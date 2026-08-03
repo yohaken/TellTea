@@ -3,6 +3,7 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
   type ReactNode,
@@ -288,9 +289,9 @@ function StockHistoryView({
         </p>
         <span
           className="ot-slim-hint muted module-slim-hint"
-          title="เรียงวันที่ใหม่→เก่า · ระบบเปิดรอบล่วงหน้า 3 รอบ · แตะแถวว่างเพื่อกรอก · แตะช่องที่นับแล้วดูรายละเอียด"
+          title="เรียงวันที่ใหม่→เก่า · ระบบเปิดรอบล่วงหน้า 3 รอบ · แตะแถวว่างเพื่อนับ · แตะช่องที่นับแล้วเพื่อแก้ไข"
         >
-          ใหม่→เก่า · แตะแถวว่างเพื่อนับ
+          ใหม่→เก่า · แตะเพื่อนับ/แก้
         </span>
       </div>
 
@@ -313,7 +314,8 @@ function StockHistoryView({
                   key={row.rowKey}
                   row={row}
                   columns={grid.columns}
-                  onOpenFilled={() => row.session && setDetail(row)}
+                  onOpenDetail={() => row.session && setDetail(row)}
+                  onEditFilled={() => onCountRound(row)}
                   onCountMissing={() => onCountRound(row)}
                 />
               ))}
@@ -334,6 +336,11 @@ function StockHistoryView({
           columns={grid.columns}
           isOwner={isOwner}
           onClose={() => setDetail(null)}
+          onEdit={() => {
+            const target = detail;
+            setDetail(null);
+            onCountRound(target);
+          }}
           onDelete={() => void onDeleteSession(detail.session!.id)}
         />
       ) : null}
@@ -344,12 +351,14 @@ function StockHistoryView({
 function StockHistoryRow({
   row,
   columns,
-  onOpenFilled,
+  onOpenDetail,
+  onEditFilled,
   onCountMissing,
 }: {
   row: StockHistoryTimelineRow;
   columns: StockHistoryItemCol[];
-  onOpenFilled: () => void;
+  onOpenDetail: () => void;
+  onEditFilled: () => void;
   onCountMissing: () => void;
 }) {
   const hasSession = !!row.session;
@@ -369,13 +378,18 @@ function StockHistoryRow({
             <span className="stock-history-missing-tag">ยังไม่นับ</span>
           </button>
         ) : (
-          <>
+          <button
+            type="button"
+            className="stock-history-round-btn is-filled"
+            onClick={onOpenDetail}
+            title={`ดูรายละเอียดรอบ ${timelineRoundLabel(row)}`}
+          >
             {timelineRoundLabel(row)}
             <span className="stock-history-meta-inline">
               {inspectorShort(row.session!.inspector)} ·{" "}
               {formatStockCountTimeShort(row.session!.submittedAt)}
             </span>
-          </>
+          </button>
         )}
       </td>
       {columns.map((col, idx) => {
@@ -400,8 +414,8 @@ function StockHistoryRow({
             <button
               type="button"
               className="stock-history-cell is-filled"
-              onClick={onOpenFilled}
-              title={`${col.name}: ${qty != null ? formatStockQty(qty) : "—"} ${col.unit}`}
+              onClick={onEditFilled}
+              title={`แก้ไข ${col.name}: ${qty != null ? formatStockQty(qty) : "—"} ${col.unit}`}
             >
               {qty != null ? formatStockQty(qty) : "—"}
             </button>
@@ -417,12 +431,14 @@ function StockCountDetailModal({
   columns,
   isOwner,
   onClose,
+  onEdit,
   onDelete,
 }: {
   row: StockHistoryTimelineRow;
   columns: StockHistoryItemCol[];
   isOwner: boolean;
   onClose: () => void;
+  onEdit: () => void;
   onDelete: () => void;
 }) {
   const session = row.session!;
@@ -437,6 +453,9 @@ function StockCountDetailModal({
             </h2>
             <p className="muted check-detail-sub">
               {session.inspector} · {formatStockCountTimeShort(session.submittedAt)}
+              {session.updatedAt && session.updatedAt !== session.submittedAt
+                ? ` · แก้ล่าสุด ${formatStockCountTimeShort(session.updatedAt)}`
+                : ""}
             </p>
           </div>
           <button type="button" className="icon-btn" onClick={onClose} aria-label="ปิด">
@@ -466,14 +485,34 @@ function StockCountDetailModal({
           </tbody>
         </table>
 
-        {isOwner ? (
-          <button type="button" className="danger-btn" style={{ marginTop: "0.65rem" }} onClick={onDelete}>
-            ลบรอบนับนี้
+        <div className="check-form-actions" style={{ marginTop: "0.65rem" }}>
+          <button type="button" className="primary-btn" onClick={onEdit}>
+            แก้ไขยอด
           </button>
-        ) : null}
+          {isOwner ? (
+            <button type="button" className="danger-btn" onClick={onDelete}>
+              ลบรอบนับนี้
+            </button>
+          ) : null}
+        </div>
       </div>
     </div>
   );
+}
+
+function buildCountDrafts(
+  items: StockItem[],
+  existing: StockCountSession | null,
+): DraftLine[] {
+  const fromExisting = existing?.lines || [];
+  return items.map((item) => {
+    const prev = fromExisting.find((l) => l.itemId === item.id);
+    return {
+      itemId: item.id,
+      itemName: item.name,
+      qty: prev != null ? String(prev.qty) : "",
+    };
+  });
 }
 
 function StockCountForm({
@@ -497,21 +536,43 @@ function StockCountForm({
   onOpenCatalog?: () => void;
 }) {
   const { year, month, dayOfMonth } = lockedRound;
-  const [step, setStep] = useState<"setup" | "count" | "done">("setup");
+  const [step, setStep] = useState<"setup" | "count" | "done" | "loading">("loading");
   const [inspectorId, setInspectorId] = useState("");
   const [drafts, setDrafts] = useState<DraftLine[]>([]);
   const [existingSession, setExistingSession] = useState<StockCountSession | null>(null);
   const [busy, setBusy] = useState(false);
+  const bootedRef = useRef(false);
 
   const inspector = employees.find((e) => e.id === inspectorId);
   const roundDateLabel = stockRoundDateLabelBe(year, month, dayOfMonth);
+  const isEdit = !!existingSession;
 
+  // โหลดรอบเดิมครั้งเดียว — ถ้านับแล้วให้เข้าโหมดแก้จำนวนทันที (ไม่ต้องลบรอบ)
   useEffect(() => {
-    if (step !== "setup") return;
+    if (bootedRef.current) return;
+    bootedRef.current = true;
     void getSessionForRound(year, month, dayOfMonth)
-      .then(setExistingSession)
-      .catch(() => setExistingSession(null));
-  }, [step, year, month, dayOfMonth]);
+      .then((session) => {
+        setExistingSession(session);
+        if (session) {
+          const prefId =
+            (session.inspectorId &&
+              employees.some((e) => e.id === session.inspectorId) &&
+              session.inspectorId) ||
+            employees.find((e) => e.name === session.inspector)?.id ||
+            "";
+          setInspectorId(prefId);
+          setDrafts(buildCountDrafts(items, session));
+          setStep(prefId ? "count" : "setup");
+        } else {
+          setStep("setup");
+        }
+      })
+      .catch(() => {
+        setExistingSession(null);
+        setStep("setup");
+      });
+  }, [year, month, dayOfMonth, items, employees]);
 
   function startCount() {
     if (!inspector) {
@@ -519,17 +580,7 @@ function StockCountForm({
       return;
     }
     onError(null);
-    const fromExisting = existingSession?.lines || [];
-    setDrafts(
-      items.map((item) => {
-        const prev = fromExisting.find((l) => l.itemId === item.id);
-        return {
-          itemId: item.id,
-          itemName: item.name,
-          qty: prev != null ? String(prev.qty) : "",
-        };
-      }),
-    );
+    setDrafts(buildCountDrafts(items, existingSession));
     setStep("count");
   }
 
@@ -593,10 +644,18 @@ function StockCountForm({
     );
   }
 
+  if (step === "loading") {
+    return (
+      <div className="check-form">
+        <p className="empty">กำลังโหลดรอบนับ...</p>
+      </div>
+    );
+  }
+
   if (step === "done") {
     return (
       <div className="check-form">
-        <h2 className="panel-title">บันทึกแล้ว</h2>
+        <h2 className="panel-title">{isEdit ? "อัปเดตแล้ว" : "บันทึกแล้ว"}</h2>
         <p className="muted">
           รอบ {roundDateLabel} · {inspector?.name}
         </p>
@@ -610,7 +669,7 @@ function StockCountForm({
   if (step === "setup") {
     return (
       <div className="check-form">
-        <h2 className="panel-title">นับสต็อก</h2>
+        <h2 className="panel-title">{isEdit ? "แก้ไขนับสต็อก" : "นับสต็อก"}</h2>
         <p className="muted check-hint">
           รอบที่ระบบเปิดไว้ · <strong>{roundDateLabel}</strong> ({roundLabel(dayOfMonth)})
         </p>
@@ -632,7 +691,7 @@ function StockCountForm({
         </div>
         {existingSession ? (
           <p className="muted check-hint">
-            มีข้อมูลรอบนี้แล้ว ({existingSession.inspector}) — บันทึกใหม่จะแทนที่
+            มียอดรอบนี้แล้ว ({existingSession.inspector}) — แก้ตัวเลขแล้วบันทึกทับได้ ไม่ต้องลบรอบ
           </p>
         ) : null}
         <div className="check-form-actions">
@@ -640,7 +699,7 @@ function StockCountForm({
             ยกเลิก
           </button>
           <button type="button" className="primary-btn" onClick={startCount}>
-            ถัดไป — กรอกจำนวน
+            {isEdit ? "ถัดไป — แก้จำนวน" : "ถัดไป — กรอกจำนวน"}
           </button>
         </div>
       </div>
@@ -655,10 +714,15 @@ function StockCountForm({
   return (
     <form className="check-form stock-count-form" onSubmit={(e) => void onSubmit(e)}>
       <h2 className="panel-title">
+        {isEdit ? "แก้ไข · " : ""}
         {roundDateLabel} · {inspector?.name}
       </h2>
       <div className="stock-count-form-head">
-        <p className="muted check-hint">กรอกยอดคงเหลือที่นับได้ (snapshot)</p>
+        <p className="muted check-hint">
+          {isEdit
+            ? "แก้เฉพาะรายการที่ผิด แล้วกดบันทึก — ไม่ต้องลบรอบแล้วกรอกใหม่"
+            : "กรอกยอดคงเหลือที่นับได้ (snapshot)"}
+        </p>
         <button type="button" className="ghost-btn stock-count-clear-btn" onClick={clearAllToZero}>
           เคลียร์เป็น 0
         </button>
@@ -691,9 +755,11 @@ function StockCountForm({
       </div>
 
       <div className="check-form-actions">
-        <button type="button" className="ghost-btn" onClick={() => setStep("setup")}>ย้อนกลับ</button>
-        <button type="submit" className="primary-btn" disabled={busy}>
-          {busy ? "กำลังบันทึก..." : "บันทึก"}
+        <button type="button" className="ghost-btn" onClick={() => setStep("setup")}>
+          ย้อนกลับ
+        </button>
+        <button type="submit" className="primary-btn" disabled={busy || !inspector}>
+          {busy ? "กำลังบันทึก..." : isEdit ? "บันทึกการแก้ไข" : "บันทึก"}
         </button>
       </div>
     </form>

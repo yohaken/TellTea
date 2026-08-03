@@ -205,6 +205,9 @@ export type StockCountSession = {
   inspectorId?: string;
   submittedAt: number;
   createdBy: string;
+  /** คนแก้ล่าสุด (ถ้ามี) */
+  updatedBy?: string;
+  updatedAt?: number;
   lines: StockCountLine[];
 };
 
@@ -216,6 +219,7 @@ export type StockCountSessionInput = {
   inspector: string;
   inspectorId?: string;
   submittedAt: number;
+  /** ผู้บันทึก/แก้รอบนี้ — create ใช้เป็น createdBy · update ใช้เป็น updatedBy */
   createdBy: string;
   lines: StockCountLine[];
 };

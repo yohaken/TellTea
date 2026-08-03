@@ -63,6 +63,8 @@ function mapSessionDoc(id: string, data: Record<string, unknown>): StockCountSes
     inspectorId: data.inspectorId ? String(data.inspectorId) : undefined,
     submittedAt: Number(data.submittedAt) || 0,
     createdBy: String(data.createdBy || ""),
+    updatedBy: data.updatedBy ? String(data.updatedBy) : undefined,
+    updatedAt: data.updatedAt != null ? Number(data.updatedAt) || undefined : undefined,
     lines,
   };
 }
@@ -104,6 +106,10 @@ export async function getSessionForRound(
 export async function submitStockCountSession(input: StockCountSessionInput): Promise<string> {
   if (!input.lines.length) throw new Error("ไม่มีรายการนับ");
   const id = stockCountSessionId(input.year, input.month, input.dayOfMonth);
+  const ref = doc(getDb(), SESSIONS_COL, id);
+  const existing = await getDoc(ref);
+  const now = Date.now();
+  const prev = existing.exists() ? (existing.data() as Record<string, unknown>) : null;
   const payload = {
     date: input.date,
     dayOfMonth: input.dayOfMonth,
@@ -111,17 +117,19 @@ export async function submitStockCountSession(input: StockCountSessionInput): Pr
     month: input.month,
     inspector: input.inspector.trim(),
     inspectorId: input.inspectorId || null,
-    submittedAt: input.submittedAt,
-    createdBy: input.createdBy,
+    // แก้รอบเดิม: คงเวลา/คนสร้างแรก · อัปเดต updatedBy
+    submittedAt: prev ? Number(prev.submittedAt) || input.submittedAt : input.submittedAt,
+    createdBy: prev ? String(prev.createdBy || input.createdBy) : input.createdBy,
+    updatedBy: input.createdBy,
     lines: input.lines.map((line) => ({
       itemId: line.itemId,
       itemName: line.itemName.trim(),
       qty: Number(line.qty) || 0,
     })),
-    updatedAt: Date.now(),
+    updatedAt: now,
   };
   if (!payload.inspector) throw new Error("ต้องเลือกผู้ตรวจนับ");
-  await setDoc(doc(getDb(), SESSIONS_COL, id), payload);
+  await setDoc(ref, payload);
   return id;
 }
 

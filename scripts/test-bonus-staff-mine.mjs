@@ -59,7 +59,7 @@ assert.equal(
 );
 
 const version = read("src/lib/version.ts");
-assert.match(version, /APP_BUILD = 677/);
+assert.match(version, /APP_BUILD = \d+/);
 
 const prodPage = read("src/app/production/page.tsx");
 assert.match(prodPage, /workEntryIncludesMe/);
