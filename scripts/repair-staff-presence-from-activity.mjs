@@ -61,8 +61,9 @@ async function listCollection(token, collectionId) {
 }
 
 async function patchLastSeen(token, staffId, lastSeenAt) {
-  const name = `projects/${PROJECT}/databases/(default)/documents/staff/${encodeURIComponent(staffId)}`;
-  const res = await fetch(`${name}?updateMask.fieldPaths=lastSeenAt`, {
+  const path = `projects/${PROJECT}/databases/(default)/documents/staff/${encodeURIComponent(staffId)}`;
+  const url = `https://firestore.googleapis.com/v1/${path}?updateMask.fieldPaths=lastSeenAt`;
+  const res = await fetch(url, {
     method: "PATCH",
     headers: {
       Authorization: `Bearer ${token}`,
