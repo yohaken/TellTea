@@ -434,7 +434,7 @@ function ProdEntryForm({
         imageUrl: urls[0] || "",
       };
       if (entry) {
-        await updateProdEntry(entry.id, payload);
+        await updateProdEntry(entry.id, payload, createdBy);
       } else {
         await addProdEntry({ ...payload, createdBy });
       }

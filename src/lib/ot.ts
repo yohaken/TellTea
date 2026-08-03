@@ -531,6 +531,8 @@ export async function updateOtEntry(
   >,
   /** แถวจาก UI — ข้าม getDoc ถ้ามี (กันพลาดสิทธิ์ตอนลงย้อนหลัง) */
   knownCurrent?: OtEntry | null,
+  /** ผู้บันทึกครั้งนี้ — ปัก lastSeenAt (ค่าเริ่มต้น = createdBy ของแถว) */
+  actorId?: string | null,
 ): Promise<void> {
   const ref = doc(getDb(), "otEntries", id);
   let current = knownCurrent && knownCurrent.id === id ? knownCurrent : null;
@@ -585,6 +587,9 @@ export async function updateOtEntry(
   if (patch.openSopSubmittedAt != null) next.openSopSubmittedAt = patch.openSopSubmittedAt;
   if (patch.closeSopSubmittedAt != null) next.closeSopSubmittedAt = patch.closeSopSubmittedAt;
   await updateDoc(ref, next);
+  // หน้าชงส่วนใหญ่เป็น update (ปิดกะ/แก้ยอด) ไม่ใช่ create — ต้องปัก presence ด้วย
+  const { touchStaffPresenceFromActor } = await import("./staff-presence");
+  await touchStaffPresenceFromActor(actorId || current.createdBy);
 }
 
 export async function bulkUpdateOtEntryStatus(ids: string[], status: OtStatus): Promise<number> {

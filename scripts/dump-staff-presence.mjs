@@ -91,9 +91,10 @@ async function listCollection(token, collectionId) {
 async function main() {
   const now = Date.now();
   const token = await getToken();
-  const [staffDocs, empDocs] = await Promise.all([
+  const [staffDocs, empDocs, phoneDocs] = await Promise.all([
     listCollection(token, "staff"),
     listCollection(token, "employees"),
+    listCollection(token, "staffPhones"),
   ]);
 
   const empByStaffId = new Map();
@@ -150,7 +151,28 @@ async function main() {
 
   const lines = [];
   lines.push(`staff presence dump · now ICT ${formatIct(now)}`);
-  lines.push(`staff docs: ${staffDocs.length} · employees: ${empDocs.length}`);
+  lines.push(
+    `staff docs: ${staffDocs.length} · employees: ${empDocs.length} · staffPhones: ${phoneDocs.length}`,
+  );
+  lines.push("");
+
+  // staffPhones index — ขาดแล้วล็อกอินเบอร์จะปัก lastSeenAt ไม่ได้
+  const phoneByStaffId = new Map();
+  for (const p of phoneDocs) {
+    const staffId = String(parseField(p.fields.staffId) || "");
+    if (!staffId) continue;
+    if (!phoneByStaffId.has(staffId)) phoneByStaffId.set(staffId, []);
+    phoneByStaffId.get(staffId).push(p.id);
+  }
+  lines.push("=== staffPhones map ===");
+  for (const r of rows.filter((x) => x.role === "staff")) {
+    const digits = (r.phone || "").replace(/\D/g, "").replace(/^0/, "66");
+    const mapped = phoneByStaffId.get(r.id) || [];
+    const ok = digits && mapped.includes(digits);
+    lines.push(
+      `${ok ? "OK" : "!!"} ${r.label.padEnd(8)} staff=${r.id} phone=${r.phone || "—"} index=[${mapped.join(",") || "none"}]`,
+    );
+  }
   lines.push("");
   lines.push(
     "role".padEnd(7) +
@@ -288,6 +310,36 @@ async function main() {
         lines.push(
           `${r.age.padEnd(6)} ${r.when.padEnd(26)} ${r.kind.padEnd(5)} by=${r.createdBy || "—"}${r.sameBatchUpdate}`,
         );
+      }
+
+      // หน้าชงส่วนใหญ่เป็น update — เทียบ updatedAt ล่าสุดกับ lastSeenAt
+      const otUpdateMismatches = [];
+      for (const d of otDocs) {
+        const f = d.fields;
+        const createdAt = Number(parseField(f.createdAt) || 0);
+        const updatedAt = Number(parseField(f.updatedAt) || 0);
+        const createdBy = String(parseField(f.createdBy) || "");
+        // เฉพาะแถวที่ถูกแก้จริง (ไม่ใช่สร้างอย่างเดียว) ใน 24 ชม.
+        if (!createdBy.includes("@")) continue;
+        if (!(updatedAt > createdAt + 60_000)) continue;
+        if (updatedAt < now - 24 * 60 * 60 * 1000) continue;
+        const staff = staffById.get(createdBy);
+        if (!staff) {
+          otUpdateMismatches.push(`${createdBy} updated ot ${formatIct(updatedAt)} but NO staff doc`);
+          continue;
+        }
+        if (!staff.lastSeenAt || staff.lastSeenAt + 60_000 < updatedAt) {
+          otUpdateMismatches.push(
+            `${staff.label} (${createdBy}) ot update ${formatIct(updatedAt)} (${formatAge(updatedAt, now)}) but lastSeen ${staff.lastSeenIct} (${staff.age})`,
+          );
+        }
+      }
+      lines.push("");
+      lines.push(`=== presence vs ot-update mismatches 24h (${otUpdateMismatches.length}) ===`);
+      if (!otUpdateMismatches.length) {
+        lines.push("none — recent ot editors have lastSeenAt >= ot updatedAt");
+      } else {
+        for (const m of otUpdateMismatches.slice(0, 30)) lines.push(`MISMATCH ${m}`);
       }
     } catch (err) {
       lines.push(`prod/ot dump failed: ${err instanceof Error ? err.message : String(err)}`);

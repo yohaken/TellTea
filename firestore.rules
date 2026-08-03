@@ -29,10 +29,15 @@ service cloud.firestore {
       return hasPhone() && authPhone().size() > 1 ? authPhone()[1:] : '';
     }
 
+    /**
+     * หา staff doc id ของคนล็อกอิน
+     * เบอร์มี index ก่อน (กันเคส Auth มีทั้งเบอร์+อีเมล แต่ doc id เป็นอีเมลอื่น / ผูกเบอร์)
+     * ไม่มีเบอร์ค่อยใช้อีเมล
+     */
     function resolvedStaffId() {
-      return hasEmail()
-        ? authEmail()
-        : get(/databases/$(database)/documents/staffPhones/$(phoneDigits())).data.staffId;
+      return hasPhone() && exists(/databases/$(database)/documents/staffPhones/$(phoneDigits()))
+        ? get(/databases/$(database)/documents/staffPhones/$(phoneDigits())).data.staffId
+        : authEmail();
     }
 
     function staffPath() {

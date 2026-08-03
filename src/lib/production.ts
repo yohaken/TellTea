@@ -412,6 +412,8 @@ export async function updateProdEntry(
       | "status"
     >
   >,
+  /** ผู้บันทึกครั้งนี้ — ปัก lastSeenAt (ค่าเริ่มต้น = createdBy ของแถว) */
+  actorId?: string | null,
 ): Promise<void> {
   const ref = doc(getDb(), "prodEntries", id);
   const snap = await getDoc(ref);
@@ -461,6 +463,9 @@ export async function updateProdEntry(
   }
   if (patch.status != null) next.status = normalizeProdStatus(patch.status);
   await updateDoc(ref, next);
+  // แก้รายการผลิตที่มีอยู่แล้ว — ปัก lastSeenAt เหมือนตอนสร้าง
+  const { touchStaffPresenceFromActor } = await import("./staff-presence");
+  await touchStaffPresenceFromActor(actorId || current.createdBy);
 }
 
 export async function bulkUpdateProdEntryStatus(

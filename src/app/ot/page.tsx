@@ -757,7 +757,7 @@ function OtEntryForm({
 
   async function persist(payload: ReturnType<typeof buildPayload>) {
     if (entry) {
-      await updateOtEntry(entry.id, payload);
+      await updateOtEntry(entry.id, payload, entry, createdBy);
       return;
     }
     const existing = findOtEntryForSlot(allEntries, payload.date, payload.shift);
@@ -832,7 +832,7 @@ function OtEntryForm({
       onError("");
       try {
         const payload = buildPayload(chosen);
-        await updateOtEntry(entry.id, payload, entry);
+        await updateOtEntry(entry.id, payload, entry, createdBy);
         onSaved();
       } catch (err) {
         reportError(friendlyFirestoreWriteError(err, "บันทึกรูป/ยอดไม่สำเร็จ"));

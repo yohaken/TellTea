@@ -420,6 +420,8 @@ export async function submitChecklistBatch(
     });
   }
   await batch.commit();
+  const { touchStaffPresenceFromActor } = await import("./staff-presence");
+  await touchStaffPresenceFromActor(rows[0]?.createdBy);
   return checkId;
 }
 
