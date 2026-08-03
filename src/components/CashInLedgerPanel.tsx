@@ -314,9 +314,16 @@ export function CashInLedgerPanel({
       status: CashDepositStatus;
       day: CashDepositDayLine;
       bankAmount: number;
+      /** Bank e-slips — transfer evidence (not round-print compare photos) */
+      bankSlipUrls: string[];
     }[] = [];
     for (const entry of entries) {
       const label = labelCashDepositRound(entry);
+      const bankSlipUrls = flattenBankTransferUrls(
+        entry.bankTransfers?.length
+          ? entry.bankTransfers
+          : coerceBankTransfers(entry),
+      );
       for (const day of entry.days) {
         rows.push({
           roundId: entry.id,
@@ -324,6 +331,7 @@ export function CashInLedgerPanel({
           status: entry.status,
           day,
           bankAmount: entry.bankAmount,
+          bankSlipUrls,
         });
       }
     }
@@ -1224,10 +1232,10 @@ export function CashInLedgerPanel({
                             type="button"
                             className="ghost-btn cash-in-compact-btn cash-in-bill-attach"
                             disabled={busy || readOnly}
-                            title={`แนบใบรอบเทียบตัวเลข ${billNo} (ไม่ใช่การโอน)`}
+                            title={`ใบรอบเทียบตัวเลข ${billNo} (ไม่ใช่สลิปโอน)`}
                             onClick={() => attachPosPrintForSession(s)}
                           >
-                            {posSlipCount ? `แนบ ${posSlipCount}` : "แนบ"}
+                            {posSlipCount ? `ใบรอบ ${posSlipCount}` : "ใบรอบ"}
                           </button>
                         </div>
                         {ticked && dayLine ? (
@@ -1568,7 +1576,18 @@ export function CashInLedgerPanel({
                         <th className="col-num" title="ยอดบิล">
                           ยอด
                         </th>
-                        <th className="col-slip">สลิป</th>
+                        <th
+                          className="col-slip"
+                          title="ใบรอบ POS — เทียบตัวเลข ไม่ใช่สลิปโอน"
+                        >
+                          ใบรอบ
+                        </th>
+                        <th
+                          className="col-slip"
+                          title="สลิปโอนเข้าบัญชี"
+                        >
+                          สลิปโอน
+                        </th>
                         <th className="col-type">สถานะ</th>
                       </tr>
                     </thead>
@@ -1597,11 +1616,27 @@ export function CashInLedgerPanel({
                             {row.day.slipUrls.length ? (
                               <EntryPhotoIndicator
                                 imageUrls={row.day.slipUrls}
-                                label="สลิป"
+                                label="ใบรอบ"
                                 onView={(urls) =>
                                   setImagePreview({
                                     urls,
-                                    title: formatCashDayShort(row.day.date),
+                                    title: `ใบรอบ ${formatCashDayShort(row.day.date)}`,
+                                  })
+                                }
+                              />
+                            ) : (
+                              <span className="muted">—</span>
+                            )}
+                          </td>
+                          <td className="col-slip">
+                            {row.bankSlipUrls.length ? (
+                              <EntryPhotoIndicator
+                                imageUrls={row.bankSlipUrls}
+                                label="สลิปโอน"
+                                onView={(urls) =>
+                                  setImagePreview({
+                                    urls,
+                                    title: `สลิปโอน ${row.roundLabel}`,
                                   })
                                 }
                               />
