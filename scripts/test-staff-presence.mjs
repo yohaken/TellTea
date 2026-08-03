@@ -9,20 +9,27 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD\s*=\s*(\d+)/)[1]) >= 683);
+assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD\s*=\s*(\d+)/)[1]) >= 684);
 assert.match(read("src/lib/staff-presence.ts"), /touchStaffPresence/);
 assert.match(read("src/lib/staff-presence.ts"), /touchStaffPresenceFromActor/);
 assert.match(read("src/lib/staff-presence.ts"), /resolvePresenceStaffId/);
 assert.match(read("src/lib/staff-presence.ts"), /coercePresenceMs/);
-assert.match(read("src/lib/staff-presence.ts"), /toMillis/);
 assert.match(read("src/lib/staff-presence.ts"), /formatPresenceAge/);
 assert.match(read("src/lib/staff-presence.ts"), /formatPresenceLastLogin/);
-assert.match(read("src/lib/staff-presence.ts"), /formatPresenceChipWhen/);
+assert.match(read("src/lib/staff-presence.ts"), /STAFF_PRESENCE_ONLINE_MS\s*=\s*5\s*\*\s*60_000/);
 assert.match(read("src/lib/staff-presence.ts"), /setDoc/);
 assert.match(read("firestore.rules"), /isOwnStaffDoc/);
-assert.match(read("firestore.rules"), /staffPhones\/\$\(phoneDigits\(\)\)/);
-assert.match(read("src/components/StaffPresenceDock.tsx"), /formatPresenceChipWhen/);
-assert.match(read("src/components/StaffPresenceDock.tsx"), /เข้าใช้ล่าสุด/);
+assert.match(read("firestore.rules"), /staffId == resolvedStaffId\(\) && staffPresenceTouch\(\)/);
+assert.match(read("firestore.rules"), /isOwnStaffDoc\(staffId\) && staffPresenceTouch\(\)/);
+// resolvedStaffId must stay email-first (don't reshuffle — breaks hasPerm app-wide)
+assert.match(
+  read("firestore.rules"),
+  /function resolvedStaffId\(\) \{\s*return hasEmail\(\)/,
+);
+assert.match(read("src/components/StaffPresenceDock.tsx"), /กำลังใช้งาน/);
+assert.match(read("src/components/StaffPresenceDock.tsx"), /formatPresenceAge/);
+assert.match(read("src/components/StaffPresenceHeartbeat.tsx"), /touchStaffPresence/);
+assert.match(read("src/lib/auth.tsx"), /touchStaffPresence\(member\.id\)/);
 assert.match(read("src/lib/staff-presence.ts"), /staffShortLabel/);
 assert.match(read("src/lib/staff-presence.ts"), /resolvePresenceLabel/);
 assert.match(read("src/lib/staff-presence.ts"), /ชื่อเล่นเต็มก่อน/);
@@ -154,35 +161,6 @@ function formatPresenceLastLogin(lastSeenAt, now) {
 }
 const noonBangkok = Date.parse("2026-08-03T05:00:00.000Z"); // 12:00 ICT
 assert.match(formatPresenceLastLogin(noonBangkok, noonBangkok + 60_000), /^วันนี้ /);
-
-function bangkokDayKey(ms) {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Bangkok",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date(ms));
-}
-function bangkokClock(ms) {
-  return new Intl.DateTimeFormat("th-TH", {
-    timeZone: "Asia/Bangkok",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(ms));
-}
-function formatPresenceChipWhen(lastSeenAt, now) {
-  if (!lastSeenAt || lastSeenAt <= 0) return "—";
-  const time = bangkokClock(lastSeenAt);
-  const seenDay = bangkokDayKey(lastSeenAt);
-  if (seenDay === bangkokDayKey(now)) return time;
-  if (seenDay === bangkokDayKey(now - 24 * 60 * 60 * 1000)) return `วาน${time}`;
-  return new Intl.DateTimeFormat("th-TH", {
-    timeZone: "Asia/Bangkok",
-    day: "numeric",
-    month: "short",
-  }).format(new Date(lastSeenAt));
-}
-assert.match(formatPresenceChipWhen(noonBangkok, noonBangkok + 60_000), /\d/);
-assert.equal(formatPresenceChipWhen(0, Date.now()), "—");
+assert.equal(formatPresenceAge(noonBangkok - 5 * 60_000, noonBangkok), "5น");
 
 console.log("test-staff-presence: ok");

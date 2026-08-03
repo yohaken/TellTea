@@ -29,15 +29,11 @@ service cloud.firestore {
       return hasPhone() && authPhone().size() > 1 ? authPhone()[1:] : '';
     }
 
-    /**
-     * หา staff doc id ของคนล็อกอิน
-     * เบอร์มี index ก่อน (กันเคส Auth มีทั้งเบอร์+อีเมล แต่ doc id เป็นอีเมลอื่น / ผูกเบอร์)
-     * ไม่มีเบอร์ค่อยใช้อีเมล
-     */
+    /** เดิมที่เคยใช้ได้: อีเมลก่อน · ไม่มีอีเมลค่อยอ่าน staffPhones (อย่าสลับลำดับ — กระทบ hasPerm ทั้งแอป) */
     function resolvedStaffId() {
-      return hasPhone() && exists(/databases/$(database)/documents/staffPhones/$(phoneDigits()))
-        ? get(/databases/$(database)/documents/staffPhones/$(phoneDigits())).data.staffId
-        : authEmail();
+      return hasEmail()
+        ? authEmail()
+        : get(/databases/$(database)/documents/staffPhones/$(phoneDigits())).data.staffId;
     }
 
     function staffPath() {
@@ -504,6 +500,8 @@ service cloud.firestore {
             && request.resource.data.role == 'owner');
       allow update: if (staffHubManage() && staffHubUpdateOk(staffId))
         || (isOwnStaffDoc(staffId) && staffSelfProfileUpdate())
+        // presence: ทางเดิม (id == resolved) + ทางขยาย (อีเมล/เบอร์บน doc ตรง token)
+        || (signedIn() && staffId == resolvedStaffId() && staffPresenceTouch())
         || (isOwnStaffDoc(staffId) && staffPresenceTouch());
       allow delete: if isOwner() || isOwnerEmail()
         || (hasPerm('staffManage') && resource.data.role == 'staff');
