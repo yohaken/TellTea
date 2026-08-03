@@ -42,16 +42,17 @@ assert.match(dock, /findEmployeeForPresence/);
 assert.match(dock, /previewFromMember\(\s*member,\s*item\.fullName/);
 
 const prod = read("src/app/production/page.tsx");
-assert.match(prod, /resolveMyWorkerId/);
+assert.match(prod, /resolveLinkedEmployee|workEntryIncludesMe/);
 assert.doesNotMatch(
   prod,
   /staff\?\.employeeId\s*\|\|\s*resolveLinkedEmployee/,
-  "prefer resolveMyWorkerId so stale employeeId cannot blank the list",
+  "prefer resolveLinkedEmployee / workEntryIncludesMe so stale employeeId cannot blank the list",
 );
+assert.doesNotMatch(prod, /workerId: filterId/);
 
 const ot = read("src/app/ot/page.tsx");
-assert.match(ot, /resolveMyWorkerId|resolveLinkedEmployee/);
-assert.match(ot, /entryIncludesMe/);
+assert.match(ot, /resolveLinkedEmployee/);
+assert.match(ot, /workEntryIncludesMe/);
 assert.match(ot, /\{ since, until \}/);
 assert.doesNotMatch(
   ot,
@@ -63,6 +64,7 @@ assert.match(ot, /พรีวิวมุมพนักงาน/);
 
 const employees = read("src/lib/employees.ts");
 assert.match(employees, /export function resolveMyWorkerId/);
+assert.match(employees, /const byLink = employees\.find/);
 assert.match(employees, /nickname/);
 
 console.log("OK test-preview-staff-identity");

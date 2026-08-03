@@ -22,9 +22,12 @@ import { resolveWorkerDisplayNames } from "@/lib/employee-rename-propagate";
 import {
   listActiveEmployees,
   resolveLinkedEmployee,
-  resolveMyWorkerId,
   type Employee,
 } from "@/lib/employees";
+import {
+  buildWorkEntryMineIdentity,
+  workEntryIncludesMe,
+} from "@/lib/work-entry-mine";
 import { can } from "@/lib/permissions";
 import {
   entryHasPhotoFlag,
@@ -171,37 +174,6 @@ function draftsFromCheckRecords(
   });
 }
 
-function entryIncludesName(entry: OtEntry, name: string) {
-  if (!name.trim()) return false;
-  const needle = name.trim().toLowerCase();
-  return entry.workerNames.some((w) => {
-    const hay = w.trim().toLowerCase();
-    return hay === needle || hay.includes(needle) || needle.includes(hay);
-  });
-}
-
-/** กรอง "ของฉัน" — ใช้ employeeId ก่อน แล้วค่อยชื่อร้าน/ชื่อเก่า (ไม่พึ่ง displayName อย่างเดียว) */
-function entryIncludesMe(
-  entry: OtEntry,
-  me: {
-    employeeId?: string;
-    name?: string;
-    displayName?: string;
-    nickname?: string;
-    previousNames?: string[];
-  } | null,
-) {
-  if (!me) return false;
-  if (me.employeeId && (entry.workerIds || []).includes(me.employeeId)) return true;
-  const aliases = [
-    me.name,
-    me.nickname,
-    me.displayName,
-    ...(me.previousNames || []),
-  ].filter((n): n is string => !!n?.trim());
-  return aliases.some((n) => entryIncludesName(entry, n));
-}
-
 export default function OtPage() {
   return (
     <AuthGate>
@@ -322,21 +294,12 @@ function OtView() {
         if (cancelled) return;
         setWorkers(emps);
         /**
-         * มุมพนักงาน/พรีวิว: โหลดช่วงเดือนแล้วกรองฝั่ง client ด้วย entryIncludesMe
+         * มุมพนักงาน/พรีวิว: โหลดช่วงเดือนแล้วกรองฝั่ง client ด้วย workEntryIncludesMe
          * (workerIds + ชื่อ/ชื่อเล่น/ชื่อเก่า) — แถวเก่าที่ไม่มี workerIds ยังเห็นได้
-         * และไม่พังเมื่อ composite index array-contains ยังไม่พร้อม
-         * ห้ามพึ่ง workerId query อย่างเดียว: พรีวิวที่ identity ไม่ครบจะได้ตารางว่างทั้งเดือน
+         * ห้ามพึ่ง workerId query อย่างเดียว: employeeId ค้าง/พรีวิวไม่ครบจะได้ตารางว่าง
          */
         const linked = shopOtView ? null : resolveLinkedEmployee(emps, staff);
-        const me = shopOtView
-          ? null
-          : {
-              employeeId: staff?.employeeId || linked?.id || resolveMyWorkerId(emps, staff),
-              name: linked?.name || "",
-              nickname: linked?.nickname || "",
-              previousNames: linked?.previousNames || [],
-              displayName: staff?.displayName || "",
-            };
+        const me = shopOtView ? null : buildWorkEntryMineIdentity(linked, staff);
         if (!shopOtView && me && !me.employeeId && !me.name && !me.nickname && !me.displayName) {
           setEntries([]);
           setEntriesReady(true);
@@ -346,7 +309,7 @@ function OtView() {
         unsubOt = subscribeOtEntries(
           (rows) => {
             if (!shopOtView && me) {
-              setEntries(rows.filter((r) => entryIncludesMe(r, me)));
+              setEntries(rows.filter((r) => workEntryIncludesMe(r, me)));
             } else {
               setEntries(rows);
             }
@@ -590,9 +553,8 @@ function OtEntryForm({
   const [shift, setShift] = useState<OtShiftId>(entry?.shift || slotDraft?.shift || "morning");
   const [selectedWorkers, setSelectedWorkers] = useState<string[]>(() => {
     if (entry?.workerIds?.length) return entry.workerIds;
-    if (staff?.employeeId && workers.some((w) => w.id === staff.employeeId)) {
-      return [staff.employeeId];
-    }
+    const linked = resolveLinkedEmployee(workers, staff);
+    if (linked && workers.some((w) => w.id === linked.id)) return [linked.id];
     return [];
   });
   const [machineCount, setMachineCount] = useState(
@@ -1373,13 +1335,7 @@ function OtTable({
     [workers, staff],
   );
   const me = useMemo(
-    () => ({
-      employeeId: staff?.employeeId || myEmployee?.id,
-      name: myEmployee?.name || "",
-      nickname: myEmployee?.nickname || "",
-      previousNames: myEmployee?.previousNames || [],
-      displayName: staff?.displayName || "",
-    }),
+    () => buildWorkEntryMineIdentity(myEmployee, staff),
     [staff, myEmployee],
   );
   const myName = me.name || me.displayName || "";
@@ -1387,7 +1343,7 @@ function OtTable({
   const filtered = useMemo(() => {
     return entries.filter((row) => {
       if (statusFilter !== "all" && row.status !== statusFilter) return false;
-      if (mineOnly && !entryIncludesMe(row, me)) return false;
+      if (mineOnly && !workEntryIncludesMe(row, me)) return false;
       return true;
     });
   }, [entries, statusFilter, mineOnly, me]);
@@ -1405,7 +1361,7 @@ function OtTable({
       summaryQty += c.summaryQty;
       totalBonus += c.totalBonus;
       if (row.status === "pending") pendingBonus += c.totalBonus;
-      if (entryIncludesMe(row, me)) myBonus += c.bonusPerPerson;
+      if (workEntryIncludesMe(row, me)) myBonus += c.bonusPerPerson;
     }
 
     return { shiftCount, summaryQty, totalBonus, pendingBonus, myBonus };
