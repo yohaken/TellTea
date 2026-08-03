@@ -167,16 +167,19 @@ jobs:
             exit "$host"
           fi
 
-          # 2) Firestore rules — retry บน 503/unavailable ของ Rules API
+          # 2) Firestore rules — Rules API มัก 503; retry ถี่+ยาว · แยก rules ก่อน indexes
           rules=1
-          for attempt in 1 2 3 4; do
+          for attempt in 1 2 3 4 5 6 7 8; do
             echo "Firestore rules attempt $attempt"
-            npx firebase-tools@latest deploy --only firestore --project mypeer-501909 --non-interactive --force
+            npx firebase-tools@latest deploy --only firestore:rules --project mypeer-501909 --non-interactive --force
             rules=$?
             if [ "$rules" -eq 0 ]; then
+              echo "Firestore rules OK on attempt $attempt"
+              # indexes แยก — อย่าให้ดึง rules พังทั้งก้อน
+              npx firebase-tools@latest deploy --only firestore:indexes --project mypeer-501909 --non-interactive --force || true
               break
             fi
-            sleep $((attempt * 8))
+            sleep $((attempt * 12))
           done
 
           # 3) Storage (optional) + Functions

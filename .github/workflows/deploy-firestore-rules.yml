@@ -1,0 +1,51 @@
+# Dedicated rules deploy — Firebase Rules API often 503s during full deploy.
+# Run on main when firestore.rules changes, or manually.
+name: Deploy Firestore rules only
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "firestore.rules"
+      - ".github/workflows/deploy-firestore-rules.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy-rules:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Guard rules file
+        run: npm run test:firestore-rules
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Deploy firestore:rules with long retry
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          set +e
+          # write SA for firebase-tools
+          echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+          rules=1
+          for attempt in $(seq 1 20); do
+            echo "Firestore rules attempt $attempt / 20"
+            npx firebase-tools@latest deploy --only firestore:rules \
+              --project mypeer-501909 --non-interactive --force
+            rules=$?
+            if [ "$rules" -eq 0 ]; then
+              echo "OK rules deployed on attempt $attempt"
+              exit 0
+            fi
+            # exponential-ish backoff, cap 90s
+            sleep $(( attempt < 8 ? attempt * 10 : 90 ))
+          done
+          echo "ERROR firestore rules still failing after 20 attempts"
+          exit 1

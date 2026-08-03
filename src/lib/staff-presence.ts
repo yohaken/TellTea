@@ -117,25 +117,6 @@ export function formatPresenceLastLogin(lastSeenAt: number, now = Date.now()): s
   return `${date} ${time}`;
 }
 
-/**
- * ป้ายบนชิป — เน้น “ตอนไหน” ให้เจ้าของอ่านได้ทันที
- * วันนี้ = นาฬิกา · เมื่อวาน = วาน+เวลา · เก่ากว่า = วันสั้น
- */
-export function formatPresenceChipWhen(lastSeenAt: number, now = Date.now()): string {
-  if (!lastSeenAt || lastSeenAt <= 0) return "—";
-  const time = bangkokClock(lastSeenAt);
-  const seenDay = bangkokDayKey(lastSeenAt);
-  const today = bangkokDayKey(now);
-  const yDay = bangkokDayKey(now - 24 * 60 * 60 * 1000);
-  if (seenDay === today) return time;
-  if (seenDay === yDay) return `วาน${time}`;
-  return new Intl.DateTimeFormat("th-TH", {
-    timeZone: "Asia/Bangkok",
-    day: "numeric",
-    month: "short",
-  }).format(new Date(lastSeenAt));
-}
-
 /** แสดงพนักงานทุกคน — ยังไม่มี lastSeenAt ก็โชว์รอ (ป้าย —) */
 export function buildStaffPresenceItems(
   members: StaffMember[],
