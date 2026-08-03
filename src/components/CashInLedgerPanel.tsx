@@ -1081,76 +1081,73 @@ export function CashInLedgerPanel({
                       >
                         <button
                           type="button"
-                          className="cash-in-bill-check"
-                          disabled={busy || readOnly}
-                          title={ticked ? `ยกเลิก ${billNo}` : `ติ๊กบิล ${billNo}`}
-                          aria-pressed={ticked}
-                          onClick={() => toggleSessionTick(s)}
-                        >
-                          {ticked ? "✓" : ""}
-                        </button>
-                        <button
-                          type="button"
-                          className="cash-in-bill-amt-btn"
+                          className="cash-in-bill-main"
                           disabled={busy || readOnly}
                           title={
                             ticked
-                              ? "แตะยอดเพื่อแนบใบปริ้น POS"
+                              ? `ยกเลิกติ๊ก ${billNo}`
                               : `ติ๊กบิล ${billNo}`
                           }
-                          onClick={() => {
-                            if (ticked) attachPosPrintForSession(s);
-                            else toggleSessionTick(s);
-                          }}
+                          aria-pressed={ticked}
+                          onClick={() => toggleSessionTick(s)}
                         >
-                          <span className="cash-in-bill-amt">
-                            ฿{formatPlainNumber(remit)}
+                          <span className="cash-in-bill-check" aria-hidden>
+                            {ticked ? "✓" : ""}
                           </span>
-                          <span className="cash-in-bill-meta">
-                            <span>
-                              {formatCashDayShort(s.date || s.openedAt || 0)}
+                          <span className="cash-in-bill-body">
+                            <span className="cash-in-bill-amt">
+                              ฿{formatPlainNumber(remit)}
                             </span>
-                            <span>·</span>
-                            <span>{sessionCounterLabel(s)}</span>
-                            <span>·</span>
-                            <span>{billNo}</span>
-                            {opener ? (
-                              <>
-                                <span>·</span>
-                                <span>{opener}</span>
-                              </>
-                            ) : null}
-                            {statusShort ? (
-                              <>
-                                <span>·</span>
-                                <span>{statusShort}</span>
-                              </>
-                            ) : null}
-                            {ticked ? (
-                              <>
-                                <span>·</span>
-                                <span className="cash-in-bill-pos-hint">
-                                  {posSlipCount
-                                    ? `ใบ POS ${posSlipCount}`
-                                    : "แนบใบ POS"}
-                                </span>
-                              </>
-                            ) : null}
+                            <span className="cash-in-bill-meta">
+                              <span>
+                                {formatCashDayShort(s.date || s.openedAt || 0)}
+                              </span>
+                              <span>·</span>
+                              <span>{sessionCounterLabel(s)}</span>
+                              <span>·</span>
+                              <span>{billNo}</span>
+                              {opener ? (
+                                <>
+                                  <span>·</span>
+                                  <span>{opener}</span>
+                                </>
+                              ) : null}
+                              {statusShort ? (
+                                <>
+                                  <span>·</span>
+                                  <span>{statusShort}</span>
+                                </>
+                              ) : null}
+                            </span>
                           </span>
                         </button>
-                        {ticked && dayLine && posSlipCount ? (
-                          <EntryPhotoIndicator
-                            imageUrls={dayLine.slipUrls}
-                            label={`ใบ POS ${billNo}`}
-                            onView={(urls) =>
-                              setImagePreview({
-                                urls,
-                                title: `ใบ POS ${billNo}`,
-                                editTarget: { kind: "day", dayId: dayLine.id },
-                              })
-                            }
-                          />
-                        ) : null}
+                        <div className="cash-in-bill-side">
+                          {dayLine && posSlipCount ? (
+                            <EntryPhotoIndicator
+                              imageUrls={dayLine.slipUrls}
+                              label={`ใบรอบ ${billNo}`}
+                              onView={(urls) =>
+                                setImagePreview({
+                                  urls,
+                                  title: `ใบรอบ ${billNo}`,
+                                  editTarget: {
+                                    kind: "day",
+                                    dayId: dayLine.id,
+                                  },
+                                })
+                              }
+                            />
+                          ) : null}
+                          <button
+                            type="button"
+                            className="ghost-btn cash-in-compact-btn cash-in-bill-attach"
+                            disabled={busy || readOnly}
+                            title={`แนบใบรอบ ${billNo}`}
+                            onClick={() => attachPosPrintForSession(s)}
+                          >
+                            {posSlipCount ? `แนบ ${posSlipCount}` : "แนบ"}
+                          </button>
+                        </div>
                       </div>
                     </li>
                   );

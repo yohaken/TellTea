@@ -21,7 +21,7 @@ const assertRules = read("scripts/assert-firestore-rules.mjs");
 
 const buildMatch = version.match(/APP_BUILD\s*=\s*(\d+)/);
 assert.ok(buildMatch);
-assert.ok(Number(buildMatch[1]) >= 659, `APP_BUILD >= 659, got ${buildMatch[1]}`);
+assert.ok(Number(buildMatch[1]) >= 660, `APP_BUILD >= 660, got ${buildMatch[1]}`);
 assert.equal(existsSync(join(root, "src/components/LedgerModeSwitch.tsx")), false);
 assert.match(ledger, /CashInLedgerPanel/);
 assert.match(ledger, /ledger-ops-duo/);
@@ -30,6 +30,7 @@ assert.match(redirect, /ledger\/\?cashIn=1/);
 assert.match(panel, /export function CashInLedgerPanel/);
 assert.match(panel, /is-tick|toggleSessionTick|queueSessionIntoWorking/);
 assert.match(panel, /clearAllTicks/);
+assert.match(panel, /cash-in-bill-main|cash-in-bill-attach/);
 assert.match(panel, /โอนนำเข้า|รอโอน/);
 assert.match(panel, /cash-in-slim/);
 assert.match(panel, /cash-in-summary-slips/);

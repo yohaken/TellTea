@@ -14,7 +14,7 @@ const read = (p) => readFileSync(join(root, p), "utf8");
 const version = read("src/lib/version.ts");
 const buildMatch = version.match(/APP_BUILD\s*=\s*(\d+)/);
 assert.ok(buildMatch);
-assert.ok(Number(buildMatch[1]) >= 659, `APP_BUILD >= 659, got ${buildMatch[1]}`);
+assert.ok(Number(buildMatch[1]) >= 660, `APP_BUILD >= 660, got ${buildMatch[1]}`);
 
 const remit = read("src/lib/pos-session-remit.ts");
 assert.match(remit, /CASH_IN_NPOS_REMIT_ONLY\s*=\s*true/);
@@ -29,6 +29,7 @@ const panel = read("src/components/CashInLedgerPanel.tsx");
 assert.match(panel, /assertCashDepositDaysNposLinked/);
 assert.match(panel, /is-tick|toggleSessionTick|queueSessionIntoWorking/);
 assert.match(panel, /clearAllTicks|ล้าง/);
+assert.match(panel, /cash-in-bill-main|cash-in-bill-attach/);
 assert.match(panel, /ทุกใบ|queueAllPendingIntoWorking/);
 assert.match(panel, /โอนนำเข้า/);
 assert.match(panel, /cash-in-summary-bar|ยอดเข้าจริง/);
