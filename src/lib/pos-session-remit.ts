@@ -13,6 +13,26 @@ export type PosRemitStatus = "pending" | "handed" | "mismatch";
 
 export const MANUAL_POS_DEVICE_ID = "manual";
 
+/**
+ * Cash-in 「ต้องโอน」uses nPos closed remits only.
+ * Manual / FoodStory / AI day slips are out of the transfer queue.
+ */
+export const CASH_IN_NPOS_REMIT_ONLY = true;
+
+export function isManualPosSession(
+  session: Pick<PosSession, "source" | "deviceId">,
+): boolean {
+  return session.source === "manual" || session.deviceId === MANUAL_POS_DEVICE_ID;
+}
+
+/** Sessions that may fill cash-in day amounts / pending transfer bills. */
+export function isCashInRemitSession(
+  session: Pick<PosSession, "source" | "deviceId">,
+): boolean {
+  if (!CASH_IN_NPOS_REMIT_ONLY) return true;
+  return !isManualPosSession(session);
+}
+
 export type RemitHandoffInput = {
   handedAmount: number;
   handedByName?: string;
@@ -260,6 +280,7 @@ export function sessionsForCashDepositDay(
   if (!day) return [];
   return sessions.filter((s) => {
     if (s.status !== "closed") return false;
+    if (!isCashInRemitSession(s)) return false;
     const sDay = startOfLocalDay(new Date(s.date || s.openedAt || 0));
     return sDay === day && sessionRemitAmount(s) != null;
   });
@@ -294,6 +315,7 @@ export function pendingDepositSessionsForCashIn(
   return sessions
     .filter((s) => {
       if (s.status !== "closed") return false;
+      if (!isCashInRemitSession(s)) return false;
       if (linked.has(s.id)) return false;
       const remit = sessionRemitAmount(s);
       return remit != null && remit > 0;

@@ -14,6 +14,7 @@ import {
   addCalendarDays,
   addCashDeposit,
   analyzeCashDepositDays,
+  assertCashDepositDaysNposLinked,
   buildCashDepositOccupancy,
   buildCashDepositRoundDays,
   CASH_DEPOSIT_BANK_SLIP_MAX,
@@ -39,6 +40,7 @@ import {
   labelCashDepositStatus,
   listCashDeposits,
   subscribeCashDepositsPage,
+  suggestedNetBankTransfer,
   sumBankTransferAmounts,
   sumBankTransferFees,
   sumCashDepositDays,
@@ -47,7 +49,6 @@ import {
 } from "@/lib/cash-deposits";
 import {
   extractCashBankSlipFromPhotos,
-  extractCashDaySlipFromPhotos,
   labelCashFillSource,
 } from "@/lib/cash-deposits-ai";
 import {
@@ -304,9 +305,15 @@ export function CashInLedgerPanel({
   const workingBank = sumBankTransferAmounts(workingTransfers);
   const workingFee = sumBankTransferFees(workingTransfers);
   const expected = sumCashDepositDays(workingDays);
+  /** มัดรวมบิล → ยอดที่ควรโอนเข้าบัญชีหลังหักคชจ. (ไม่ต้องเบิกคชจ.) */
+  const netBankTarget = suggestedNetBankTransfer(expected, workingFee);
   const remainingToTransfer =
-    Math.round((expected - workingBank) * 100) / 100;
+    Math.round((netBankTarget - workingBank) * 100) / 100;
   const variance = cashDepositVariance(workingBank, expected, workingFee);
+  const bundledBillCount = workingDays.reduce(
+    (n, d) => n + (d.sessionIds?.filter((id) => String(id || "").trim()).length || 0),
+    0,
+  );
   const bankSlipUrlCount = flattenBankTransferUrls(workingTransfers).length;
   const coverage = useMemo(
     () =>
@@ -413,8 +420,8 @@ export function CashInLedgerPanel({
     opts?: { fromAi?: boolean },
   ) {
     const fromAi = !!opts?.fromAi;
-    const apply = (rows: CashDepositBankTransfer[]) =>
-      rows.map((t) => {
+    const apply = (rows: CashDepositBankTransfer[]) => {
+      const nextRows = rows.map((t) => {
         if (t.id !== transferId) return t;
         const next: CashDepositBankTransfer = { ...t, ...patch };
         if (!fromAi) {
@@ -423,8 +430,48 @@ export function CashInLedgerPanel({
         }
         return next;
       });
+      // Single-slip bundle: คชจ. เปลี่ยน → ยอดโอนเข้าบช. = มัดรวม − คชจ. (ถ้ายังไม่พิมพ์ยอดเอง)
+      if (
+        !fromAi &&
+        patch.fee != null &&
+        patch.amount == null &&
+        nextRows.length === 1 &&
+        expected > 0
+      ) {
+        const only = nextRows[0]!;
+        const prev = rows[0]!;
+        const prevSuggested = suggestedNetBankTransfer(expected, prev.fee);
+        const amountLooksAuto =
+          !(Number(prev.amount) > 0) ||
+          Math.abs((Number(prev.amount) || 0) - prevSuggested) < 0.005;
+        if (amountLooksAuto || prev.amountSource !== "staff") {
+          only.amount = suggestedNetBankTransfer(expected, only.fee);
+          only.amountSource = "staff";
+        }
+      }
+      return nextRows;
+    };
     if (draft) setDraft({ ...draft, bankTransfers: apply(draft.bankTransfers) });
     else setEditBankTransfers((prev) => apply(prev));
+  }
+
+  /** ใส่ยอดสลิปโอนใบเดียว = มัดรวมบิล − คชจ. */
+  function fillNetBankFromBundle() {
+    if (!expected) {
+      setError("ยังไม่มียอดมัดรวมบิล — ใช้บิลรอโอนหรือกดจากรอบก่อน");
+      return;
+    }
+    if (workingTransfers.length !== 1) {
+      setError("ใส่ยอดอัตโนมัติได้เมื่อมีสลิปโอนใบเดียว — หลายใบให้แจกยอดเอง");
+      return;
+    }
+    const only = workingTransfers[0]!;
+    const net = suggestedNetBankTransfer(expected, only.fee);
+    patchTransfer(only.id, { amount: net });
+    setError(null);
+    setAiHint(
+      `ยอดโอนเข้าบช. ฿${formatPlainNumber(net)} = มัดรวม ฿${formatPlainNumber(expected)} − คชจ. ฿${formatPlainNumber(only.fee || 0)} · ไม่ต้องเบิกคชจ.`,
+    );
   }
 
   function addBankTransfer() {
@@ -474,13 +521,13 @@ export function CashInLedgerPanel({
     else setEditDays((prev) => apply(prev));
   }
 
-  /** R2: fill day cashAmount from closed nPos/manual session remits for that day. */
+  /** R2: fill day cashAmount from closed nPos session remits for that day. */
   function fillDayFromPosSessions(dayId: string) {
     const day = workingDays.find((d) => d.id === dayId);
     if (!day) return;
     const matches = sessionsForCashDepositDay(posSessions, day.date);
     if (!matches.length) {
-      setError("วันนี้ยังไม่มีรอบปิดที่ยอดนำส่ง — ปิดกะที่แท็บเล็ตหรือเพิ่มรอบมือก่อน");
+      setError("วันนี้ยังไม่มีรอบปิด nPos ที่ยอดนำส่ง — ปิดกะที่แท็บเล็ตก่อน");
       return;
     }
     setError(null);
@@ -654,44 +701,6 @@ export function CashInLedgerPanel({
     }
   }
 
-  async function runAiDay(dayId: string, refs: string[], force = false) {
-    const key = `day:${dayId}:${refs.slice(0, 2).join("|")}`;
-    if (!force && lastAiKeyRef.current === key) return;
-    lastAiKeyRef.current = key;
-    setAiBusy(true);
-    setAiHint("AI กำลังอ่านสลิปเงินสด…");
-    try {
-      const result = await extractCashDaySlipFromPhotos(refs.slice(0, 2));
-      const patch: Partial<CashDepositDayLine> = {
-        slipKind: result.slipKind,
-        shiftLabel: result.shiftLabel || undefined,
-      };
-      if (result.cashAmount != null) {
-        patch.cashAmount = result.cashAmount;
-        patch.cashAmountSource = "ai";
-      }
-      // drawerCloseAmount ignored — Expected/Actual รวมเงินทอนเริ่มต้น งงง่าย ไม่ใช้เทียบโอน
-      if (result.date) {
-        try {
-          patch.date = parseDateInput(result.date);
-          patch.dateSource = "ai";
-        } catch {
-          /* ignore bad date */
-        }
-      }
-      patchDay(dayId, patch, { fromAi: true });
-      setAiHint(
-        result.reason
-          ? `AI ใส่วันนี้แล้ว · ${result.reason}`
-          : "AI ใส่วันนี้แล้ว — แก้/ถ่ายใหม่ได้",
-      );
-    } catch (err) {
-      setAiHint((err as Error).message || "AI อ่านสลิปวันไม่สำเร็จ — กรอกเองได้");
-    } finally {
-      setAiBusy(false);
-    }
-  }
-
   async function onPhotoFiles(files: FileList | null) {
     const target = photoTargetRef.current;
     photoTargetRef.current = null;
@@ -737,7 +746,8 @@ export function CashInLedgerPanel({
           });
         if (draft) setDraft({ ...draft, days: merge(draft.days) });
         else setEditDays((prev) => merge(prev));
-        void runAiDay(dayId, nextDayUrls);
+        // Day photos are evidence only — amounts come from nPos remits, not AI/FoodStory slips.
+        setAiHint("แนบรูปวันแล้ว — ยอดบิลนำส่งกด「จากรอบ」หรือใช้บิลรอโอน");
       }
     } catch (err) {
       if (!uploadCancelRef.current) {
@@ -779,6 +789,7 @@ export function CashInLedgerPanel({
         slipUrls: [...d.slipUrls],
         sessionIds: [...(d.sessionIds || [])],
       }));
+      assertCashDepositDaysNposLinked(days);
       const bankTransfers = workingTransfers.map((t) => ({
         ...t,
         amount: Number(t.amount) || 0,
@@ -890,18 +901,22 @@ export function CashInLedgerPanel({
     });
     setError(null);
     setSelectedId(null);
+    const bundleTotal = sumSessionRemits(sessions);
+    const bankRow = emptyCashDepositBankTransfer(endMs);
+    bankRow.amount = suggestedNetBankTransfer(bundleTotal, 0);
+    bankRow.amountSource = "staff";
     setDraft({
       key: `draft-pending-${Date.now()}`,
       transferDate: endMs,
       dayCount: days.length,
       staffName: staffName || "",
-      note: `จากรอบรอฝาก ${sessions.length} รอบ`,
-      bankTransfers: [emptyCashDepositBankTransfer(endMs)],
+      note: `มัดรวมบิลรอโอน ${sessions.length} ใบ`,
+      bankTransfers: [bankRow],
       days,
       aiReason: "",
     });
     setAiHint(
-      `ใส่ ${sessions.length} รอบรอฝาก · Σ นำส่ง ฿${formatPlainNumber(sumSessionRemits(sessions))}`,
+      `มัดรวม ${sessions.length} บิล · ฿${formatPlainNumber(bundleTotal)} · ใส่คชจ.แล้วยอดโอนเข้าบช.จะเหลือ มัดรวม−คชจ. (ไม่ต้องเบิก)`,
     );
     if (!open) {
       setOpen(true);
@@ -1005,7 +1020,8 @@ export function CashInLedgerPanel({
                 <div>
                   <strong>บิลนำส่งรอโอน</strong>
                   <p className="cash-in-pending-sub">
-                    1 ใบ = 1 รอบปิดกะ · ยอดใหญ่คือเงินสดที่ต้องโอนเข้าบัญชีร้าน
+                    1 ใบ = 1 รอบปิด nPos · มัดรวมหลายใบแล้วโอนครั้งเดียวได้ ·
+                    ยอดโอนเข้าบช. = มัดรวม − คชจ. (ไม่ต้องเบิก)
                   </p>
                   <span className="muted cash-in-pending-sum">
                     {pendingDepositSessions.length} ใบ · รวม ฿
@@ -1017,10 +1033,10 @@ export function CashInLedgerPanel({
                     type="button"
                     className="ghost-btn cash-in-ai-reread"
                     disabled={busy}
-                    title="สร้างรอบฝากจากบิลทั้งหมด"
+                    title="มัดรวมทุกบิลเป็นรอบโอนเดียว · ยอดเข้าบช. = รวม − คชจ."
                     onClick={() => startDraftFromSessions(pendingDepositSessions)}
                   >
-                    ใช้ทุกใบ
+                    มัดรวมทุกใบ
                   </button>
                 ) : null}
               </header>
@@ -1065,10 +1081,10 @@ export function CashInLedgerPanel({
                         type="button"
                         className="ghost-btn cash-in-bill-use"
                         disabled={busy}
-                        title="ใช้บิลนี้ใส่รอบฝาก"
+                        title="ใส่บิลนี้เข้ามัดรวมรอบโอน"
                         onClick={() => queueSessionIntoWorking(s)}
                       >
-                        ใช้บิลนี้
+                        ใส่บิลนี้
                       </button>
                     </li>
                   );
@@ -1076,13 +1092,13 @@ export function CashInLedgerPanel({
               </ul>
               {pendingDepositSessions.length > 12 ? (
                 <p className="muted cash-in-pending-more">
-                  +{pendingDepositSessions.length - 12} ใบ — กดใช้ทุกใบ
+                  +{pendingDepositSessions.length - 12} ใบ — กดมัดรวมทุกใบ
                 </p>
               ) : null}
             </section>
           ) : (
             <p className="muted cash-in-hint">
-              ยังไม่มีบิลนำส่งรอโอน · ปิดกะแล้วยอดจะขึ้นเป็นใบที่นี่อัตโนมัติ
+              ยังไม่มีบิลนำส่งรอโอน · ปิดกะ nPos แล้วยอดจะขึ้นที่นี่อัตโนมัติ (ระบบใหม่อย่างเดียว)
             </p>
           )}
 
@@ -1194,7 +1210,7 @@ export function CashInLedgerPanel({
                         <th className="col-date">วัน</th>
                         <th
                           className="col-num"
-                          title="ยอดจากบิลนำส่ง / ยอดขายเงินสดที่ต้องโอนเข้าบัญชี"
+                          title="ยอดจากบิลนำส่ง nPos ที่ต้องโอนเข้าบัญชี"
                         >
                           ยอดบิลนำส่ง
                         </th>
@@ -1465,24 +1481,43 @@ export function CashInLedgerPanel({
                 </button>
               ) : null}
 
-              <p className="cash-in-remain" aria-live="polite">
-                ต้องโอน (Σบิลนำส่ง) {formatPlainNumber(expected)} · โอนแล้ว
-                (Σเข้าบช.สุทธิ) {formatPlainNumber(workingBank)} · คงเหลือ{" "}
-                <strong
-                  className={
-                    remainingToTransfer === 0
-                      ? "is-ok"
-                      : remainingToTransfer > 0
-                        ? "is-off"
-                        : "is-over"
-                  }
-                >
-                  {formatPlainNumber(remainingToTransfer)}
-                </strong>
-                {workingFee
-                  ? ` · Σคชจ. ${formatPlainNumber(workingFee)}`
-                  : ""}
-              </p>
+              <div className="cash-in-remain" aria-live="polite">
+                <p className="cash-in-remain-line">
+                  มัดรวมบิล
+                  {bundledBillCount ? ` ${bundledBillCount} ใบ` : ""}{" "}
+                  {formatPlainNumber(expected)}
+                  {" · "}คชจ. {formatPlainNumber(workingFee)}
+                  {" · "}
+                  <span title="ยอดที่ควรโอนเข้าบัญชี = มัดรวม − คชจ. · ไม่ต้องเบิกคชจ.">
+                    โอนเข้าบช.{" "}
+                    <strong>{formatPlainNumber(netBankTarget)}</strong>
+                  </span>
+                  {" · "}โอนแล้ว {formatPlainNumber(workingBank)}
+                  {" · "}คงเหลือ{" "}
+                  <strong
+                    className={
+                      remainingToTransfer === 0
+                        ? "is-ok"
+                        : remainingToTransfer > 0
+                          ? "is-off"
+                          : "is-over"
+                    }
+                  >
+                    {formatPlainNumber(remainingToTransfer)}
+                  </strong>
+                </p>
+                {editingRound && workingTransfers.length === 1 && expected > 0 ? (
+                  <button
+                    type="button"
+                    className="ghost-btn cash-in-ai-reread"
+                    disabled={busy || readOnly}
+                    title="ใส่ยอดสลิปโอน = มัดรวมบิล − คชจ."
+                    onClick={fillNetBankFromBundle}
+                  >
+                    ใส่ยอดโอน = มัดรวม−คชจ.
+                  </button>
+                ) : null}
+              </div>
 
               {aiHint ? (
                 <p className={aiBusy ? "muted cash-in-ai-hint" : "cash-in-ai-hint"}>
@@ -1499,7 +1534,7 @@ export function CashInLedgerPanel({
                       <th className="col-date">วัน</th>
                       <th
                         className="col-num"
-                        title="ยอดบิลนำส่ง = เงินสดที่ต้องโอนเข้าบัญชี (จากรอบปิดกะหรือสลิป)"
+                        title="ยอดบิลนำส่ง = เงินสดที่ต้องโอนเข้าบัญชี จากรอบปิด nPos เท่านั้น"
                       >
                         ยอดบิลนำส่ง
                       </th>
@@ -1544,7 +1579,11 @@ export function CashInLedgerPanel({
                         </td>
                         <td className="col-num">
                           <div className="cash-in-cell-stack">
-                            {sourceBadge(day.cashAmountSource)}
+                            {day.sessionIds?.length ? (
+                              <span className="cash-in-src is-staff" title="จากรอบปิด nPos">
+                                nPos
+                              </span>
+                            ) : sourceBadge(day.cashAmountSource)}
                             <input
                               type="number"
                               min="0"
@@ -1553,11 +1592,8 @@ export function CashInLedgerPanel({
                               className="cash-in-cell-input is-num"
                               value={day.cashAmount ? String(day.cashAmount) : ""}
                               placeholder="0"
-                              onChange={(e) =>
-                                patchDay(day.id, {
-                                  cashAmount: Number(e.target.value) || 0,
-                                })
-                              }
+                              readOnly
+                              title="ยอดจากรอบปิด nPos เท่านั้น — กด「จากรอบ」หรือใช้บิลรอโอน"
                             />
                             <button
                               type="button"
@@ -1571,8 +1607,8 @@ export function CashInLedgerPanel({
                                   ).filter((s) => !linkedSessionIds.has(s.id) || (day.sessionIds || []).includes(s.id));
                                   const sum = sumSessionRemits(matches);
                                   return matches.length
-                                    ? `ดึง Σ นำส่ง ${matches.length} รอบ = ฿${formatPlainNumber(sum)}`
-                                    : "ดึงยอดนำส่งจากรอบ nPos/มือของวันนี้";
+                                    ? `ดึง Σ นำส่ง nPos ${matches.length} รอบ = ฿${formatPlainNumber(sum)}`
+                                    : "ดึงยอดนำส่งจากรอบปิด nPos ของวันนี้";
                                 })()
                               }
                               onClick={() => fillDayFromPosSessions(day.id)}
@@ -1627,30 +1663,17 @@ export function CashInLedgerPanel({
                                 </button>
                               ) : null}
                               {day.slipUrls.length ? (
-                                <>
-                                  <button
-                                    type="button"
-                                    className="ghost-btn danger-text cash-in-ai-reread"
-                                    disabled={busy}
-                                    onClick={() =>
-                                      clearSlipUrls({ kind: "day", dayId: day.id })
-                                    }
-                                    title="ลบรูปทั้งหมดของวันนี้"
-                                  >
-                                    ลบรูป
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="ghost-btn cash-in-ai-reread"
-                                    disabled={busy || aiBusy}
-                                    onClick={() =>
-                                      void runAiDay(day.id, day.slipUrls, true)
-                                    }
-                                    title="ให้อ่านสลิปใหม่"
-                                  >
-                                    AI
-                                  </button>
-                                </>
+                                <button
+                                  type="button"
+                                  className="ghost-btn danger-text cash-in-ai-reread"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    clearSlipUrls({ kind: "day", dayId: day.id })
+                                  }
+                                  title="ลบรูปทั้งหมดของวันนี้"
+                                >
+                                  ลบรูป
+                                </button>
                               ) : null}
                             </div>
                           </div>
@@ -1693,11 +1716,9 @@ export function CashInLedgerPanel({
 
               <div className="cash-in-math is-slim" aria-live="polite">
                 <span>
-                  Σบิลนำส่ง {formatPlainNumber(expected)} · Σเข้าบช.สุทธิ{" "}
+                  มัดรวม {formatPlainNumber(expected)} · เข้าบช.{" "}
                   {formatPlainNumber(workingBank)}
-                  {workingFee
-                    ? ` · Σคชจ. ${formatPlainNumber(workingFee)}`
-                    : " · Σคชจ. 0"}
+                  {" · "}คชจ. {formatPlainNumber(workingFee)}
                   {bankSlipUrlCount
                     ? ` · สลิปโอน ${bankSlipUrlCount} รูป`
                     : ""}{" "}
@@ -1709,7 +1730,7 @@ export function CashInLedgerPanel({
                   </strong>
                 </span>
                 <span className="muted cash-in-math-formula">
-                  (Σเข้าบช.สุทธิ + Σคชจ) − Σบิลนำส่ง
+                  เข้าบช. + คชจ. = มัดรวมบิล · ยอดโอนเข้าบช. = มัดรวม − คชจ. · ไม่ต้องเบิก
                 </span>
               </div>
 
