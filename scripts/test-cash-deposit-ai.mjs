@@ -45,12 +45,11 @@ assert.doesNotMatch(panel, /runAiDay|extractCashDaySlipFromPhotos/);
 assert.match(panel, /เข้าบช\./);
 assert.match(panel, /เหลือ|remainingToTransfer/);
 assert.match(panel, /คชจ\.|transferFee|workingFee/);
-assert.match(panel, /ใส่โดยพนักงาน|is-staff|cash-in-src/);
 assert.match(panel, /อ่านสลิป|title="อ่านสลิป"/);
-assert.match(panel, /\+สลิป/);
-assert.match(panel, /cash-in-bank-table/);
+assert.match(panel, /\+สลิปโอน|\+สลิป/);
+assert.match(panel, /cash-in-summary-slips|cash-in-bank-table/);
 assert.match(panel, /addBankTransfer/);
-assert.match(panel, /ในมัด|is-tap/);
+assert.match(panel, /is-tick|clearAllTicks/);
 assert.doesNotMatch(panel, />\s*ใส่ยอด\s*</);
 assert.match(client, /extractCashDaySlipFromPhotos/);
 
