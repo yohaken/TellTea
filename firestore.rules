@@ -915,9 +915,41 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    /** พนักงานที่ลิงก์กับ employees/{empId} — ใช้เมื่อ staff.employeeId ว่าง/ค้าง */
+    function employeeLinkedToMe(empId) {
+      return empId is string
+        && empId.size() > 0
+        && exists(employeeDocPath(empId))
+        && (
+          (get(employeeDocPath(empId)).data.keys().hasAny(['linkedStaffId'])
+            && get(employeeDocPath(empId)).data.linkedStaffId == resolvedStaffId())
+          || (hasEmail()
+            && get(employeeDocPath(empId)).data.keys().hasAny(['linkedEmail'])
+            && get(employeeDocPath(empId)).data.linkedEmail == authEmail())
+          || (hasPhone()
+            && get(employeeDocPath(empId)).data.keys().hasAny(['linkedPhone'])
+            && get(employeeDocPath(empId)).data.linkedPhone == authPhone())
+        );
+    }
+
+    /** ตรวจ assigneeIds สูงสุด 8 คน — rules วน list แบบไดนามิกไม่ได้ */
+    function assigneeListHasLinkedEmployee(ids) {
+      return (ids.size() > 0 && employeeLinkedToMe(ids[0]))
+        || (ids.size() > 1 && employeeLinkedToMe(ids[1]))
+        || (ids.size() > 2 && employeeLinkedToMe(ids[2]))
+        || (ids.size() > 3 && employeeLinkedToMe(ids[3]))
+        || (ids.size() > 4 && employeeLinkedToMe(ids[4]))
+        || (ids.size() > 5 && employeeLinkedToMe(ids[5]))
+        || (ids.size() > 6 && employeeLinkedToMe(ids[6]))
+        || (ids.size() > 7 && employeeLinkedToMe(ids[7]));
+    }
+
     function isTaskOccurrenceAssignee() {
-      return staffEmployeeId() != ''
-        && staffEmployeeId() in resource.data.assigneeIds;
+      return (staffEmployeeId() != ''
+          && staffEmployeeId() in resource.data.assigneeIds)
+        || (resource.data.keys().hasAny(['assigneeIds'])
+          && resource.data.assigneeIds is list
+          && assigneeListHasLinkedEmployee(resource.data.assigneeIds));
     }
 
     function taskOccurrenceAssigneeComplete() {

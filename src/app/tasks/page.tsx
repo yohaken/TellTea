@@ -15,6 +15,7 @@ import { ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
+import { useMyTaskAssigneeId } from "@/hooks/use-my-task-assignee-id";
 import { useAuth } from "@/lib/auth";
 import { resolveWorkerDisplayNames } from "@/lib/employee-rename-propagate";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
@@ -98,7 +99,8 @@ function TasksView() {
   const isOwnerManager =
     !isPermPreview &&
     (staff?.role === "owner" || isAppOwnerEmail(user?.email));
-  const myEmployeeId = staff?.employeeId || "";
+  /** ลิงก์ canonical / heal — อย่าใช้ staff.employeeId ล้วน (ค้างแล้วงานหาย) */
+  const { employeeId: myEmployeeId, ready: assigneeReady } = useMyTaskAssigneeId();
 
   const [templates, setTemplates] = useState<TaskTemplate[]>([]);
   const [occurrences, setOccurrences] = useState<TaskOccurrence[]>([]);
@@ -192,6 +194,11 @@ function TasksView() {
       };
     }
 
+    if (!assigneeReady) {
+      setLoading(true);
+      return;
+    }
+
     if (!myEmployeeId) {
       setTemplates([]);
       setOccurrences([]);
@@ -214,7 +221,7 @@ function TasksView() {
       { since: taskOccurrenceSinceMs() },
     );
     return () => unsubOcc();
-  }, [staff, isOwnerManager, myEmployeeId]);
+  }, [staff, isOwnerManager, myEmployeeId, assigneeReady]);
 
   useEffect(() => {
     if (!isOwnerManager || loading || syncedRef.current) return;

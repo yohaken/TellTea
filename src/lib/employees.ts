@@ -120,6 +120,21 @@ export function resolveMyWorkerId(
   return resolveLinkedEmployee(employees, staff)?.id || "";
 }
 
+/**
+ * ID สำหรับดึงงานมอบหมาย (taskOccurrences.assigneeIds)
+ * ให้ลิงก์ canonical (linkedStaffId / อีเมล / เบอร์) ชนะ staff.employeeId ที่อาจค้างผิด
+ * — กันเคสเจ้าของเห็นชื่อผู้รับ แต่พนักงานมองไม่เห็นงาน
+ */
+export function resolveTaskAssigneeId(
+  employees: Employee[],
+  staff: Pick<StaffMember, "id" | "email" | "phone" | "displayName" | "employeeId"> | null | undefined,
+): string {
+  if (!staff || !employees.length) return "";
+  const byLink = employees.find((e) => isLinkedToStaff(e, staff as StaffMember));
+  if (byLink) return byLink.id;
+  return resolveMyWorkerId(employees, staff);
+}
+
 function isUnlinked(emp: Employee): boolean {
   return !emp.linkedStaffId && !emp.linkedEmail && !emp.linkedPhone;
 }

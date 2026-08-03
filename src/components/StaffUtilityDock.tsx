@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Sparkles, X } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
+import { useMyTaskAssigneeId } from "@/hooks/use-my-task-assignee-id";
 import { StaffUtilityPanel } from "@/components/StaffUtilityPanel";
 import { staffUtilityAttentionCount } from "@/lib/staff-utility";
 import {
@@ -26,7 +27,7 @@ export function StaffUtilityDock() {
   const [pendingTasks, setPendingTasks] = useState(0);
 
   const ready = status === "ready" && !!staff && !isOwner;
-  const myEmployeeId = staff?.employeeId || "";
+  const { employeeId: myEmployeeId, ready: assigneeReady } = useMyTaskAssigneeId();
   useBodyScrollLock(open);
 
   useEffect(() => {
@@ -34,7 +35,7 @@ export function StaffUtilityDock() {
   }, [pathname]);
 
   useEffect(() => {
-    if (!ready || !myEmployeeId) {
+    if (!ready || !assigneeReady || !myEmployeeId) {
       setPendingTasks(0);
       return;
     }
@@ -46,7 +47,7 @@ export function StaffUtilityDock() {
       () => setPendingTasks(0),
       { since: taskOccurrenceSinceMs() },
     );
-  }, [ready, myEmployeeId]);
+  }, [ready, assigneeReady, myEmployeeId]);
 
   const attention = useMemo(
     () =>

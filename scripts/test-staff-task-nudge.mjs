@@ -29,18 +29,28 @@ assert.match(tasksSrc, /มีกำหนด/);
 assert.match(rulesSrc, /nudgeKind/);
 assert.match(versionSrc, /APP_BUILD = \d+/);
 
+function nudgeSortRank(item) {
+  if (item.status === "waiting") return 1;
+  return item.nudgeKind === "deadline" ? 0 : 2;
+}
+
 function actionableStaffTaskNudges(occurrences, now = Date.now()) {
   return occurrences
-    .filter((o) => o.status === "pending" && now >= (o.openAt || 0))
+    .filter(
+      (o) =>
+        (o.status === "pending" || o.status === "waiting") &&
+        now >= (o.openAt || 0),
+    )
     .map((o) => ({
       id: o.id,
       title: o.title,
       dueDate: o.dueDate,
       nudgeKind: o.nudgeKind === "soft" ? "soft" : "deadline",
+      status: o.status === "waiting" ? "waiting" : "pending",
     }))
     .sort((a, b) => {
-      const ua = a.nudgeKind === "deadline" ? 0 : 1;
-      const ub = b.nudgeKind === "deadline" ? 0 : 1;
+      const ua = nudgeSortRank(a);
+      const ub = nudgeSortRank(b);
       if (ua !== ub) return ua - ub;
       return a.dueDate - b.dueDate;
     });
@@ -81,12 +91,23 @@ const rows = actionableStaffTaskNudges(
       dueDate: now,
       nudgeKind: "deadline",
     },
+    {
+      id: "e",
+      status: "waiting",
+      openAt: now - 1000,
+      title: "รอร้าน",
+      dueDate: now + 7200000,
+      nudgeKind: "deadline",
+    },
   ],
   now,
 );
 
-assert.equal(rows.length, 2);
+assert.equal(rows.length, 3);
 assert.equal(rows[0].id, "b");
-assert.equal(rows[1].id, "a");
+assert.equal(rows[1].id, "e");
+assert.equal(rows[2].id, "a");
+assert.match(uiSrc, /useMyTaskAssigneeId/);
+assert.match(nudgeLib, /status === "waiting"/);
 
 console.log("OK test-staff-task-nudge");

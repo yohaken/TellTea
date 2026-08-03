@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronUp, ListTodo, X } from "lucide-react";
+import { useMyTaskAssigneeId } from "@/hooks/use-my-task-assignee-id";
 import { useAuth } from "@/lib/auth";
 import {
   subscribeTaskOccurrencesForAssignee,
@@ -33,8 +34,9 @@ function writeDismissed(fp: string) {
 export function StaffTaskNudge() {
   const { staff, status } = useAuth();
   const isOwner = staff?.role === "owner";
-  const myEmployeeId = staff?.employeeId || "";
-  const ready = status === "ready" && !!staff && !isOwner && !!myEmployeeId;
+  const { employeeId: myEmployeeId, ready: assigneeReady } = useMyTaskAssigneeId();
+  const ready =
+    status === "ready" && !!staff && !isOwner && assigneeReady && !!myEmployeeId;
 
   const [items, setItems] = useState<StaffTaskNudgeItem[]>([]);
   const [popupOpen, setPopupOpen] = useState(false);
@@ -87,6 +89,11 @@ export function StaffTaskNudge() {
                 {summary.deadline ? (
                   <span className="staff-task-nudge-pill is-deadline">
                     กำหนด {summary.deadline}
+                  </span>
+                ) : null}
+                {summary.waiting ? (
+                  <span className="staff-task-nudge-pill is-waiting">
+                    รออยู่ {summary.waiting}
                   </span>
                 ) : null}
                 {summary.soft ? (
@@ -150,10 +157,22 @@ export function StaffTaskNudge() {
             {items.slice(0, 6).map((item) => (
               <li key={item.id}>
                 <span
-                  className={`staff-task-nudge-kind is-${item.nudgeKind}`}
-                  title={item.nudgeKind === "deadline" ? "มีกำหนด" : "แจ้งเบา"}
+                  className={`staff-task-nudge-kind is-${
+                    item.status === "waiting" ? "waiting" : item.nudgeKind
+                  }`}
+                  title={
+                    item.status === "waiting"
+                      ? "รออยู่"
+                      : item.nudgeKind === "deadline"
+                        ? "มีกำหนด"
+                        : "แจ้งเบา"
+                  }
                 >
-                  {item.nudgeKind === "deadline" ? "กำหนด" : "เบา"}
+                  {item.status === "waiting"
+                    ? "รอ"
+                    : item.nudgeKind === "deadline"
+                      ? "กำหนด"
+                      : "เบา"}
                 </span>
                 <span className="staff-task-nudge-list-title">{item.title}</span>
                 {item.nudgeKind === "deadline" && item.dueDate ? (
