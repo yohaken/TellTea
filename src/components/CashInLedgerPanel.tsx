@@ -57,7 +57,6 @@ import {
   deriveRemitStatus,
   fillDayCashFromSessions,
   groupSessionsBySalesDay,
-  linkedSessionIdsFromDeposits,
   pendingDepositSessionsForCashIn,
   sessionCounterLabel,
   sessionRemitAmount,
@@ -652,23 +651,39 @@ export function CashInLedgerPanel({
 
   const editingRound = !!draft || !!selected;
 
-  const linkedSessionIds = useMemo(
-    () => linkedSessionIdsFromDeposits(entries),
-    [entries],
-  );
-  /** Saved deposits + bills already in the open bundle — ไม่โชว์ซ้ำในคิวรอ */
-  const blockedSessionIds = useMemo(() => {
-    const ids = new Set(linkedSessionIds);
-    for (const id of workingSessionIds) ids.add(id);
-    return ids;
-  }, [linkedSessionIds, workingSessionIds]);
+  /**
+   * คิวติ๊ก: ซ่อนเฉพาะบิลที่ผูกมัดอื่นแล้ว
+   * — มัดที่กำลังแก้/ร่าง ยังโชว์ในคิวเป็นติ๊กแล้ว
+   */
+  const linkedOutsideWorking = useMemo(() => {
+    const out = new Set<string>();
+    for (const dep of entries) {
+      if (String(dep.status || "") === "void") continue;
+      if (selected && dep.id === selected.id) continue;
+      for (const day of dep.days || []) {
+        for (const id of day.sessionIds || []) {
+          const t = String(id || "").trim();
+          if (t) out.add(t);
+        }
+      }
+    }
+    return out;
+  }, [entries, selected]);
   const pendingDepositSessions = useMemo(
-    () => pendingDepositSessionsForCashIn(posSessions, blockedSessionIds),
-    [posSessions, blockedSessionIds],
+    () => pendingDepositSessionsForCashIn(posSessions, linkedOutsideWorking),
+    [posSessions, linkedOutsideWorking],
   );
   const pendingDepositSum = useMemo(
     () => sumSessionRemits(pendingDepositSessions),
     [pendingDepositSessions],
+  );
+  const untickedPendingSessions = useMemo(
+    () => pendingDepositSessions.filter((s) => !workingSessionIds.has(s.id)),
+    [pendingDepositSessions, workingSessionIds],
+  );
+  const untickedPendingSum = useMemo(
+    () => sumSessionRemits(untickedPendingSessions),
+    [untickedPendingSessions],
   );
   /** บิลที่อยู่ในมัดรวมตอนนี้ — แสดงรายการชัดๆ */
   const bundledBills = useMemo(() => {
@@ -785,7 +800,7 @@ export function CashInLedgerPanel({
     let added = 0;
     let skipped = 0;
     for (const session of sessions) {
-      if (have.has(session.id) || linkedSessionIds.has(session.id)) {
+      if (have.has(session.id) || linkedOutsideWorking.has(session.id)) {
         skipped += 1;
         continue;
       }
@@ -830,7 +845,8 @@ export function CashInLedgerPanel({
   }
 
   function queueSessionIntoWorking(session: PosSession) {
-    if (workingSessionIds.has(session.id) || linkedSessionIds.has(session.id)) {
+    if (workingSessionIds.has(session.id)) return;
+    if (linkedOutsideWorking.has(session.id)) {
       setError(`ซ้ำ ${posSessionCode(session.id)}`);
       return;
     }
@@ -852,14 +868,14 @@ export function CashInLedgerPanel({
   }
 
   function queueAllPendingIntoWorking() {
-    if (!pendingDepositSessions.length) return;
+    if (!untickedPendingSessions.length) return;
     if (!editingRound) {
-      startDraftFromSessions(pendingDepositSessions);
+      startDraftFromSessions(untickedPendingSessions);
       return;
     }
     const { days: nextDays, added, skipped } = mergeSessionsIntoDays(
       workingDays,
-      pendingDepositSessions,
+      untickedPendingSessions,
     );
     if (!added) {
       setError("ครบแล้ว");
@@ -871,6 +887,14 @@ export function CashInLedgerPanel({
     setAiHint(
       `+${added}` + (skipped ? ` · ซ้ำ ${skipped}` : "") + ` · รวม ${workingSessionIds.size + added}`,
     );
+  }
+
+  function toggleSessionTick(session: PosSession) {
+    if (workingSessionIds.has(session.id)) {
+      removeSessionFromWorking(session.id);
+      return;
+    }
+    queueSessionIntoWorking(session);
   }
 
   function removeSessionFromWorking(sessionId: string) {
@@ -898,6 +922,12 @@ export function CashInLedgerPanel({
       });
     }
     if (!nextDays.length) {
+      if (draft) {
+        setDraft(null);
+        setError(null);
+        setAiHint("");
+        return;
+      }
       setError("มัดรวมต้องมีอย่างน้อย 1 บิล");
       return;
     }
@@ -922,15 +952,19 @@ export function CashInLedgerPanel({
 
   const toggleMeta = (() => {
     if (editingRound && bundledBillCount) {
-      return `${bundledBillCount} บิล · ฿${formatPlainNumber(expected)}`;
+      return `ติ๊ก ${bundledBillCount} · ฿${formatPlainNumber(expected)}`;
+    }
+    if (untickedPendingSessions.length) {
+      return `รอ ${untickedPendingSessions.length} · ฿${formatPlainNumber(untickedPendingSum)}`;
     }
     if (pendingDepositSessions.length) {
       return `รอ ${pendingDepositSessions.length} · ฿${formatPlainNumber(pendingDepositSum)}`;
     }
     if (loading && !entries.length) return "…";
     if (pendingCount > 0) return `รอตรวจ ${pendingCount}`;
-    return "กดบิลเพื่อใส่";
+    return "ติ๊กบิลเพื่อโอน";
   })();
+  const primaryTransfer = workingTransfers[0] ?? null;
 
   return (
     <aside className="cash-in-panel" aria-label="โอนนำเข้า">
@@ -956,23 +990,28 @@ export function CashInLedgerPanel({
           {pendingDepositSessions.length ? (
             <section
               className="cash-in-pending-rounds"
-              aria-label="บิลรอใส่"
+              aria-label="บิลรอโอน"
             >
               <header className="cash-in-pending-head">
                 <div>
-                  <strong>รอใส่</strong>
+                  <strong>รอโอน</strong>
                   <span className="muted cash-in-pending-sum">
                     {" "}
                     {pendingDepositSessions.length} · ฿
                     {formatPlainNumber(pendingDepositSum)}
+                    {bundledBillCount ? (
+                      <>
+                        {" · "}ติ๊ก {bundledBillCount}
+                      </>
+                    ) : null}
                   </span>
                 </div>
-                {pendingDepositSessions.length > 1 ? (
+                {untickedPendingSessions.length > 1 ? (
                   <button
                     type="button"
                     className="ghost-btn cash-in-compact-btn"
                     disabled={busy || readOnly}
-                    title="ใส่ทุกใบ"
+                    title="ติ๊กทุกใบ"
                     onClick={queueAllPendingIntoWorking}
                   >
                     ทุกใบ
@@ -985,6 +1024,7 @@ export function CashInLedgerPanel({
                   const handoff = deriveRemitStatus(s);
                   const opener = (s.openedByName || "").trim();
                   const billNo = posSessionCode(s.id);
+                  const ticked = workingSessionIds.has(s.id);
                   const statusShort =
                     handoff === "handed"
                       ? "ส่งแล้ว"
@@ -995,11 +1035,20 @@ export function CashInLedgerPanel({
                     <li key={s.id}>
                       <button
                         type="button"
-                        className="cash-in-bill-card is-tap"
+                        className={[
+                          "cash-in-bill-card is-tick",
+                          ticked ? "is-on" : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
                         disabled={busy || readOnly}
-                        title={`ใส่บิล ${billNo}`}
-                        onClick={() => queueSessionIntoWorking(s)}
+                        title={ticked ? `ยกเลิก ${billNo}` : `ติ๊กบิล ${billNo}`}
+                        aria-pressed={ticked}
+                        onClick={() => toggleSessionTick(s)}
                       >
+                        <span className="cash-in-bill-check" aria-hidden>
+                          {ticked ? "✓" : ""}
+                        </span>
                         <span className="cash-in-bill-amt">
                           ฿{formatPlainNumber(remit)}
                         </span>
@@ -1022,9 +1071,6 @@ export function CashInLedgerPanel({
                             </>
                           ) : null}
                         </span>
-                        <span className="cash-in-bill-use" aria-hidden>
-                          ใส่
-                        </span>
                       </button>
                     </li>
                   );
@@ -1045,6 +1091,95 @@ export function CashInLedgerPanel({
           ) : null}
 
           {error ? <p className="error-text">{error}</p> : null}
+
+          {bundledBillCount >= 1 ? (
+            <div
+              className="cash-in-summary-bar cash-in-remain"
+              aria-live="polite"
+            >
+              <div className="cash-in-summary-rows">
+                <div className="cash-in-summary-row">
+                  <span>ยอดรวม</span>
+                  <strong>฿{formatPlainNumber(expected)}</strong>
+                </div>
+                <div className="cash-in-summary-row">
+                  <span>โอนเงินตามยอดนี้</span>
+                  <strong>฿{formatPlainNumber(expected)}</strong>
+                </div>
+                <div className="cash-in-summary-row is-fee">
+                  <span>คชจ.โอน</span>
+                  {primaryTransfer && workingTransfers.length === 1 && !readOnly ? (
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      inputMode="decimal"
+                      className="cash-in-cell-input is-num cash-in-summary-fee"
+                      placeholder="0"
+                      value={
+                        primaryTransfer.fee ? String(primaryTransfer.fee) : ""
+                      }
+                      onChange={(e) =>
+                        patchTransfer(primaryTransfer.id, {
+                          fee: Number(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  ) : (
+                    <strong>฿{formatPlainNumber(workingFee)}</strong>
+                  )}
+                </div>
+                <div className="cash-in-summary-row is-net">
+                  <span>ยอดเข้าจริง</span>
+                  <strong className="is-ok">
+                    ฿{formatPlainNumber(netBankTarget)}
+                  </strong>
+                </div>
+                <p className="cash-in-remain-line cash-in-summary-formula">
+                  ยอดโอนรวม {formatPlainNumber(expected)} − คชจ.{" "}
+                  {formatPlainNumber(workingFee)} = ยอดเข้าจริง{" "}
+                  {formatPlainNumber(netBankTarget)}
+                  {bankSlipUrlCount ? ` · รูป ${bankSlipUrlCount}` : ""}
+                  {remainingToTransfer !== 0
+                    ? ` · เหลือใส่สลิป ${formatPlainNumber(remainingToTransfer)}`
+                    : variance === 0
+                      ? " · ตรง"
+                      : ` · ${variance > 0 ? "+" : ""}${formatPlainNumber(variance)}`}
+                </p>
+              </div>
+              <div className="cash-in-round-actions">
+                <button
+                  type="button"
+                  className="primary-btn action-in cash-in-compact-btn"
+                  disabled={busy || !!coverage.issues.length || !bundledBillCount}
+                  onClick={() => void saveWorking()}
+                >
+                  {busy ? "…" : "บันทึก"}
+                </button>
+                <button
+                  type="button"
+                  className="ghost-btn cash-in-compact-btn"
+                  disabled={busy}
+                  onClick={() => {
+                    setDraft(null);
+                    setSelectedId(null);
+                  }}
+                >
+                  ปิด
+                </button>
+                {selected && (isOwner || selected.createdBy === actorId) ? (
+                  <button
+                    type="button"
+                    className="ghost-btn danger-text cash-in-compact-btn"
+                    disabled={busy}
+                    onClick={() => void onDeleteRound()}
+                  >
+                    ลบ
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
 
           {/* Round chips */}
           {entries.length || draft ? (
@@ -1103,7 +1238,7 @@ export function CashInLedgerPanel({
               {loading && !flatRows.length ? (
                 <p className="empty">…</p>
               ) : !flatRows.length ? (
-                <p className="empty">ยังไม่มีมัดรวม · กดบิลด้านบนเพื่อใส่</p>
+                <p className="empty">ยังไม่มีมัดรวม · ติ๊กบิลด้านบนเพื่อโอน</p>
               ) : (
                 <div className="sheet-wrap cash-in-panel-table-wrap">
                   <table className="sheet-table cash-in-slim">
@@ -1183,7 +1318,7 @@ export function CashInLedgerPanel({
             </>
           ) : null}
 
-          {/* Edit / draft — bundle first, then bank slip */}
+          {/* Edit / draft — slip + sticky summary */}
           {editingRound ? (
             <div className="cash-in-round-edit">
               <section
@@ -1193,71 +1328,27 @@ export function CashInLedgerPanel({
                 <header className="cash-in-bundle-head">
                   <strong>ในมัด</strong>
                   <span className="muted">
-                    {bundledBillCount} · ฿{formatPlainNumber(expected)}
+                    ติ๊ก {bundledBillCount} · ฿{formatPlainNumber(expected)}
                   </span>
                 </header>
-                {bundledBills.length ? (
-                  <ul className="cash-in-bundle-list">
-                    {bundledBills.map((row, idx) => {
-                      const billNo = posSessionCode(row.sessionId);
-                      return (
-                        <li key={row.sessionId} className="cash-in-bundle-row">
-                          <div className="cash-in-bundle-main">
-                            <span className="cash-in-bill-tag">#{idx + 1}</span>
-                            <span className="cash-in-bill-no" title={row.sessionId}>
-                              {billNo}
-                            </span>
-                            <span className="muted">
-                              {formatCashDayShort(row.date)}
-                              {row.session
-                                ? ` · ${sessionCounterLabel(row.session)}`
-                                : ""}
-                            </span>
-                            <span className="cash-in-bundle-amt">
-                              ฿{formatPlainNumber(row.remit)}
-                            </span>
-                            {!readOnly ? (
-                              <button
-                                type="button"
-                                className="ghost-btn danger-text cash-in-compact-btn"
-                                disabled={busy || bundledBillCount <= 1}
-                                title="เอาออก"
-                                onClick={() => removeSessionFromWorking(row.sessionId)}
-                              >
-                                ×
-                              </button>
-                            ) : null}
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                {!bundledBillCount ? (
+                  <p className="muted cash-in-hint">ติ๊กบิลด้านบนเพื่อโอน</p>
+                ) : bundledBills.length > 3 ? (
+                  <p className="muted cash-in-hint">
+                    {bundledBills
+                      .slice(0, 3)
+                      .map((row) => posSessionCode(row.sessionId))
+                      .join(" · ")}
+                    {" · "}+{bundledBills.length - 3}
+                  </p>
                 ) : (
-                  <p className="muted cash-in-hint">กดบิลด้านบนเพื่อใส่</p>
+                  <p className="muted cash-in-hint">
+                    {bundledBills
+                      .map((row) => posSessionCode(row.sessionId))
+                      .join(" · ")}
+                  </p>
                 )}
               </section>
-
-              <div className="cash-in-remain" aria-live="polite">
-                <p className="cash-in-remain-line">
-                  รวม ฿{formatPlainNumber(expected)}
-                  {" · "}คชจ. {formatPlainNumber(workingFee)}
-                  {" · "}โอน{" "}
-                  <strong>{formatPlainNumber(netBankTarget)}</strong>
-                  {" · "}เข้าแล้ว {formatPlainNumber(workingBank)}
-                  {" · "}เหลือ{" "}
-                  <strong
-                    className={
-                      remainingToTransfer === 0
-                        ? "is-ok"
-                        : remainingToTransfer > 0
-                          ? "is-off"
-                          : "is-over"
-                    }
-                  >
-                    {formatPlainNumber(remainingToTransfer)}
-                  </strong>
-                </p>
-              </div>
 
               <div className="cash-in-round-meta">
                 <label className="cash-in-create-field">
@@ -1461,20 +1552,6 @@ export function CashInLedgerPanel({
                 </p>
               ) : null}
 
-              <div className="cash-in-math is-slim" aria-live="polite">
-                <span>
-                  {bundledBillCount} บิล · รวม ฿{formatPlainNumber(expected)} ·
-                  เข้า {formatPlainNumber(workingBank)} · คชจ.{" "}
-                  {formatPlainNumber(workingFee)}
-                  {bankSlipUrlCount ? ` · รูป ${bankSlipUrlCount}` : ""} ·{" "}
-                  <strong className={variance === 0 ? "is-ok" : "is-off"}>
-                    {variance === 0
-                      ? "ตรง"
-                      : `${variance > 0 ? "+" : ""}${formatPlainNumber(variance)}`}
-                  </strong>
-                </span>
-              </div>
-
               {coverage.issues.length ? (
                 <ul className="cash-in-issues">
                   {coverage.issues.slice(0, 3).map((issue, i) => (
@@ -1482,38 +1559,6 @@ export function CashInLedgerPanel({
                   ))}
                 </ul>
               ) : null}
-
-              <div className="cash-in-round-actions">
-                <button
-                  type="button"
-                  className="primary-btn action-in cash-in-compact-btn"
-                  disabled={busy || !!coverage.issues.length || !bundledBillCount}
-                  onClick={() => void saveWorking()}
-                >
-                  {busy ? "…" : "บันทึก"}
-                </button>
-                <button
-                  type="button"
-                  className="ghost-btn cash-in-compact-btn"
-                  disabled={busy}
-                  onClick={() => {
-                    setDraft(null);
-                    setSelectedId(null);
-                  }}
-                >
-                  ปิด
-                </button>
-                {selected && (isOwner || selected.createdBy === actorId) ? (
-                  <button
-                    type="button"
-                    className="ghost-btn danger-text cash-in-compact-btn"
-                    disabled={busy}
-                    onClick={() => void onDeleteRound()}
-                  >
-                    ลบ
-                  </button>
-                ) : null}
-              </div>
 
               {selected && isOwner ? (
                 <div className="cash-in-verify is-slim">

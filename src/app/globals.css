@@ -22448,7 +22448,8 @@ a.ghost-btn {
   border-radius: 0.75rem;
   background: rgba(28, 42, 31, 0.035);
   border: 1px solid rgba(28, 42, 31, 0.08);
-  overflow: hidden;
+  /* visible so sticky summary bar can pin while scrolling slips */
+  overflow: visible;
 }
 
 .cash-in-panel-toggle {
@@ -22526,7 +22527,7 @@ a.ghost-btn {
 
 .cash-in-bill-card {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1.35rem 1fr;
   grid-template-rows: auto auto;
   column-gap: 0.4rem;
   row-gap: 0.08rem;
@@ -22542,13 +22543,44 @@ a.ghost-btn {
   cursor: pointer;
 }
 
-.cash-in-bill-card.is-tap:disabled {
+.cash-in-bill-card.is-tap:disabled,
+.cash-in-bill-card.is-tick:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
 
-.cash-in-bill-card.is-tap:not(:disabled):active {
+.cash-in-bill-card.is-tap:not(:disabled):active,
+.cash-in-bill-card.is-tick:not(:disabled):active {
   background: rgba(127, 183, 126, 0.18);
+}
+
+.cash-in-bill-card.is-on {
+  border-color: rgba(47, 107, 79, 0.45);
+  background: rgba(127, 183, 126, 0.16);
+}
+
+.cash-in-bill-check {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  align-self: center;
+  justify-self: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 0.22rem;
+  border: 1.5px solid rgba(28, 42, 31, 0.28);
+  background: #fff;
+  color: #1e6036;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cash-in-bill-card.is-on .cash-in-bill-check {
+  border-color: rgba(47, 107, 79, 0.7);
+  background: rgba(47, 107, 79, 0.14);
 }
 
 .cash-in-bill-tag {
@@ -22564,7 +22596,7 @@ a.ghost-btn {
 }
 
 .cash-in-bill-amt {
-  grid-column: 1;
+  grid-column: 2;
   grid-row: 1;
   margin: 0;
   font-size: 1.05rem;
@@ -22575,7 +22607,7 @@ a.ghost-btn {
 }
 
 .cash-in-bill-meta {
-  grid-column: 1;
+  grid-column: 2;
   grid-row: 2;
   margin: 0;
   display: flex;
@@ -22589,6 +22621,7 @@ a.ghost-btn {
   grid-column: 2;
   grid-row: 1 / span 2;
   align-self: center;
+  justify-self: end;
   white-space: nowrap;
   width: fit-content;
   padding: 0.2rem 0.45rem;
@@ -22930,6 +22963,57 @@ a.ghost-btn {
   border-radius: 0.35rem;
   display: grid;
   gap: 0.25rem;
+}
+
+.cash-in-summary-bar {
+  position: sticky;
+  bottom: 0.35rem;
+  z-index: 3;
+  margin: 0.45rem 0 0.55rem;
+  padding: 0.55rem 0.55rem;
+  border-radius: 0.45rem;
+  border: 1px solid rgba(47, 107, 79, 0.22);
+  border-top: 1px solid rgba(47, 107, 79, 0.22);
+  background: rgba(245, 250, 246, 0.98);
+  box-shadow: 0 4px 16px rgba(28, 42, 31, 0.08);
+  gap: 0.4rem;
+}
+
+.cash-in-summary-rows {
+  display: grid;
+  gap: 0.22rem;
+}
+
+.cash-in-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.78rem;
+}
+
+.cash-in-summary-row strong {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.92rem;
+}
+
+.cash-in-summary-row.is-net strong {
+  font-size: 1.05rem;
+}
+
+.cash-in-summary-row.is-fee {
+  align-items: center;
+}
+
+.cash-in-summary-fee {
+  max-width: 5.5rem !important;
+  min-height: 1.7rem;
+}
+
+.cash-in-summary-formula {
+  margin-top: 0.15rem !important;
+  font-size: 0.66rem;
+  color: rgba(40, 55, 48, 0.72);
 }
 
 .cash-in-remain-line {
