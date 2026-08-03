@@ -50,7 +50,8 @@ assert.match(panel, /อ่านสลิป|title="อ่านสลิป"/)
 assert.match(panel, /\+สลิป/);
 assert.match(panel, /cash-in-bank-table/);
 assert.match(panel, /addBankTransfer/);
-assert.match(panel, /ในมัด|is-tap|ใส่ยอด/);
+assert.match(panel, /ในมัด|is-tap/);
+assert.doesNotMatch(panel, />\s*ใส่ยอด\s*</);
 assert.match(client, /extractCashDaySlipFromPhotos/);
 
 const runner = `

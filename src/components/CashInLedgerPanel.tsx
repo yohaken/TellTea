@@ -414,23 +414,6 @@ export function CashInLedgerPanel({
     else setEditBankTransfers((prev) => apply(prev));
   }
 
-  /** ใส่ยอดสลิปโอนใบเดียว = มัดรวมบิล − คชจ. */
-  function fillNetBankFromBundle() {
-    if (!expected) {
-      setError("ยังไม่มีบิลในมัด");
-      return;
-    }
-    if (workingTransfers.length !== 1) {
-      setError("ใช้ได้เมื่อมีสลิปเดียว");
-      return;
-    }
-    const only = workingTransfers[0]!;
-    const net = suggestedNetBankTransfer(expected, only.fee);
-    patchTransfer(only.id, { amount: net });
-    setError(null);
-    setAiHint(`โอน ฿${formatPlainNumber(net)}`);
-  }
-
   function addBankTransfer() {
     if (workingTransfers.length >= CASH_DEPOSIT_BANK_TRANSFER_MAX) {
       setError(`สลิปโอนได้สูงสุด ${CASH_DEPOSIT_BANK_TRANSFER_MAX} ใบ`);
@@ -1274,17 +1257,6 @@ export function CashInLedgerPanel({
                     {formatPlainNumber(remainingToTransfer)}
                   </strong>
                 </p>
-                {workingTransfers.length === 1 && expected > 0 ? (
-                  <button
-                    type="button"
-                    className="ghost-btn cash-in-compact-btn"
-                    disabled={busy || readOnly}
-                    title="ใส่ยอดโอน = รวม − คชจ."
-                    onClick={fillNetBankFromBundle}
-                  >
-                    ใส่ยอด
-                  </button>
-                ) : null}
               </div>
 
               <div className="cash-in-round-meta">
