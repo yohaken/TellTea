@@ -1,9 +1,9 @@
 "use client";
 
 /**
- * หน้าเดือนใหม่ — ตามหลักบัญชีร้าน
- * A รายได้ถึงร้าน · B คชจ. · C กำไร+ภ.ง.ด. · D VAT
- * นำเข้าไม่แตะ — รับ sync ผ่าน vat-import-month-sync
+ * หน้าเดือน VAT — สรุปรายเดือน (งบ)
+ * ยอดเดลิเวอรี่ → A รายได้ · B คชจ. · C กำไร+ภ.ง.ด. · D VAT
+ * ตารางยอดเดลิเวอรี่รายเดือน (หน้าที่มายอดพักแล้ว — ไม่ลิงก์ไป sources)
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDateShort } from "@/lib/utils";
@@ -39,11 +39,27 @@ import {
   patchGpVat,
   patchSales,
   patchSfSendIntoDraft,
+  patchSfSendTendersIntoDraft,
   patchTransfer,
   retToMonthBooksDraft,
   type MonthBooksDraft,
   type MonthChannel,
 } from "@/lib/vat-month-books";
+import {
+  emptyPosStorefrontTenders,
+  fetchPosStorefrontTenderTotalsByMonth,
+  loadSfPosConnect,
+  saveSfPosConnect,
+  scaleSfSendTenders,
+  sfSendTendersGross,
+  type PosStorefrontTenderTotals,
+} from "@/lib/vat-storefront-pos";
+import {
+  DELIVERY_COL_INFO,
+  DELIVERY_COL_ROLE,
+  draftToMonthSources,
+} from "@/lib/vat-month-sources";
+import { subscribeVatImportMonthMerged } from "@/lib/vat-import-month-sync";
 import {
   bookLabel,
   loadBothBooksVatByMonth,
@@ -53,6 +69,8 @@ import {
 import { updateLedgerEntry } from "@/lib/ledger";
 import { updateOwnerBookEntry } from "@/lib/owner-books";
 import { BooksVatEntryDetailModal } from "@/components/vat-sales/BooksVatEntryDetailModal";
+import { VatColHead } from "@/components/vat-sales/VatColHead";
+import { VatSalesSubNav } from "@/components/vat-sales/VatSalesSubNav";
 import { exportPersonalTaxYearXlsx } from "@/lib/xlsx-export";
 import {
   fileVatMonthlyReturn,
@@ -66,15 +84,6 @@ import {
   type VatMonthlyReturn,
 } from "@/lib/vat-monthly";
 import { bangkokMonthKey } from "@/lib/vat-sales";
-import { listVatImportRows } from "@/lib/vat-import";
-import {
-  describeImportIntoBooks,
-  previewApplyVatImportRows,
-  type ImportIntoBooksMap,
-} from "@/lib/vat-import-apply";
-import {
-  subscribeVatImportMonthMerged,
-} from "@/lib/vat-import-month-sync";
 import {
   computeNetProfitMarginPct,
   computeRealProfitAfterVat,
@@ -217,30 +226,36 @@ export function VatMonthBooks({ actor }: Props) {
 
   const [openDeliverySales, setOpenDeliverySales] = useState(true);
   const [openStorefrontSales, setOpenStorefrontSales] = useState(true);
-  const [importMap, setImportMap] = useState<ImportIntoBooksMap | null>(null);
 
-  /** A) แถบส่งหน้าร้าน → ตาราง — ไม่แตะ import/ช่องอื่น / VAT */
+  /** A) แถบส่งหน้าร้าน → ตาราง — ไม่แตะช่องอื่น / VAT */
   const [sfSendSourceStr, setSfSendSourceStr] = useState("");
   const [sfSendPct, setSfSendPct] = useState(100);
   const [sfPulse, setSfPulse] = useState(false);
   const sfPulseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** ดึงยอดหน้าร้านจาก nPOS (วันบิล) — default เปิดตั้งแต่ 2026-08 */
+  const [sfPosConnect, setSfPosConnect] = useState(() =>
+    loadSfPosConnect(bangkokMonthKey()),
+  );
+  const [sfPosBusy, setSfPosBusy] = useState(false);
+  const [sfPosTenders, setSfPosTenders] = useState<PosStorefrontTenderTotals>(
+    () => emptyPosStorefrontTenders(),
+  );
+  const sfPosFetchGen = useRef(0);
 
   const draftRef = useRef(draft);
   draftRef.current = draft;
+  const dirtyRef = useRef(false);
+  dirtyRef.current = dirty;
+  const actorRef = useRef(actor);
+  actorRef.current = actor;
+  /** เพิ่มขึ้นทุกครั้งที่ dirty — กัน setDirty(false) จากเซฟเก่าหลังเปลี่ยนเดือน/แก้ใหม่ */
+  const dirtySeq = useRef(0);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadGen = useRef(0);
 
   const locked = draft.status === "filed";
 
-  const refreshImportMap = useCallback(async (m: string) => {
-    try {
-      const rows = await listVatImportRows(m);
-      const preview = previewApplyVatImportRows(m, rows);
-      setImportMap(describeImportIntoBooks(preview));
-    } catch {
-      setImportMap(null);
-    }
-  }, []);
+  const monthSources = useMemo(() => draftToMonthSources(draft), [draft]);
 
   const booksCombo = useMemo(() => {
     if (!bookStaff || !bookOwner) return null;
@@ -266,11 +281,53 @@ export function VatMonthBooks({ actor }: Props) {
     [month, periodStartDay],
   );
 
-  const markDirty = useCallback(() => setDirty(true), []);
+  const markDirty = useCallback(() => {
+    dirtySeq.current += 1;
+    dirtyRef.current = true;
+    setDirty(true);
+  }, []);
 
   const hydrateFromReturn = useCallback((ret: VatMonthlyReturn) => {
     setDraft(retToMonthBooksDraft(ret));
+    dirtyRef.current = false;
     setDirty(false);
+  }, []);
+
+  /** เซฟยอดค้างก่อนเปลี่ยนเดือน / ออกหน้า — ห้ามทิ้ง draft กลางทาง */
+  const flushDirtySave = useCallback(async () => {
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+    }
+    const snap = draftRef.current;
+    if (!dirtyRef.current) return;
+    if (snap.status === "filed") {
+      dirtyRef.current = false;
+      setDirty(false);
+      return;
+    }
+    const seq = dirtySeq.current;
+    const monthKey = snap.monthKey;
+    try {
+      const saved = await saveVatMonthlyReturn(
+        draftToSaveInput(snap, "saved"),
+        actorRef.current,
+      );
+      if (
+        dirtySeq.current === seq &&
+        draftRef.current.monthKey === monthKey
+      ) {
+        setDraft((d) =>
+          d.monthKey === saved.monthKey
+            ? { ...d, status: saved.status }
+            : d,
+        );
+        dirtyRef.current = false;
+        setDirty(false);
+      }
+    } catch (e) {
+      throw e instanceof Error ? e : new Error(String(e));
+    }
   }, []);
 
   /** ผสานคชจ. + ภาษีซื้อจากสองบช. อัตโนมัติ (ไม่ต้องกดดึง) */
@@ -306,6 +363,8 @@ export function VatMonthBooks({ actor }: Props) {
           return { ...d, ingredientVat: bundle.vatInput };
         });
         if (changed && draftRef.current.status !== "filed") {
+          dirtySeq.current += 1;
+          dirtyRef.current = true;
           setDirty(true);
         }
         return bundle;
@@ -319,6 +378,18 @@ export function VatMonthBooks({ actor }: Props) {
 
   const loadMonth = useCallback(
     async (m: string) => {
+      // กันสลับเดือนแล้วทิ้งยอดหน้าร้านที่เพิ่งใส่ (autosave ถูก cancel เมื่อ loading)
+      if (draftRef.current.monthKey !== m && dirtyRef.current) {
+        try {
+          await flushDirtySave();
+        } catch (e) {
+          setError(
+            e instanceof Error
+              ? `เซฟเดือนก่อนไม่สำเร็จ: ${e.message}`
+              : "เซฟเดือนก่อนไม่สำเร็จ",
+          );
+        }
+      }
       const gen = ++loadGen.current;
       setLoading(true);
       setError("");
@@ -344,7 +415,6 @@ export function VatMonthBooks({ actor }: Props) {
         const draft0 = retToMonthBooksDraft(ret);
         hydrateFromReturn(ret);
         setHydrated(true);
-        void refreshImportMap(m);
         // คชจ.บช. + ภาษีซื้อบช. ผสานอัตโนมัติ
         try {
           await syncBooksFromLedgers(m, {
@@ -358,56 +428,128 @@ export function VatMonthBooks({ actor }: Props) {
         if (gen !== loadGen.current) return;
         setError(e instanceof Error ? e.message : String(e));
         setDraft(emptyMonthBooksDraft(m));
+        dirtyRef.current = false;
+        setDirty(false);
         setHydrated(true);
       } finally {
         if (gen === loadGen.current) setLoading(false);
       }
     },
-    [hydrateFromReturn, refreshImportMap, syncBooksFromLedgers],
+    [hydrateFromReturn, syncBooksFromLedgers, flushDirtySave],
   );
 
   useEffect(() => {
     void loadMonth(month);
   }, [month, loadMonth]);
 
-  // ซิงก์จากแท็บนำเข้า (ไม่แตะโค้ดนำเข้า)
+  // รับยอดเดลิเวอรี่จากนำเข้า — เก็บยอดหน้าร้านที่กำลังแก้/เซฟไว้แล้ว
   useEffect(() => {
     return subscribeVatImportMonthMerged((detail) => {
       if (detail.monthKey !== month) return;
       if (draftRef.current.status === "filed") return;
-      const next = retToMonthBooksDraft(detail.saved);
-      setDraft(next);
-      setDirty(false);
-      const income =
-        next.transfer.shopee +
-        next.transfer.grab +
-        next.transfer.lineman +
-        next.transfer.storefront;
-      setMsg(`ซิงก์จากนำเข้า · รายได้ถึงร้าน ${formatVatMoney(income)}`);
-      void refreshImportMap(month);
+      const incoming = retToMonthBooksDraft(detail.saved);
+      const cur = draftRef.current;
+      const keepSf =
+        dirty ||
+        cur.transfer.storefront > 0 ||
+        cur.sales.storefrontTransfer > 0 ||
+        cur.sales.storefrontCash > 0;
+      setDraft(
+        keepSf
+          ? {
+              ...incoming,
+              transfer: {
+                ...incoming.transfer,
+                storefront: cur.transfer.storefront,
+              },
+              sales: {
+                ...incoming.sales,
+                storefrontTransfer: cur.sales.storefrontTransfer,
+                storefrontCash: cur.sales.storefrontCash,
+              },
+            }
+          : incoming,
+      );
+      if (keepSf) {
+        dirtySeq.current += 1;
+        dirtyRef.current = true;
+        setDirty(true);
+      } else {
+        dirtyRef.current = false;
+        setDirty(false);
+      }
+      setMsg(
+        keepSf
+          ? "อัปเดตยอดเดลิเวอรี่ · คงยอดหน้าร้านที่ใส่ไว้"
+          : "อัปเดตยอดเดลิเวอรี่",
+      );
     });
-  }, [month, refreshImportMap]);
+  }, [month, dirty]);
 
-  // อัตโนมัติเซฟเบา ๆ
+  // เซฟอัตโนมัติทันทีเมื่อแก้ — ไม่ต้องกดบันทึก (สถานะ saved · ไม่ทับ filed)
   useEffect(() => {
     if (!hydrated || loading || locked || !dirty) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
+    const seq = dirtySeq.current;
+    const monthKey = draftRef.current.monthKey;
     saveTimer.current = setTimeout(() => {
       void (async () => {
+        const snap = draftRef.current;
+        if (snap.status === "filed") {
+          if (dirtySeq.current === seq) {
+            dirtyRef.current = false;
+            setDirty(false);
+          }
+          return;
+        }
+        // เปลี่ยนเดือนไปแล้ว — ห้ามเซฟ/เคลียร์ dirty ของเดือนใหม่
+        if (snap.monthKey !== monthKey) return;
         try {
-          const input = draftToSaveInput(draftRef.current, "draft");
-          const saved = await saveVatMonthlyReturn(input, actor);
-          setDraft((d) => ({ ...d, status: saved.status }));
+          const saved = await saveVatMonthlyReturn(
+            draftToSaveInput(snap, "saved"),
+            actorRef.current,
+          );
+          if (
+            dirtySeq.current !== seq ||
+            draftRef.current.monthKey !== monthKey
+          ) {
+            return;
+          }
+          setDraft((d) =>
+            d.monthKey === saved.monthKey
+              ? { ...d, status: saved.status }
+              : d,
+          );
+          dirtyRef.current = false;
           setDirty(false);
-        } catch {
-          /* silent autosave */
+          setMsg("เซฟอัตโนมัติแล้ว");
+          setError("");
+        } catch (e) {
+          if (draftRef.current.monthKey !== monthKey) return;
+          setError(
+            e instanceof Error
+              ? `เซฟไม่สำเร็จ: ${e.message}`
+              : "เซฟไม่สำเร็จ",
+          );
         }
       })();
-    }, 900);
+    }, 450);
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
-  }, [draft, dirty, hydrated, loading, locked, actor]);
+  }, [draft, dirty, hydrated, loading, locked]);
+
+  // ก่อนออกจากหน้า / unmount — เซฟค้างถ้ายัง dirty
+  useEffect(() => {
+    const onHide = () => {
+      void flushDirtySave();
+    };
+    window.addEventListener("pagehide", onHide);
+    return () => {
+      window.removeEventListener("pagehide", onHide);
+      void flushDirtySave();
+    };
+  }, [flushDirtySave]);
 
   function setTransferField(key: MonthChannel | "storefront", raw: string) {
     if (locked) return;
@@ -415,12 +557,34 @@ export function VatMonthBooks({ actor }: Props) {
     markDirty();
   }
 
-  // โหลด % ล่าสุด + ยอดต้นทางของเดือน (ไม่เขียนทับตารางจนกว่าจะเลื่อน/แก้ยอด)
+  function setSourceSales(key: MonthChannel, raw: string) {
+    if (locked) return;
+    setDraft((d) => patchSales(d, key, parseVatMoneyInput(raw)));
+    markDirty();
+  }
+
+  function setSourceFee(key: MonthChannel, raw: string) {
+    if (locked) return;
+    setDraft((d) => patchGpFee(d, key, parseVatMoneyInput(raw)));
+    markDirty();
+  }
+
+  function setSourceGpVat(key: MonthChannel, raw: string) {
+    if (locked) return;
+    setDraft((d) => patchGpVat(d, key, parseVatMoneyInput(raw)));
+    markDirty();
+  }
+
+  // โหลด % ล่าสุด + ยอดต้นทาง + ติ๊ก nPOS ของเดือน
   useEffect(() => {
     setSfSendPct(loadSfSendPct());
     const src = loadSfSendSource(month);
     setSfSendSourceStr(src > 0 ? moneyFieldValue(src) : "");
     setSfPulse(false);
+    setSfPosConnect(loadSfPosConnect(month));
+    setSfPosTenders(emptyPosStorefrontTenders());
+    setSfPosBusy(false);
+    sfPosFetchGen.current += 1;
   }, [month]);
 
   const flashSfCell = useCallback(() => {
@@ -429,9 +593,38 @@ export function VatMonthBooks({ actor }: Props) {
     sfPulseTimer.current = setTimeout(() => setSfPulse(false), 900);
   }, []);
 
+  const disconnectSfPos = useCallback(() => {
+    setSfPosConnect((on) => {
+      if (on) saveSfPosConnect(month, false);
+      return false;
+    });
+  }, [month]);
+
   const applySfSendToTable = useCallback(
-    (source: number, pct: number) => {
+    (
+      source: number,
+      pct: number,
+      tenders?: { cash: number; transfer: number } | null,
+    ) => {
       if (locked) return;
+      if (tenders) {
+        const scaled = scaleSfSendTenders(tenders, pct);
+        const sent = sfSendTendersGross(scaled);
+        if (!(sent > 0) && !(sfSendTendersGross(tenders) > 0)) return;
+        if (!(sent > 0)) return; // ห้ามเขียน 0 ทับยอดในตาราง
+        setDraft((d) => {
+          const same =
+            Math.abs((d.transfer.storefront || 0) - sent) < 0.009 &&
+            Math.abs((d.sales.storefrontTransfer || 0) - scaled.transfer) <
+              0.009 &&
+            Math.abs((d.sales.storefrontCash || 0) - scaled.cash) < 0.009;
+          if (same) return d;
+          return patchSfSendTendersIntoDraft(d, scaled);
+        });
+        markDirty();
+        flashSfCell();
+        return;
+      }
       if (!(source > 0)) return; // ห้ามเขียน 0 ทับยอดในตารางเมื่อยังไม่มีต้นทาง
       const sent = computeSfSendAmount(source, pct);
       setDraft((d) => {
@@ -450,15 +643,103 @@ export function VatMonthBooks({ actor }: Props) {
     [locked, markDirty, flashSfCell],
   );
 
-  /** ต้นทางแถบส่ง — ช่องกรอก หรือยอดหน้าร้านในตาราง (ถ้ายังไม่กรอก) */
+  // ดึง nPOS เมื่อติ๊กเปิด · หลังโหลดเดือน · ไม่ทับเดือนที่ filed
+  useEffect(() => {
+    if (!sfPosConnect || locked || loading || !hydrated) return;
+    // กัน state ติ๊กค้างจากเดือนก่อน — ต้องตรงกับเดือนที่กำลังดู
+    if (draftRef.current.monthKey !== month) return;
+    const fetchMonth = month;
+    const gen = ++sfPosFetchGen.current;
+    setSfPosBusy(true);
+    setMsg("กำลังดึงยอดหน้าร้านจาก nPOS…");
+    void fetchPosStorefrontTenderTotalsByMonth(fetchMonth)
+      .then((t) => {
+        if (gen !== sfPosFetchGen.current) return;
+        if (draftRef.current.monthKey !== fetchMonth) return;
+        setSfPosTenders(t);
+        const gross = t.gross;
+        if (gross > 0) {
+          // มียอด POS จริงเท่านั้น — ห้าม saveSfSendSource(0) ลบต้นทางมือ
+          setSfSendSourceStr(moneyFieldValue(gross));
+          saveSfSendSource(fetchMonth, gross);
+          applySfSendToTable(gross, loadSfSendPct(), {
+            cash: t.cash,
+            transfer: t.transfer,
+          });
+          setMsg(
+            `ดึงจาก nPOS แล้ว · สด ${fmt(t.cash)} · โอน ${fmt(t.transfer)}`,
+          );
+        } else {
+          setMsg("nPOS เดือนนี้ยังไม่มียอดหน้าร้าน — คงยอดเดิมในตาราง");
+        }
+      })
+      .catch((e) => {
+        if (gen !== sfPosFetchGen.current) return;
+        if (draftRef.current.monthKey !== fetchMonth) return;
+        setError(e instanceof Error ? e.message : String(e));
+        setMsg("");
+      })
+      .finally(() => {
+        if (gen === sfPosFetchGen.current) setSfPosBusy(false);
+      });
+    return () => {
+      // invalidate in-flight เมื่อเปลี่ยนเดือน/ติ๊ก/loading
+      if (sfPosFetchGen.current === gen) sfPosFetchGen.current += 1;
+    };
+  }, [
+    sfPosConnect,
+    month,
+    locked,
+    loading,
+    hydrated,
+    applySfSendToTable,
+  ]);
+
+  /** สลับเดือนแบบเซฟก่อน + ตั้งติ๊ก nPOS ให้ตรงเดือนปลายทางในเรนเดอร์เดียวกัน */
+  async function changeMonth(next: string) {
+    if (next === month) return;
+    try {
+      await flushDirtySave();
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? `เซฟก่อนเปลี่ยนเดือนไม่สำเร็จ: ${e.message}`
+          : "เซฟก่อนเปลี่ยนเดือนไม่สำเร็จ",
+      );
+      return;
+    }
+    setSfSendPct(loadSfSendPct());
+    const src = loadSfSendSource(next);
+    setSfSendSourceStr(src > 0 ? moneyFieldValue(src) : "");
+    setSfPulse(false);
+    setSfPosConnect(loadSfPosConnect(next));
+    setSfPosTenders(emptyPosStorefrontTenders());
+    setSfPosBusy(false);
+    sfPosFetchGen.current += 1;
+    setMonth(next);
+  }
+
+  /**
+   * ต้นทางแถบส่ง — ใช้เฉพาะที่พิมพ์ในช่องต้นทาง
+   * ห้ามดึงจากตารางมาคูณ % (เคยทับยอดหน้าร้านที่เซฟไว้แล้ว)
+   */
   function resolveSfSendSource(rawStr: string): number {
     const typed = parseVatMoneyInput(rawStr);
-    if (typed > 0) return typed;
-    const fromTable = Number(draftRef.current.transfer.storefront) || 0;
-    return fromTable > 0 ? fromTable : 0;
+    return typed > 0 ? typed : 0;
+  }
+
+  function onSfPosConnectChange(on: boolean) {
+    setSfPosConnect(on);
+    saveSfPosConnect(month, on);
+    if (!on) {
+      setSfPosBusy(false);
+      sfPosFetchGen.current += 1;
+      setMsg("ปิดดึงจาก nPOS — แก้ยอดมือได้");
+    }
   }
 
   function onSfSendSourceChange(raw: string) {
+    if (sfPosConnect) disconnectSfPos();
     setSfSendSourceStr(raw);
     if (locked) return;
     const source = parseVatMoneyInput(raw);
@@ -471,31 +752,79 @@ export function VatMonthBooks({ actor }: Props) {
     setSfSendPct(pct);
     saveSfSendPct(pct);
     if (locked) return;
-    const source = resolveSfSendSource(sfSendSourceStr);
-    if (!(source > 0)) {
-      setMsg("ใส่ยอดหน้าร้านต้นทางก่อน แล้วค่อยเลื่อน % ส่งเข้าตาราง");
+    if (sfPosConnect) {
+      const tenders = {
+        cash: sfPosTenders.cash,
+        transfer: sfPosTenders.transfer,
+      };
+      if (!(sfSendTendersGross(tenders) > 0)) {
+        setMsg("รอยอดจาก nPOS ก่อน แล้วค่อยเลื่อน % — จะไม่แตะยอดในตาราง");
+        return;
+      }
+      applySfSendToTable(sfPosTenders.gross, pct, tenders);
       return;
     }
-    // ถ้ายังไม่กรอกต้นทาง — เติมจากยอดในตารางแล้วค่อยคิด %
-    if (!(parseVatMoneyInput(sfSendSourceStr) > 0)) {
-      setSfSendSourceStr(moneyFieldValue(source));
-      saveSfSendSource(month, source);
+    const source = resolveSfSendSource(sfSendSourceStr);
+    if (!(source > 0)) {
+      setMsg("ใส่ยอดหน้าร้านต้นทางก่อน แล้วค่อยเลื่อน % — จะไม่แตะยอดในตาราง");
+      return;
     }
     applySfSendToTable(source, pct);
+  }
+
+  /** แก้ยอดหน้าร้านในตารางเอง → จำค่านั้น · ไม่ให้แถบ % มาทับทีหลัง */
+  function onStorefrontTransferManual(raw: string) {
+    if (locked) return;
+    if (sfPosConnect) disconnectSfPos();
+    const n = parseVatMoneyInput(raw);
+    setDraft((d) => {
+      let next = patchTransfer(d, "storefront", n);
+      // ให้ A กับ D โอนหน้าร้านสอดคล้องกันเมื่อแก้มือ
+      next = {
+        ...next,
+        sales: {
+          ...next.sales,
+          storefrontTransfer: n,
+        },
+      };
+      return next;
+    });
+    markDirty();
+    // เคลียร์ต้นทางแถบส่งของเดือนนี้ — กันเลื่อน % แล้วทับยอดที่เพิ่งใส่
+    saveSfSendSource(month, 0);
+    setSfSendSourceStr("");
   }
 
   const sfSendSourceNum = useMemo(
     () => parseVatMoneyInput(sfSendSourceStr),
     [sfSendSourceStr],
   );
-  const sfSendPreview = useMemo(
-    () => computeSfSendAmount(sfSendSourceNum, sfSendPct),
-    [sfSendSourceNum, sfSendPct],
+  const sfPosScaled = useMemo(
+    () =>
+      scaleSfSendTenders(
+        { cash: sfPosTenders.cash, transfer: sfPosTenders.transfer },
+        sfSendPct,
+      ),
+    [sfPosTenders.cash, sfPosTenders.transfer, sfSendPct],
   );
-  const sfUnsent = useMemo(
-    () => computeSfUnsentAmount(sfSendSourceNum, sfSendPct),
-    [sfSendSourceNum, sfSendPct],
-  );
+  const sfSendPreview = useMemo(() => {
+    if (sfPosConnect && sfSendTendersGross(sfPosTenders) > 0) {
+      return sfSendTendersGross(sfPosScaled);
+    }
+    return computeSfSendAmount(sfSendSourceNum, sfSendPct);
+  }, [sfPosConnect, sfPosTenders, sfPosScaled, sfSendSourceNum, sfSendPct]);
+  const sfUnsent = useMemo(() => {
+    if (sfPosConnect && sfSendTendersGross(sfPosTenders) > 0) {
+      return Math.round((sfPosTenders.gross - sfSendPreview) * 100) / 100;
+    }
+    return computeSfUnsentAmount(sfSendSourceNum, sfSendPct);
+  }, [
+    sfPosConnect,
+    sfPosTenders,
+    sfSendPreview,
+    sfSendSourceNum,
+    sfSendPct,
+  ]);
   const realProfitAfterVat = useMemo(
     () => computeRealProfitAfterVat(view.profitAfterVat, sfUnsent),
     [view.profitAfterVat, sfUnsent],
@@ -519,6 +848,12 @@ export function VatMonthBooks({ actor }: Props) {
 
   function setSalesField(key: keyof MonthBooksDraft["sales"], raw: string) {
     if (locked) return;
+    if (
+      sfPosConnect &&
+      (key === "storefrontCash" || key === "storefrontTransfer")
+    ) {
+      disconnectSfPos();
+    }
     setDraft((d) => patchSales(d, key, parseVatMoneyInput(raw)));
     markDirty();
   }
@@ -605,23 +940,6 @@ export function VatMonthBooks({ actor }: Props) {
       void syncBooksFromLedgers(month, { writeVat: true });
     } finally {
       setBooksVatBusy(false);
-    }
-  };
-
-  const saveDraft = async (as: "draft" | "saved") => {
-    setBusy(true);
-    setError("");
-    try {
-      const saved = await saveVatMonthlyReturn(
-        draftToSaveInput(draft, as),
-        actor,
-      );
-      hydrateFromReturn(saved);
-      setMsg(as === "draft" ? "บันทึกร่างแล้ว" : "บันทึกแล้ว");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
     }
   };
 
@@ -782,14 +1100,17 @@ export function VatMonthBooks({ actor }: Props) {
   const ownerOp = bookOpEx(bookOwner);
 
   return (
-    <div className="vat-month-books">
+    <div className="vat-month-books has-sf-send-float">
+      <VatSalesSubNav active="month" />
       <div className="vat-top-bar">
         <label className="vat-month-pick">
           <span className="muted">เดือน</span>
           <select
             value={month}
             disabled={busy}
-            onChange={(e) => setMonth(e.target.value)}
+            onChange={(e) => {
+              void changeMonth(e.target.value);
+            }}
             aria-label="เลือกเดือน"
           >
             {monthOptions.map((o) => (
@@ -805,7 +1126,7 @@ export function VatMonthBooks({ actor }: Props) {
         >
           {statusLabel}
           {dirty ? (
-            <span className="vat-dirty-dot" title="มีการแก้ที่ยังไม่บันทึก">
+            <span className="vat-dirty-dot" title="กำลังเซฟอัตโนมัติ…">
               ·
             </span>
           ) : null}
@@ -819,142 +1140,113 @@ export function VatMonthBooks({ actor }: Props) {
       {error ? <p className="error-text">{error}</p> : null}
       {msg ? <p className="muted vat-sales-msg">{msg}</p> : null}
 
-      {/* สรุปยอดจากนำเข้าที่ผสานเข้างบอัตโนมัติแล้ว (เนื้อเดียว · ไม่มีปุ่มดึง) */}
-      <section className="vat-table-block vat-import-into-books">
-        <h2 className="vat-table-title">จากตารางนำเข้า → งบ (ผสานอัตโนมัติ)</h2>
-        {importMap && importMap.rowCount > 0 ? (
-          <>
-            <div className="sheet-wrap vat-month-slim-wrap">
-              <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
-                <thead>
-                  <tr>
-                    <th className="col-seg">ช่อง</th>
-                    <th
-                      className="col-num"
-                      title="ยอดขายรวม VAT → กล่อง D คิดภาษีขาย"
-                    >
-                      ขาย→D
-                    </th>
-                    <th
-                      className="col-num"
-                      title="ค่า GP ที่หักจากโอนแล้ว — โชว์ใน B / ไม่หักซ้ำกำไร"
-                    >
-                      คชจ.(อ้าง)
-                    </th>
-                    <th
-                      className="col-num"
-                      title="เงินเข้าบัญชีหลังหัก GP = รายได้ถึงร้าน → กล่อง A"
-                    >
-                      โอน→A
-                    </th>
-                    <th
-                      className="col-num"
-                      title="VAT บนบิลค่า GP — ไม่ใช่เงินหักเพิ่ม → กล่อง D ภาษีซื้อ"
-                    >
-                      GP≠→D
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {MONTH_CHANNELS.map((k) => {
-                    const c = importMap.byChannel[k];
-                    return (
-                      <tr key={k}>
-                        <td className="col-seg">{MONTH_CHANNEL_SHORT[k]}</td>
-                        <td className="col-num">{fmt(c.sales)}</td>
-                        <td className="col-num">{fmt(c.fee)}</td>
-                        <td className="col-num">{fmt(c.transfer)}</td>
-                        <td className="col-num">{fmt(c.gpVat)}</td>
-                      </tr>
-                    );
-                  })}
-                  <tr className="vat-sales-totals-row">
-                    <td className="col-seg">รวม ({importMap.rowCount} แถว)</td>
-                    <td className="col-num col-net">
-                      {fmt(importMap.salesTotal)}
-                    </td>
-                    <td className="col-num col-net">
-                      {fmt(importMap.feeTotal)}
-                    </td>
-                    <td className="col-num col-net">
-                      {fmt(importMap.transferTotal)}
-                    </td>
-                    <td className="col-num col-net">
-                      {fmt(importMap.gpVatTotal)}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <p className="muted vat-sales-hint vat-hint-one-line">
-              แก้ที่แท็บนำเข้าแล้วเข้างบทันที · โอน = รายได้ · GP≠ = ภาษีซื้อ
-            </p>
-          </>
-        ) : (
-          <p className="muted vat-sales-hint vat-hint-one-line">
-            ยังไม่มีแถวในแท็บนำเข้าเดือนนี้ — กรอกที่แท็บนำเข้าแล้วผสานเข้างบอัตโนมัติ
-          </p>
-        )}
+      {/* ยอดเดลิเวอรี่ — กรอก/แก้บนงบเดือนโดยตรง */}
+      <section className="vat-table-block vat-month-sources">
+        <h2 className="vat-table-title">
+          ยอดเดลิเวอรี่ — {formatThaiMonthKey(month)}
+        </h2>
+        <div className="sheet-wrap vat-month-slim-wrap">
+          <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
+            <thead>
+              <tr>
+                <th className="col-seg">ช่องทาง</th>
+                <VatColHead
+                  label="ยอดขายแอพ"
+                  role={DELIVERY_COL_ROLE.appSales}
+                  info={DELIVERY_COL_INFO.appSales}
+                />
+                <VatColHead
+                  label="ยอดโอน"
+                  role={DELIVERY_COL_ROLE.transfer}
+                  info={DELIVERY_COL_INFO.transfer}
+                />
+                <VatColHead
+                  label="คชจ.GP"
+                  role={DELIVERY_COL_ROLE.gpFee}
+                  info={DELIVERY_COL_INFO.gpFee}
+                />
+                <VatColHead
+                  label="VAT-ซื้อ"
+                  role={DELIVERY_COL_ROLE.purchaseVat}
+                  info={DELIVERY_COL_INFO.purchaseVat}
+                />
+              </tr>
+            </thead>
+            <tbody>
+              {MONTH_CHANNELS.map((k) => (
+                <tr key={k}>
+                  <td className="col-seg">{MONTH_CHANNEL_LABEL[k]}</td>
+                  <td className="col-num col-input">
+                    <MoneyCell
+                      value={moneyFieldValue(draft.sales[k])}
+                      locked={locked}
+                      ariaLabel={`ยอดขายแอพ ${MONTH_CHANNEL_SHORT[k]}`}
+                      onChange={(v) => setSourceSales(k, v)}
+                    />
+                  </td>
+                  <td className="col-num col-input">
+                    <MoneyCell
+                      value={moneyFieldValue(draft.transfer[k])}
+                      locked={locked}
+                      ariaLabel={`ยอดโอน ${MONTH_CHANNEL_SHORT[k]}`}
+                      onChange={(v) => setTransferField(k, v)}
+                    />
+                  </td>
+                  <td className="col-num col-input">
+                    <MoneyCell
+                      value={moneyFieldValue(draft.gpFee[k])}
+                      locked={locked}
+                      ariaLabel={`คชจ.GP ${MONTH_CHANNEL_SHORT[k]}`}
+                      onChange={(v) => setSourceFee(k, v)}
+                    />
+                  </td>
+                  <td className="col-num col-input">
+                    <MoneyCell
+                      value={moneyFieldValue(draft.gpVatOverride[k])}
+                      locked={locked}
+                      ariaLabel={`VAT-ซื้อ ${MONTH_CHANNEL_SHORT[k]}`}
+                      onChange={(v) => setSourceGpVat(k, v)}
+                    />
+                  </td>
+                </tr>
+              ))}
+              <tr className="vat-sales-totals-row">
+                <td className="col-seg">รวมเดลิเวอรี่</td>
+                <td className="col-num col-net">
+                  {fmt(monthSources.totals.sales)}
+                </td>
+                <td className="col-num col-net">
+                  {fmt(monthSources.totals.transfer)}
+                </td>
+                <td className="col-num col-net">
+                  {fmt(monthSources.totals.fee)}
+                </td>
+                <td className="col-num col-net">
+                  {fmt(monthSources.totals.gpVat)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p
+          className="muted vat-sales-hint vat-hint-one-line"
+          title="หลักแยกชั้น: ขาย→VAT · โอน→รายได้/กำไร · GP ไม่หักซ้ำ"
+        >
+          ขายแอพ → VAT · ยอดโอน → รายได้/กำไร · GP อยู่ในโอนแล้ว ไม่หักซ้ำ
+        </p>
       </section>
 
       {loading && !hydrated ? (
         <p className="muted">กำลังโหลด…</p>
       ) : (
         <>
-          {/* A) รายได้ถึงร้าน */}
+          {/* A) รายได้ถึงร้าน — แถบส่งหน้าร้านลอยด้านล่าง (vat-sf-send--float) */}
           <section className="vat-table-block vat-income-bridge">
             <h2 className="vat-table-title">
               A) รายได้ถึงร้าน — {formatThaiMonthKey(month)}
             </h2>
-            <div
-              className="vat-sf-send"
-              title="ใส่ยอดหน้าร้านต้นทาง แล้วเลื่อน % — ยอดส่งเข้าช่อง「หน้าร้าน」ในตารางรายได้เท่านั้น · ไม่แตะภาษีขาย/ภาษีซื้อ"
-            >
-              <span className="vat-sf-send-label">ส่งหน้าร้าน</span>
-              <input
-                className="vat-sales-input vat-sf-send-input"
-                inputMode="decimal"
-                disabled={locked}
-                value={sfSendSourceStr}
-                placeholder="ยอดต้นทาง"
-                aria-label="ยอดหน้าร้านต้นทาง"
-                onChange={(e) => onSfSendSourceChange(e.target.value)}
-                onBlur={() => {
-                  const next = normalizeMoneyFieldText(sfSendSourceStr);
-                  if (next !== sfSendSourceStr) setSfSendSourceStr(next);
-                }}
-              />
-              <input
-                type="range"
-                className="vat-sf-send-range"
-                min={0}
-                max={100}
-                step={1}
-                disabled={locked}
-                value={sfSendPct}
-                aria-label="เปอร์เซ็นต์ส่งเข้ารายได้ถึงร้าน"
-                onChange={(e) => onSfSendPctChange(Number(e.target.value))}
-              />
-              <span className="vat-sf-send-pct">{sfSendPct}%</span>
-              <span
-                className={`vat-sf-send-out${sfSendSourceNum > 0 ? " is-live" : ""}`}
-                title="ยอดที่ส่งเข้าช่องหน้าร้านในตาราง A"
-              >
-                → โอน {fmt(sfSendPreview)}
-              </span>
-              <span
-                className="vat-sf-send-unsent"
-                title="ส่วนหน้าร้านที่ไม่ถูกส่งเข้าตารางรายได้"
-              >
-                ค้าง {fmt(sfUnsent)}
-              </span>
-            </div>
             <p className="muted vat-sales-hint vat-sf-send-hint">
-              ส่งเข้า A「ยอดโอนหน้าร้าน」+ D「ยอดขายโอน」ทั้งก้อน → คิดภาษีขายอัตโนมัติ ·{" "}
-              ไม่แตะภาษีซื้อ
-              {sfSendSourceNum > 0
-                ? ""
-                : " · ใส่ยอดต้นทางก่อน แล้วเลื่อน %"}
+              แถบลอย「ส่งหน้าร้าน」· ติ๊ก nPOS ดึงตามวันบิล (สด/โอน) หรือใส่ยอดมือ → ×% เข้า A+D · ไม่แตะภาษีซื้อ
             </p>
             <div className="sheet-wrap vat-month-slim-wrap">
               <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
@@ -963,7 +1255,7 @@ export function VatMonthBooks({ actor }: Props) {
                     <th className="col-seg">รายการ</th>
                     <th
                       className="col-num"
-                      title="เงินถึงร้าน — ซิงก์จากแท็บนำเข้า หรือแก้ตรงนี้"
+                      title="เงินถึงร้าน — จากยอดเดลิเวอรี่ด้านบน หรือแก้ตรงนี้"
                     >
                       ยอดโอน / ถึงร้าน
                     </th>
@@ -985,7 +1277,7 @@ export function VatMonthBooks({ actor }: Props) {
                     <tr key={k} className="vat-row-child">
                       <td
                         className="col-seg col-child"
-                        title={`ยอดโอน ${MONTH_CHANNEL_LABEL[k]} จากนำเข้า`}
+                        title={`ยอดโอน ${MONTH_CHANNEL_LABEL[k]} จากสรุปเดือน`}
                       >
                         {MONTH_CHANNEL_LABEL[k]}
                       </td>
@@ -1012,7 +1304,7 @@ export function VatMonthBooks({ actor }: Props) {
                         locked={locked}
                         ariaLabel="ยอดหน้าร้าน"
                         pulse={sfPulse}
-                        onChange={(v) => setTransferField("storefront", v)}
+                        onChange={onStorefrontTransferManual}
                       />
                     </td>
                   </tr>
@@ -1053,14 +1345,16 @@ export function VatMonthBooks({ actor }: Props) {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="vat-row-parent">
+                  <tr className="vat-row-parent vat-memo-row">
                     <td
-                      className="col-seg"
-                      title="แพลตฟอร์มหักจากยอดโอนแล้ว — ไม่หักซ้ำตอนคิดกำไร"
+                      className="col-seg muted"
+                      title="แพลตฟอร์มหักจากยอดโอนแล้ว — โชว์อ้างอิง · ไม่หักซ้ำตอนคิดกำไร"
                     >
-                      GP แพลตฯ (หักจากโอนแล้ว · ไม่หักซ้ำ)
+                      GP แพลตฯ (อ้างอิง · ไม่หักกำไร)
                     </td>
-                    <td className="col-num col-net">{fmt(view.gpCostTotal)}</td>
+                    <td className="col-num col-net muted">
+                      {fmt(view.gpCostTotal)}
+                    </td>
                   </tr>
                   {MONTH_CHANNELS.map((k) => (
                     <tr key={k} className="vat-row-child">
@@ -1217,19 +1511,19 @@ export function VatMonthBooks({ actor }: Props) {
                       {view.booksOpex == null ? "—" : fmt(view.booksOpex)}
                     </td>
                   </tr>
-                  <tr className="vat-row-child">
+                  <tr className="vat-row-child vat-memo-row">
                     <td
-                      className="col-seg col-child"
-                      title="อ้างอิงเท่านั้น — หักจากยอดโอนแล้ว"
+                      className="col-seg col-child muted"
+                      title="อ้างอิงเท่านั้น — หักจากยอดโอนแล้ว · ไม่ลบจากกำไร"
                     >
-                      GP แพลตฯ (หักจากโอนแล้ว)
+                      GP แพลตฯ (อ้างอิง · ไม่หัก)
                     </td>
-                    <td className="col-num">{fmt(view.gpCostTotal)}</td>
+                    <td className="col-num muted">{fmt(view.gpCostTotal)}</td>
                   </tr>
                   <tr className="vat-sales-totals-row">
                     <td
                       className="col-seg"
-                      title="รายได้ถึงร้าน − คชจ.บช. · ยังไม่หัก VAT"
+                      title="รายได้ถึงร้าน − คชจ.บช. · ยังไม่หัก VAT · ไม่หัก GP"
                     >
                       = กำไรประมาณการเดือน
                     </td>
@@ -1262,6 +1556,12 @@ export function VatMonthBooks({ actor }: Props) {
                 </tbody>
               </table>
             </div>
+            <p
+              className="muted vat-sales-hint vat-hint-one-line"
+              title="สูตรกำไร — GP ไม่เข้าสมการ"
+            >
+              กำไร ≈ ยอดโอน − คชจ.บช. · GP หักในโอนแล้ว ไม่ลบซ้ำ
+            </p>
             <p
               className="muted vat-sales-hint vat-hint-one-line vat-c-real-note"
               title="โน้ตดูเอง — ไม่แก้ VAT / ภ.ง.ด. / P&L"
@@ -1517,7 +1817,7 @@ export function VatMonthBooks({ actor }: Props) {
                     <tr className="vat-row-parent">
                       <td
                         className="col-seg"
-                        title="จากนำเข้าคอลัมน์ GP≠ หรือประมาณคชจ.×7/107"
+                        title="จากยอดเดลิเวอรี่คอลัมน์ VAT-ซื้อ หรือประมาณคชจ.×7/107"
                       >
                         ภาษีซื้อ GP (รวม)
                       </td>
@@ -1710,22 +2010,9 @@ export function VatMonthBooks({ actor }: Props) {
           <div className="vat-month-actions">
             {!locked ? (
               <>
-                <button
-                  type="button"
-                  className="vat-mini-btn"
-                  disabled={busy}
-                  onClick={() => void saveDraft("draft")}
-                >
-                  ร่าง
-                </button>
-                <button
-                  type="button"
-                  className="vat-mini-btn vat-mini-btn--primary"
-                  disabled={busy}
-                  onClick={() => void saveDraft("saved")}
-                >
-                  บันทึก
-                </button>
+                <span className="muted vat-autosave-hint">
+                  {dirty ? "กำลังเซฟ…" : "เซฟอัตโนมัติเมื่อแก้ตัวเลข"}
+                </span>
                 <button
                   type="button"
                   className="vat-mini-btn"
@@ -1769,6 +2056,72 @@ export function VatMonthBooks({ actor }: Props) {
           }}
         />
       ) : null}
+
+      {/* แถบส่งหน้าร้านเดิม — ลอยด้านล่าง ซ้าย–กลาง · ไม่ทับ Tune Desk / bottom-nav */}
+      <div
+        className="vat-sf-send vat-sf-send--float"
+        role="region"
+        aria-label="แถบส่งหน้าร้าน"
+        title="ติ๊กดึงจาก nPOS หรือใส่ยอดต้นทางมือ แล้วเลื่อน % — จึงจะเขียนเข้าตาราง · แก้ยอดในตารางเองแล้วระบบจะไม่ให้ % ทับ"
+      >
+        <label
+          className={`vat-sf-pos-connect${sfPosConnect ? " is-on" : ""}`}
+          title="ดึงยอดหน้าร้านจาก nPOS ตามวันบิล (สด / พร้อมเพย์+โอน) · เดือนตั้งแต่ ส.ค. 2026 เปิดเป็นค่าเริ่มต้น"
+        >
+          <input
+            type="checkbox"
+            checked={sfPosConnect}
+            disabled={locked || loading || sfPosBusy}
+            onChange={(e) => onSfPosConnectChange(e.target.checked)}
+            aria-label="ดึงยอดหน้าร้านจาก nPOS"
+          />
+          <span>{sfPosBusy ? "nPOS…" : "nPOS"}</span>
+        </label>
+        <span className="vat-sf-send-label">ส่งหน้าร้าน</span>
+        <input
+          className="vat-sales-input vat-sf-send-input"
+          inputMode="decimal"
+          disabled={locked || loading || sfPosConnect}
+          value={sfSendSourceStr}
+          placeholder="ยอดต้นทาง"
+          aria-label="ยอดหน้าร้านต้นทาง"
+          onChange={(e) => onSfSendSourceChange(e.target.value)}
+          onBlur={() => {
+            const next = normalizeMoneyFieldText(sfSendSourceStr);
+            if (next !== sfSendSourceStr) setSfSendSourceStr(next);
+          }}
+        />
+        <input
+          type="range"
+          className="vat-sf-send-range"
+          min={0}
+          max={100}
+          step={1}
+          disabled={locked || loading || sfPosBusy}
+          value={sfSendPct}
+          aria-label="เปอร์เซ็นต์ส่งเข้ารายได้ถึงร้าน"
+          onChange={(e) => onSfSendPctChange(Number(e.target.value))}
+        />
+        <span className="vat-sf-send-pct">{sfSendPct}%</span>
+        <span
+          className={`vat-sf-send-out${sfSendSourceNum > 0 ? " is-live" : ""}`}
+          title={
+            sfPosConnect
+              ? "ยอดหลัง % → A รายได้ + D ยอดขาย (สด/โอน ตาม nPOS)"
+              : "ยอดที่ส่งเข้าช่องหน้าร้านในตาราง A + D"
+          }
+        >
+          {sfPosConnect && sfSendTendersGross(sfPosTenders) > 0
+            ? `→ สด ${fmt(sfPosScaled.cash)} · โอน ${fmt(sfPosScaled.transfer)}`
+            : `→ โอน ${fmt(sfSendPreview)}`}
+        </span>
+        <span
+          className="vat-sf-send-unsent"
+          title="ส่วนหน้าร้านที่ไม่ถูกส่งเข้าตารางรายได้"
+        >
+          ค้าง {fmt(sfUnsent)}
+        </span>
+      </div>
     </div>
   );
 }

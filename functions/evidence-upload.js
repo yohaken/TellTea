@@ -1,10 +1,66 @@
 const crypto = require("crypto");
 const functions = require("firebase-functions/v1");
+const admin = require("firebase-admin");
 const { resolveStorageBucket } = require("./storage-bucket");
+
+const OWNER_EMAIL = String(process.env.OWNER_EMAIL || "yohaken@gmail.com")
+  .trim()
+  .toLowerCase();
 
 function evidenceBucket() {
   // Prefer resolved existing bucket (appspot fallback) over hardcoded missing name.
   return resolveStorageBucket();
+}
+
+function db() {
+  if (!admin.apps.length) {
+    admin.initializeApp();
+  }
+  return admin.firestore();
+}
+
+/** owner-books folder — เจ้าของ หรือสิทธิ์ ownerBooks เท่านั้น */
+async function assertOwnerBooksFolder(context, folder) {
+  if (folder !== "owner-books") return;
+  const token = context.auth?.token || {};
+  const email = String(token.email || "")
+    .trim()
+    .toLowerCase();
+  if (email && email === OWNER_EMAIL) return;
+
+  let staffId = email;
+  if (!staffId) {
+    const phone = String(token.phone_number || "");
+    const digits = phone.startsWith("+") ? phone.slice(1) : phone;
+    if (!digits) {
+      throw new functions.https.HttpsError(
+        "permission-denied",
+        "อัปโหลดบช.เจ้าของได้เฉพาะเจ้าของร้าน",
+      );
+    }
+    const phoneSnap = await db().collection("staffPhones").doc(digits).get();
+    staffId = String((phoneSnap.exists ? phoneSnap.get("staffId") : "") || "");
+  }
+  if (!staffId) {
+    throw new functions.https.HttpsError(
+      "permission-denied",
+      "อัปโหลดบช.เจ้าของได้เฉพาะเจ้าของร้าน",
+    );
+  }
+  const staffSnap = await db().collection("staff").doc(staffId).get();
+  if (!staffSnap.exists) {
+    throw new functions.https.HttpsError(
+      "permission-denied",
+      "อัปโหลดบช.เจ้าของได้เฉพาะเจ้าของร้าน",
+    );
+  }
+  const role = staffSnap.get("role");
+  const perms = staffSnap.get("permissions") || {};
+  if (role === "owner" || perms.ownerBooks === true) return;
+  throw new functions.https.HttpsError(
+    "permission-denied",
+    "อัปโหลดบช.เจ้าของได้เฉพาะเจ้าของร้าน",
+  );
 }
 
 function safeSegment(raw, max = 48) {
@@ -44,6 +100,7 @@ exports.createEvidenceUpload = functions
     if (!ALLOWED_FOLDERS.has(folder)) {
       throw new functions.https.HttpsError("invalid-argument", "โฟลเดอร์อัปโหลดไม่ถูกต้อง");
     }
+    await assertOwnerBooksFolder(context, folder);
     const slotKey = safeSegment(data?.slotKey || "entry");
     const contentType = String(data?.contentType || "image/jpeg").slice(0, 80);
     if (!contentType.startsWith("image/")) {
@@ -94,6 +151,7 @@ exports.finalizeEvidenceUpload = functions
     if (!ALLOWED_FOLDERS.has(folder)) {
       throw new functions.https.HttpsError("permission-denied", "โฟลเดอร์ไม่ถูกต้อง");
     }
+    await assertOwnerBooksFolder(context, folder);
 
     const token = String(data?.token || crypto.randomUUID());
     const bucket = await evidenceBucket();
@@ -136,6 +194,7 @@ exports.uploadEvidencePhoto = functions
     if (!ALLOWED_FOLDERS.has(folder)) {
       throw new functions.https.HttpsError("invalid-argument", "โฟลเดอร์อัปโหลดไม่ถูกต้อง");
     }
+    await assertOwnerBooksFolder(context, folder);
     const slotKey = safeSegment(data?.slotKey || "entry");
     const contentType = String(data?.contentType || "image/jpeg").slice(0, 80);
     if (!contentType.startsWith("image/")) {

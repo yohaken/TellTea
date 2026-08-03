@@ -7,8 +7,9 @@ import {
   adjustStockQty,
   createStockItem,
   deleteStockItem,
+  migrateAllLegacyStockCosts,
   seedStockItemsIfEmpty,
-  subscribeStockItems,
+  subscribeStockItemsWithCosts,
   updateStockItem,
 } from "@/lib/stock";
 import type { StockItem } from "@/lib/types";
@@ -33,8 +34,19 @@ export function StockCatalogSetup({ onError }: { onError: (msg: string | null) =
 
   useEffect(() => {
     if (!userEmail) return;
-    void seedStockItemsIfEmpty(userEmail).catch(() => undefined);
-    const unsub = subscribeStockItems(
+    void (async () => {
+      try {
+        await seedStockItemsIfEmpty(userEmail);
+      } catch {
+        /* ignore */
+      }
+      try {
+        await migrateAllLegacyStockCosts();
+      } catch {
+        /* best-effort */
+      }
+    })();
+    const unsub = subscribeStockItemsWithCosts(
       (rows) => setItems(rows),
       (err) => onError(err.message),
     );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { listActiveEmployees, updateEmployee, type Employee } from "@/lib/employees";
+import { listActiveEmployeesWithPay, updateEmployee, type Employee } from "@/lib/employees";
 import {
   DEFAULT_PAYROLL_SCHEDULE,
   salaryAmountForSplit,
@@ -175,7 +175,7 @@ export function PayrollSettingsPanel({
         advanceBalance: advNum,
         skipGroupPayroll: draft.skipGroupPayroll,
       });
-      const refreshed = await listActiveEmployees();
+      const refreshed = await listActiveEmployeesWithPay();
       onEmployeesChange?.(refreshed);
       onInfo?.(
         [
@@ -355,8 +355,8 @@ export function PayrollSettingsPanel({
       <div className="payroll-settings-block">
         <h2 className="payroll-settings-title">2) เงินเดือนพนักงาน</h2>
         <p className="muted payroll-settings-hint">
-          ใส่ยอดต่อเดือน + เบิกค้าง (ถ้ามี) · ระบบหักเบิกจากรอบจ่ายอัตโนมัติ ·
-          ติ๊กข้ามรอบกลุ่มได้ถ้าจ่ายแยกก่อน
+          ใส่ยอดต่อเดือน · เบิกใหม่ใช้แท็บรอโอน「บันทึกเบิก」(วัน+สลิป+บช.) ·
+          ช่องเบิกค้างที่นี่แก้ยอดเก่าอย่างเดียว · ติ๊กข้ามรอบกลุ่มได้ถ้าจ่ายแยกก่อน
           {missingSalary ? ` · ยังไม่ตั้งเงินเดือน ${missingSalary} คน` : ""}
           {withAdvance ? ` · มีเบิกค้าง ${withAdvance} คน` : ""}
           {skipGroupCount ? ` · ข้ามรอบกลุ่ม ${skipGroupCount} คน` : ""}
@@ -519,7 +519,7 @@ export function PayrollSettingsPanel({
                         ข้ามตอนกด «สร้างเงินเดือน/โบนัส» กลุ่ม — ใช้ตอนจ่ายแยกก่อนเข้ารอบปกติ
                       </label>
                       <p className="muted form-hint-inline">
-                        เบิกค้างเดิมใส่ยอดอย่างเดียว (ไม่ลงสมุดซ้ำ) · ระบบจะหักจากรอบจ่ายถัดไปจนครบ
+                        เบิกค้างที่นี่ = แก้ยอดอย่างเดียว (ไม่ลงสมุด) · เบิกใหม่ที่มีวัน+สลิปไปแท็บรอโอน →「บันทึกเบิก」
                         {salaryNum > 0
                           ? ` · ตัวอย่างก่อนหัก: วันที่ ${midDay} = ฿${fmt(midAmt)} · สิ้นเดือนโอนวันที่ ${endDay} = ฿${fmt(endAmt)}`
                           : ""}

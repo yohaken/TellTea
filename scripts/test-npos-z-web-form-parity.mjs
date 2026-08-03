@@ -9,13 +9,13 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 512/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 144/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+112/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.89"/);
+assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)[1]) >= 583);
+assert.ok(Number(read("src/lib/pos-version.ts").match(/POS_BUILD = (\d+)/)[1]) >= 167);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+131/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.108"/);
 
 assert.ok(existsSync(join(root, "docs/npos-z-web-form-parity-checklist.md")));
-assert.match(read("docs/npos-z-web-form-parity-checklist.md"), /1\.14\.89/);
+assert.match(read("docs/npos-z-web-form-parity-checklist.md"), /1\.14\.10[5-8]/);
 
 const web = read("src/lib/pos-printer/shift-snapshot-template.ts");
 assert.match(web, /รายงานยอดการขาย/);
@@ -46,7 +46,7 @@ for (const token of [
   "นับจริงในลิ้นชัก",
   "ทำลายบิล / ยกเลิก",
   "บิลรอส่ง",
-  "รายการขายแยกตามบิล",
+  "สรุปบิล (สถิติ)",
   "ปิดรอบเรียบร้อย",
   "ยอดเงินสดที่ต้องนำส่ง",
   "ตรวจก่อนเซ็น / ส่งเงิน",

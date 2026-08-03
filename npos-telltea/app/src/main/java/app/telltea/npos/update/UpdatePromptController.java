@@ -17,16 +17,25 @@ import java.io.File;
 import app.telltea.npos.BuildConfig;
 import app.telltea.npos.R;
 import app.telltea.npos.diagnose.OpsLogger;
-import app.telltea.npos.ui.UiScale;
 
 /**
- * Top-left update popup on sell/hub — check → one-tap install → resume sell after restart.
+ * Forced APK update popup on sell/hub.
+ *
+ * <ul>
+ *   <li>Always mandatory when a newer build is published — no Later / snooze.
+ *   <li>Always force immediately — do not wait for idle cart / pay sheet.
+ *   <li>Show forced popup + nag voice + open install permission if needed;
+ *       auto-start download/install once permission is granted.
+ * </ul>
  */
 public final class UpdatePromptController {
   public interface BeforeInstall {
     /** Persist cart / work so update restart feels seamless. */
     void onBeforeInstall();
   }
+
+  private static final long AUTO_INSTALL_DELAY_MS = 900L;
+  private static final long PERMISSION_NUDGE_MS = 8_000L;
 
   private final Activity activity;
   private final View popup;
@@ -40,7 +49,13 @@ public final class UpdatePromptController {
   private BeforeInstall beforeInstall;
   private UpdateManifest pending;
   private boolean busy;
+  private boolean autoInstallScheduled;
+  private boolean permissionSettingsOpened;
   private int localVersionCode = 1;
+
+  private final Runnable autoInstallTask = this::maybeAutoInstall;
+  /** Method-ref so field init does not read {@code activity} before the constructor assigns it. */
+  private final Runnable permissionNudgeTask = this::runPermissionNudge;
 
   public UpdatePromptController(Activity activity) {
     this.activity = activity;
@@ -63,17 +78,16 @@ public final class UpdatePromptController {
 
   private void positionPopup() {
     if (popup == null) return;
-    UiScale ui = UiScale.from(activity);
     ViewGroup.LayoutParams lp = popup.getLayoutParams();
     if (lp instanceof FrameLayout.LayoutParams) {
       FrameLayout.LayoutParams flp = (FrameLayout.LayoutParams) lp;
-      View sidebar = activity.findViewById(R.id.posSidebar);
-      int start = ui.dp(12);
-      if (sidebar != null && sidebar.getVisibility() == View.VISIBLE) {
-        start = ui.navWidthPx + ui.dp(12);
-      }
-      flp.setMarginStart(start);
-      flp.topMargin = ui.dp(12);
+      // Full-bleed dim overlay; compact card is centered inside the layout XML.
+      flp.width = ViewGroup.LayoutParams.MATCH_PARENT;
+      flp.height = ViewGroup.LayoutParams.MATCH_PARENT;
+      flp.gravity = android.view.Gravity.CENTER;
+      flp.setMargins(0, 0, 0, 0);
+      flp.setMarginStart(0);
+      flp.setMarginEnd(0);
       popup.setLayoutParams(flp);
     }
   }
@@ -86,6 +100,7 @@ public final class UpdatePromptController {
     UpdateCheckCoordinator.bind(this);
     if (popup == null) return;
     ResumePrefs.clearPopupDismiss(activity);
+    permissionSettingsOpened = false;
     if (hasPendingUpdate()) {
       showPending();
     }
@@ -95,6 +110,10 @@ public final class UpdatePromptController {
   /** Drop live host so background activities do not steal sync-pulse UI. */
   public void onPause() {
     UpdateCheckCoordinator.unbind(this);
+    stopNag();
+    main.removeCallbacks(autoInstallTask);
+    main.removeCallbacks(permissionNudgeTask);
+    autoInstallScheduled = false;
   }
 
   /** Claim / kick gate — poll sooner than sell auto-check. */
@@ -115,9 +134,13 @@ public final class UpdatePromptController {
   }
 
   /**
-   * Sync pulse with a known newer build — always re-show (no snooze).
+   * Sync pulse with a known newer build — always re-show (no snooze, no idle wait).
    */
   void reassertPendingUpdate() {
+    if (Looper.myLooper() != Looper.getMainLooper()) {
+      main.post(this::reassertPendingUpdate);
+      return;
+    }
     if (activity.isFinishing() || busy) return;
     if (!hasPendingUpdate()) return;
     ResumePrefs.clearPopupDismiss(activity);
@@ -126,6 +149,10 @@ public final class UpdatePromptController {
 
   /** Invoked by {@link UpdateCheckCoordinator} after throttle allows. */
   void runAutoCheck(String reason) {
+    if (Looper.myLooper() != Looper.getMainLooper()) {
+      main.post(() -> runAutoCheck(reason));
+      return;
+    }
     if (activity.isFinishing()) return;
     if (popup == null) return;
     ResumePrefs.clearPopupDismiss(activity);
@@ -169,6 +196,7 @@ public final class UpdatePromptController {
   private void applyManifest(UpdateManifest manifest) {
     if (manifest == null || !manifest.isNewerThan(localVersionCode)) {
       pending = null;
+      stopNag();
       hide();
       return;
     }
@@ -179,21 +207,102 @@ public final class UpdatePromptController {
 
   private void showPending() {
     if (pending == null || !pending.isNewerThan(localVersionCode)) return;
+    boolean canInstall = ApkInstaller.canInstallPackages(activity);
     if (body != null) {
-      body.setText(
-          activity.getString(
-              R.string.update_popup_body, pending.versionName, pending.versionCode));
+      if (canInstall) {
+        body.setText(
+            activity.getString(
+                R.string.update_popup_body_force, pending.versionName, pending.versionCode));
+      } else {
+        body.setText(
+            activity.getString(
+                R.string.update_popup_body_need_permission,
+                pending.versionName,
+                pending.versionCode));
+      }
     }
     if (progress != null) progress.setVisibility(View.GONE);
     if (goBtn != null) {
       goBtn.setEnabled(true);
-      goBtn.setText(R.string.btn_install_update);
+      goBtn.setText(
+          canInstall ? R.string.btn_install_update : R.string.btn_allow_install_permission);
+      // Make CTA hard to miss.
+      goBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f);
     }
     if (laterBtn != null) {
       laterBtn.setVisibility(View.GONE);
       laterBtn.setEnabled(false);
     }
     if (popup != null) popup.setVisibility(View.VISIBLE);
+    UpdateNagVoice.start(activity);
+    OpsLogger.info(
+        activity,
+        "update",
+        "บังคับอัปเดตทันที",
+        pending.versionName
+            + " ("
+            + pending.versionCode
+            + ")"
+            + (canInstall ? "" : " · รอสิทธิ์ติดตั้ง"));
+
+    if (!canInstall) {
+      openInstallPermission();
+      schedulePermissionNudge();
+      return;
+    }
+    scheduleAutoInstall();
+  }
+
+  private void openInstallPermission() {
+    if (permissionSettingsOpened) return;
+    permissionSettingsOpened = true;
+    try {
+      Toast.makeText(activity, R.string.status_allow_install, Toast.LENGTH_LONG).show();
+      ApkInstaller.openUnknownSourcesSettings(activity);
+      OpsLogger.warn(activity, "update", "ขอสิทธิ์ติดตั้งอัปเดต", "unknown_sources");
+    } catch (Exception e) {
+      OpsLogger.error(
+          activity,
+          "update",
+          "เปิดหน้าสิทธิ์ติดตั้งไม่สำเร็จ",
+          e.getMessage() == null ? "" : e.getMessage());
+    }
+  }
+
+  private void schedulePermissionNudge() {
+    main.removeCallbacks(permissionNudgeTask);
+    main.postDelayed(permissionNudgeTask, PERMISSION_NUDGE_MS);
+  }
+
+  private void runPermissionNudge() {
+    if (activity == null || activity.isFinishing() || busy) return;
+    if (!hasPendingUpdate()) return;
+    if (ApkInstaller.canInstallPackages(activity)) {
+      maybeAutoInstall();
+      return;
+    }
+    // Staff returned from settings without grant — open again + keep nagging.
+    openInstallPermission();
+    schedulePermissionNudge();
+  }
+
+  private void scheduleAutoInstall() {
+    if (autoInstallScheduled || busy) return;
+    autoInstallScheduled = true;
+    main.removeCallbacks(autoInstallTask);
+    main.postDelayed(autoInstallTask, AUTO_INSTALL_DELAY_MS);
+  }
+
+  private void maybeAutoInstall() {
+    autoInstallScheduled = false;
+    if (activity.isFinishing() || busy) return;
+    if (!hasPendingUpdate()) return;
+    if (!ApkInstaller.canInstallPackages(activity)) {
+      openInstallPermission();
+      schedulePermissionNudge();
+      return;
+    }
+    onGo();
   }
 
   private void onGo() {
@@ -203,11 +312,23 @@ public final class UpdatePromptController {
       return;
     }
     if (!ApkInstaller.canInstallPackages(activity)) {
-      Toast.makeText(activity, R.string.status_allow_install, Toast.LENGTH_LONG).show();
-      ApkInstaller.openUnknownSourcesSettings(activity);
+      permissionSettingsOpened = false;
+      openInstallPermission();
+      schedulePermissionNudge();
+      if (body != null) {
+        body.setText(
+            activity.getString(
+                R.string.update_popup_body_need_permission,
+                pending.versionName,
+                pending.versionCode));
+      }
+      if (goBtn != null) goBtn.setText(R.string.btn_allow_install_permission);
       return;
     }
     busy = true;
+    stopNag();
+    main.removeCallbacks(autoInstallTask);
+    main.removeCallbacks(permissionNudgeTask);
     if (goBtn != null) goBtn.setEnabled(false);
     if (laterBtn != null) laterBtn.setEnabled(false);
     if (progress != null) {
@@ -250,7 +371,6 @@ public final class UpdatePromptController {
                 () -> {
                   busy = false;
                   if (goBtn != null) goBtn.setEnabled(true);
-                  if (laterBtn != null) laterBtn.setEnabled(true);
                   String msg =
                       error.getMessage() == null ? "download" : error.getMessage();
                   if (progress != null) {
@@ -258,6 +378,9 @@ public final class UpdatePromptController {
                     progress.setText(activity.getString(R.string.status_error, msg));
                   }
                   OpsLogger.error(activity, "update", "ดาวน์โหลดอัปเดตไม่สำเร็จ", msg);
+                  // Keep forcing — retry.
+                  UpdateNagVoice.start(activity);
+                  scheduleAutoInstall();
                 });
           }
         });
@@ -279,11 +402,16 @@ public final class UpdatePromptController {
     } catch (Exception e) {
       busy = false;
       if (goBtn != null) goBtn.setEnabled(true);
-      if (laterBtn != null) laterBtn.setEnabled(true);
       String msg = e.getMessage() == null ? "install" : e.getMessage();
       if (progress != null) progress.setText(activity.getString(R.string.status_error, msg));
       OpsLogger.error(activity, "update", "ติดตั้งอัปเดตไม่สำเร็จ", msg);
+      UpdateNagVoice.start(activity);
+      scheduleAutoInstall();
     }
+  }
+
+  private void stopNag() {
+    UpdateNagVoice.stop();
   }
 
   private void hide() {

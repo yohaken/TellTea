@@ -198,6 +198,12 @@ public final class ShiftReportFormBuilder {
    * staff already know from prior POS (เริ่มต้น · ขายสด · เข้า/ออก · ควรมี · นับจริง · ส่วนต่าง ·
    * ทอนรอบถัดไป · ยอดที่ต้องนำส่ง).
    */
+  /**
+   * kind:
+   * - {@code snapshot} — X mid-shift (full-ish)
+   * - {@code close} / {@code remit} — SHORT cash-remit slip for phone photo (default on close)
+   * - {@code close-full} — long Z with category/item list (optional reprint)
+   */
   public static String build(
       JSONObject shop,
       String kind,
@@ -228,7 +234,8 @@ public final class ShiftReportFormBuilder {
       JSONArray sessionReceipts,
       int cols) {
     int width = cols <= 0 ? COLS_80 : cols;
-    boolean isClose = "close".equals(kind);
+    boolean shortRemit = "close".equals(kind) || "remit".equals(kind);
+    boolean isClose = shortRemit || "close-full".equals(kind);
 
     String shopEn = firstNonEmpty(opt(shop, "shopName"), DEFAULT_SHOP_EN);
     String shopTh = firstNonEmpty(opt(shop, "shopNameTh"), DEFAULT_SHOP_TH);
@@ -258,6 +265,40 @@ public final class ShiftReportFormBuilder {
     int customerCount = saleCount > 0 ? saleCount : detail.activeBills;
     double avgPerBill = customerCount > 0 ? netSales / customerCount : 0;
 
+    // Short remit slip — phone-photo friendly (no item/category dump).
+    if (shortRemit) {
+      return buildRemitSlip(
+          shopEn,
+          shopTh,
+          shopAddress,
+          shopPhone,
+          staff,
+          device,
+          sessionShort,
+          shift,
+          openedAt,
+          closedOrPrintedAt,
+          saleCount,
+          voidedCount,
+          cashBills,
+          cashSales,
+          promptpayBills,
+          promptpaySales,
+          transferBills,
+          transferSales,
+          netSales,
+          openingCash,
+          countedCash,
+          expectedCash,
+          cashDifference,
+          discrepancyLabel,
+          leaveFloat,
+          discrepancyNote,
+          cashOutTotal,
+          cashInTotal,
+          width);
+    }
+
     StringBuilder sb = new StringBuilder();
 
     // --- Frame 1: shop header (center) — match web ---
@@ -281,7 +322,7 @@ public final class ShiftReportFormBuilder {
         .append(center("*** รายงานสรุปรอบ ***", width))
         .append(EscPos.BOLD_OFF)
         .append('\n');
-    sb.append(center(isClose ? "(ปิดรอบ Z - ไม่ใช่ใบเสร็จลูกค้า)" : "(X ระหว่างรอบ - ไม่ใช่ใบเสร็จ)", width))
+    sb.append(center(isClose ? "(ปิดรอบ Z เต็ม - ไม่ใช่ใบเสร็จลูกค้า)" : "(X ระหว่างรอบ - ไม่ใช่ใบเสร็จ)", width))
         .append('\n');
     sb.append('\n');
     String title = isClose ? "รายงานยอดการขาย" : "Snapshot ระหว่างรอบการขาย";
@@ -387,7 +428,7 @@ public final class ShiftReportFormBuilder {
       sb.append(pairRow("เงินเข้า/เงินออก", money(netInOut), width)).append('\n');
       sb.append(pairRow("ควรมีในลิ้นชัก", money(expected), width)).append('\n');
       sb.append(pairRow("นับจริงในลิ้นชัก", money(counted), width)).append('\n');
-      sb.append(pairRow("ส่วนต่าง", label + " " + money(diff), width)).append('\n');
+      sb.append(tripleRow("ส่วนต่าง", label, money(diff), width)).append('\n');
       if (leaveFloat > 0.0001) {
         sb.append(pairRow("ทอนรอบถัดไป", money(leaveFloat), width)).append('\n');
       }
@@ -404,7 +445,7 @@ public final class ShiftReportFormBuilder {
       sb.append(pairRow("เงินเข้า/เงินออก", money(netInOut), width)).append('\n');
       sb.append(pairRow("ควรมีในลิ้นชัก*", money(expectedSnap), width)).append('\n');
       sb.append(pairRow("นับจริงในลิ้นชัก", "-", width)).append('\n');
-      sb.append(pairRow("ส่วนต่าง", "-", width)).append('\n');
+      sb.append(tripleRow("ส่วนต่าง", "", "-", width)).append('\n');
       sb.append(pairRow("ยอดเงินสดที่ต้องนำส่ง", "-", width)).append('\n');
       sb.append(center("*ยังไม่ปิดรอบ - ยังไม่นับส่งเงิน", width)).append('\n');
     }
@@ -445,22 +486,33 @@ public final class ShiftReportFormBuilder {
       }
     }
 
-    // --- Frame 12: รายการขายแยกตามบิล ---
-    if (!detail.billBlocks.isEmpty()) {
-      sb.append(rule(width)).append('\n');
-      sb.append('\n');
-      sb.append(EscPos.BOLD_ON)
-          .append("รายการขายแยกตามบิล (" + detail.billBlocks.size() + ")")
-          .append(EscPos.BOLD_OFF)
+    // --- Frame 12: สรุปบิล (สถิติ) — ไม่แจกแจงรายบิล/รายการย่อย (สั้น อ่านเร็ว) ---
+    sb.append(rule(width)).append('\n');
+    sb.append('\n');
+    sb.append(EscPos.BOLD_ON).append("สรุปบิล (สถิติ)").append(EscPos.BOLD_OFF).append('\n');
+    sb.append(pairRow("จำนวนบิลขาย", String.valueOf(customerCount), width)).append('\n');
+    sb.append(
+            pairRow(
+                "จำนวนชิ้น",
+                String.valueOf(detail.itemQty > 0 ? detail.itemQty : customerCount),
+                width))
+        .append('\n');
+    sb.append(pairRow("ยอดเฉลี่ยต่อบิล", money(avgPerBill), width)).append('\n');
+    if (discountCount > 0) {
+      sb.append(
+              pairRow(
+                  "บิลมีส่วนลด",
+                  discountCount + " / -" + money(discountTotal),
+                  width))
           .append('\n');
-      int shown = 0;
-      for (String block : detail.billBlocks) {
-        if (shown++ >= 25) {
-          sb.append(center("...", width)).append('\n');
-          break;
-        }
-        sb.append(block);
-      }
+    }
+    if (voidedCount > 0) {
+      sb.append(
+              pairRow(
+                  "ทำลายบิล",
+                  voidedCount + " / " + money(detail.voidedTotal),
+                  width))
+          .append('\n');
     }
 
     // --- Frame 13: footer (+ Z checklist + signatures) ---
@@ -483,6 +535,142 @@ public final class ShiftReportFormBuilder {
       sb.append(center("*** ไม่ใช่การปิดรอบ ***", width)).append('\n');
     }
 
+    return sb.toString();
+  }
+
+  /**
+   * Short cash-remit slip for close — designed to fit one phone photo.
+   * Drops category/item lists; keeps pay summary + drawer math + signatures.
+   */
+  static String buildRemitSlip(
+      String shopEn,
+      String shopTh,
+      String shopAddress,
+      String shopPhone,
+      String staff,
+      String device,
+      String sessionShort,
+      String shift,
+      long openedAt,
+      long closedAt,
+      int saleCount,
+      int voidedCount,
+      int cashBills,
+      double cashSales,
+      int promptpayBills,
+      double promptpaySales,
+      int transferBills,
+      double transferSales,
+      double netSales,
+      double openingCash,
+      Double countedCash,
+      Double expectedCash,
+      Double cashDifference,
+      String discrepancyLabel,
+      double leaveFloat,
+      String discrepancyNote,
+      double cashOutTotal,
+      double cashInTotal,
+      int width) {
+    StringBuilder sb = new StringBuilder();
+    sb.append(center(shopEn, width)).append('\n');
+    if (!shopTh.isEmpty()
+        && !shopEn.toLowerCase(Locale.US).contains(shopTh.toLowerCase(Locale.US))) {
+      sb.append(center(shopTh, width)).append('\n');
+    }
+    if (!shopAddress.isEmpty()) {
+      for (String part : wrap(shopAddress, width)) {
+        sb.append(center(part, width)).append('\n');
+      }
+    }
+    if (!shopPhone.isEmpty()) {
+      sb.append(center(shopPhone, width)).append('\n');
+    }
+    sb.append(rule(width)).append('\n');
+    sb.append(EscPos.BOLD_ON)
+        .append(center("*** ใบส่งเงินสด ***", width))
+        .append(EscPos.BOLD_OFF)
+        .append('\n');
+    sb.append(center("(ปิดรอบ — ถ่ายรูปส่งเงิน)", width)).append('\n');
+    sb.append(center("ไม่ใช่ใบเสร็จลูกค้า · ไม่มีรายการสินค้า", width)).append('\n');
+    sb.append('\n');
+    sb.append(pairRow("เครื่อง/รอบ", device + " / " + sessionShort, width)).append('\n');
+    if (openedAt > 0) {
+      sb.append(pairRow("เปิด", formatDateTime(openedAt), width)).append('\n');
+    }
+    sb.append(pairRow("ปิด", formatDateTime(closedAt), width)).append('\n');
+    sb.append(pairRow("โดย", staff, width)).append('\n');
+    if (shift != null && !shift.isEmpty()) {
+      sb.append(pairRow("รอบงาน", shiftLabel(shift), width)).append('\n');
+    }
+
+    sb.append(rule(width)).append('\n');
+    sb.append(EscPos.BOLD_ON).append("การชำระเงิน").append(EscPos.BOLD_OFF).append('\n');
+    sb.append(tripleRow("ช่องทาง", "บิล", "ยอด", width)).append('\n');
+    sb.append(tripleRow("เงินสด", String.valueOf(cashBills), money(cashSales), width))
+        .append('\n');
+    sb.append(
+            tripleRow("โอนเงิน", String.valueOf(transferBills), money(transferSales), width))
+        .append('\n');
+    sb.append(
+            tripleRow(
+                "PromptPay", String.valueOf(promptpayBills), money(promptpaySales), width))
+        .append('\n');
+    sb.append(tripleRow("รวมสุทธิ", String.valueOf(saleCount), money(netSales), width))
+        .append('\n');
+    if (voidedCount > 0) {
+      sb.append(pairRow("ทำลายบิล", String.valueOf(voidedCount), width)).append('\n');
+    }
+
+    double outAmt = Math.max(0, cashOutTotal);
+    double inAmt = Math.max(0, cashInTotal);
+    double netInOut = inAmt - outAmt;
+    double expected =
+        expectedCash != null ? expectedCash : openingCash + cashSales - outAmt + inAmt;
+    double counted = countedCash != null ? countedCash : expected;
+    double diff = cashDifference != null ? cashDifference : counted - expected;
+    String label =
+        discrepancyLabel != null && !discrepancyLabel.isEmpty()
+            ? discrepancyLabel
+            : (Math.abs(diff) < 0.5 ? "ตรง" : (diff > 0 ? "เกิน" : "ขาด"));
+    double remit = Math.max(0, counted - Math.max(0, leaveFloat));
+
+    sb.append(rule(width)).append('\n');
+    sb.append(EscPos.BOLD_ON).append("เงินสดที่ต้องนำส่ง").append(EscPos.BOLD_OFF).append('\n');
+    sb.append(pairRow("เงินสดเริ่มต้น", money(openingCash), width)).append('\n');
+    sb.append(pairRow("ยอดขายเงินสด", money(cashSales), width)).append('\n');
+    if (Math.abs(netInOut) > 0.0001) {
+      sb.append(pairRow("เงินเข้า/เงินออก", money(netInOut), width)).append('\n');
+    }
+    sb.append(pairRow("ควรมีในลิ้นชัก", money(expected), width)).append('\n');
+    sb.append(pairRow("นับจริงในลิ้นชัก", money(counted), width)).append('\n');
+    // Keep status word left of amount column so numbers stay aligned.
+    sb.append(tripleRow("ส่วนต่าง", label, money(diff), width)).append('\n');
+    if (leaveFloat > 0.0001) {
+      sb.append(pairRow("ทอนรอบถัดไป", money(leaveFloat), width)).append('\n');
+    }
+    sb.append(EscPos.BOLD_ON)
+        .append(pairRow("ยอดเงินสดที่ต้องนำส่ง", money(remit), width))
+        .append(EscPos.BOLD_OFF)
+        .append('\n');
+    sb.append(center("*นับจริง - ทอนรอบถัดไป", width)).append('\n');
+    if (discrepancyNote != null && !discrepancyNote.trim().isEmpty()) {
+      sb.append(pairRow("เหตุผล", discrepancyNote.trim(), width)).append('\n');
+    }
+
+    sb.append(rule(width)).append('\n');
+    sb.append("ตรวจก่อนเซ็น / ส่งเงิน").append('\n');
+    sb.append("[ ] นับรวมเงินทอนเริ่มต้นแล้ว").append('\n');
+    sb.append("[ ] ยอดที่ต้องนำส่งตรงกับเงินในมือ").append('\n');
+    sb.append("[ ] โอน/PromptPay ตรวจสลิปแล้ว").append('\n');
+    sb.append('\n');
+    sb.append("ลงชื่อผู้ส่งเงิน").append('\n');
+    sb.append(signLine(width)).append('\n');
+    sb.append('\n');
+    sb.append("ลงชื่อผู้รับเงิน").append('\n');
+    sb.append(signLine(width)).append('\n');
+    sb.append(rule(width)).append('\n');
+    sb.append(center("รายการสินค้าดูหลังร้าน / พิมพ์รายงานเต็ม", width)).append('\n');
     return sb.toString();
   }
 
@@ -660,7 +848,6 @@ public final class ShiftReportFormBuilder {
     double voidedTotal;
     List<NamedAmt> byCategory = new ArrayList<>();
     List<NamedAmt> byItem = new ArrayList<>();
-    List<String> billBlocks = new ArrayList<>();
     List<String> voidedHeads = new ArrayList<>();
 
     static DetailAgg fromReceipts(JSONArray receipts, String sessionId) {
@@ -679,12 +866,10 @@ public final class ShiftReportFormBuilder {
         boolean voided = r.optBoolean("voided", false);
         double total = r.optDouble("total", 0);
         double disc = r.optDouble("discountBaht", 0);
-        String billNo = r.optString("billNo", "-");
-        long at = r.optLong("at", System.currentTimeMillis());
-        String pay = r.optString("paymentMethod", "cash");
-        String payLabel = app.telltea.npos.sell.PaymentMethods.labelShort(pay);
         if (voided) {
           d.voidedTotal += total;
+          String billNo = r.optString("billNo", "-");
+          long at = r.optLong("at", System.currentTimeMillis());
           d.voidedHeads.add(
               "#" + billNo + " " + formatTime(at) + " / " + money(total));
           continue;
@@ -695,15 +880,7 @@ public final class ShiftReportFormBuilder {
           d.discountCount += 1;
         }
         JSONArray lines = r.optJSONArray("lines");
-        StringBuilder block = new StringBuilder();
-        block
-            .append("#")
-            .append(billNo)
-            .append(" / ")
-            .append(formatTime(at))
-            .append(" / ")
-            .append(payLabel)
-            .append('\n');
+        // Aggregate stats only — no per-bill dump on X/Z paper (BOH preview uses same form).
         if (lines != null && lines.length() > 0) {
           d.hasLines = true;
           for (int j = 0; j < lines.length(); j++) {
@@ -712,9 +889,11 @@ public final class ShiftReportFormBuilder {
             String name = line.optString("name", "รายการ").trim();
             if (name.isEmpty()) name = "รายการ";
             int qty = Math.max(1, line.optInt("qty", 1));
-            double unit = line.optDouble("unitPrice", 0);
+            // SaleSync stores unit as "price" (server/web shape); older/hold carts use unitPrice.
+            double unit = lineUnitPrice(line);
             double amount = qty * unit;
             if (amount <= 0 && line.has("amount")) amount = line.optDouble("amount", 0);
+            if (amount <= 0 && line.has("lineTotal")) amount = line.optDouble("lineTotal", 0);
             d.itemQty += qty;
             d.grossSales += amount;
             String cat = line.optString("categoryName", "").trim();
@@ -733,14 +912,6 @@ public final class ShiftReportFormBuilder {
             }
             it.qty += qty;
             it.amount += amount;
-            block
-                .append("  ")
-                .append(name)
-                .append(" x")
-                .append(qty)
-                .append("  ")
-                .append(money(amount))
-                .append('\n');
           }
         } else {
           d.grossSales += total + disc;
@@ -751,13 +922,7 @@ public final class ShiftReportFormBuilder {
           }
           c.qty += 1;
           c.amount += total + disc;
-          block.append("  (ไม่มีรายการรายละเอียด)\n");
         }
-        if (disc > 0.0001) {
-          block.append("  ส่วนลด  -").append(money(disc)).append('\n');
-        }
-        block.append("  รวมบิล  ").append(money(total)).append('\n');
-        d.billBlocks.add(block.toString());
       }
       d.byCategory = sortedAmts(cats);
       d.byItem = sortedAmts(items);
@@ -778,5 +943,17 @@ public final class ShiftReportFormBuilder {
           });
       return list;
     }
+  }
+
+  /** Prefer {@code price} (nposCompleteSale / SaleSync), then {@code unitPrice} (hold cart). */
+  static double lineUnitPrice(JSONObject line) {
+    if (line == null) return 0;
+    double price = line.optDouble("price", Double.NaN);
+    if (!Double.isNaN(price) && price > 0) return price;
+    double unit = line.optDouble("unitPrice", Double.NaN);
+    if (!Double.isNaN(unit) && unit > 0) return unit;
+    if (!Double.isNaN(price) && price >= 0) return price;
+    if (!Double.isNaN(unit) && unit >= 0) return unit;
+    return 0;
   }
 }

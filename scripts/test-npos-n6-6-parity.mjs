@@ -9,9 +9,9 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 512/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+112/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.89"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 581/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+130/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.107"/);
 assert.match(read("docs/npos-migration-phases.md"), /N6\.6/);
 assert.match(read("docs/npos-n6-plan.md"), /N6\.6/);
 
@@ -36,7 +36,9 @@ assert.match(sell, /showOptionPicker/);
 assert.match(sell, /showDiscountDialog/);
 assert.match(sell, /showPromptPayDialog/);
 assert.match(sell, /pay_pp_hidden_early|PromptPayPayload/);
-assert.match(sell, /confirmToggleSoldOut/);
+// Sold-out uses long-press action sheet → MenuAdmin (not legacy confirm dialog).
+assert.match(sell, /showItemActionsSheet|menu_item_action_sold_out/);
+assert.doesNotMatch(sell, /confirmToggleSoldOut/);
 assert.match(sell, /reloadMenu/);
 assert.match(sell, /effectiveMin|option_min/);
 

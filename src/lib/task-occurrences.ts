@@ -1,7 +1,9 @@
 import {
   addDoc,
+  arrayUnion,
   collection,
   doc,
+  getDoc,
   onSnapshot,
   orderBy,
   query,
@@ -14,11 +16,15 @@ import { getDb } from "./firebase";
 import { daysAgoMs } from "./query-window";
 import {
   normalizeTaskNudgeKind,
+  TASK_PROGRESS_NOTE_MAX,
+  TASK_PROGRESS_NOTES_MAX,
   type TaskOccurrence,
   type TaskOccurrenceStatus,
+  type TaskProgressNote,
 } from "./task-types";
 import {
   computeCompletedKind,
+  newProgressNoteId,
   occurrenceDocId,
   type SyncCreateOp,
   type SyncDeleteOp,
@@ -42,6 +48,31 @@ function occurrencesCol() {
 function normalizeOccurrenceStatus(raw: unknown): TaskOccurrenceStatus {
   if (raw === "waiting" || raw === "completed" || raw === "missed") return raw;
   return "pending";
+}
+
+export function mapTaskProgressNotes(raw: unknown): TaskProgressNote[] {
+  if (!Array.isArray(raw)) return [];
+  const out: TaskProgressNote[] = [];
+  for (const row of raw) {
+    if (!row || typeof row !== "object") continue;
+    const r = row as Record<string, unknown>;
+    const text = typeof r.text === "string" ? r.text.trim() : "";
+    if (!text) continue;
+    out.push({
+      id:
+        typeof r.id === "string" && r.id.trim()
+          ? r.id.trim()
+          : newProgressNoteId(),
+      text: text.slice(0, TASK_PROGRESS_NOTE_MAX),
+      createdBy: typeof r.createdBy === "string" ? r.createdBy : "",
+      createdByName:
+        typeof r.createdByName === "string" ? r.createdByName.trim() : "",
+      authorRole: r.authorRole === "owner" ? "owner" : "staff",
+      createdAt: typeof r.createdAt === "number" ? r.createdAt : 0,
+    });
+  }
+  out.sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id));
+  return out.slice(-TASK_PROGRESS_NOTES_MAX);
 }
 
 function mapOccurrence(id: string, data: Record<string, unknown>): TaskOccurrence {
@@ -68,6 +99,7 @@ function mapOccurrence(id: string, data: Record<string, unknown>): TaskOccurrenc
     status: normalizeOccurrenceStatus(data.status),
     nudgeKind: normalizeTaskNudgeKind(data.nudgeKind),
     checklistDone,
+    progressNotes: mapTaskProgressNotes(data.progressNotes),
     proofImg: data.proofImg ? String(data.proofImg) : undefined,
     proofImgs: Array.isArray(data.proofImgs)
       ? (data.proofImgs as string[]).map(String).filter((u) => u.trim())
@@ -168,6 +200,7 @@ export async function applySyncOperations(
       status: "pending",
       nudgeKind: normalizeTaskNudgeKind(op.nudgeKind),
       checklistDone: [],
+      progressNotes: [],
       proofImg: "",
       createdAt: now,
       updatedAt: now,
@@ -229,7 +262,7 @@ function getExistingProofs(occ: TaskOccurrence): string[] {
 export async function completeTaskOccurrence(
   occ: TaskOccurrence,
   patch: {
-    checklistDone: string[];
+    checklistDone?: string[];
     proofImg?: string;
     proofImgs?: string[];
     completionNote?: string;
@@ -242,7 +275,7 @@ export async function completeTaskOccurrence(
   const proofImgs = normalizeProofImgs(patch);
   const completionNote = (patch.completionNote || "").trim().slice(0, 280);
   await updateDoc(doc(getDb(), "taskOccurrences", occ.id), {
-    checklistDone: patch.checklistDone,
+    checklistDone: patch.checklistDone || occ.checklistDone || [],
     proofImg: proofImgs[0] || "",
     proofImgs,
     completionNote,
@@ -255,6 +288,50 @@ export async function completeTaskOccurrence(
   });
 }
 
+export async function addTaskProgressNote(
+  occ: TaskOccurrence,
+  input: {
+    text: string;
+    createdBy: string;
+    createdByName: string;
+    authorRole: "owner" | "staff";
+  },
+): Promise<TaskProgressNote> {
+  const text = String(input.text || "").trim().slice(0, TASK_PROGRESS_NOTE_MAX);
+  if (!text) throw new Error("ใส่ข้อความความคืบก่อน");
+  if (!input.createdBy) throw new Error("เข้าสู่ระบบก่อนโพสต์โนต");
+  const existing = mapTaskProgressNotes(occ.progressNotes);
+  if (existing.length >= TASK_PROGRESS_NOTES_MAX) {
+    throw new Error(`โนตเต็มแล้ว (สูงสุด ${TASK_PROGRESS_NOTES_MAX})`);
+  }
+  const note: TaskProgressNote = {
+    id: newProgressNoteId(),
+    text,
+    createdBy: input.createdBy,
+    createdByName: String(input.createdByName || "").trim() || "ไม่ระบุชื่อ",
+    authorRole: input.authorRole === "owner" ? "owner" : "staff",
+    createdAt: Date.now(),
+  };
+  await updateDoc(doc(getDb(), "taskOccurrences", occ.id), {
+    progressNotes: arrayUnion(note),
+    updatedAt: Date.now(),
+  });
+  return note;
+}
+
+export async function deleteTaskProgressNote(
+  occ: TaskOccurrence,
+  noteId: string,
+): Promise<void> {
+  const id = String(noteId || "").trim();
+  if (!id) throw new Error("ไม่พบโนต");
+  const next = mapTaskProgressNotes(occ.progressNotes).filter((n) => n.id !== id);
+  await updateDoc(doc(getDb(), "taskOccurrences", occ.id), {
+    progressNotes: next,
+    updatedAt: Date.now(),
+  });
+}
+
 export async function deleteTaskOccurrences(ids: string[]): Promise<void> {
   if (!ids.length) return;
   const batch = writeBatch(getDb());
@@ -262,6 +339,157 @@ export async function deleteTaskOccurrences(ids: string[]): Promise<void> {
     batch.delete(doc(getDb(), "taskOccurrences", id));
   }
   await batch.commit();
+}
+
+/** รอบที่ยังไม่จบ — pending / waiting / missed */
+export function isOpenTaskOccurrenceStatus(status: TaskOccurrenceStatus) {
+  return status === "pending" || status === "missed" || status === "waiting";
+}
+
+/** ตัดขยะจาก id (เช่น ?query) — กัน path เพี้ยนแล้ว update ไม่เจอเอกสาร */
+export function sanitizeTaskTemplateId(raw: string): string {
+  return String(raw || "")
+    .trim()
+    .split(/[?#]/)[0]
+    .trim();
+}
+
+/**
+ * รวบรวมรอบที่ยังไม่จบของกติกา + เอกสารซ้ำ periodKey เดียวกัน
+ * (ตาราง thisWeek โชว์แค่ 1 แถว/กติกา — ลบแถวเดียวแล้วพี่น้องโผล่แทน)
+ */
+export function collectOpenTaskOccurrences(
+  templateId: string,
+  occurrences: TaskOccurrence[],
+): TaskOccurrence[] {
+  const tid = sanitizeTaskTemplateId(templateId);
+  const rawTid = String(templateId || "").trim();
+  if (!tid && !rawTid) return [];
+  const matchTid = (raw: string) => {
+    const t = String(raw || "").trim();
+    if (!t) return false;
+    if (rawTid && t === rawTid) return true;
+    if (tid && (t === tid || sanitizeTaskTemplateId(t) === tid)) return true;
+    return false;
+  };
+  const open = occurrences.filter(
+    (o) => matchTid(o.templateId) && isOpenTaskOccurrenceStatus(o.status),
+  );
+  const periodKeys = new Set(open.map((o) => o.periodKey).filter(Boolean));
+  const byId = new Map<string, TaskOccurrence>();
+  for (const o of occurrences) {
+    if (!matchTid(o.templateId)) continue;
+    if (o.status === "completed") continue;
+    if (periodKeys.has(o.periodKey) || isOpenTaskOccurrenceStatus(o.status)) {
+      byId.set(o.id, o);
+    }
+  }
+  return [...byId.values()];
+}
+
+async function resolveExistingTaskTemplateRef(rawId: string) {
+  const candidates = [...new Set(
+    [String(rawId || "").trim(), sanitizeTaskTemplateId(rawId)].filter(Boolean),
+  )];
+  for (const id of candidates) {
+    const ref = doc(getDb(), "taskTemplates", id);
+    try {
+      if ((await getDoc(ref)).exists()) return { ref, id };
+    } catch {
+      /* try next */
+    }
+  }
+  return null;
+}
+
+async function commitOpenOccurrenceDeletes(input: {
+  templateId: string;
+  ids: string[];
+  /** ถ้ามีกติกา — อัปเดต dismiss/active; ถ้าไม่มีแล้ว ลบรอบอย่างเดียว */
+  templatePatch?: Record<string, unknown>;
+}): Promise<void> {
+  const existing = input.templatePatch
+    ? await resolveExistingTaskTemplateRef(input.templateId)
+    : null;
+
+  const batch = writeBatch(getDb());
+  if (existing && input.templatePatch) {
+    batch.update(existing.ref, input.templatePatch);
+  }
+  for (const id of input.ids) {
+    batch.delete(doc(getDb(), "taskOccurrences", id));
+  }
+  // มีอย่างน้อยหนึ่งอย่างต้องทำ — ถ้าไม่มีทั้งกติกาและรอบ ก็ไม่ commit
+  if (!input.ids.length && !(existing && input.templatePatch)) {
+    return;
+  }
+  await batch.commit();
+}
+
+/**
+ * dismiss periodKeys + ลบรอบที่ยังไม่จบ ใน batch เดียว
+ * กัน sync สร้างซ้ำ และกันลบแล้วแถวพี่น้องโผล่แทน
+ * ถ้ากติกาถูกลบไปแล้ว — ยังลบรอบค้างได้ (ไม่ให้ทั้ง batch พังด้วย No document to update)
+ */
+export async function dismissAndDeleteOpenTaskOccurrences(
+  templateId: string,
+  occurrences: TaskOccurrence[],
+): Promise<{ deletedIds: string[]; periodKeys: string[] }> {
+  const tid = sanitizeTaskTemplateId(templateId);
+  if (!tid) throw new Error("ไม่พบกติกางาน");
+  const open = collectOpenTaskOccurrences(tid, occurrences);
+  // รองรับ templateId เพี้ยนในแถว — ลองจับจาก occ ที่กดลบผ่านรายการ open ของ id ดิบด้วย
+  const rawTid = String(templateId || "").trim();
+  const openExtra =
+    rawTid !== tid
+      ? collectOpenTaskOccurrences(rawTid, occurrences).filter(
+          (o) => !open.some((x) => x.id === o.id),
+        )
+      : [];
+  const allOpen = [...open, ...openExtra];
+  const periodKeys = [...new Set(allOpen.map((o) => o.periodKey).filter(Boolean))];
+  const ids = [...new Set(allOpen.map((o) => o.id))];
+  if (!ids.length && !periodKeys.length) {
+    return { deletedIds: [], periodKeys: [] };
+  }
+
+  await commitOpenOccurrenceDeletes({
+    templateId: rawTid || tid,
+    ids,
+    templatePatch: periodKeys.length
+      ? {
+          dismissedPeriodKeys: arrayUnion(...periodKeys),
+          updatedAt: Date.now(),
+        }
+      : undefined,
+  });
+  return { deletedIds: ids, periodKeys };
+}
+
+/** ปิดกติกา + ลบรอบที่ยังไม่จบออกจากตารางทันที */
+export async function deactivateTaskTemplateClearingOpen(
+  templateId: string,
+  occurrences: TaskOccurrence[],
+): Promise<{ deletedIds: string[]; periodKeys: string[] }> {
+  const tid = sanitizeTaskTemplateId(templateId);
+  const rawTid = String(templateId || "").trim();
+  if (!tid && !rawTid) throw new Error("ไม่พบกติกางาน");
+  const open = collectOpenTaskOccurrences(rawTid || tid, occurrences);
+  const periodKeys = [...new Set(open.map((o) => o.periodKey).filter(Boolean))];
+  const ids = open.map((o) => o.id);
+  const patch: Record<string, unknown> = {
+    active: false,
+    updatedAt: Date.now(),
+  };
+  if (periodKeys.length) {
+    patch.dismissedPeriodKeys = arrayUnion(...periodKeys);
+  }
+  await commitOpenOccurrenceDeletes({
+    templateId: rawTid || tid,
+    ids,
+    templatePatch: patch,
+  });
+  return { deletedIds: ids, periodKeys };
 }
 
 export async function syncPendingOccurrencesFromTemplate(

@@ -7,7 +7,8 @@ package app.telltea.npos.printer;
  * separate Bluetooth/USB device. Keep kick moments deterministic.
  *
  * Auto kick:
- * - cash sale after a successful receipt print
+ * - cash sale — queued on the printer thread before the receipt so the drawer
+ *   opens while paper prints (staff can make change immediately)
  *
  * Never auto kick:
  * - PromptPay
@@ -23,7 +24,7 @@ package app.telltea.npos.printer;
 public final class CashDrawerPolicy {
   private CashDrawerPolicy() {}
 
-  /** True when a completed sale should pulse the drawer after paper prints. */
+  /** True when a completed cash sale should pulse the drawer (queued before paper). */
   public static boolean shouldKickAfterSale(String paymentMethod) {
     return app.telltea.npos.sell.PaymentMethods.isCash(paymentMethod);
   }

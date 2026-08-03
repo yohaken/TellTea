@@ -3,12 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   Camera,
-  CheckCircle2,
-  Circle,
   ImageIcon,
   ListTodo,
   Pencil,
-  Plus,
+  Send,
   Trash2,
   X,
 } from "lucide-react";
@@ -18,11 +16,18 @@ import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useAuth } from "@/lib/auth";
+import { resolveWorkerDisplayNames } from "@/lib/employee-rename-propagate";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
 import { isAppOwnerEmail } from "@/lib/firebase";
+import { profileStatusLabel } from "@/lib/profile";
 import {
+  addTaskProgressNote,
+  collectOpenTaskOccurrences,
   completeTaskOccurrence,
-  deleteTaskOccurrences,
+  deactivateTaskTemplateClearingOpen,
+  deleteTaskProgressNote,
+  dismissAndDeleteOpenTaskOccurrences,
+  isOpenTaskOccurrenceStatus,
   reportTaskOccurrenceWaiting,
   subscribeTaskOccurrences,
   subscribeTaskOccurrencesForAssignee,
@@ -31,9 +36,7 @@ import {
 } from "@/lib/task-occurrences";
 import {
   createTaskTemplate,
-  deactivateTaskTemplate,
   deleteTaskTemplate,
-  dismissTaskPeriod,
   subscribeTaskTemplates,
   updateTaskTemplate,
 } from "@/lib/task-templates";
@@ -42,17 +45,23 @@ import {
   buildOwnerTaskTimeline,
   type OwnerTimelineRow,
 } from "@/lib/task-owner-timeline";
-import type { TaskChecklistItem, TaskOccurrence, TaskTemplate } from "@/lib/task-types";
 import {
+  TASK_PROGRESS_NOTE_MAX,
+  type TaskOccurrence,
+  type TaskTemplate,
+} from "@/lib/task-types";
+import {
+  applyDismissBlocksToTemplates,
   bangkokCalendarParts,
   canSubmitOccurrence,
   filterOccurrencesByTab,
+  formatTaskProgressNotesPreview,
   getTaskProofImgs,
   isOccurrenceOpenSoon,
   labelCompletedKind,
   labelWeekday,
   labelWeekdayShort,
-  newChecklistItemId,
+  mergeDismissedPeriodKeys,
   TASK_PROOF_MAX,
   validateTaskCompleteInput,
   WEEKDAY_LABELS,
@@ -61,37 +70,18 @@ import {
 import { formatDateShortBe, formatDateTimeShortBe } from "@/lib/utils";
 
 /** ลบกติกาถาวร + รอบที่ยังไม่ส่ง (ประวัติที่ส่งแล้วคงไว้) */
-function isOpenOccurrenceStatus(status: TaskOccurrence["status"]) {
-  return status === "pending" || status === "missed" || status === "waiting";
-}
-
 async function purgeTaskTemplate(
   template: TaskTemplate,
   occurrences: TaskOccurrence[],
-): Promise<void> {
-  const pending = occurrences.filter(
-    (o) => o.templateId === template.id && isOpenOccurrenceStatus(o.status),
-  );
-  if (pending.length) {
-    for (const occ of pending) {
-      await dismissTaskPeriod(occ.templateId, occ.periodKey);
-    }
-    await deleteTaskOccurrences(pending.map((o) => o.id));
-  }
+): Promise<{ deletedIds: string[]; periodKeys: string[] }> {
+  const result = await dismissAndDeleteOpenTaskOccurrences(template.id, occurrences);
   await deleteTaskTemplate(template.id);
+  return result;
 }
 
-const TASK_PRESETS: { title: string; weekday: number; checklist: string[] }[] = [
-  {
-    title: "โพสต์ Facebook ประจำสัปดาห์",
-    weekday: 1,
-    checklist: ["ออกแบบภาพ/ข้อความ", "โพสต์แล้ว", "แคปหน้าจอโพสต์"],
-  },
-  {
-    title: "คอนเทนต์รายเดือน",
-    weekday: 1,
-    checklist: ["ร่างคอนเทนต์", "อนุมัติแล้ว", "เผยแพร่แล้ว", "แนบรูปหลักฐาน"],
-  },
+const TASK_PRESETS: { title: string; weekday: number }[] = [
+  { title: "โพสต์ Facebook ประจำสัปดาห์", weekday: 1 },
+  { title: "คอนเทนต์รายเดือน", weekday: 1 },
 ];
 
 export default function TasksPage() {
@@ -103,8 +93,11 @@ export default function TasksPage() {
 }
 
 function TasksView() {
-  const { actorId, staff, user } = useAuth();
-  const isOwnerManager = staff?.role === "owner" || isAppOwnerEmail(user?.email);
+  const { actorId, staff, user, isPermPreview } = useAuth();
+  // พรีวิวมุมพนักงาน: ห้ามใช้ email เจ้าของดึง UI หลังร้าน (ตารางกติกา/ไทม์ไลน์)
+  const isOwnerManager =
+    !isPermPreview &&
+    (staff?.role === "owner" || isAppOwnerEmail(user?.email));
   const myEmployeeId = staff?.employeeId || "";
 
   const [templates, setTemplates] = useState<TaskTemplate[]>([]);
@@ -122,11 +115,27 @@ function TasksView() {
   const [rulesOpen, setRulesOpen] = useState(false);
   const rulesInitRef = useRef(false);
   const syncedRef = useRef(false);
+  /** กัน sync สร้างรอบกลับหลังลบ — ก่อน snapshot dismissedPeriodKeys ตามทัน */
+  const dismissBlockRef = useRef<Set<string>>(new Set());
+
+  const rememberDismissed = useCallback((templateId: string, periodKeys: string[]) => {
+    const tid = String(templateId || "").trim();
+    if (!tid) return;
+    for (const pk of periodKeys) {
+      if (pk) dismissBlockRef.current.add(`${tid}:${pk}`);
+    }
+    setTemplates((prev) =>
+      prev.map((tpl) =>
+        tpl.id === tid ? mergeDismissedPeriodKeys(tpl, periodKeys) : tpl,
+      ),
+    );
+  }, []);
 
   const doSync = useCallback(async (tpls: TaskTemplate[], occs: TaskOccurrence[]) => {
     setSyncing(true);
     try {
-      await runTaskOccurrenceSync(tpls, occs);
+      const merged = applyDismissBlocksToTemplates(tpls, dismissBlockRef.current);
+      await runTaskOccurrenceSync(merged, occs);
     } catch (err) {
       setError((err as Error).message || "ซิงก์รอบงานไม่สำเร็จ");
     } finally {
@@ -239,8 +248,8 @@ function TasksView() {
         </h1>
         <p className="muted tasks-page-hint">
           {isOwnerManager
-            ? "กติกาประจำสัปดาห์ · มินิไทม์ไลน์ติดตามส่ง/feedback · ปิด/ลบกติกาและลบรอบได้"
-            : "งานที่มอบให้คุณ · ติ๊ก checklist + รูป · ใส่ข้อความถึงเจ้าของได้"}
+            ? "กติกา = งานซ้ำทุกสัปดาห์ · ในแต่ละรอบใช้โนตความคืบแทนเช็คลิสย่อย · พนักงาน+เจ้าของพิมพ์ได้"
+            : "ใส่โนตความคืบได้ · ส่งงานพร้อมรูปหลักฐาน · เจ้าของอ่านและพิมพ์ตอบในโนตได้"}
         </p>
       </div>
 
@@ -270,7 +279,7 @@ function TasksView() {
                   กติกา {activeTemplates.length}
                   <span className="muted tasks-template-toggle-hint">
                     {" "}
-                    · ปิด=หยุดสร้างรอบ · ลบ=ถาวร
+                    · ปิด=หยุด+เอาออกจากตาราง · ลบ=ถาวร
                   </span>
                 </span>
                 <span className="tasks-template-toggle-meta" aria-hidden>
@@ -303,18 +312,39 @@ function TasksView() {
                         <button
                           type="button"
                           className="tasks-template-act"
-                          title="หยุดสร้างรอบใหม่ — กติกายังอยู่ในระบบ"
+                          title="หยุดงานประจำ + เอาออกจากตารางทันที"
                           onClick={() => {
-                            if (
-                              !window.confirm(
-                                `ปิดกติกา "${tpl.title}"?\nรอบใหม่จะไม่ถูกสร้าง (งานประจำหยุด)`,
-                              )
-                            ) {
-                              return;
-                            }
-                            void deactivateTaskTemplate(tpl.id).catch((err) =>
-                              setError((err as Error).message || "ปิดกติกาไม่สำเร็จ"),
-                            );
+                            const openN = collectOpenTaskOccurrences(
+                              tpl.id,
+                              occurrences,
+                            ).length;
+                            const msg =
+                              openN > 0
+                                ? `ปิดกติกา "${tpl.title}"?\nรอบที่ยังไม่ส่ง ${openN} รายการจะหายจากตาราง\nไม่สร้างรอบใหม่`
+                                : `ปิดกติกา "${tpl.title}"?\nไม่สร้างรอบใหม่`;
+                            if (!window.confirm(msg)) return;
+                            void deactivateTaskTemplateClearingOpen(tpl.id, occurrences)
+                              .then((result) => {
+                                rememberDismissed(tpl.id, result.periodKeys);
+                                setTemplates((prev) =>
+                                  prev.map((t) =>
+                                    t.id === tpl.id ? { ...t, active: false } : t,
+                                  ),
+                                );
+                                setOccurrences((prev) =>
+                                  prev.filter(
+                                    (o) =>
+                                      !(
+                                        o.templateId === tpl.id &&
+                                        isOpenTaskOccurrenceStatus(o.status)
+                                      ),
+                                  ),
+                                );
+                                // อย่า reset syncedRef — sync ซ้ำด้วย template เก่าจะสร้างรอบกลับ
+                              })
+                              .catch((err) =>
+                                setError((err as Error).message || "ปิดกติกาไม่สำเร็จ"),
+                              );
                           }}
                         >
                           <X size={11} aria-hidden /> ปิด
@@ -324,10 +354,9 @@ function TasksView() {
                           className="tasks-template-act is-danger"
                           title="ลบกติกาถาวร"
                           onClick={() => {
-                            const pendingN = occurrences.filter(
-                              (o) =>
-                                o.templateId === tpl.id &&
-                                isOpenOccurrenceStatus(o.status),
+                            const pendingN = collectOpenTaskOccurrences(
+                              tpl.id,
+                              occurrences,
                             ).length;
                             const msg =
                               pendingN > 0
@@ -335,8 +364,18 @@ function TasksView() {
                                 : `ลบกติกา "${tpl.title}" ถาวร?`;
                             if (!window.confirm(msg)) return;
                             void purgeTaskTemplate(tpl, occurrences)
-                              .then(() => {
-                                syncedRef.current = false;
+                              .then((result) => {
+                                rememberDismissed(tpl.id, result.periodKeys);
+                                setTemplates((prev) => prev.filter((t) => t.id !== tpl.id));
+                                setOccurrences((prev) =>
+                                  prev.filter(
+                                    (o) =>
+                                      !(
+                                        o.templateId === tpl.id &&
+                                        isOpenTaskOccurrenceStatus(o.status)
+                                      ),
+                                  ),
+                                );
                               })
                               .catch((err) =>
                                 setError((err as Error).message || "ลบกติกาไม่สำเร็จ"),
@@ -397,11 +436,18 @@ function TasksView() {
           ) : (
             <OccurrencesTable
               rows={visible}
+              allOccurrences={occurrences}
+              employees={employees}
               canManage={isOwnerManager}
               showFeedback={tab === "history"}
               onSubmit={(occ) => setSubmitOcc(occ)}
               onViewPhoto={(urls) => setPreviewUrls(urls)}
               onError={setError}
+              onDeleted={(result) => {
+                rememberDismissed(result.templateId, result.periodKeys);
+                const gone = new Set(result.deletedIds);
+                setOccurrences((prev) => prev.filter((o) => !gone.has(o.id)));
+              }}
             />
           )}
         </>
@@ -428,8 +474,22 @@ function TasksView() {
           occurrences={occurrences}
           onError={setError}
           onClose={() => setEditingTemplate(null)}
-          onSaved={async () => {
+          onSaved={async (opts) => {
             setEditingTemplate(null);
+            if (opts?.deleted && opts.templateId) {
+              rememberDismissed(opts.templateId, opts.periodKeys || []);
+              setTemplates((prev) => prev.filter((t) => t.id !== opts.templateId));
+              setOccurrences((prev) =>
+                prev.filter(
+                  (o) =>
+                    !(
+                      o.templateId === opts.templateId &&
+                      isOpenTaskOccurrenceStatus(o.status)
+                    ),
+                ),
+              );
+              return;
+            }
             syncedRef.current = false;
           }}
         />
@@ -437,8 +497,17 @@ function TasksView() {
 
       {submitOcc ? (
         <SubmitOccurrenceModal
-          occ={submitOcc}
-          actorId={actorId}
+          occ={
+            occurrences.find((o) => o.id === submitOcc.id) || submitOcc
+          }
+          actorId={actorId || staff?.id || ""}
+          authorName={
+            profileStatusLabel(staff) ||
+            staff?.displayName ||
+            (isOwnerManager ? "เจ้าของ" : "พนักงาน")
+          }
+          authorRole={isOwnerManager || staff?.role === "owner" ? "owner" : "staff"}
+          isOwner={isOwnerManager || staff?.role === "owner"}
           onError={setError}
           onClose={() => setSubmitOcc(null)}
           onSaved={() => setSubmitOcc(null)}
@@ -575,32 +644,54 @@ function OwnerTaskTimeline({
 
 function OccurrencesTable({
   rows,
+  allOccurrences,
+  employees = [],
   canManage,
   showFeedback = false,
   onSubmit,
   onViewPhoto,
   onError,
+  onDeleted,
 }: {
   rows: TaskOccurrence[];
+  allOccurrences: TaskOccurrence[];
+  employees?: Employee[];
   canManage: boolean;
   showFeedback?: boolean;
   onSubmit: (occ: TaskOccurrence) => void;
   onViewPhoto: (urls: string[]) => void;
   onError: (msg: string) => void;
+  onDeleted?: (result: {
+    templateId: string;
+    deletedIds: string[];
+    periodKeys: string[];
+  }) => void;
 }) {
   async function onDelete(occ: TaskOccurrence) {
+    const open = collectOpenTaskOccurrences(occ.templateId, allOccurrences);
+    const n = Math.max(1, open.length);
     if (
       !window.confirm(
-        `ลบรอบนี้ "${occ.title}" (${formatDateShortBe(occ.dueDate)})?\nกติกายังอยู่ — สัปดาห์หน้ายังสร้างรอบใหม่ได้`,
+        n > 1
+          ? `เอา "${occ.title}" ออกจากตาราง?\nรอบที่ยังไม่ส่ง ${n} รายการจะหายทันที\nกติกายังอยู่ — สัปดาห์หน้าสร้างใหม่ได้`
+          : `เอา "${occ.title}" ออกจากตาราง?\nกติกายังอยู่ — สัปดาห์หน้าสร้างใหม่ได้`,
       )
     ) {
       return;
     }
     try {
-      await dismissTaskPeriod(occ.templateId, occ.periodKey);
-      await deleteTaskOccurrences([occ.id]);
+      const result = await dismissAndDeleteOpenTaskOccurrences(
+        occ.templateId,
+        allOccurrences,
+      );
+      onError("");
+      onDeleted?.({
+        templateId: occ.templateId,
+        deletedIds: result.deletedIds.length ? result.deletedIds : [occ.id],
+        periodKeys: result.periodKeys,
+      });
     } catch (err) {
-      onError((err as Error).message || "ลบรอบงานไม่สำเร็จ");
+      onError((err as Error).message || "ลบงานไม่สำเร็จ");
     }
   }
 
@@ -612,7 +703,7 @@ function OccurrencesTable({
             <th className="tasks-col-title">งาน</th>
             <th className="tasks-col-due">รอบ</th>
             <th className="tasks-col-who">มอบให้</th>
-            <th className="tasks-col-check">checklist</th>
+            <th className="tasks-col-check">โนตความคืบ</th>
             <th className="tasks-col-note">{showFeedback ? "feedback" : "note"}</th>
             <th className="tasks-col-status">สถานะ</th>
             <th className="tasks-col-act">ทำ</th>
@@ -631,13 +722,11 @@ function OccurrencesTable({
             const noteText = waiting || showFeedback
               ? (occ.completionNote || "").trim()
               : occ.note || "";
-            const checkText = occ.checklist
-              .map((item) => {
-                const checked =
-                  done || waiting ? occ.checklistDone.includes(item.id) : false;
-                return `${checked ? "✓" : "○"} ${item.label}`;
-              })
-              .join(" · ");
+            const notesPreview =
+              formatTaskProgressNotesPreview(occ.progressNotes, 2) ||
+              (occ.progressNotes?.length
+                ? `${occ.progressNotes.length} โนต`
+                : "");
 
             return (
               <tr
@@ -673,9 +762,15 @@ function OccurrencesTable({
                     <span className="tasks-due-sub">เปิด {formatDateShortBe(occ.openAt)}</span>
                   ) : null}
                 </td>
-                <td className="tasks-col-who">{occ.assigneeNames.join(", ") || "—"}</td>
-                <td className="tasks-col-check" title={checkText}>
-                  {checkText || "—"}
+                <td className="tasks-col-who">
+                  {resolveWorkerDisplayNames(
+                    occ.assigneeIds,
+                    occ.assigneeNames,
+                    employees,
+                  ).join(", ") || "—"}
+                </td>
+                <td className="tasks-col-check" title={notesPreview || undefined}>
+                  {notesPreview || "—"}
                 </td>
                 <td className="tasks-col-note" title={noteText || undefined}>
                   {noteText || (waiting || showFeedback ? "—" : occ.note || "—")}
@@ -709,10 +804,10 @@ function OccurrencesTable({
                       <button
                         type="button"
                         className="ghost-btn tasks-delete-btn"
-                        title="ลบเฉพาะรอบนี้"
+                        title="เอาออกจากตารางทันที"
                         onClick={() => void onDelete(occ)}
                       >
-                        <Trash2 size={13} aria-hidden /> ลบรอบ
+                        <Trash2 size={13} aria-hidden /> เอาออก
                       </button>
                     ) : null}
                   </div>
@@ -741,7 +836,11 @@ function TemplateFormModal({
   occurrences?: TaskOccurrence[];
   onError: (msg: string) => void;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (opts?: {
+    deleted?: boolean;
+    templateId?: string;
+    periodKeys?: string[];
+  }) => void;
 }) {
   const isEdit = !!template;
   const [title, setTitle] = useState(template?.title || "");
@@ -751,18 +850,12 @@ function TemplateFormModal({
     template?.nudgeKind === "soft" ? "soft" : "deadline",
   );
   const [selected, setSelected] = useState<string[]>(template?.assigneeIds || []);
-  const [checklist, setChecklist] = useState<TaskChecklistItem[]>(
-    template?.checklist.length
-      ? template.checklist.map((c) => ({ ...c }))
-      : [{ id: newChecklistItemId(), label: "" }],
-  );
   const [busy, setBusy] = useState(false);
 
   function applyPreset(preset: (typeof TASK_PRESETS)[number]) {
     if (isEdit) return;
     setTitle(preset.title);
     setWeekday(preset.weekday);
-    setChecklist(preset.checklist.map((label) => ({ id: newChecklistItemId(), label })));
   }
 
   function toggleWorker(id: string) {
@@ -779,16 +872,12 @@ function TemplateFormModal({
       onError("เลือกพนักงานอย่างน้อย 1 คน");
       return;
     }
-    const steps = checklist.filter((c) => c.label.trim());
-    if (!steps.length) {
-      onError("ต้องมี checklist อย่างน้อย 1 ข้อ");
-      return;
-    }
+    // เลิกเช็คลิสย่อยในกติกา — ความคืบอยู่ที่โนตในแต่ละรอบ
     const payload = {
       title,
       note,
       weekday,
-      checklist: steps,
+      checklist: [] as { id: string; label: string }[],
       assigneeIds: chosen.map((w) => w.id),
       assigneeNames: chosen.map((w) => w.name),
       nudgeKind,
@@ -798,20 +887,16 @@ function TemplateFormModal({
     try {
       if (isEdit && template) {
         await updateTaskTemplate(template.id, payload);
-        const pendingIds = occurrences
-          .filter(
-            (o) =>
-              o.templateId === template.id &&
-              (o.status === "pending" || o.status === "missed"),
-          )
-          .map((o) => o.id);
+        const pendingIds = collectOpenTaskOccurrences(template.id, occurrences).map(
+          (o) => o.id,
+        );
         if (pendingIds.length) {
           await syncPendingOccurrencesFromTemplate(
             {
               templateId: template.id,
               title: payload.title.trim(),
               note: (payload.note || "").trim(),
-              checklist: steps,
+              checklist: [],
               assigneeIds: payload.assigneeIds,
               assigneeNames: payload.assigneeNames,
               nudgeKind: payload.nudgeKind,
@@ -832,9 +917,7 @@ function TemplateFormModal({
 
   async function onDeleteTemplate() {
     if (!template) return;
-    const pendingN = occurrences.filter(
-      (o) => o.templateId === template.id && isOpenOccurrenceStatus(o.status),
-    ).length;
+    const pendingN = collectOpenTaskOccurrences(template.id, occurrences).length;
     const msg =
       pendingN > 0
         ? `ลบกติกา "${template.title}" ถาวร?\nรอบที่ยังไม่ส่ง ${pendingN} รายการจะถูกลบ\nประวัติที่ส่งแล้วยังอยู่`
@@ -843,8 +926,12 @@ function TemplateFormModal({
     setBusy(true);
     onError("");
     try {
-      await purgeTaskTemplate(template, occurrences);
-      onSaved();
+      const result = await purgeTaskTemplate(template, occurrences);
+      onSaved({
+        deleted: true,
+        templateId: template.id,
+        periodKeys: result.periodKeys,
+      });
     } catch (err) {
       onError((err as Error).message || "ลบกติกาไม่สำเร็จ");
     } finally {
@@ -952,40 +1039,9 @@ function TemplateFormModal({
           <div className="field">
             <label htmlFor="task-note">รายละเอียด (ถ้ามี)</label>
             <input id="task-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="ลิงก์เพจ / ธีมโพสต์" />
-          </div>
-
-          <div className="field">
-            <span className="field-label">Checklist</span>
-            {checklist.map((row, idx) => (
-              <div key={row.id} className="tasks-check-row">
-                <input
-                  value={row.label}
-                  placeholder={`ขั้นตอน ${idx + 1}`}
-                  onChange={(e) =>
-                    setChecklist((prev) =>
-                      prev.map((c) => (c.id === row.id ? { ...c, label: e.target.value } : c)),
-                    )
-                  }
-                />
-                {checklist.length > 1 ? (
-                  <button
-                    type="button"
-                    className="ghost-btn icon-btn"
-                    aria-label="ลบขั้นตอน"
-                    onClick={() => setChecklist((prev) => prev.filter((c) => c.id !== row.id))}
-                  >
-                    <X size={14} />
-                  </button>
-                ) : null}
-              </div>
-            ))}
-            <button
-              type="button"
-              className="ghost-btn tasks-add-step"
-              onClick={() => setChecklist((prev) => [...prev, { id: newChecklistItemId(), label: "" }])}
-            >
-              <Plus size={14} aria-hidden /> เพิ่มขั้นตอน
-            </button>
+            <p className="muted form-hint-inline">
+              ในแต่ละรอบ พนักงาน/เจ้าของใส่โนตความคืบได้ — ไม่ใช้เช็คลิสย่อยแล้ว
+            </p>
           </div>
 
           <div className="entry-actions module-form-actions">
@@ -1015,39 +1071,70 @@ function TemplateFormModal({
 function SubmitOccurrenceModal({
   occ,
   actorId,
+  authorName,
+  authorRole,
+  isOwner,
   onError,
   onClose,
   onSaved,
 }: {
   occ: TaskOccurrence;
   actorId: string;
+  authorName: string;
+  authorRole: "owner" | "staff";
+  isOwner: boolean;
   onError: (msg: string) => void;
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [checked, setChecked] = useState<Set<string>>(
-    () => new Set(occ.checklistDone || []),
-  );
   const [imageUrls, setImageUrls] = useState<string[]>(() => getTaskProofImgs(occ));
   const [completionNote, setCompletionNote] = useState(occ.completionNote || "");
   const [outcome, setOutcome] = useState<"done" | "waiting">(
     occ.status === "waiting" ? "waiting" : "done",
   );
+  const [noteDraft, setNoteDraft] = useState("");
   const [busy, setBusy] = useState(false);
+  const [noteBusy, setNoteBusy] = useState(false);
+  const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
 
-  function toggleItem(id: string) {
-    setChecked((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const progressNotes = occ.progressNotes || [];
+
+  async function onPostNote(e?: FormEvent) {
+    e?.preventDefault();
+    if (!actorId || noteBusy) return;
+    setNoteBusy(true);
+    onError("");
+    try {
+      await addTaskProgressNote(occ, {
+        text: noteDraft,
+        createdBy: actorId,
+        createdByName: authorName,
+        authorRole,
+      });
+      setNoteDraft("");
+    } catch (err) {
+      onError((err as Error).message || "โพสต์โนตไม่สำเร็จ");
+    } finally {
+      setNoteBusy(false);
+    }
+  }
+
+  async function onDeleteNote(noteId: string) {
+    if (!window.confirm("ลบโนตนี้?")) return;
+    setDeletingNoteId(noteId);
+    onError("");
+    try {
+      await deleteTaskProgressNote(occ, noteId);
+    } catch (err) {
+      onError((err as Error).message || "ลบโนตไม่สำเร็จ");
+    } finally {
+      setDeletingNoteId(null);
+    }
   }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (!actorId) return;
-    const checkedIds = [...checked];
     const urls = imageUrls.filter(Boolean).slice(0, TASK_PROOF_MAX);
     if (urls.some((u) => u.startsWith("data:"))) {
       onError("รูปเก่ายังฝังในเอกสาร — ลบแล้วแนบใหม่เพื่อบันทึกเข้าคลังหลักฐาน");
@@ -1063,7 +1150,7 @@ function SubmitOccurrenceModal({
       onError("");
       try {
         await reportTaskOccurrenceWaiting(occ, {
-          checklistDone: checkedIds,
+          checklistDone: occ.checklistDone || [],
           proofImgs: urls,
           proofImg: urls[0] || "",
           completionNote,
@@ -1079,8 +1166,6 @@ function SubmitOccurrenceModal({
     }
 
     const validation = validateTaskCompleteInput({
-      checklist: occ.checklist,
-      checkedIds,
       proofImgs: urls,
     });
     if (validation) {
@@ -1091,7 +1176,7 @@ function SubmitOccurrenceModal({
     onError("");
     try {
       await completeTaskOccurrence(occ, {
-        checklistDone: checkedIds,
+        checklistDone: occ.checklistDone || [],
         proofImgs: urls,
         proofImg: urls[0] || "",
         completionNote,
@@ -1105,8 +1190,7 @@ function SubmitOccurrenceModal({
     }
   }
 
-  const allDone = occ.checklist.every((c) => checked.has(c.id));
-  const canSubmitDone = allDone && imageUrls.length > 0;
+  const canSubmitDone = imageUrls.length > 0;
   const canSubmitWaiting = !!(completionNote || "").trim();
   const title =
     occ.status === "missed"
@@ -1128,8 +1212,78 @@ function SubmitOccurrenceModal({
 
           <p className="tasks-form-slot-bar">{occ.title}</p>
           <p className="muted form-hint-inline">
-            รอบ {formatDateShortBe(occ.dueDate)} — เลือกจบงาน หรือรายงานว่ารออยู่ (หยุดแจ้งเตือน)
+            รอบ {formatDateShortBe(occ.dueDate)} — โนตความคืบแทนเช็คลิสย่อย · แล้วค่อยจบงานหรือรายงานว่ารออยู่
           </p>
+
+          <div className="field tasks-progress-notes">
+            <span className="field-label">โนตความคืบ</span>
+            <ul className="tasks-progress-list">
+              {progressNotes.length === 0 ? (
+                <li className="muted tasks-progress-empty">ยังไม่มีโนต — พิมพ์ความคืบด้านล่าง</li>
+              ) : (
+                progressNotes.map((n) => {
+                  const canDelete =
+                    isOwner || (!!actorId && n.createdBy === actorId);
+                  return (
+                    <li
+                      key={n.id}
+                      className={
+                        n.authorRole === "owner"
+                          ? "tasks-progress-item is-owner"
+                          : "tasks-progress-item is-staff"
+                      }
+                    >
+                      <div className="tasks-progress-meta">
+                        <span className="tasks-progress-who">
+                          {n.authorRole === "owner" ? "เจ้าของ" : "พนักงาน"} ·{" "}
+                          {n.createdByName || "—"}
+                        </span>
+                        <span className="tasks-progress-when">
+                          {n.createdAt ? formatDateTimeShortBe(n.createdAt) : ""}
+                        </span>
+                      </div>
+                      <p className="tasks-progress-text">{n.text}</p>
+                      {canDelete ? (
+                        <button
+                          type="button"
+                          className="ghost-btn tasks-progress-del"
+                          disabled={deletingNoteId === n.id || noteBusy || busy}
+                          onClick={() => void onDeleteNote(n.id)}
+                          aria-label="ลบโนต"
+                        >
+                          ×
+                        </button>
+                      ) : null}
+                    </li>
+                  );
+                })
+              )}
+            </ul>
+            <div className="tasks-progress-compose">
+              <textarea
+                className="tasks-completion-note"
+                rows={2}
+                maxLength={TASK_PROGRESS_NOTE_MAX}
+                value={noteDraft}
+                onChange={(e) => setNoteDraft(e.target.value)}
+                placeholder={
+                  isOwner
+                    ? "พิมพ์ข้อความถึงพนักงาน…"
+                    : "ใส่ข้อความแสดงความคืบหน้า…"
+                }
+                disabled={noteBusy || busy}
+              />
+              <button
+                type="button"
+                className="primary-btn tasks-progress-send"
+                disabled={noteBusy || busy || !noteDraft.trim()}
+                onClick={() => void onPostNote()}
+              >
+                <Send size={14} aria-hidden />
+                {noteBusy ? "กำลังส่ง…" : "ส่งโนต"}
+              </button>
+            </div>
+          </div>
 
           <div className="field">
             <span className="field-label">ผลตอนนี้</span>
@@ -1152,27 +1306,9 @@ function SubmitOccurrenceModal({
             <p className="muted form-hint-inline">
               {outcome === "waiting"
                 ? "หยุดป๊อป/แถบแจ้งเตือน · ข้อความค้างในตารางหลังร้านจนกว่าจะจบ"
-                : "ติ๊กครบ + รูปหลักฐาน · ปิดรอบนี้"}
+                : "แนบรูปหลักฐาน · ปิดรอบนี้"}
             </p>
           </div>
-
-          <ul className="tasks-check-submit">
-            {occ.checklist.map((item) => {
-              const on = checked.has(item.id);
-              return (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    className={on ? "tasks-check-btn is-on" : "tasks-check-btn"}
-                    onClick={() => toggleItem(item.id)}
-                  >
-                    {on ? <CheckCircle2 size={20} /> : <Circle size={20} />}
-                    <span>{item.label}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
 
           <PhotoAttachMultiField
             values={imageUrls}
@@ -1192,8 +1328,8 @@ function SubmitOccurrenceModal({
           <label className="field">
             <span className="field-label">
               {outcome === "waiting"
-                ? "ข้อความถึงเจ้าของ (บังคับ)"
-                : "ข้อความถึงเจ้าของ (ไม่บังคับ)"}
+                ? "สรุปตอนส่ง/รอ (บังคับ)"
+                : "สรุปตอนส่ง (ไม่บังคับ)"}
             </span>
             <textarea
               className="tasks-completion-note"

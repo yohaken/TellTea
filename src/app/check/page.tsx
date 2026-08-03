@@ -90,7 +90,8 @@ export default function CheckPage() {
 }
 
 function CheckView() {
-  const { actorId, staff } = useAuth();
+  const { actorId, staff, isPermPreview } = useAuth();
+  const canWrite = !!actorId && !isPermPreview;
   const router = useRouter();
   const searchParams = useSearchParams();
   const isOwner = staff?.role === "owner";
@@ -259,7 +260,7 @@ function CheckView() {
         />
       ) : null}
 
-      {formOpen && !loading && showHistory ? (
+      {canWrite && formOpen && !loading && showHistory ? (
         <div className="modal-backdrop edit-modal is-module-form is-check-form" onClick={closeForm}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <CheckForm
@@ -276,7 +277,7 @@ function CheckView() {
         </div>
       ) : null}
 
-      {showHistory ? (
+      {canWrite && showHistory ? (
         <ModuleTabDock
           ariaLabel="มุมมอง SmartCheck"
           formOpen={formOpen}

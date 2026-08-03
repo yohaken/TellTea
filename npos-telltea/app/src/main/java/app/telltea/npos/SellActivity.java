@@ -71,6 +71,7 @@ import app.telltea.npos.ui.NposUi;
 import app.telltea.npos.ui.UiScale;
 import app.telltea.npos.update.ResumePrefs;
 import app.telltea.npos.update.UpdatePromptController;
+import app.telltea.npos.update.WhatsNewController;
 
 /**
  * Sell screen — front-counter only: categories, menu images, options, cart, discount,
@@ -121,6 +122,7 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
   private String draftCartCode = "";
   private CustomerDisplayController customerDisplay;
   private UpdatePromptController updatePrompt;
+  private WhatsNewController whatsNew;
   private UiScale uiScale;
   private final Handler dutyHandler = new Handler(Looper.getMainLooper());
   private final Runnable dutyTick =
@@ -233,6 +235,7 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
     }
     updatePrompt = new UpdatePromptController(this);
     updatePrompt.setBeforeInstall(this::persistWorkBeforeUpdate);
+    whatsNew = new WhatsNewController(this);
     applySmartChrome();
 
     View back = findViewById(R.id.backButton);
@@ -600,31 +603,36 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
     }
   }
 
-  /** Overflow: settings / shift / history (cart tools live on cart header row). */
+  /** Overflow: settings / shift / history / menu admin (cart tools live on cart header row). */
   private void showSellHubMenu(View anchor) {
     PopupMenu popup = new PopupMenu(this, anchor);
     popup.getMenu().add(0, 1, 0, R.string.nav_open_bills);
-    popup.getMenu().add(0, 2, 1, R.string.nav_receipts);
-    popup.getMenu().add(0, 3, 2, R.string.nav_shift);
-    popup.getMenu().add(0, 8, 3, R.string.sell_hub_open_drawer);
+    popup.getMenu().add(0, 11, 1, R.string.nav_menu);
+    popup.getMenu().add(0, 2, 2, R.string.nav_receipts);
+    popup.getMenu().add(0, 3, 3, R.string.nav_shift);
+    popup.getMenu().add(0, 8, 4, R.string.sell_hub_open_drawer);
     popup
         .getMenu()
         .add(
             0,
             9,
-            4,
+            5,
             getString(
                 R.string.sell_hub_change_display_fmt, ChangeDisplayPrefs.label(this)));
-    popup.getMenu().add(0, 10, 5, R.string.sell_hub_refresh_menu);
-    popup.getMenu().add(0, 4, 6, R.string.btn_settings_device);
-    popup.getMenu().add(0, 5, 7, R.string.sell_hub_x_report);
-    popup.getMenu().add(0, 6, 8, R.string.sell_hub_close_shift);
-    popup.getMenu().add(0, 7, 9, R.string.nav_lock_pin);
+    popup.getMenu().add(0, 10, 6, R.string.sell_hub_refresh_menu);
+    popup.getMenu().add(0, 4, 7, R.string.btn_settings_device);
+    popup.getMenu().add(0, 5, 8, R.string.sell_hub_x_report);
+    popup.getMenu().add(0, 6, 9, R.string.sell_hub_close_shift);
+    popup.getMenu().add(0, 7, 10, R.string.nav_lock_pin);
     popup.setOnMenuItemClickListener(
         (MenuItem item) -> {
           int id = item.getItemId();
           if (id == 1) {
             PosShellNav.openOpenBillsHint(this);
+            return true;
+          }
+          if (id == 11) {
+            PosShellNav.openMenuAdmin(this);
             return true;
           }
           if (id == 2) {
@@ -680,8 +688,8 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
     runOnUiThread(
         () -> {
           if (isFinishing()) return;
+          // Quiet reload — sold-out / BOH edits already show their own status.
           reloadMenu(true);
-          Toast.makeText(this, R.string.sell_menu_refreshed_toast, Toast.LENGTH_SHORT).show();
         });
   }
 
@@ -1122,6 +1130,7 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
     CaptureConsentActivity.launchAfterUpdateIfNeeded(this);
     CaptureConsentActivity.relaunchPendingIfNeeded(this);
     if (updatePrompt != null) updatePrompt.onResume();
+    if (whatsNew != null) whatsNew.maybeShow();
     // Refresh shop name/address from server so BO edits show on next bill.
     if (menuRepo != null) {
       menuRepo.loadShop(
@@ -1153,6 +1162,7 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
   protected void onPause() {
     dutyHandler.removeCallbacks(dutyTick);
     if (updatePrompt != null) updatePrompt.onPause();
+    if (whatsNew != null) whatsNew.onPause();
     super.onPause();
   }
 
@@ -1473,7 +1483,7 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
       }
       cell.setOnLongClickListener(
           v -> {
-            confirmToggleSoldOut(item);
+            showItemActionsSheet(item);
             return true;
           });
       menuGrid.addView(cell);
@@ -1530,39 +1540,129 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
     showOptionPicker(item);
   }
 
-  private void confirmToggleSoldOut(MenuModels.Item item) {
+  /** Long-press on grid: sold-out toggle + jump to menu admin editor. */
+  private void showItemActionsSheet(MenuModels.Item item) {
+    if (item == null) return;
+    if (uiScale == null) uiScale = UiScale.from(this);
+
+    LinearLayout box = new LinearLayout(this);
+    box.setOrientation(LinearLayout.VERTICAL);
+    int pad = uiScale.dp(12);
+    box.setPadding(pad, pad, pad, pad);
+
+    TextView name = NposUi.section(this, item.name);
+    name.setPadding(0, 0, 0, uiScale.dp(4));
+    box.addView(name);
+
+    TextView status =
+        NposUi.caption(
+            this,
+            getString(
+                item.active ? R.string.menu_admin_status_on : R.string.menu_admin_status_off));
+    status.setPadding(0, 0, 0, uiScale.dp(12));
+    box.addView(status);
+
+    final android.app.AlertDialog[] holder = new android.app.AlertDialog[1];
+
+    TextView toggle =
+        item.active
+            ? NposUi.primary(this, getString(R.string.menu_item_action_sold_out))
+            : NposUi.primary(this, getString(R.string.menu_item_action_restore));
+    toggle.setMaxWidth(Integer.MAX_VALUE);
+    toggle.setMinHeight(uiScale.payPrimaryMinPx);
+    LinearLayout.LayoutParams tLp =
+        new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+    tLp.bottomMargin = uiScale.dp(10);
+    toggle.setLayoutParams(tLp);
+    toggle.setOnClickListener(
+        v -> {
+          if (holder[0] != null) holder[0].dismiss();
+          runToggleSoldOut(item);
+        });
+    box.addView(toggle);
+
+    TextView edit = NposUi.secondary(this, getString(R.string.menu_item_action_edit));
+    edit.setMaxWidth(Integer.MAX_VALUE);
+    edit.setMinHeight(uiScale.payPrimaryMinPx);
+    LinearLayout.LayoutParams eLp =
+        new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+    eLp.bottomMargin = uiScale.dp(10);
+    edit.setLayoutParams(eLp);
+    edit.setOnClickListener(
+        v -> {
+          if (holder[0] != null) holder[0].dismiss();
+          Intent intent = new Intent(this, MenuAdminActivity.class);
+          intent.putExtra(MenuAdminActivity.EXTRA_FOCUS_ITEM_ID, item.id);
+          startActivity(intent);
+        });
+    box.addView(edit);
+
+    TextView cancel = NposUi.ghost(this, getString(android.R.string.cancel));
+    cancel.setMaxWidth(Integer.MAX_VALUE);
+    cancel.setLayoutParams(
+        new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+    cancel.setOnClickListener(
+        v -> {
+          if (holder[0] != null) holder[0].dismiss();
+        });
+    box.addView(cancel);
+
+    holder[0] =
+        new android.app.AlertDialog.Builder(this)
+            .setTitle(R.string.menu_item_actions_title)
+            .setView(box)
+            .create();
+    holder[0].show();
+    if (holder[0].getWindow() != null) {
+      int w =
+          Math.min(
+              (int) (getResources().getDisplayMetrics().widthPixels * 0.42f), uiScale.dp(420));
+      w = Math.max(w, uiScale.dp(320));
+      holder[0]
+          .getWindow()
+          .setLayout(w, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+    }
+  }
+
+  private void runToggleSoldOut(MenuModels.Item item) {
     if (menu != null && menu.demo) {
       Toast.makeText(this, R.string.sold_out_demo_blocked, Toast.LENGTH_SHORT).show();
       return;
     }
     boolean toSoldOut = item.active;
-    NposConfirmDialog.confirm(
+    Toast.makeText(this, R.string.sold_out_saving, Toast.LENGTH_SHORT).show();
+    menuRepo.toggleSoldOut(
         this,
-        getString(toSoldOut ? R.string.sold_out_confirm_title : R.string.sold_out_restore_title),
-        item.name,
-        getString(android.R.string.ok),
-        () ->
-            menuRepo.toggleSoldOut(
-                this,
-                item.id,
-                toSoldOut,
-                (ok, active, err) ->
-                    runOnUiThread(
-                        () -> {
-                          if (!ok) {
-                            Toast.makeText(this, R.string.sold_out_fail, Toast.LENGTH_LONG).show();
-                            return;
-                          }
-                          replaceItemActive(item.id, active);
-                          // Clear cart lines for sold-out item (web parity)
-                          if (!active) {
-                            for (int i = cart.size() - 1; i >= 0; i--) {
-                              if (item.id.equals(cart.get(i).menuItemId)) cart.remove(i);
-                            }
-                            renderCart();
-                          }
-                          renderMenu();
-                        })));
+        item.id,
+        toSoldOut,
+        (ok, active, err) ->
+            runOnUiThread(
+                () -> {
+                  if (!ok) {
+                    Toast.makeText(this, R.string.sold_out_fail, Toast.LENGTH_LONG).show();
+                    return;
+                  }
+                  replaceItemActive(item.id, active);
+                  // Clear cart lines for sold-out item (web parity)
+                  if (!active) {
+                    for (int i = cart.size() - 1; i >= 0; i--) {
+                      if (item.id.equals(cart.get(i).menuItemId)) cart.remove(i);
+                    }
+                    renderCart();
+                  }
+                  renderMenu();
+                  // menuVersion notify may also reload — one success toast here is enough.
+                  Toast.makeText(
+                          this,
+                          active
+                              ? R.string.menu_admin_restored_toast
+                              : R.string.menu_admin_sold_out_toast,
+                          Toast.LENGTH_SHORT)
+                      .show();
+                }));
   }
 
   private void replaceItemActive(String id, boolean active) {
@@ -1575,10 +1675,15 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
                 it.id,
                 it.categoryId,
                 it.name,
+                it.nameEn,
+                it.code,
+                it.description,
                 it.price,
+                it.deliveryPrice,
                 it.optionGroupIds,
                 it.imageUrl,
                 active,
+                it.visibleOnPos,
                 it.recommended));
       } else {
         next.add(it);
@@ -1591,7 +1696,8 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
             menu.optionGroups,
             menu.demo,
             menu.fetchedAt,
-            menu.menuArrangeMode);
+            menu.menuArrangeMode,
+            menu.admin);
   }
 
   private void showOptionPicker(MenuModels.Item item) {

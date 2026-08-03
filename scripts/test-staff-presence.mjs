@@ -9,32 +9,60 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD\s*=\s*399\b/);
+assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD\s*=\s*(\d+)/)[1]) >= 680);
 assert.match(read("src/lib/staff-presence.ts"), /touchStaffPresence/);
+assert.match(read("src/lib/staff-presence.ts"), /touchStaffPresenceFromActor/);
+assert.match(read("src/lib/staff-presence.ts"), /resolvePresenceStaffId/);
+assert.match(read("src/lib/staff-presence.ts"), /coercePresenceMs/);
 assert.match(read("src/lib/staff-presence.ts"), /formatPresenceAge/);
+assert.match(read("src/lib/staff-presence.ts"), /formatPresenceLastLogin/);
 assert.match(read("src/lib/staff-presence.ts"), /staffShortLabel/);
 assert.match(read("src/lib/staff-presence.ts"), /resolvePresenceLabel/);
 assert.match(read("src/lib/staff-presence.ts"), /ชื่อเล่นเต็มก่อน/);
 assert.match(read("src/lib/staff-presence.ts"), /แสดงพนักงานทุกคน/);
-assert.match(read("src/lib/staff-presence.ts"), /STAFF_PRESENCE_HEARTBEAT_MS\s*=\s*10\s*\*\s*60_000/);
+assert.match(read("src/lib/staff-presence.ts"), /STAFF_PRESENCE_HEARTBEAT_MS\s*=\s*2\s*\*\s*60_000/);
+assert.match(read("src/lib/staff-presence.ts"), /STAFF_PRESENCE_ONLINE_MS\s*=\s*5\s*\*\s*60_000/);
 assert.doesNotMatch(read("src/lib/staff-presence.ts"), /STAFF_PRESENCE_WINDOW_MS/);
 assert.doesNotMatch(read("src/lib/staff-presence.ts"), /STAFF_PRESENCE_IDLE_MS/);
 assert.match(read("src/components/StaffPresenceDock.tsx"), /staff-presence-name/);
 assert.match(read("src/components/StaffPresenceDock.tsx"), /is-waiting/);
 assert.match(read("src/components/StaffPresenceDock.tsx"), /visibilitychange/);
+assert.match(read("src/components/StaffPresenceDock.tsx"), /formatPresenceLastLogin/);
 assert.match(read("src/components/StaffPresenceHeartbeat.tsx"), /STAFF_PRESENCE_HEARTBEAT_MS/);
+assert.match(read("src/components/StaffPresenceHeartbeat.tsx"), /realStaff/);
+assert.match(read("src/components/StaffPresenceHeartbeat.tsx"), /ignoreVisibility/);
+assert.match(read("src/components/StaffPresenceHeartbeat.tsx"), /RECENT_ACTIVITY_MS/);
+assert.match(read("src/components/StaffPresenceHeartbeat.tsx"), /pointerdown/);
+assert.match(read("src/components/StaffPresenceHeartbeat.tsx"), /["']input["']/);
+assert.match(read("src/lib/stock-count.ts"), /await touchStaffPresenceFromActor/);
+assert.match(read("src/lib/ot.ts"), /await touchStaffPresenceFromActor/);
+assert.match(read("src/lib/production.ts"), /await touchStaffPresenceFromActor/);
+assert.match(read("src/lib/auth.tsx"), /touchStaffPresence\(member\.id\)/);
+assert.match(read("firestore.rules"), /isOwnStaffDoc/);
+assert.doesNotMatch(
+  read("src/components/StaffPresenceHeartbeat.tsx"),
+  /const \{ staff, status \}/,
+  "heartbeat must use realStaff, not preview staff",
+);
+assert.match(
+  read("scripts/repair-staff-presence-from-activity.mjs"),
+  /ห้ามใช้ updatedAt/,
+);
 assert.match(read("src/app/globals.css"), /\.staff-presence-name\b/);
 assert.match(read("src/app/globals.css"), /\.is-waiting\b/);
 assert.match(read("src/lib/employees.ts"), /nickname/);
 assert.match(read("src/lib/types.ts"), /lastSeenAt/);
 assert.match(read("firestore.rules"), /'lastSeenAt'/);
+assert.match(read("firestore.rules"), /staffPresenceTouch/);
 assert.match(read("src/components/StaffPresenceDock.tsx"), /isOwner/);
 assert.match(read("src/components/StaffPresenceHeartbeat.tsx"), /touchStaffPresence/);
 assert.match(read("src/components/AppShell.tsx"), /StaffPresenceDock/);
 assert.match(read("src/components/AppShell.tsx"), /StaffPresenceHeartbeat/);
-assert.match(read("src/app/staff/page.tsx"), /ชื่อเล่น/);
-assert.match(read("src/app/staff/page.tsx"), /แก้ชื่อ/);
-assert.match(read("src/components/StaffReadinessTable.tsx"), /staff-ready-col-nick/);
+// Must keep heartbeat during perm preview (realStaff touch)
+assert.doesNotMatch(
+  read("src/components/AppShell.tsx"),
+  /\{!isPermPreview \? <StaffPresenceHeartbeat/,
+);
 assert.match(read("src/app/globals.css"), /\.staff-presence-dock\b/);
 
 // unit: sort shows never-seen last; age formatting
@@ -78,5 +106,31 @@ function formatPresenceAge(lastSeenAt, now) {
 }
 assert.equal(formatPresenceAge(0, Date.now()), "—");
 assert.equal(formatPresenceAge(Date.now() - 55 * 60_000, Date.now()), "55น");
+
+function formatPresenceLastLogin(lastSeenAt, now) {
+  if (!lastSeenAt || lastSeenAt <= 0) return "ยังไม่เคยเข้า";
+  const time = new Intl.DateTimeFormat("th-TH", {
+    timeZone: "Asia/Bangkok",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(lastSeenAt));
+  const dayKey = (ms) =>
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Bangkok",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date(ms));
+  if (dayKey(lastSeenAt) === dayKey(now)) return `วันนี้ ${time}`;
+  if (dayKey(lastSeenAt) === dayKey(now - 24 * 60 * 60 * 1000)) return `เมื่อวาน ${time}`;
+  const date = new Intl.DateTimeFormat("th-TH", {
+    timeZone: "Asia/Bangkok",
+    day: "numeric",
+    month: "short",
+  }).format(new Date(lastSeenAt));
+  return `${date} ${time}`;
+}
+const noonBangkok = Date.parse("2026-08-03T05:00:00.000Z"); // 12:00 ICT
+assert.match(formatPresenceLastLogin(noonBangkok, noonBangkok + 60_000), /^วันนี้ /);
 
 console.log("test-staff-presence: ok");

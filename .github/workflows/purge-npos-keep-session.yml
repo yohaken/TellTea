@@ -1,0 +1,69 @@
+name: Purge nPos orphans except keep session
+
+on:
+  workflow_dispatch:
+    inputs:
+      keep_session_code:
+        description: "BO session code to keep (last 12 chars)"
+        required: true
+        default: "785414397411"
+      apply:
+        description: "Set to 1 to delete for real (otherwise dry-run)"
+        required: true
+        default: "0"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/purge-npos-keep-session.mjs"
+      - ".github/workflows/purge-npos-keep-session.yml"
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Dry-run plan
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          KEEP_SESSION_CODE: ${{ inputs.keep_session_code || '785414397411' }}
+          APPLY: "0"
+        run: node scripts/purge-npos-keep-session.mjs
+
+      - name: Apply purge (push always; dispatch only if apply=1)
+        if: ${{ github.event_name == 'push' || inputs.apply == '1' }}
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          KEEP_SESSION_CODE: ${{ inputs.keep_session_code || '785414397411' }}
+          APPLY: "1"
+        run: node scripts/purge-npos-keep-session.mjs
+
+      - name: Re-audit after apply
+        if: ${{ github.event_name == 'push' || inputs.apply == '1' }}
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          KEEP_SESSION_CODE: ${{ inputs.keep_session_code || '785414397411' }}
+          OUT_DIR: artifacts/npos-sales-audit
+        run: |
+          mkdir -p artifacts/npos-sales-audit
+          node scripts/audit-npos-sales-keep-session.mjs
+
+      - name: Upload post-purge audit
+        if: ${{ github.event_name == 'push' || inputs.apply == '1' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: npos-keep-session-purge-audit
+          path: artifacts/npos-sales-audit
+          if-no-files-found: error

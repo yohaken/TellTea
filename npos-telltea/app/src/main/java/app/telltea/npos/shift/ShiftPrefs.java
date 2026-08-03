@@ -44,6 +44,8 @@ public final class ShiftPrefs {
   /** JSON array of {amount, reason, at} mid-shift cash drops. */
   private static final String KEY_CASH_DROP_NOTES = "cashDropNotes";
   private static final String KEY_SERVER_SYNCED = "serverSessionSynced";
+  /** True once server session doc has openedByName (or local open had no name). */
+  private static final String KEY_OPENER_SERVER_OK = "openerServerOk";
   private static final String KEY_REMOTE_CLOSED_PENDING = "remoteClosedPending";
   private static final String KEY_REMOTE_CLOSE_SOURCE = "remoteCloseSource";
 
@@ -332,6 +334,8 @@ public final class ShiftPrefs {
             .putString(KEY_OPENED_BY_NAME, name)
             .putBoolean(KEY_LAST_RESUMED, false)
             .putBoolean(KEY_SERVER_SYNCED, false)
+            // Need CF ack when staff picked a name at clock-in.
+            .putBoolean(KEY_OPENER_SERVER_OK, name.isEmpty())
             .putBoolean(KEY_REMOTE_CLOSED_PENDING, false)
             .putString(KEY_REMOTE_CLOSE_SOURCE, "");
     if (!name.isEmpty()) {
@@ -375,8 +379,26 @@ public final class ShiftPrefs {
             .putString(KEY_OPENED_BY_NAME, n);
     if (!n.isEmpty()) {
       ed.putString(KEY_LAST_OPENED_BY_ID, id).putString(KEY_LAST_OPENED_BY_NAME, n);
+      // Name applied from server response ⇒ opener already on the session doc.
+      ed.putBoolean(KEY_OPENER_SERVER_OK, true);
     }
     ed.apply();
+  }
+
+  /** Local has opener name but BO session may still be missing it — keep retrying open sync. */
+  public static boolean needsOpenerServerSync(Context context) {
+    SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+    String name = prefs.getString(KEY_OPENED_BY_NAME, "");
+    if (name == null || name.trim().isEmpty()) return false;
+    return !prefs.getBoolean(KEY_OPENER_SERVER_OK, false);
+  }
+
+  public static void markOpenerServerOk(Context context, boolean ok) {
+    context
+        .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        .edit()
+        .putBoolean(KEY_OPENER_SERVER_OK, ok)
+        .apply();
   }
 
   /**
@@ -443,7 +465,7 @@ public final class ShiftPrefs {
         .putBoolean(KEY_REMOTE_CLOSED_PENDING, false)
         .putString(KEY_REMOTE_CLOSE_SOURCE, "")
         .commit();
-    // Opener for resumed rounds is applied separately via setOpenedBy from server fields.
+    // Opener for resumed rounds is applied separately via setOpenedBy / markOpenerServerOk.
   }
 
   public static boolean consumeLastResumed(Context context) {

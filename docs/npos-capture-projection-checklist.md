@@ -1,33 +1,29 @@
 # nPos — แคปจอจริง (MediaProjection) + สิทธิ์แคปแยก
 
-อัปเดต: **1.14.89** · `versionCode` 112 · `APP_BUILD` 509 · `POS_BUILD` 141
+อัปเดต: **1.14.107** · `versionCode` 125 · `APP_BUILD` 544 · `POS_BUILD` 156
 
-## ปัญหาเดิม
-- BO เห็นจอเขียว เพราะ `statusShot` สีแบรนด์ถูกอัปเป็น `ok=true`
-- PixelCopy ใช้ได้แค่หน้าต่างแอปที่ foreground — พอแอปหลับ/ไม่มี Activity → แคปไม่ติด
-- พนักงานกดไม่รับสิทธิ์แล้วเงียบ — หลังร้านแคปไม่ได้
+## รากปัญหาที่ทำให้「ไม่เคยแคปได้」(เครื่อง 12570f0f)
 
-## แก้รอบนี้
+1. **VirtualDisplay poll บล็อก Handler ตัวเดียวกับ ImageReader** → callback เฟรมไม่ทันวิ่ง → `no_usable_frame` ตลอด  
+2. เครื่องนี้ **API &lt; 26** → PixelCopy ใช้ไม่ได้ แต่โค้ดเก่าคืน `api_lt_26` ทันที **ไม่ลอง `View.draw`**  
+3. ผลรวม: MediaProjection “live” แต่ไม่มีรูป · fallback ก็ตาย → ops แดงซ้ำ
+
+## แก้ใน 1.14.102
 
 | หัวข้อ | ทำอย่างไร |
 |--------|----------|
-| แคปจริง | `MediaProjection` + FGS `mediaProjection` + VirtualDisplay 1 เฟรม |
-| ไม่หลอก BO | ไม่ส่ง JPEG ปลอมเขียวเป็นสำเร็จ · ปฏิเสธเฟรมเขียวเกือบทั้งจอ |
-| สิทธิ์แคป | แยกจาก BT/แจ้งเตือน — dialog «แชร์หน้าจอ» ของระบบ |
-| **เด้งจนกว่าจะรับ** | **1.14.85** — สั่งแคปจาก BO / หลังอัปเดต → ถ้าไม่รับ จะเด้งซ้ำทุก ~2.5 วิ (ไม่ซ้อน dialog) จนกว่าจะกดอนุญาต |
-| หลังอัปเดต | ถามเมื่อเปิดแอป · ถ้าไม่รับ → sticky nag จนรับ |
-| interval | หลัง deny ถ่วง 6 ชม. (ไม่รบกวนขายทุก heartbeat) — คนละเรื่องกับคำสั่งแคปมือจาก BO |
-
-## ไฟล์หลัก
-- `CaptureConsentActivity` · `CaptureProjectionService` · `CaptureProjectionPrefs` · `CapturePrefs`
-- `ScreenCapture` · `InstallResultReceiver` · `MainActivity` · `SellActivity`
+| VirtualDisplay | poll `acquireLatestImage()` บน **thread แยก** · ไม่ starve listener |
+| เฟรมดำ | รอ settle · reject ดำ · ลองครึ่งขนาดถ้าเต็มจอล้ม |
+| API &lt; 26 | primary/secondary ใช้ **`View.draw` / draw_decor** เป็น fallback (ไม่คืน `api_lt_26`) |
+| API ≥ 26 | PixelCopy ก่อน แล้วค่อย draw |
+| Ack เมื่อมีรูป | `hasImages` เท่านั้น — ว่างแล้ว heartbeat ลองใหม่ |
 
 ## คนเทสเคาน์เตอร์
-1. อัปเป็น **1.14.85** → เด้งขอแชร์หน้าจอ → กดอนุญาต
-2. หลังร้านสั่งแคป → เห็นจอขายจริง (ไม่ใช่เขียวเปล่า)
-3. ปฏิเสธครั้งหนึ่ง → **เด้งอีกภายใน ~2–3 วินาที** จนกว่าจะกดอนุญาต
-4. แจ้งเตือนค้าง «nPos · แคปจอหลังร้าน» = สิทธิ์ยัง live
+1. อัปเป็น **1.14.102** → อนุญาตแชร์หน้าจอ  
+2. หลังร้าน「สั่งแคปจอ」→ ต้องมีรูปจอขาย (และจอลูกค้าถ้ามี)  
+3. ops ไม่ควรเหลือ `api_lt_26` / `no_usable_frame` ติดกันเป็นแถว
 
 ```bash
 node scripts/test-npos-capture-projection.mjs
+node scripts/test-npos-capture.mjs
 ```

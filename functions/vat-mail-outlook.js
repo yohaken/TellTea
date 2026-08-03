@@ -7,6 +7,11 @@
 const functions = require("firebase-functions/v1");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const crypto = require("crypto");
+const {
+  resolveReportPeriod,
+  periodFieldsFromResolved,
+} = require("./vat-mail-period");
+const { inferMailStudyTags } = require("./vat-mail-study-tags");
 
 const REGION = "asia-southeast1";
 const OWNER_EMAIL = String(process.env.TELLTEA_OWNER_EMAIL || "yohaken@gmail.com")
@@ -26,18 +31,18 @@ const MAX_MESSAGES = 60;
 const DEFAULT_MAIL_RULES = {
   shopee: {
     enabled: true,
-    fromIncludes: ["shopee", "shopeefood"],
-    subjectIncludes: ["shopee", "shopeefood", "สรุปยอด", "ยอดขาย"],
+    fromIncludes: ["shopeefood.com", "shopeefood", "shopee"],
+    subjectIncludes: ["shopeefood", "รายงานการโอนเงิน"],
   },
   grab: {
     enabled: true,
     fromIncludes: ["grab.com", "grabfood"],
-    subjectIncludes: ["grab", "รายงาน", "สรุป", "sales", "settlement"],
+    subjectIncludes: ["grabfood", "สรุปยอดขายสำหรับคำสั่งซื้อ", "daily sales"],
   },
   lineman: {
     enabled: true,
-    fromIncludes: ["lineman", "line.me", "linedelivery"],
-    subjectIncludes: ["lineman", "line man", "สรุป", "ยอดขาย", "รายงาน"],
+    fromIncludes: ["lmwn.com", "lmwn", "lineman", "wongnai", "line.me"],
+    subjectIncludes: ["รายงานยอดขายรายวัน", "รายงานยอดโอนออก", "line man"],
   },
 };
 
@@ -206,17 +211,10 @@ function loadMailRules(settings) {
   };
 }
 
+const { matchChannel: matchChannelShared } = require("./vat-mail-channel");
+
 function matchChannel(from, subject, rules) {
-  const f = String(from || "").toLowerCase();
-  const s = String(subject || "").toLowerCase();
-  for (const channel of ["shopee", "grab", "lineman"]) {
-    const rule = rules[channel];
-    if (!rule?.enabled) continue;
-    if (rule.fromIncludes.some((k) => f.includes(k)) || rule.subjectIncludes.some((k) => s.includes(k))) {
-      return channel;
-    }
-  }
-  return "unknown";
+  return matchChannelShared(from, subject, rules);
 }
 
 function buildGraphFilter(rule, lookbackDays) {
@@ -429,18 +427,41 @@ exports.vatOutlookSync = functions
           const rawHtml = asString(msg.body?.content, 200000);
           const rawText = msg.body?.contentType === "text" ? rawHtml : stripHtml(rawHtml);
           const matched = matchChannel(from, subject, rules);
+          const channelFinal = matched === "unknown" ? channel : matched;
+          const text = String(rawText || "").slice(0, 200000);
+          const snippet = asString(msg.bodyPreview, 400);
+          const period = periodFieldsFromResolved(
+            resolveReportPeriod({
+              subject,
+              snippet,
+              rawText: text,
+              receivedAt,
+            }),
+          );
+          const studyTags = inferMailStudyTags(
+            {
+              from,
+              subject,
+              channel: channelFinal,
+              reportKind: period.reportKind,
+              snippet,
+              rawText: text,
+            },
+            rules,
+          );
           await db.collection(REPORTS_COL).doc(docId).set({
-            channel: matched === "unknown" ? channel : matched,
+            channel: channelFinal,
             provider: "outlook",
             messageId,
             receivedAt,
             subject,
             from,
-            snippet: asString(msg.bodyPreview, 400),
-            rawText: String(rawText || "").slice(0, 200000),
+            snippet,
+            rawText: text,
             rawHtml: String(rawHtml || "").slice(0, 200000),
-            reportDateGuess: guessReportDate(subject, receivedAt),
-            reportKind: guessReportKind(subject),
+            ...period,
+            studyTags,
+            studyTagsUpdatedAt: Date.now(),
             parseStatus: "pending",
             parseError: "",
             syncedAt: Date.now(),

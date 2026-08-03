@@ -34,6 +34,42 @@ function decodeAttachmentData(data) {
   }
 }
 
+function isPdfPart(filename, mime) {
+  return mime.includes("pdf") || /\.pdf$/i.test(filename);
+}
+
+/** MIME / ชื่อไฟล์ที่อัปขึ้น Drive ได้ (PDF · Excel · CSV) */
+function matchDriveableKind(filename, mime) {
+  const name = String(filename || "");
+  const m = String(mime || "").toLowerCase();
+  if (isPdfPart(name, m)) {
+    return { kind: "pdf", mimeType: "application/pdf", filename: name || "attachment.pdf" };
+  }
+  if (
+    m.includes("spreadsheetml") ||
+    m.includes("excel") ||
+    /\.xlsx$/i.test(name)
+  ) {
+    return {
+      kind: "xlsx",
+      mimeType:
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      filename: name || "attachment.xlsx",
+    };
+  }
+  if (m === "application/vnd.ms-excel" || /\.xls$/i.test(name)) {
+    return {
+      kind: "xls",
+      mimeType: "application/vnd.ms-excel",
+      filename: name || "attachment.xls",
+    };
+  }
+  if (m.includes("csv") || /\.csv$/i.test(name)) {
+    return { kind: "csv", mimeType: "text/csv", filename: name || "attachment.csv" };
+  }
+  return null;
+}
+
 /** Walk MIME tree → PDF parts with attachmentId */
 function listPdfParts(payload, out = []) {
   if (!payload || typeof payload !== "object") return out;
@@ -44,14 +80,14 @@ function listPdfParts(payload, out = []) {
       ? String(payload.body.attachmentId)
       : "";
   const size = Number(payload.body && payload.body.size) || 0;
-  if (attId && (mime.includes("pdf") || /\.pdf$/i.test(filename))) {
+  if (attId && isPdfPart(filename, mime)) {
     out.push({ filename: filename || "attachment.pdf", attachmentId: attId, size });
   }
   if (
     !attId &&
     payload.body &&
     payload.body.data &&
-    (mime.includes("pdf") || /\.pdf$/i.test(filename))
+    isPdfPart(filename, mime)
   ) {
     out.push({
       filename: filename || "inline.pdf",
@@ -62,6 +98,46 @@ function listPdfParts(payload, out = []) {
   }
   const parts = Array.isArray(payload.parts) ? payload.parts : [];
   for (const p of parts) listPdfParts(p, out);
+  return out;
+}
+
+/** Walk MIME tree → PDF / Excel / CSV for Drive upload */
+function listDriveableParts(payload, out = []) {
+  if (!payload || typeof payload !== "object") return out;
+  const filename = asString(payload.filename, 240);
+  const mime = String(payload.mimeType || "").toLowerCase();
+  const attId =
+    payload.body && payload.body.attachmentId
+      ? String(payload.body.attachmentId)
+      : "";
+  const size = Number(payload.body && payload.body.size) || 0;
+  const kind = matchDriveableKind(filename, mime);
+  if (kind && attId) {
+    out.push({
+      filename: kind.filename,
+      attachmentId: attId,
+      size,
+      mimeType: kind.mimeType,
+      kind: kind.kind,
+    });
+  }
+  if (
+    kind &&
+    !attId &&
+    payload.body &&
+    payload.body.data
+  ) {
+    out.push({
+      filename: kind.filename,
+      attachmentId: "",
+      size,
+      mimeType: kind.mimeType,
+      kind: kind.kind,
+      inlineData: payload.body.data,
+    });
+  }
+  const parts = Array.isArray(payload.parts) ? payload.parts : [];
+  for (const p of parts) listDriveableParts(p, out);
   return out;
 }
 
@@ -277,7 +353,12 @@ function needsPdfEnrich(doc) {
 
 module.exports = {
   PDF_MARKER,
+  MAX_PDF_BYTES,
   listPdfParts,
+  listDriveableParts,
+  matchDriveableKind,
+  fetchAttachmentBuffer,
+  decodeAttachmentData,
   extractPdfTextFromMessage,
   mergeBodyWithPdf,
   needsPdfEnrich,

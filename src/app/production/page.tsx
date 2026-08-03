@@ -19,6 +19,13 @@ import { PhotoForensicsPanel } from "@/components/PhotoForensicsPanel";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useAuth } from "@/lib/auth";
 import { monthInputValue, parseMonthInput } from "@/lib/bonus";
+import { resolveWorkerDisplayNames } from "@/lib/employee-rename-propagate";
+import { resolveLinkedEmployee } from "@/lib/employees";
+import { staffHomeHref } from "@/lib/nav-menu";
+import {
+  buildWorkEntryMineIdentity,
+  workEntryIncludesMe,
+} from "@/lib/work-entry-mine";
 import { can } from "@/lib/permissions";
 import {
   entryHasPhotoFlag,
@@ -34,7 +41,6 @@ import {
   listProdProducts,
   listProdWorkers,
   PROD_IMAGE_MAX,
-  prodHistorySinceMs,
   resolveProdEntryRates,
   seedProdCatalogIfEmpty,
   subscribeProdEntries,
@@ -66,9 +72,12 @@ export default function ProductionPage() {
 }
 
 function ProductionView() {
-  const { actorId, staff } = useAuth();
+  const { actorId, staff, isPermPreview } = useAuth();
   const router = useRouter();
   const isOwner = staff?.role === "owner";
+  const shopProdView = isOwner || can(staff, "payrollPay");
+  /** พรีวิว = มุมพนักงาน: ดู/เลือกเดือนได้ · กรอกไม่ได้ */
+  const canWrite = !!actorId && !isPermPreview;
   const [ownerView, setOwnerView] = useState<ProdOwnerView>("log");
   const [formOpen, setFormOpen] = useState(false);
   const [entries, setEntries] = useState<ProdEntry[]>([]);
@@ -89,43 +98,66 @@ function ProductionView() {
 
   useEffect(() => {
     if (staff && !can(staff, "production")) {
-      router.replace("/ledger/");
+      router.replace(staffHomeHref(staff));
     }
   }, [staff, router]);
 
   useEffect(() => {
     if (!can(staff, "production")) return;
     setLoading(true);
+    let cancelled = false;
+    let unsubEntries: (() => void) | undefined;
+    const unsubSchedule = subscribeRateSchedule(
+      (doc) => setRateSchedule(doc.entries),
+      (err) => setError(err.message),
+    );
+
     void reloadCatalog()
       .then(async () => {
         if (isOwner) {
           const seeded = await seedProdCatalogIfEmpty();
           if (seeded.products || seeded.workers) await reloadCatalog();
         }
-      })
-      .catch((err) => setError((err as Error).message || "โหลดข้อมูลไม่สำเร็จ"))
-      .finally(() => setLoading(false));
-
-    const windowOpts = isOwner
-      ? {
+        if (cancelled) return;
+        const w = await listProdWorkers();
+        if (cancelled) return;
+        setWorkers(w);
+        // มุมพนักงาน/พรีวิว: โหลดเดือนแล้วกรองฝั่ง client (id + ชื่อ) — กัน employeeId ค้างแล้วรายการว่าง
+        const monthWindow = {
           since: new Date(logYear, logMonthIdx, 1).getTime(),
           until: new Date(logYear, logMonthIdx + 1, 1).getTime(),
+        };
+        if (!shopProdView) {
+          const linked = resolveLinkedEmployee(w, staff);
+          const me = buildWorkEntryMineIdentity(linked, staff);
+          if (!me.employeeId && !me.name && !me.nickname && !me.displayName) {
+            setEntries([]);
+            return;
+          }
+          unsubEntries = subscribeProdEntries(
+            (rows) => setEntries(rows.filter((r) => workEntryIncludesMe(r, me))),
+            (err) => setError(err.message || "โหลดรายการไม่สำเร็จ"),
+            monthWindow,
+          );
+          return;
         }
-      : { since: prodHistorySinceMs() };
-    const unsub = subscribeProdEntries(
-      (rows) => setEntries(rows),
-      (err) => setError(err.message || "โหลดรายการไม่สำเร็จ"),
-      windowOpts,
-    );
-    const unsubSchedule = subscribeRateSchedule(
-      (doc) => setRateSchedule(doc.entries),
-      (err) => setError(err.message),
-    );
+        unsubEntries = subscribeProdEntries(
+          (rows) => setEntries(rows),
+          (err) => setError(err.message || "โหลดรายการไม่สำเร็จ"),
+          monthWindow,
+        );
+      })
+      .catch((err) => setError((err as Error).message || "โหลดข้อมูลไม่สำเร็จ"))
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
     return () => {
-      unsub();
+      cancelled = true;
+      unsubEntries?.();
       unsubSchedule();
     };
-  }, [staff, isOwner, logYear, logMonthIdx]);
+  }, [staff, isOwner, shopProdView, logYear, logMonthIdx]);
 
   useBodyScrollLock(formOpen);
 
@@ -196,6 +228,11 @@ function ProductionView() {
       </div>
 
       {error ? <p className="error-text">{error}</p> : null}
+      {isPermPreview && showLog ? (
+        <p className="muted" style={{ margin: "0 0 0.55rem", fontSize: "0.78rem" }}>
+          พรีวิวมุมพนักงาน — เลือกเดือนดูรายการของคนนี้ได้ · กรอก/แก้ไม่ได้
+        </p>
+      ) : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
       {!loading && showCatalog ? (
@@ -218,7 +255,10 @@ function ProductionView() {
       {!loading && showLog ? (
         <ProdTable
           entries={entries}
+          workers={workers}
           isOwner={isOwner}
+          mineOnly={!shopProdView}
+          canOpenRow={canWrite}
           month={logMonth}
           onMonthChange={setLogMonth}
           onEdit={openEdit}
@@ -227,7 +267,7 @@ function ProductionView() {
         />
       ) : null}
 
-      {formOpen && !loading && showLog ? (
+      {canWrite && formOpen && !loading && showLog ? (
         <div className="modal-backdrop edit-modal is-module-form" onClick={closeForm}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <ProdEntryForm
@@ -238,6 +278,8 @@ function ProductionView() {
               rateSchedule={rateSchedule}
               createdBy={actorId}
               isOwner={isOwner}
+              staff={staff}
+              mineOnly={!shopProdView}
               onError={setError}
               onSaved={closeForm}
               onCancelEdit={closeForm}
@@ -254,12 +296,27 @@ function ProductionView() {
         </div>
       ) : null}
 
-      {showLog ? (
+      {canWrite && showLog ? (
         <ModuleTabDock
           ariaLabel="มุมมองผลิต"
           formOpen={formOpen}
           onAdd={openAdd}
         />
+      ) : null}
+      {/* พรีวิว: โชว์ปุ่ม + กรอกแบบพนักงาน แต่กดไม่ได้ — ให้สภาพแวดล้อมใกล้ของจริง */}
+      {isPermPreview && showLog ? (
+        <div className="module-tab-dock is-single" role="tablist" aria-label="มุมมองผลิต">
+          <button
+            type="button"
+            role="tab"
+            className="module-tab is-add"
+            disabled
+            title="พรีวิว — กรอกไม่ได้"
+            aria-disabled="true"
+          >
+            + กรอก
+          </button>
+        </div>
       ) : null}
     </div>
   );
@@ -272,6 +329,8 @@ function ProdEntryForm({
   rateSchedule,
   createdBy,
   isOwner,
+  staff,
+  mineOnly,
   onError,
   onSaved,
   onCancelEdit,
@@ -283,6 +342,8 @@ function ProdEntryForm({
   rateSchedule: RateScheduleEntry[];
   createdBy: string;
   isOwner: boolean;
+  staff: ReturnType<typeof useAuth>["staff"];
+  mineOnly: boolean;
   onError: (msg: string) => void;
   onSaved: () => void;
   onCancelEdit: () => void;
@@ -290,9 +351,13 @@ function ProdEntryForm({
 }) {
   const locked = entry ? isProdEntryLocked(entry) : false;
   const [date, setDate] = useState(entry ? todayInputValue(new Date(entry.date)) : todayInputValue());
-  const [selectedWorkers, setSelectedWorkers] = useState<string[]>(
-    entry?.workerIds?.length ? entry.workerIds : [],
-  );
+  const [selectedWorkers, setSelectedWorkers] = useState<string[]>(() => {
+    if (entry?.workerIds?.length) return entry.workerIds;
+    if (!mineOnly) return [];
+    const linked = resolveLinkedEmployee(workers, staff);
+    if (linked && workers.some((w) => w.id === linked.id)) return [linked.id];
+    return [];
+  });
   const [productId, setProductId] = useState(entry?.productId || products[0]?.id || "");
   const [qty, setQty] = useState(entry ? String(entry.qtyProduced) : "");
   const [waste, setWaste] = useState(entry ? String(entry.qtyWaste || 0) : "");
@@ -551,7 +616,10 @@ function ProdEntryForm({
 
 function ProdTable({
   entries,
+  workers,
   isOwner,
+  mineOnly,
+  canOpenRow,
   month,
   onMonthChange,
   onEdit,
@@ -559,7 +627,12 @@ function ProdTable({
   toolbarLeading,
 }: {
   entries: ProdEntry[];
+  workers: ProdWorker[];
   isOwner: boolean;
+  /** true = มุมพนักงาน (รายการของฉัน) — ซ่อนคอลัมน์พนักงาน */
+  mineOnly: boolean;
+  /** false = พรีวิว/อ่านอย่างเดียว — ไม่เปิดฟอร์มแก้ */
+  canOpenRow: boolean;
   month: string;
   onMonthChange: (month: string) => void;
   onEdit: (row: ProdEntry) => void;
@@ -575,7 +648,7 @@ function ProdTable({
 
   useBodyScrollLock(!!preview);
 
-  // entries ถูก scope ตามเดือน/lookback จาก parent แล้ว
+  // entries ถูก scope ตามเดือน (+ workerId มุมพนักงาน) จาก parent แล้ว
   const filtered = entries;
 
   const forensicsRows = useMemo(
@@ -606,20 +679,18 @@ function ProdTable({
     <>
       <div className="ot-toolbar-slim module-toolbar-slim">
         {toolbarLeading}
-        {isOwner ? (
-          <input
-            type="month"
-            className="ot-slim-input"
-            value={month}
-            onChange={(e) => onMonthChange(e.target.value)}
-            aria-label="เดือน"
-          />
-        ) : null}
+        <input
+          type="month"
+          className="ot-slim-input"
+          value={month}
+          onChange={(e) => onMonthChange(e.target.value)}
+          aria-label="เดือนอ้างอิง"
+        />
         <span
           className="ot-slim-hint muted module-slim-hint"
           title="สถานะล็อกเมื่อปิดเดือนโบนัสที่ จ่าย/โบนัส — ไม่เปลี่ยนสถานะเป็นกลุ่มที่นี่"
         >
-          ล็อกเมื่อปิดเดือนโบนัส
+          {mineOnly ? "รายการของฉันในเดือนนี้" : "ล็อกเมื่อปิดเดือนโบนัส"}
         </span>
         {isOwner ? (
           <PhotoForensicsPanel
@@ -627,23 +698,27 @@ function ProdTable({
             onReport={setPhotoReport}
             onPickEntry={(id) => {
               const row = filtered.find((r) => r.id === id);
-              if (row) onEdit(row);
+              if (row && canOpenRow) onEdit(row);
             }}
           />
         ) : null}
       </div>
 
       {!entries.length ? (
-        <p className="empty">ยังไม่มีรายการผลิต — กด + กรอก ด้านล่างเพื่อเริ่ม</p>
-      ) : !filtered.length && isOwner ? (
-        <p className="empty">ไม่มีรายการในเดือนนี้</p>
+        <p className="empty">
+          {mineOnly
+            ? "ยังไม่มีรายการผลิตของคุณในเดือนนี้"
+            : "ยังไม่มีรายการผลิตในเดือนนี้ — กด + กรอก ด้านล่างเพื่อเริ่ม"}
+        </p>
       ) : (
         <div className="sheet-wrap production-sheet sheet-bleed">
           <table className="sheet-table prod-table sheet-table--dense">
             <thead>
               <tr>
                 <th className="col-date">วันที่</th>
-                <th className="col-desc prod-col-worker">พนักงาน</th>
+                {mineOnly ? null : (
+                  <th className="col-desc prod-col-worker">พนักงาน</th>
+                )}
                 <th className="col-desc prod-col-product col-sticky-left">สินค้า</th>
                 <th className="col-out">ผลิต</th>
                 <th className="col-out">ทิ้ง/เสีย</th>
@@ -661,7 +736,7 @@ function ProdTable({
               </tr>
             </thead>
             <tbody>
-              {(isOwner ? filtered : entries).map((row) => {
+              {filtered.map((row) => {
                 const c = computeProdBonus(row);
                 const locked = isProdEntryLocked(row);
                 const photoFlagged = isOwner && entryHasPhotoFlag(photoReport, row.id);
@@ -677,14 +752,27 @@ function ProdTable({
                       .join(" ")}
                   >
                     <td className="col-date">{formatDateShortBe(row.date)}</td>
-                    <td className="col-desc prod-col-worker">{row.workerNames.join(", ")}</td>
+                    {mineOnly ? null : (
+                      <td className="col-desc prod-col-worker">
+                        {resolveWorkerDisplayNames(row.workerIds, row.workerNames, workers).join(
+                          ", ",
+                        ) || "—"}
+                      </td>
+                    )}
                     <td className="col-desc prod-col-product col-sticky-left">
                       <div className="prod-name-row">
                         <button
                           type="button"
                           className="desc-link"
-                          title={row.productName}
-                          onClick={() => onEdit(row)}
+                          title={
+                            canOpenRow
+                              ? row.productName
+                              : `${row.productName} · ดูอย่างเดียว`
+                          }
+                          onClick={() => {
+                            if (canOpenRow) onEdit(row);
+                          }}
+                          disabled={!canOpenRow}
                         >
                           {locked ? <Lock size={11} aria-hidden /> : null} {row.productName}
                         </button>

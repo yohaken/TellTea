@@ -11,7 +11,13 @@ import { getDb } from "./firebase";
 import { POS_SALES_COL } from "./pos-sales";
 import { POS_SESSIONS_COL } from "./pos-session";
 import type { PosSale, PosSession, PosSessionCashDropNote } from "./types";
-import { startOfLocalDay } from "./utils";
+import {
+  bangkokMonthKey,
+  dateKeysInMonth,
+  isMonthKey,
+  startMsFromDateKey,
+} from "./vat-sales";
+import { bangkokDateKey, startOfLocalDay } from "./utils";
 
 /** Initial slim-table page size (scroll for the rest of the window). */
 export const POS_SESSIONS_SLIM_LIMIT = 50;
@@ -193,13 +199,40 @@ function mapSession(id: string, data: Record<string, unknown>): PosSession {
     discrepancyNote: str("discrepancyNote"),
     discrepancyLabel: str("discrepancyLabel"),
     remitAmount,
+    remitStatus: (() => {
+      const r = str("remitStatus");
+      if (r === "pending" || r === "handed" || r === "mismatch") return r;
+      return undefined;
+    })(),
+    remitHandedAmount: num("remitHandedAmount"),
+    remitHandedAt: num("remitHandedAt"),
+    remitHandedBy: str("remitHandedBy"),
+    remitHandedByName: str("remitHandedByName"),
+    remitReceivedByName: str("remitReceivedByName"),
+    remitHandoffNote: str("remitHandoffNote"),
     cashBillCount: num("cashBillCount"),
     promptpayBillCount: num("promptpayBillCount"),
     transferBillCount: num("transferBillCount"),
     source: str("source"),
+    counterLabel: str("counterLabel"),
     openedByEmployeeId: str("openedByEmployeeId"),
     openedByName: str("openedByName"),
+    closedBy: str("closedBy"),
+    closedByEmployeeId: str("closedByEmployeeId"),
+    closedByName: str("closedByName"),
+    closeSource: str("closeSource"),
   };
+}
+
+/** Display label for who closed the round — empty when still open / unknown. */
+export function posSessionCloserLabel(session: PosSession): string {
+  if (session.status !== "closed") return "";
+  const name = (session.closedByName || "").trim();
+  if (name) return name;
+  const source = (session.closeSource || "").trim();
+  if (source === "bo-force" || source === "bo-manual") return "BO";
+  if ((session.closedBy || "").trim()) return "BO";
+  return "";
 }
 
 /** Activity clock for sort — closedAt when closed, else openedAt. */
@@ -649,6 +682,205 @@ export function subscribePosSalesRecent(
     },
     (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
   );
+}
+
+/** Max inclusive calendar days for BO dashboard range query. */
+export const POS_DASHBOARD_MAX_RANGE_DAYS = 92;
+
+export type PosDateRange = {
+  /** Bangkok midnight ms (inclusive) */
+  startMs: number;
+  /** Bangkok midnight ms (inclusive) */
+  endMs: number;
+};
+
+/** Default dashboard window: 1st of Bangkok month → today. */
+export function defaultPosDashboardRange(nowMs = Date.now()): PosDateRange {
+  return posDashboardMonthRange(bangkokMonthKey(nowMs), nowMs);
+}
+
+/**
+ * Full calendar month in Bangkok.
+ * Current month ends at today; past months use the last day of the month.
+ */
+export function posDashboardMonthRange(monthKey: string, nowMs = Date.now()): PosDateRange {
+  if (!isMonthKey(monthKey)) throw new Error("เดือนไม่ถูกต้อง");
+  const keys = dateKeysInMonth(monthKey);
+  const startMs = startMsFromDateKey(keys[0]);
+  const monthEnd = startMsFromDateKey(keys[keys.length - 1]);
+  const today = startOfLocalDay(nowMs);
+  const endMs =
+    monthKey === bangkokMonthKey(nowMs) ? Math.min(monthEnd, today) : monthEnd;
+  return { startMs, endMs };
+}
+
+/** Shift YYYY-MM by whole months (can go past current — callers clamp). */
+export function shiftPosMonthKey(monthKey: string, deltaMonths: number): string {
+  if (!isMonthKey(monthKey)) throw new Error("เดือนไม่ถูกต้อง");
+  const [y, m] = monthKey.split("-").map(Number);
+  const utc = Date.UTC(y, m - 1 + deltaMonths, 1);
+  const d = new Date(utc);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+export type PosDashMonthOption = { monthKey: string; label: string };
+
+/** Recent Bangkok months newest-first for the dashboard month picker. */
+export function listPosDashboardMonthOptions(
+  nowMs = Date.now(),
+  count = 24,
+): PosDashMonthOption[] {
+  const n = Math.max(1, Math.min(60, count));
+  const cur = bangkokMonthKey(nowMs);
+  const out: PosDashMonthOption[] = [];
+  for (let i = 0; i < n; i++) {
+    const monthKey = shiftPosMonthKey(cur, -i);
+    const startMs = startMsFromDateKey(`${monthKey}-01`);
+    const label = new Intl.DateTimeFormat("th-TH", {
+      timeZone: "Asia/Bangkok",
+      month: "long",
+      year: "numeric",
+    }).format(new Date(startMs + 12 * 60 * 60 * 1000));
+    out.push({ monthKey, label });
+  }
+  return out;
+}
+
+/**
+ * If the range is exactly a dashboard month window, return that YYYY-MM; else null
+ * (custom from–to).
+ */
+export function posRangeMatchedMonthKey(
+  range: PosDateRange,
+  nowMs = Date.now(),
+): string | null {
+  const { startMs, endMs } = normalizePosDateRange(range);
+  const startKey = bangkokDateKey(startMs);
+  if (!/^\d{4}-\d{2}-01$/.test(startKey)) return null;
+  const monthKey = startKey.slice(0, 7);
+  try {
+    const expected = posDashboardMonthRange(monthKey, nowMs);
+    if (expected.startMs === startMs && expected.endMs === endMs) return monthKey;
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+/** Order start/end as Bangkok midnights — does not enforce max span. */
+export function normalizePosDateRange(range: PosDateRange): PosDateRange {
+  let startMs = startOfLocalDay(range.startMs);
+  let endMs = startOfLocalDay(range.endMs);
+  if (endMs < startMs) {
+    const tmp = startMs;
+    startMs = endMs;
+    endMs = tmp;
+  }
+  return { startMs, endMs };
+}
+
+/** Inclusive calendar-day count without max-span clamp (for validation). */
+export function posDateRangeDayCountRaw(range: PosDateRange): number {
+  const { startMs, endMs } = normalizePosDateRange(range);
+  return Math.floor((endMs - startMs) / (24 * 60 * 60 * 1000)) + 1;
+}
+
+/** Normalize + clamp to {@link POS_DASHBOARD_MAX_RANGE_DAYS} (safety for queries). */
+export function clampPosDateRange(range: PosDateRange): PosDateRange {
+  const { startMs, endMs } = normalizePosDateRange(range);
+  const maxSpan = (POS_DASHBOARD_MAX_RANGE_DAYS - 1) * 24 * 60 * 60 * 1000;
+  if (endMs - startMs > maxSpan) {
+    return { startMs: endMs - maxSpan, endMs };
+  }
+  return { startMs, endMs };
+}
+
+export function posDateRangeDayCount(range: PosDateRange): number {
+  return posDateRangeDayCountRaw(clampPosDateRange(range));
+}
+
+/** Gregorian DD/MM/YYYY for one Bangkok day. */
+export function formatPosRangeDayCe(ms: number): string {
+  const key = bangkokDateKey(ms);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return "—";
+  const [y, m, d] = key.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+/** `01/07/2026 - 31/07/2026` style label. */
+export function formatPosDateRangeLabel(range: PosDateRange): string {
+  const { startMs, endMs } = clampPosDateRange(range);
+  return `${formatPosRangeDayCe(startMs)} - ${formatPosRangeDayCe(endMs)}`;
+}
+
+/** YYYY-MM-DD for `<input type="date">` from Bangkok midnight ms. */
+export function posRangeDayInputValue(ms: number): string {
+  return bangkokDateKey(startOfLocalDay(ms)) || "";
+}
+
+/**
+ * Live bills for a Bangkok date range (inclusive midnights).
+ * Merges legacy UTC+7 twin `date` stamps the same way as single-day subscribe.
+ */
+export function subscribePosSalesForDateRange(
+  range: PosDateRange,
+  onSales: (sales: PosSale[]) => void,
+  onError?: (err: Error) => void,
+): Unsubscribe {
+  const { startMs, endMs } = clampPosDateRange(range);
+  const legacyStart = startMs + 7 * 60 * 60 * 1000;
+  const legacyEnd = endMs + 7 * 60 * 60 * 1000;
+
+  let primary: PosSale[] = [];
+  let legacy: PosSale[] = [];
+  let primaryReady = false;
+  let legacyReady = false;
+
+  const emit = () => {
+    // Wait for both twin queries so the dashboard does not flash empty/under-count.
+    if (!primaryReady || !legacyReady) return;
+    const map = new Map<string, PosSale>();
+    for (const s of primary) map.set(s.id, s);
+    for (const s of legacy) map.set(s.id, s);
+    onSales(
+      [...map.values()].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
+    );
+  };
+
+  const handleErr = (err: Error) => onError?.(err);
+
+  const unsub1 = onSnapshot(
+    query(
+      collection(getDb(), POS_SALES_COL),
+      where("date", ">=", startMs),
+      where("date", "<=", endMs),
+    ),
+    (snap) => {
+      primary = snap.docs.map((d) => mapPosSale(d.id, d.data() as Record<string, unknown>));
+      primaryReady = true;
+      emit();
+    },
+    (err) => handleErr(err instanceof Error ? err : new Error(String(err))),
+  );
+
+  const unsub2 = onSnapshot(
+    query(
+      collection(getDb(), POS_SALES_COL),
+      where("date", ">=", legacyStart),
+      where("date", "<=", legacyEnd),
+    ),
+    (snap) => {
+      legacy = snap.docs.map((d) => mapPosSale(d.id, d.data() as Record<string, unknown>));
+      legacyReady = true;
+      emit();
+    },
+    (err) => handleErr(err instanceof Error ? err : new Error(String(err))),
+  );
+
+  return () => {
+    unsub1();
+    unsub2();
+  };
 }
 
 export function shiftDayMs(offsetDays = 0): number {

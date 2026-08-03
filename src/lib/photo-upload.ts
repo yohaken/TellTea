@@ -249,7 +249,13 @@ export function friendlyStorageUploadError(err: unknown): string {
     return "บันทึกรูปใช้เวลานานเกินไป — ลองใหม่อีกครั้งบน Wi‑Fi";
   }
   if (/permission-denied|insufficient permissions/i.test(code + raw)) {
-    return "ไม่มีสิทธิ์บันทึกรูป — เข้าสู่ระบบใหม่แล้วลองอีกครั้ง";
+    return (
+      "ไม่มีสิทธิ์บันทึกรูป — เข้าสู่ระบบใหม่แล้วลองอีกครั้ง " +
+      "(ถ้าเพิ่งอัปเดตระบบ ให้รีเฟรชหน้าเว็บก่อน)"
+    );
+  }
+  if (/โฟลเดอร์รูปไม่ถูกต้อง/.test(raw)) {
+    return raw;
   }
   if (/ยกเลิก|abort/i.test(code + raw)) {
     return "ยกเลิกการอัปโหลดแล้ว";

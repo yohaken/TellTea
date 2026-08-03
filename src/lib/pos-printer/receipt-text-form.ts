@@ -4,7 +4,7 @@
  * Used for golden tests + docs; thermal on web still uses HTML → browser print.
  */
 import type { PosSaleLine } from "../types";
-import { tallySaleLineModifiers } from "../pos-receipt-format";
+import { formatReceiptModifierText, tallySaleLineModifiers } from "../pos-receipt-format";
 import { receiptLineBaseName } from "./receipt-template";
 import type { ReceiptPrintPayload } from "./types";
 
@@ -47,7 +47,9 @@ function formatReceiptTime(ts: number): string {
 }
 
 function paymentLabel(method: ReceiptPrintPayload["paymentMethod"]): string {
-  return method === "promptpay" ? "PromptPay" : "เงินสด";
+  if (method === "promptpay") return "PromptPay";
+  if (method === "transfer") return "โอนเงิน";
+  return "เงินสด";
 }
 
 function center(text: string, width: number): string {
@@ -95,8 +97,7 @@ function appendItem(lines: string[], line: PosSaleLine, width: number, compact: 
   const qtyCol = qty < 10 ? ` ${qty}` : String(Math.min(qty, 99));
   lines.push(pairRow(`${qtyCol} ${title}`, priceText, width));
   for (const mod of tallySaleLineModifiers(line, compact)) {
-    const count = Math.max(1, mod.count);
-    const label = `- ${mod.label} x${count}`;
+    const label = `- ${formatReceiptModifierText(mod.label, mod.count)}`;
     for (const part of wrap(`    ${label}`, width)) lines.push(part);
   }
 }

@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * @deprecated 2026-08-01 — เลิกใช้ UI นำเข้ารายวัน
+ * หน้า `/vat-sales/` ใช้สรุปรายเดือนใน VatMonthBooks แทน
+ * ดู docs/vat-month-sources.md · คงไฟล์ไว้เป็นอะแดปเตอร์/เทสชั่วคราว
+ */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   mergeVatImportIntoMonth,

@@ -1,5 +1,6 @@
 /**
- * Guard: cash-in round edit — delete/replace photos, add/remove days, notes
+ * Guard: cash-in round edit — bank slip photos, notes, save/update
+ * (day/round-print attach removed; tick sessions + bank slips only)
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -15,21 +16,20 @@ const preview = read("src/components/EntryPhotoCell.tsx");
 const css = read("src/app/globals.css");
 const lib = read("src/lib/cash-deposits.ts");
 
-assert.match(version, /APP_BUILD = 386/);
-assert.match(panel, /ลบรูป/);
-assert.match(panel, /clearSlipUrls|removePreviewPhotoAt/);
-assert.match(panel, /function addDay/);
-assert.match(panel, /function removeDay/);
-assert.match(panel, /\+ วันก่อนหน้า|\+ วันถัดไป/);
-assert.match(panel, /โน้ตรอบ/);
-assert.match(panel, /โน้ตวัน|col-note/);
+const buildMatch = version.match(/APP_BUILD\s*=\s*(\d+)/);
+assert.ok(buildMatch);
+assert.ok(Number(buildMatch[1]) >= 674, `APP_BUILD >= 674, got ${buildMatch[1]}`);
+
+assert.match(panel, /ลบรูป|clearSlipUrls|removePreviewPhotoAt/);
+assert.match(panel, /setTransferSlipUrls/);
+assert.doesNotMatch(panel, /setDaySlipUrls|openDayPhoto|attachPosPrintForSession/);
 assert.match(panel, /editNote|draft\.note/);
 assert.match(panel, /emptyCashDepositDay/);
+assert.match(panel, /updateCashDeposit|addCashDeposit/);
+assert.match(panel, /slipUrls: \[\.\.\.d\.slipUrls\]/);
 assert.match(preview, /onRemoveAt/);
 assert.match(preview, /ลบรูปนี้/);
 assert.match(css, /photo-fs-download\.is-danger/);
-assert.match(css, /cash-in-day-add-bar/);
-assert.match(css, /cash-in-note-field/);
 assert.match(lib, /note: \(input\.note/);
 assert.match(lib, /emptyCashDepositDay/);
 

@@ -2,6 +2,7 @@ import {
   addDoc,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -14,6 +15,12 @@ import {
   where,
   type Unsubscribe,
 } from "firebase/firestore";
+import {
+  listStockCostMap,
+  mergeStockCosts,
+  migrateAllLegacyStockCosts,
+  setStockUnitCost,
+} from "./stock-costs";
 import { getDb } from "./firebase";
 import { startOfLocalDay } from "./utils";
 import type {
@@ -23,6 +30,8 @@ import type {
   StockMovementInput,
   StockMovementType,
 } from "./types";
+
+export { migrateAllLegacyStockCosts };
 
 const STOCK_COL = "stock";
 const MOVEMENTS_COL = "stockMovements";
@@ -53,12 +62,18 @@ function mapStockDoc(id: string, data: Record<string, unknown>): StockItem {
     qty: Number(data.qty) || 0,
     minQty: Number(data.minQty) || 0,
     safetyStock: Number(data.safetyStock) || 0,
-    unitCost: Number(data.unitCost) || 0,
+    // ต้นทุนอยู่ stockCosts — ไม่อ่านจาก stock (กัน leak ระหว่าง migrate)
+    unitCost: 0,
     barcode: data.barcode ? String(data.barcode) : undefined,
     note: data.note ? String(data.note) : undefined,
     updatedAt: Number(data.updatedAt) || 0,
     updatedBy: String(data.updatedBy || ""),
   };
+}
+
+/** @deprecated stock docs ไม่มี unitCost แล้ว — คงไว้เพื่อ call site เก่า */
+export function redactStockUnitCosts(items: StockItem[]): StockItem[] {
+  return items.map((item) => (item.unitCost ? { ...item, unitCost: 0 } : item));
 }
 
 function mapMovementDoc(id: string, data: Record<string, unknown>): StockMovement {
@@ -78,26 +93,34 @@ function mapMovementDoc(id: string, data: Record<string, unknown>): StockMovemen
   };
 }
 
-function stockPayload(input: StockItemInput) {
+function stockPayload(input: StockItemInput, opts?: { stripUnitCost?: boolean }) {
   const name = input.name.trim();
   if (!name) throw new Error("ต้องใส่ชื่อวัตถุดิบ");
-  return {
+  const base: Record<string, unknown> = {
     name,
     unit: (input.unit || "ชิ้น").trim(),
     qty: Number(input.qty) || 0,
     minQty: Number(input.minQty) || 0,
     safetyStock: Number(input.safetyStock) || 0,
-    unitCost: Number(input.unitCost) || 0,
     barcode: (input.barcode || "").trim() || null,
     note: (input.note || "").trim(),
     updatedAt: Date.now(),
     updatedBy: input.updatedBy,
   };
+  // อัปเดต: ลบ legacy unitCost ออกจาก stock doc
+  if (opts?.stripUnitCost) base.unitCost = deleteField();
+  return base;
 }
 
 export async function listStockItems(): Promise<StockItem[]> {
   const snap = await getDocs(query(collection(getDb(), STOCK_COL), orderBy("name", "asc")));
   return snap.docs.map((d) => mapStockDoc(d.id, d.data() as Record<string, unknown>));
+}
+
+/** รายการ + ต้นทุน (เจ้าของ) */
+export async function listStockItemsWithCosts(): Promise<StockItem[]> {
+  const [items, costMap] = await Promise.all([listStockItems(), listStockCostMap()]);
+  return mergeStockCosts(items, costMap);
 }
 
 export function subscribeStockItems(
@@ -114,10 +137,43 @@ export function subscribeStockItems(
   );
 }
 
+/** subscribe พร้อมต้นทุน — ใช้เฉพาะเจ้าของ (rules บล็อก stockCosts สำหรับ staff) */
+export function subscribeStockItemsWithCosts(
+  onData: (items: StockItem[]) => void,
+  onError?: (err: Error) => void,
+): Unsubscribe {
+  let roster: StockItem[] = [];
+  let costMap = new Map<string, number>();
+  const emit = () => onData(mergeStockCosts(roster, costMap));
+
+  const unsubStock = onSnapshot(
+    query(collection(getDb(), STOCK_COL), orderBy("name", "asc")),
+    (snap) => {
+      roster = snap.docs.map((d) => mapStockDoc(d.id, d.data() as Record<string, unknown>));
+      emit();
+    },
+    (err) => onError?.(err),
+  );
+  const unsubCosts = onSnapshot(
+    collection(getDb(), "stockCosts"),
+    (snap) => {
+      costMap = new Map(
+        snap.docs.map((d) => [d.id, Math.round((Number(d.data().unitCost) || 0) * 100) / 100]),
+      );
+      emit();
+    },
+    (err) => onError?.(err),
+  );
+  return () => {
+    unsubStock();
+    unsubCosts();
+  };
+}
+
 export function subscribeStockMovements(
   onData: (rows: StockMovement[]) => void,
   onError?: (err: Error) => void,
-  opts?: { itemId?: string; since?: number },
+  opts?: { itemId?: string; since?: number; until?: number },
 ): Unsubscribe {
   let q = query(collection(getDb(), MOVEMENTS_COL), orderBy("date", "desc"), orderBy("createdAt", "desc"));
   if (opts?.itemId) {
@@ -127,7 +183,15 @@ export function subscribeStockMovements(
       orderBy("date", "desc"),
       orderBy("createdAt", "desc"),
     );
-  } else if (opts?.since) {
+  } else if (opts?.since != null && opts?.until != null) {
+    q = query(
+      collection(getDb(), MOVEMENTS_COL),
+      where("date", ">=", opts.since),
+      where("date", "<=", opts.until),
+      orderBy("date", "desc"),
+      orderBy("createdAt", "desc"),
+    );
+  } else if (opts?.since != null) {
     q = query(
       collection(getDb(), MOVEMENTS_COL),
       where("date", ">=", opts.since),
@@ -259,6 +323,9 @@ export async function recordCycleCount(
 
 export async function createStockItem(input: StockItemInput): Promise<string> {
   const ref = await addDoc(collection(getDb(), STOCK_COL), stockPayload(input));
+  if (input.unitCost != null && Number(input.unitCost) > 0) {
+    await setStockUnitCost(ref.id, Number(input.unitCost));
+  }
   return ref.id;
 }
 
@@ -275,12 +342,14 @@ export async function updateStockItem(
     qty: patch.qty ?? current.qty,
     minQty: patch.minQty ?? current.minQty,
     safetyStock: patch.safetyStock ?? current.safetyStock,
-    unitCost: patch.unitCost ?? current.unitCost,
     barcode: patch.barcode ?? current.barcode,
     note: patch.note ?? current.note,
     updatedBy: patch.updatedBy,
   };
-  await updateDoc(doc(getDb(), STOCK_COL, id), stockPayload(merged));
+  await updateDoc(doc(getDb(), STOCK_COL, id), stockPayload(merged, { stripUnitCost: true }));
+  if (patch.unitCost !== undefined) {
+    await setStockUnitCost(id, Number(patch.unitCost) || 0);
+  }
 }
 
 /** @deprecated use recordStockIn/Out — kept for compatibility */
@@ -304,6 +373,11 @@ export async function setStockQty(id: string, qty: number, updatedBy: string): P
 
 export async function deleteStockItem(id: string): Promise<void> {
   await deleteDoc(doc(getDb(), STOCK_COL, id));
+  try {
+    await deleteDoc(doc(getDb(), "stockCosts", id));
+  } catch {
+    /* cost doc may not exist */
+  }
 }
 
 export async function seedStockItemsIfEmpty(updatedBy: string): Promise<boolean> {

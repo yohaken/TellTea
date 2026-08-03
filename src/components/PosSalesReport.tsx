@@ -15,51 +15,31 @@ import {
   subscribePosSessionsRecent,
   summarizePosSalesDetailed,
 } from "@/lib/pos-sales-report";
-import {
-  saleLinesToLocalReceiptLines,
-  type PosLocalReceipt,
-} from "@/lib/pos-local-receipts";
+import { saleToLocalReceipt } from "@/lib/pos-boh-print-docs";
 import type { PosSale, PosSession } from "@/lib/types";
 import { formatPlainNumber, startOfLocalDay } from "@/lib/utils";
+import {
+  getLocalPosShopSettings,
+  setPosSettingsDbMode,
+  subscribePosShopSettings,
+  type PosShopSettings,
+} from "@/lib/pos-settings";
 import { PosConfirmDialog } from "@/components/PosConfirmDialog";
 import { PosManagePanel } from "@/components/PosManagePanel";
 import { PosReceiptPaper } from "@/components/PosReceiptPaper";
+import { PosSalesDashboard } from "@/components/PosSalesDashboard";
+import { PosSessionPrintDocs } from "@/components/PosSessionPrintDocs";
 import { PosSessionsSlimTable } from "@/components/PosSessionsSlimTable";
-
-function saleToLocalReceipt(sale: PosSale): PosLocalReceipt {
-  const extra = sale as PosSale & {
-    customerName?: string;
-    customerPhone?: string;
-    staffName?: string;
-    vatBaht?: number;
-    serviceChargeBaht?: number;
-  };
-  return {
-    id: sale.id,
-    billNo: sale.billNo,
-    sessionId: sale.sessionId,
-    total: sale.total,
-    paymentMethod: sale.paymentMethod,
-    linePreview: sale.lines.map((l) => `${l.name}×${l.qty}`).join(", "),
-    lines: saleLinesToLocalReceiptLines(sale.lines),
-    discountBaht: sale.discountBaht,
-    cashReceived: sale.cashReceived,
-    change: sale.change,
-    createdAt: sale.createdAt,
-    pending: false,
-    voided: sale.status === "voided",
-    voidedAt: sale.voidedAt,
-    voidReason: sale.voidReason,
-    customerName: extra.customerName,
-    customerPhone: extra.customerPhone,
-    staffName: extra.staffName,
-    vatBaht: extra.vatBaht,
-    serviceChargeBaht: extra.serviceChargeBaht,
-  };
-}
 
 type BillStatusFilter = "all" | "ok" | "voided";
 type BillPayFilter = "all" | "cash" | "promptpay" | "transfer";
+type PosSalesTab = "dashboard" | "sessions" | "manage";
+
+function resolvePosSalesTab(raw: string | null): PosSalesTab {
+  if (raw === "manage") return "manage";
+  if (raw === "sessions" || raw === "report") return "sessions";
+  return "dashboard";
+}
 
 function formatTime(ts: number) {
   return new Date(ts).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
@@ -70,18 +50,19 @@ function saleIsToday(sale: PosSale, todayMs: number): boolean {
   return startOfLocalDay(new Date(sale.createdAt || 0)) === todayMs;
 }
 
-type PosSalesHubTab = "report" | "manage";
-
 export function PosSalesReport({
   onError,
   compact = false,
+  initialStatusFilter = "all",
 }: {
   onError?: (msg: string | null) => void;
   compact?: boolean;
+  initialStatusFilter?: BillStatusFilter;
 }) {
-  const { actorId } = useAuth();
+  const { actorId, staff } = useAuth();
   const [sales, setSales] = useState<PosSale[]>([]);
   const [sessions, setSessions] = useState<PosSession[]>([]);
+  const [shop, setShop] = useState<PosShopSettings>(() => getLocalPosShopSettings());
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [voidTarget, setVoidTarget] = useState<PosSale | null>(null);
@@ -89,12 +70,17 @@ export function PosSalesReport({
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
   const [billQuery, setBillQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<BillStatusFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<BillStatusFilter>(initialStatusFilter);
   const [payFilter, setPayFilter] = useState<BillPayFilter>("all");
   const [billsVisible, setBillsVisible] = useState(POS_BILLS_SLIM_PAGE);
   const [forceCloseBusyId, setForceCloseBusyId] = useState<string | null>(null);
   const [forceCloseTargetId, setForceCloseTargetId] = useState<string | null>(null);
-  const [billsOpen, setBillsOpen] = useState(false);
+  const [billsOpen, setBillsOpen] = useState(initialStatusFilter === "voided");
+
+  useEffect(() => {
+    setStatusFilter(initialStatusFilter);
+    if (initialStatusFilter === "voided") setBillsOpen(true);
+  }, [initialStatusFilter]);
 
   const todayMs = startOfLocalDay();
 
@@ -120,8 +106,18 @@ export function PosSalesReport({
     };
   }, [onError]);
 
+  useEffect(() => {
+    setPosSettingsDbMode("owner");
+    setShop(getLocalPosShopSettings());
+    return subscribePosShopSettings(setShop);
+  }, []);
+
   const summary = useMemo(() => summarizePosSalesDetailed(sales, sessions), [sales, sessions]);
   const dataIssues = useMemo(() => inspectPosSessionData(sessions, sales), [sessions, sales]);
+  const selectedSession = useMemo(
+    () => sessions.find((s) => s.id === selectedSessionId) ?? null,
+    [sessions, selectedSessionId],
+  );
   const filteredSales = useMemo(() => {
     let list = selectedSessionId
       ? sales.filter((s) => s.sessionId === selectedSessionId)
@@ -203,7 +199,15 @@ export function PosSalesReport({
     setForceCloseBusyId(sid);
     onError?.(null);
     try {
-      await closePosSessionAdmin(sid, actorId);
+      const closedByName =
+        (staff?.displayName || "").trim() ||
+        (staff?.email || "").trim() ||
+        (staff?.phone || "").trim() ||
+        "เจ้าของ";
+      await closePosSessionAdmin(sid, actorId, "", {
+        closedByName,
+        closedByEmployeeId: staff?.employeeId || "",
+      });
       setForceCloseTargetId(null);
     } catch (err) {
       onError?.((err as Error).message || "ปิดรอบไม่สำเร็จ");
@@ -233,6 +237,7 @@ export function PosSalesReport({
         sales={sales}
         selectedSessionId={selectedSessionId}
         dayLabel="ล่าสุด"
+        actorId={actorId || ""}
         onSelect={(id) => {
           setSelectedSessionId(id);
           if (id) {
@@ -252,12 +257,11 @@ export function PosSalesReport({
 
       {dataIssues.length ? (
         <div className="pos-sales-reconcile-warn-note" role="status">
-          <p className="muted">
-            พบข้อมูลผิดปกติ {dataIssues.length} รอบในหน้าต่างนี้ — ตรวจแถวรอบ + รายบิล
-          </p>
-          <ul className="pos-sales-data-issue-list">
-            {dataIssues.slice(0, 8).map((row) => (
-              <li key={row.sessionId}>
+          <p className="muted pos-sales-issue-lead">
+            ผิดปกติ {dataIssues.length} รอบ
+            {dataIssues.slice(0, 4).map((row) => (
+              <span key={row.sessionId}>
+                {" · "}
                 <button
                   type="button"
                   className="npos-slim-text-btn"
@@ -268,14 +272,16 @@ export function PosSalesReport({
                 >
                   {row.label}
                 </button>
-                <span className="muted"> · {row.issues.join(" · ")}</span>
-              </li>
+                <span> {row.issues.join(" · ")}</span>
+              </span>
             ))}
-            {dataIssues.length > 8 ? (
-              <li className="muted">…และอีก {dataIssues.length - 8} รอบ</li>
-            ) : null}
-          </ul>
+            {dataIssues.length > 4 ? ` · +${dataIssues.length - 4}` : ""}
+          </p>
         </div>
+      ) : null}
+
+      {selectedSession ? (
+        <PosSessionPrintDocs session={selectedSession} sales={sales} shop={shop} />
       ) : null}
 
       <details
@@ -441,6 +447,7 @@ export function PosSalesReport({
               {selectedSale ? (
                 <PosReceiptPaper
                   compact
+                  shop={shop}
                   receipt={saleToLocalReceipt(selectedSale)}
                   onVoid={
                     saleIsToday(selectedSale, todayMs) && selectedSale.status !== "voided"
@@ -453,7 +460,7 @@ export function PosSalesReport({
                 <p className="muted">เลือกบิลจากรายการ</p>
               )}
               <p className="muted pos-sales-bill-detail-note">
-                สลิปแบบพิมพ์ · หลังบ้านดูอย่างเดียว — พิมพ์ซ้ำที่แท็บเล็ต
+                ใบเสร็จฟอร์มเดียวกับเครื่องพิมพ์หน้างาน · ดู X/Z ของรอบด้านบนเมื่อเลือกรอบ
               </p>
             </aside>
           </div>
@@ -603,40 +610,51 @@ export function PosSalesReport({
 export function PosSalesReportPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const tabParam = searchParams.get("tab");
-  const tab: PosSalesHubTab = tabParam === "manage" ? "manage" : "report";
+  const tab = resolvePosSalesTab(searchParams.get("tab"));
+  const statusParam = searchParams.get("status");
+  const initialStatusFilter: BillStatusFilter =
+    statusParam === "voided" ? "voided" : statusParam === "ok" ? "ok" : "all";
   const [error, setError] = useState<string | null>(null);
 
-  function setTab(next: PosSalesHubTab) {
+  function jump(section: PosSalesTab, opts?: { status?: BillStatusFilter }) {
     setError(null);
-    router.replace(next === "manage" ? "/pos-sales/?tab=manage" : "/pos-sales/", { scroll: false });
+    const params = new URLSearchParams();
+    if (section === "manage") params.set("tab", "manage");
+    else if (section === "sessions") params.set("tab", "sessions");
+    else params.set("tab", "dashboard");
+    if (section === "sessions" && opts?.status && opts.status !== "all") {
+      params.set("status", opts.status);
+    }
+    const qs = params.toString();
+    router.replace(qs ? `/pos-sales/?${qs}` : "/pos-sales/", { scroll: false });
   }
 
   return (
-    <div className="module-page pos-sales-report-page pos-sales-report-page--dense pos-sales-report-page--slim">
+    <div className="module-page pos-sales-report-page pos-sales-report-page--dense pos-sales-report-page--slim pos-sales-report-page--unified">
       <header className="npos-bo-page-head">
         <div>
           <h1 className="panel-title pos-sales-page-title">POS</h1>
-          <p className="muted pos-sales-page-lead">
-            รอบ + บิล · โฟกัสเครื่อง 570F0F · ไม่ใช่กะ OT
-          </p>
+          <p className="muted pos-sales-page-lead">แดชบอร์ด · รอบ · บิล · เครื่อง</p>
         </div>
-        <nav className="npos-bo-page-tabs" role="tablist" aria-label="หมวด POS">
+        <nav className="npos-bo-page-tabs" aria-label="ข้ามหมวด POS">
           <button
             type="button"
-            role="tab"
-            aria-selected={tab === "report"}
-            className={tab === "report" ? "npos-slim-text-btn is-active" : "npos-slim-text-btn"}
-            onClick={() => setTab("report")}
+            className={tab === "dashboard" ? "npos-slim-text-btn is-active" : "npos-slim-text-btn"}
+            onClick={() => jump("dashboard")}
           >
-            รายงานยอดขาย
+            แดชบอร์ด
           </button>
           <button
             type="button"
-            role="tab"
-            aria-selected={tab === "manage"}
+            className={tab === "sessions" ? "npos-slim-text-btn is-active" : "npos-slim-text-btn"}
+            onClick={() => jump("sessions")}
+          >
+            รอบขาย
+          </button>
+          <button
+            type="button"
             className={tab === "manage" ? "npos-slim-text-btn is-active" : "npos-slim-text-btn"}
-            onClick={() => setTab("manage")}
+            onClick={() => jump("manage")}
           >
             จัดการ
           </button>
@@ -645,7 +663,28 @@ export function PosSalesReportPage() {
 
       {error ? <p className="error-text">{error}</p> : null}
 
-      {tab === "manage" ? <PosManagePanel onError={setError} /> : <PosSalesReport onError={setError} />}
+      {tab === "dashboard" ? (
+        <section id="pos-sales-dashboard" className="pos-hub-section" aria-label="แดชบอร์ด">
+          <PosSalesDashboard
+            onError={setError}
+            onOpenSessions={(opts) =>
+              jump("sessions", { status: opts?.voided ? "voided" : "all" })
+            }
+          />
+        </section>
+      ) : null}
+
+      {tab === "sessions" ? (
+        <section id="pos-sales-report" className="pos-hub-section" aria-label="รอบขาย">
+          <PosSalesReport onError={setError} initialStatusFilter={initialStatusFilter} />
+        </section>
+      ) : null}
+
+      {tab === "manage" ? (
+        <section id="pos-manage" className="pos-hub-section" aria-label="จัดการ">
+          <PosManagePanel onError={setError} />
+        </section>
+      ) : null}
     </div>
   );
 }

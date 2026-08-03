@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
   BookOpen,
@@ -17,6 +17,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { AppBrand } from "@/components/AppBrand";
 import { LowBalanceAlert } from "@/components/LowBalanceAlert";
+import { PermPreviewBanner } from "@/components/PermPreviewBanner";
 import { PersonalProfileModal } from "@/components/PersonalProfileModal";
 import { ProfilePromptBanner } from "@/components/ProfilePromptBanner";
 import { StaffNewsPopup } from "@/components/StaffNewsPopup";
@@ -25,6 +26,7 @@ import { OwnerQuickDock } from "@/components/OwnerQuickDock";
 import { StaffPresenceDock } from "@/components/StaffPresenceDock";
 import { StaffPresenceHeartbeat } from "@/components/StaffPresenceHeartbeat";
 import { StaffUtilityDock } from "@/components/StaffUtilityDock";
+import { staffHomeHref } from "@/lib/nav-menu";
 import {
   DEFAULT_NAV_ORDER,
   DEFAULT_DOCK_TAB_MAX,
@@ -54,6 +56,8 @@ const MORE_PREFIXES = [
   "/profile",
   "/tasks",
   "/utility",
+  "/business-notes",
+  "/capital",
 ];
 
 const NAV_ICONS: Record<NavTabKey, typeof BookOpen> = {
@@ -75,16 +79,37 @@ const DEFAULT_UI: NavUiSettings = {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { staff, user, signOut } = useAuth();
-  const isOwner = staff?.role === "owner";
+  const router = useRouter();
+  const { staff, realStaff, user, signOut, isPermPreview, permPreview } = useAuth();
+  const realIsOwner = realStaff?.role === "owner";
+  const isOwner = realIsOwner && !isPermPreview;
   const emailShort = user?.email?.split("@")[0] || user?.phoneNumber?.slice(-4) || "";
-  const userLabel = profileStatusLabel(staff) || emailShort;
-  const roleLabel = isOwner ? "เจ้าของ" : "พนักงาน";
+  const userLabel = isPermPreview
+    ? permPreview?.label || "พรีวิว"
+    : profileStatusLabel(realStaff) || emailShort;
+  const roleLabel = isPermPreview ? "พรีวิวพนักงาน" : isOwner ? "เจ้าของ" : "พนักงาน";
   const [navUi, setNavUi] = useState<NavUiSettings>(DEFAULT_UI);
 
   useEffect(() => {
     return subscribeNavUi(setNavUi);
   }, []);
+
+  useEffect(() => {
+    if (!isPermPreview || !staff) return;
+    const home = staffHomeHref(staff);
+    // โปรไฟล์/ศูนย์พนักงาน/หน้าเจ้าของล้วน — กันแก้บัญชีจริงตอนพรีวิว
+    const blocked =
+      pathname.startsWith("/staff") ||
+      pathname.startsWith("/profile") ||
+      pathname.startsWith("/vat-sales") ||
+      pathname.startsWith("/menu") ||
+      pathname.startsWith("/settings") ||
+      pathname.startsWith("/pos-sales") ||
+      pathname.startsWith("/business-notes");
+    if (blocked) {
+      router.replace(home);
+    }
+  }, [isPermPreview, staff, pathname, router]);
 
   const links = useMemo(() => {
     const { dockModules, showMoreTab } = resolveNavForUser(staff, navUi);
@@ -121,7 +146,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <p className="topbar-sub">{roleLabel}</p>
           </div>
           <div className="topbar-user">
-            {staff?.role === "staff" ? (
+            {!isPermPreview && staff?.role === "staff" ? (
               <Link
                 href="/profile/"
                 className="topbar-email topbar-email-link"
@@ -148,20 +173,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        {isOwner ? <StaffPresenceDock /> : null}
+        <PermPreviewBanner />
+
+        {/* โชว์ตลอดเมื่อเป็นเจ้าของจริง — รวมตอนพรีวิว เพื่อแตะไอคอนเดิมแล้วออก */}
+        {realIsOwner ? <StaffPresenceDock /> : null}
+        {/* heartbeat ใช้ realStaff เสมอ — รันทั้งตอนพรีวิวเพื่อไม่ให้สถานะออนไลน์ค้าง */}
         <StaffPresenceHeartbeat />
 
         <main className="main-panel">
-          <ProfilePromptBanner />
+          {/* พรีวิวไม่โชว์แบนเนอร์/โมดอลโปรไฟล์จริง — กันแก้บัญชีเจ้าของโดยไม่ตั้งใจ */}
+          {!isPermPreview ? <ProfilePromptBanner /> : null}
           {children}
         </main>
 
+        {/* มุมพนักงานเป๊ะตอนพรีวิว: ข่าว · แจ้งงานเบา/หนัก · ยูทิล · เตือนยอดต่ำ */}
         <StaffNewsPopup />
         <StaffTaskNudge />
-
         <LowBalanceAlert />
 
-        <PersonalProfileModal />
+        {!isPermPreview ? <PersonalProfileModal /> : null}
 
         {isOwner ? <OwnerQuickDock /> : null}
         <StaffUtilityDock />

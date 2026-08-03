@@ -58,7 +58,7 @@ function DocPreview({ shop }: { shop: PosShopSettings }) {
             [
               ["receipt", "ใบเสร็จ"],
               ["x", "X"],
-              ["z", "Z"],
+              ["z", "ส่งเงิน"],
             ] as const
           ).map(([id, label]) => (
             <button
@@ -88,7 +88,9 @@ function DocPreview({ shop }: { shop: PosShopSettings }) {
           </div>
         ) : (
           <p className="pos-biz-preview-hint muted">
-            {doc === "x" ? "กลางรอบ" : "ปิดรอบ"} · ฟอร์มเดียวกับพิมพ์
+            {doc === "x"
+              ? "X กลางรอบ · ฟอร์มเดียวกับหน้างาน"
+              : "ใบส่งเงินสดสั้น · เหมือนปิดรอบที่แท็บเล็ต (ไม่มีรายการสินค้า)"}
           </p>
         )}
       </div>

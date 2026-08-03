@@ -158,8 +158,11 @@ const SHARED_NET = [
   "ยอดโอนเข้าบัญชี",
   "ยอดที่ร้านจะได้รับ",
   "ยอดที่โอน",
+  "ยอดโอนออก",
+  "รวมยอดโอน",
   "ยอดโอน",
   "จำนวนเงินที่โอน",
+  "รายงานยอดโอน",
   "net payout",
   "net transfer",
   "payout amount",
@@ -464,6 +467,48 @@ function confidenceFromHits(grossLabel: string | undefined, fee: number, net: nu
   if (/ลูกค้า|customer|gmv|gross|รายรับทั้งหมด/i.test(grossLabel)) return "high";
   if (/ยอดขายรวม|total sales|ยอดขาย/i.test(grossLabel)) return "medium";
   return "medium";
+}
+
+/**
+ * เมลยอดโอนอย่างเดียว (เช่น LINE MAN รายงานยอดโอนออก) — ไม่บังคับยอดขาย
+ */
+export function parseMailNetTransfer(input: {
+  channel: DeliveryChannel | "unknown";
+  subject?: string;
+  rawText?: string;
+  rawHtml?: string;
+}): { ok: true; netTransfer: number; label: string } | { ok: false; error: string } {
+  const channel = input.channel;
+  if (channel === "unknown") {
+    return { ok: false, error: "ไม่ทราบช่องทาง" };
+  }
+  const body = normalizeMailBody(input.rawText || "", input.rawHtml || "");
+  const subject = String(input.subject || "");
+  const hay = `${subject}\n${body}`;
+  if (hay.trim().length < 8) {
+    return { ok: false, error: "เนื้อเมลว่าง" };
+  }
+  const netLabels = [
+    ...(CHANNEL_LABELS[channel].find((s) => s.key === "net")?.labels || []),
+    ...SHARED_NET,
+  ];
+  const hit = findLabeledAmount(hay, netLabels);
+  if (!hit) {
+    // บางฉบับมีแค่ตัวเลขหลักหลังหัวข้อโอน
+    if (/ยอดโอน|โอนออก|payout|settlement/i.test(hay)) {
+      const m = hay.match(
+        /([฿]\s*\d{1,3}(?:[,\s]\d{3})*(?:\.\d{1,2})?|\d{1,3}(?:[,\s]\d{3})+(?:\.\d{1,2})?|\d+\.\d{2})/,
+      );
+      if (m) {
+        const amount = parseAmountToken(m[1]);
+        if (amount != null && amount >= 50) {
+          return { ok: true, netTransfer: amount, label: "amount-fallback" };
+        }
+      }
+    }
+    return { ok: false, error: "หาป้ายยอดโอนไม่เจอ" };
+  }
+  return { ok: true, netTransfer: hit.amount, label: hit.label };
 }
 
 export function parsePlatformEmail(input: {

@@ -23,17 +23,26 @@ export type BonusDeductionSettings = {
 /** จำนวนหักทั้งร้านต่อเดือน — เจ้าของกรอกสิ้นเดือน */
 export type BonusDeductionMonthCounts = Record<BonusDeductionRuleId, number>;
 
-/** รูปหลักฐานหักโบนัสต่องวด (แคปฟีดแบค ฯลฯ) */
+/** รูปหลักฐานต่อกองต่องวด (ระวัง / ตัด) */
 export const BONUS_DEDUCTION_EVIDENCE_MAX = 8;
+
+export type BonusEvidencePileId = "caution" | "cut";
 
 export type BonusDeductionMonthDoc = {
   year: number;
   month: number;
   counts: BonusDeductionMonthCounts;
-  /** แคปสาเหตุตัดคะแนน / ฟีดแบคลูกค้า ฯลฯ */
+  /**
+   * กองตัด — แคปสาเหตุตัดคะแนน / ฟีดแบคที่หักโบนัสจริง
+   * (ฟิลด์เดิม evidenceUrls — คงชื่อเพื่อไม่พังข้อมูลเก่า)
+   */
   evidenceUrls: string[];
-  /** โน้ตสั้นอธิบายการหักงวดนี้ */
+  /** โน้ตกองตัด */
   note: string;
+  /** กองระวัง — เตือน/ให้ระมัดระวัง ไม่ตัดโบนัส */
+  cautionUrls: string[];
+  /** โน้ตกองระวัง */
+  cautionNote: string;
   updatedAt: number;
 };
 
@@ -116,8 +125,38 @@ export function normalizeBonusDeductionMonthDoc(
     counts: normalizeMonthCounts(data?.counts),
     evidenceUrls: normalizeEvidenceUrls(data?.evidenceUrls),
     note: typeof data?.note === "string" ? data.note.trim() : "",
+    cautionUrls: normalizeEvidenceUrls(data?.cautionUrls),
+    cautionNote: typeof data?.cautionNote === "string" ? data.cautionNote.trim() : "",
     updatedAt: Number(data?.updatedAt) || 0,
   };
+}
+
+export function bonusEvidencePileHasContent(
+  doc: Pick<BonusDeductionMonthDoc, "cautionUrls" | "cautionNote" | "evidenceUrls" | "note">,
+  pile: BonusEvidencePileId,
+): boolean {
+  if (pile === "caution") {
+    return doc.cautionUrls.length > 0 || Boolean(doc.cautionNote.trim());
+  }
+  return doc.evidenceUrls.length > 0 || Boolean(doc.note.trim());
+}
+
+/** ลำดับบังคับดู: ระวังก่อน แล้วค่อยตัด (ข้ามกองที่ว่าง) */
+export function bonusEvidenceViewOrder(
+  doc: Pick<BonusDeductionMonthDoc, "cautionUrls" | "cautionNote" | "evidenceUrls" | "note">,
+): BonusEvidencePileId[] {
+  const order: BonusEvidencePileId[] = [];
+  if (bonusEvidencePileHasContent(doc, "caution")) order.push("caution");
+  if (bonusEvidencePileHasContent(doc, "cut")) order.push("cut");
+  return order;
+}
+
+export function bonusEvidenceViewedStorageKey(
+  actorId: string,
+  periodMonth: string,
+): string {
+  const actor = (actorId || "anon").trim() || "anon";
+  return `telltea:bonusEvidenceViewed:${actor}:${periodMonth}`;
 }
 
 export function computeRuleLinePct(qty: number, ratePct: number) {
@@ -245,28 +284,46 @@ export async function saveBonusDeductionMonthQty(
   );
 }
 
-/** แนบหลักฐาน + โน้ตหักโบนัสของงวด (เก็บตามเดือน — ย้อนหลังได้) */
+/** แนบหลักฐานระวัง/ตัด + โน้ตของงวด (เก็บตามเดือน — ย้อนหลังได้) */
 export async function saveBonusDeductionMonthEvidence(
   year: number,
   month: number,
-  input: { evidenceUrls?: string[]; note?: string },
+  input: {
+    evidenceUrls?: string[];
+    note?: string;
+    cautionUrls?: string[];
+    cautionNote?: string;
+  },
 ): Promise<BonusDeductionMonthDoc> {
   const current = await getBonusDeductionMonth(year, month);
   const evidenceUrls =
     input.evidenceUrls != null
       ? normalizeEvidenceUrls(input.evidenceUrls)
       : current.evidenceUrls;
-  if (evidenceUrls.some((u) => u.startsWith("data:"))) {
+  const cautionUrls =
+    input.cautionUrls != null
+      ? normalizeEvidenceUrls(input.cautionUrls)
+      : current.cautionUrls;
+  if (
+    evidenceUrls.some((u) => u.startsWith("data:")) ||
+    cautionUrls.some((u) => u.startsWith("data:"))
+  ) {
     throw new Error("รูปเก่ายังฝังในเอกสาร — ลบแล้วแนบใหม่");
   }
   const note =
     input.note != null ? String(input.note).trim().slice(0, 500) : current.note;
+  const cautionNote =
+    input.cautionNote != null
+      ? String(input.cautionNote).trim().slice(0, 500)
+      : current.cautionNote;
   const next: BonusDeductionMonthDoc = {
     year,
     month,
     counts: current.counts,
     evidenceUrls,
     note,
+    cautionUrls,
+    cautionNote,
     updatedAt: Date.now(),
   };
   await setDoc(monthRef(year, month), next, { merge: true });

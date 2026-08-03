@@ -82,8 +82,20 @@ export function subscribeBonusMonthClose(
 }
 
 export async function isBonusMonthClosed(month: string): Promise<boolean> {
-  const docData = await getBonusMonthClose(month);
-  return !!docData && docData.status === "closed";
+  // พนักงานอ่าน bonusMonthCloses ไม่ได้ — ใช้ bonusMonthStatus (ไม่มียอดรายคน)
+  try {
+    const { getBonusMonthStatus } = await import("./bonus-personal-close");
+    const status = await getBonusMonthStatus(month);
+    if (status?.status === "closed") return true;
+  } catch {
+    /* fall through */
+  }
+  try {
+    const docData = await getBonusMonthClose(month);
+    return !!docData && docData.status === "closed";
+  } catch {
+    return false;
+  }
 }
 
 /** Block create/edit when the entry date falls in a closed bonus month. */

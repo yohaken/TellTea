@@ -841,6 +841,30 @@ body.modal-open .main-panel {
   max-width: 100%;
 }
 
+.permission-picker.is-compact {
+  gap: 0.45rem;
+}
+
+.permission-picker.is-compact .permission-group {
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.65rem;
+}
+
+.permission-picker.is-compact .permission-row {
+  padding: 0.28rem 0.4rem;
+  border-radius: 0.45rem;
+}
+
+.permission-picker.is-compact .permission-row-text {
+  font-size: 0.78rem;
+}
+
+.permission-list.is-compact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 0.28rem;
+}
+
 .field-permissions {
   display: block;
   width: 100%;
@@ -960,6 +984,382 @@ body.modal-open .main-panel {
 
 .staff-hub-section {
   margin-bottom: 1rem;
+}
+
+/* —— Staff hub compact (หลังร้าน) —— */
+.staff-hub {
+  max-width: 42rem;
+}
+
+.staff-hub-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.55rem;
+}
+
+.staff-hub-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.staff-preview-check {
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(196, 90, 26, 0.28);
+  background: rgba(255, 244, 230, 0.75);
+}
+
+.staff-preview-check-list {
+  margin: 0.35rem 0 0;
+  padding-left: 1.15rem;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: rgba(28, 42, 31, 0.78);
+  text-align: left;
+}
+
+.perm-preview-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.4rem 0.65rem;
+  background: linear-gradient(90deg, rgba(47, 107, 58, 0.18), rgba(243, 239, 228, 0.95));
+  border-bottom: 1px solid rgba(47, 107, 58, 0.28);
+}
+
+.perm-preview-banner-text {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.45rem;
+  text-align: left;
+  font-size: 0.78rem;
+}
+
+.perm-preview-banner-text strong {
+  color: var(--tea-leaf, #2f6b3a);
+  font-size: 0.76rem;
+}
+
+.perm-preview-banner-label {
+  font-weight: 700;
+  color: rgba(28, 42, 31, 0.88);
+}
+
+.perm-preview-banner-hint {
+  font-size: 0.68rem;
+}
+
+.perm-preview-exit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+  background: var(--tea-leaf, #2f6b3a) !important;
+}
+
+.staff-hub-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 750;
+  color: var(--tea-leaf);
+  text-align: left;
+  line-height: 1.25;
+}
+
+.staff-hub-sub {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  color: rgba(28, 42, 31, 0.55);
+  text-align: left;
+}
+
+.staff-hub-loading {
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.staff-hub-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin: 0 0 0.65rem;
+  padding: 0.2rem;
+  border-radius: 0.65rem;
+  background: rgba(28, 42, 31, 0.06);
+}
+
+.staff-hub-tab {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: rgba(28, 42, 31, 0.7);
+  font-size: 0.78rem;
+  font-weight: 650;
+  padding: 0.38rem 0.35rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.staff-hub-tab.is-active {
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--tea-leaf);
+  box-shadow: 0 1px 2px rgba(28, 42, 31, 0.08);
+}
+
+.staff-hub-msg {
+  margin: 0 0 0.55rem;
+  font-size: 0.82rem;
+  text-align: left;
+}
+
+.staff-hub-panel {
+  margin-bottom: 0.85rem;
+}
+
+.staff-hub-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+}
+
+.staff-hub-panel-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--tea-leaf);
+  text-align: left;
+}
+
+.staff-hub-panel-hint {
+  margin: 0.12rem 0 0;
+  font-size: 0.72rem;
+  color: rgba(28, 42, 31, 0.52);
+  text-align: left;
+  line-height: 1.35;
+}
+
+.staff-btn-sm {
+  font-size: 0.72rem !important;
+  padding: 0.28rem 0.5rem !important;
+  min-height: 0 !important;
+  line-height: 1.2 !important;
+  border-radius: 0.45rem !important;
+}
+
+.staff-btn-sm.is-danger {
+  color: #9b2c2c;
+}
+
+.staff-compact-form {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.staff-compact-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+@media (max-width: 520px) {
+  .staff-compact-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.staff-compact-form .field {
+  margin: 0;
+}
+
+.staff-compact-form .field span,
+.staff-compact-form .field label,
+.staff-compact-form .field > span {
+  font-size: 0.72rem;
+}
+
+.staff-compact-form input,
+.staff-compact-form select,
+.staff-compact-select {
+  font-size: 0.84rem;
+  padding: 0.4rem 0.5rem;
+  min-height: 0;
+}
+
+.staff-inline-add {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr) auto;
+  align-items: center;
+}
+
+@media (max-width: 520px) {
+  .staff-inline-add {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .staff-inline-add .primary-btn {
+    grid-column: 1 / -1;
+  }
+}
+
+.staff-compact-actions,
+.staff-perm-toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.staff-compact-list {
+  margin-top: 0.5rem;
+}
+
+.staff-empty {
+  margin: 0.4rem 0;
+  text-align: left;
+  font-size: 0.8rem;
+}
+
+.staff-level-list {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+
+.staff-level-row,
+.staff-account-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.4rem 0.55rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(28, 42, 31, 0.1);
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.staff-level-row.is-inactive {
+  opacity: 0.62;
+}
+
+.staff-level-main,
+.staff-account-main {
+  min-width: 0;
+  flex: 1 1 10rem;
+  text-align: left;
+}
+
+.staff-level-name-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.28rem;
+}
+
+.staff-level-name-row strong {
+  font-size: 0.86rem;
+}
+
+.staff-level-meta {
+  margin-top: 0.12rem;
+  font-size: 0.72rem;
+}
+
+.staff-level-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.staff-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.65rem;
+  font-weight: 650;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(74, 107, 62, 0.12);
+  color: var(--tea-leaf);
+}
+
+.staff-chip.is-soft {
+  background: rgba(28, 42, 31, 0.08);
+  color: rgba(28, 42, 31, 0.72);
+}
+
+.staff-chip.is-muted {
+  background: rgba(28, 42, 31, 0.05);
+  color: rgba(28, 42, 31, 0.5);
+}
+
+.staff-sync-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  text-align: left;
+  color: rgba(28, 42, 31, 0.72);
+}
+
+.staff-sync-check input {
+  margin-top: 0.15rem;
+}
+
+.staff-account-row .permission-editor {
+  flex: 1 1 100%;
+  width: 100%;
+}
+
+.staff-hub .staff-readiness-section .panel-title {
+  font-size: 0.95rem;
+}
+
+.staff-hub .staff-readiness-summary {
+  font-size: 0.78rem;
+  margin-bottom: 0.45rem;
+}
+
+.staff-hub .staff-ready-edit-btn {
+  font-size: 0.68rem;
+  padding: 0.18rem 0.4rem;
+}
+
+.staff-ready-col-level {
+  min-width: 4.2rem;
+  text-align: left;
+}
+
+.staff-ready-col-level .staff-chip {
+  max-width: 6.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.staff-ready-nick {
+  font-weight: 500;
+  color: rgba(28, 42, 31, 0.55);
+  font-size: 0.75rem;
+}
+
+.staff-readiness-legend {
+  text-align: left;
+  font-size: 0.72rem;
+  margin: 0.45rem 0 0;
+  line-height: 1.35;
+}
+
+.staff-hub .staff-readiness-table {
+  min-width: 30rem;
 }
 
 .staff-readiness-section {
@@ -2087,6 +2487,7 @@ body.modal-open .main-panel {
 /* Owner-books page chrome — compact, export de-emphasized */
 .owner-books-mode {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.25rem;
   margin: 0 0 0.4rem;
   padding: 0.12rem;
@@ -2115,6 +2516,59 @@ body.modal-open .main-panel {
   background: #fff;
   color: rgba(87, 15, 15, 0.92);
   box-shadow: 0 1px 2px rgba(28, 42, 31, 0.08);
+}
+
+/* บช ทุน — สรุปทุนกล่องชิดตาราง + สลับเข้า/ออกในฟอร์ม */
+.capital-books-page .capital-books-toolbar {
+  margin-bottom: 0.15rem;
+}
+
+.capital-books-page .capital-summary-box {
+  max-width: 70%;
+  margin-right: clamp(2.4rem, 14vw, 5rem);
+  background: rgba(214, 196, 160, 0.28);
+  border-color: rgba(120, 90, 40, 0.18);
+}
+
+.capital-books-page .capital-summary-meta {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.capital-kind-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.capital-kind-toggle .ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  min-height: 2rem;
+  font-size: 0.8rem;
+}
+
+.capital-kind-toggle .ghost-btn.is-active-in {
+  background: rgba(183, 228, 192, 0.55);
+  border-color: rgba(47, 107, 79, 0.28);
+  color: rgba(28, 42, 31, 0.9);
+  font-weight: 700;
+}
+
+.capital-kind-toggle .ghost-btn.is-active-out {
+  background: rgba(244, 198, 176, 0.55);
+  border-color: rgba(160, 70, 40, 0.28);
+  color: rgba(87, 15, 15, 0.92);
+  font-weight: 700;
+}
+
+.capital-books-page .capital-books-sheet .col-in,
+.capital-books-page .capital-books-sheet .col-out {
+  width: 5.6rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .owner-books-balance {
@@ -2536,7 +2990,7 @@ body.modal-open .main-panel {
   left: 50%;
   right: max(0.55rem, calc((100vw - var(--shell-max)) / 2 + 0.55rem));
   bottom: calc(var(--nav-h) + var(--safe-bottom) + 0.45rem);
-  z-index: 13;
+  z-index: 16; /* สูงกว่าแถบส่งหน้าร้าน — ไอคอนตัวแรกชัดเสมอ */
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
@@ -2653,6 +3107,49 @@ body.modal-open .main-panel {
   flex: 0 0 auto;
   min-width: 2.2rem;
   font-weight: 750;
+  font-size: 0.72rem;
+}
+
+.owner-quick-abbr-input {
+  flex: 0 0 auto;
+  width: 3rem;
+  min-width: 3rem;
+  max-width: 3.4rem;
+  margin: 0;
+  padding: 0.12rem 0.2rem;
+  border: 1px solid rgba(28, 42, 31, 0.18);
+  border-radius: 0.35rem;
+  background: #fff;
+  font-size: 0.72rem;
+  font-weight: 750;
+  text-align: center;
+  line-height: 1.2;
+  color: inherit;
+}
+
+.owner-quick-setup-abbr-input {
+  width: 2.8rem;
+  min-width: 2.8rem;
+}
+
+.owner-quick-settings-list .owner-quick-settings-row.is-on {
+  background: rgba(74, 107, 62, 0.08);
+  border-radius: 0.45rem;
+}
+
+.owner-quick-settings-abbr-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.owner-quick-settings-copy {
+  gap: 0.1rem;
+}
+
+.owner-quick-setup-count {
+  margin: 0 0 0.45rem;
   font-size: 0.72rem;
 }
 
@@ -3301,6 +3798,24 @@ body.modal-open .main-panel {
   gap: 0.28rem;
   margin-bottom: 0.28rem;
   row-gap: 0.22rem;
+}
+
+.ot-month-closed-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.35rem 0 0.55rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(180, 83, 9, 0.35);
+  background: rgba(251, 191, 36, 0.16);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.ot-slim-hint.is-locked {
+  color: rgba(146, 64, 14, 0.95);
+  font-weight: 700;
 }
 
 .ot-slim-hint {
@@ -5585,6 +6100,56 @@ body.modal-open .main-panel {
   font-size: 0.72rem;
 }
 
+.payroll-staff-preview-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.65rem;
+  margin: 0.35rem 0 0.15rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--tea-line);
+  border-radius: 0.55rem;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.payroll-staff-preview-bar.is-active {
+  border-color: rgba(45, 106, 79, 0.4);
+  background: rgba(45, 106, 79, 0.1);
+}
+
+.payroll-staff-preview-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
+.payroll-staff-preview-copy strong {
+  font-size: 0.82rem;
+}
+
+.payroll-staff-preview-hint {
+  flex: 1 1 10rem;
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.payroll-staff-preview-pick {
+  margin: 0;
+  min-width: 8.5rem;
+}
+
+.payroll-staff-preview-pick select {
+  width: 100%;
+  min-height: 2.15rem;
+  border: 1px solid var(--tea-line);
+  border-radius: 0.55rem;
+  padding: 0.3rem 0.5rem;
+  background: rgba(255, 255, 255, 0.85);
+  font-size: 0.78rem;
+}
+
 .payroll-tabs,
 .payroll-filter {
   display: flex;
@@ -5785,22 +6350,373 @@ body.modal-open .main-panel {
   font-size: 0.78rem;
 }
 
+.bonus-evidence-pile {
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 1px dashed var(--tea-line);
+}
+
+.bonus-evidence-pile-title {
+  margin: 0 0 0.15rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.bonus-evidence-pile-hint {
+  margin: 0 0 0.45rem;
+  font-size: 0.76rem;
+}
+
+.bonus-evidence-pile--caution .bonus-evidence-pile-title {
+  color: #8a5a12;
+}
+
+.bonus-evidence-pile--cut .bonus-evidence-pile-title {
+  color: #8b2e2e;
+}
+
 .bonus-evidence-note {
   margin: 0 0 0.5rem;
   font-size: 0.88rem;
   font-weight: 600;
 }
 
-.bonus-evidence-staff-photos {
+.bonus-evidence-staff-photos,
+.bonus-evidence-staff-piles {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.bonus-evidence-staff-pile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 7rem;
+}
+
+.bonus-evidence-staff-order {
+  margin: 0 0 0.55rem;
+  font-size: 0.78rem;
+}
+
+.bonus-forced-backdrop {
+  position: fixed;
+  inset: 0;
+  /* สูงกว่า preview bar / sheet — ต่ำกว่าบาง modal 220 ก็พอถ้าไม่มีซ้อน */
+  z-index: 200;
+  background: rgba(20, 16, 12, 0.72);
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  flex-wrap: wrap;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.bonus-forced-card {
+  width: min(36rem, 100%);
+  max-height: min(92vh, 44rem);
+  overflow: auto;
+  background: #fffaf3;
+  border-radius: 0.85rem;
+  padding: 0.85rem 0.95rem 1rem;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+}
+
+.bonus-forced-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.bonus-forced-pile {
+  margin: 0;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.bonus-forced-sub {
+  margin: 0.15rem 0 0;
+  font-size: 0.78rem;
+}
+
+.bonus-forced-close {
+  padding: 0.25rem;
+  min-width: 2rem;
+}
+
+.bonus-forced-progress {
+  margin: 0.55rem 0 0.4rem;
+  font-size: 0.78rem;
+}
+
+.bonus-forced-stage {
+  min-height: 12rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1c1814;
+  border-radius: 0.55rem;
+  overflow: hidden;
+  padding: 0.5rem;
+}
+
+.bonus-forced-img {
+  max-width: 100%;
+  max-height: min(55vh, 28rem);
+  object-fit: contain;
+}
+
+.bonus-forced-note {
+  margin: 0;
+  padding: 1rem;
+  color: #fff8ef;
+  font-size: 1.05rem;
+  line-height: 1.45;
+  font-weight: 600;
+  text-align: center;
+}
+
+.bonus-forced-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+}
+
+.bonus-forced-foot {
+  margin: 0.55rem 0 0;
+  font-size: 0.72rem;
 }
 
 .payroll-col-act {
   width: 1%;
   white-space: nowrap;
+}
+
+.payroll-combined-hint {
+  margin: 0.35rem 0 0.55rem;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.payroll-combined-breakdown {
+  margin: 0.25rem 0 0;
+  padding-left: 1.1rem;
+  line-height: 1.45;
+}
+
+.payroll-latest-transfer {
+  margin: 0.35rem 0 0.75rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid rgba(45, 106, 79, 0.28);
+  border-radius: 0.55rem;
+  background: rgba(149, 213, 178, 0.16);
+}
+
+.payroll-latest-transfer-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.45rem 0.75rem;
+}
+
+.payroll-latest-transfer-head > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.08rem;
+  min-width: 0;
+}
+
+.payroll-latest-transfer-total {
+  font-size: 1.15rem;
+  line-height: 1.2;
+}
+
+.payroll-latest-transfer-lines {
+  list-style: none;
+  margin: 0.45rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.payroll-latest-transfer-lines li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+}
+
+.payroll-latest-transfer-note,
+.payroll-latest-transfer-bonus,
+.payroll-latest-transfer-foot {
+  margin: 0.35rem 0 0;
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+.payroll-latest-transfer-bonus {
+  font-weight: 600;
+}
+
+.payroll-latest-transfer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+
+.payroll-history-combined-banner {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba(45, 106, 79, 0.95);
+  margin-bottom: 0.15rem;
+}
+
+.payroll-pay-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin: 0.35rem 0 1rem;
+}
+
+.payroll-pay-group {
+  border: 1px solid var(--tea-line);
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.55);
+  padding: 0.7rem 0.8rem 0.55rem;
+}
+
+.payroll-pay-group-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.45rem;
+}
+
+.payroll-pay-group-name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.payroll-pay-group-meta {
+  margin: 0.15rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.payroll-combined-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.05rem;
+  min-width: 6.5rem;
+  padding: 0.55rem 0.85rem;
+  border: none;
+  border-radius: 0.65rem;
+  background: #1f7a4c;
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.95rem;
+  line-height: 1.15;
+  cursor: pointer;
+  box-shadow: 0 2px 0 rgba(20, 80, 48, 0.35);
+}
+
+.payroll-combined-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.payroll-combined-btn:not(:disabled):active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+.payroll-combined-btn-amt {
+  font-size: 0.78rem;
+  font-weight: 700;
+  opacity: 0.95;
+}
+
+.payroll-combined-btn--compact {
+  min-width: 0;
+  flex-direction: row;
+  gap: 0.35rem;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.78rem;
+}
+
+.payroll-pay-group-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px dashed var(--tea-line);
+}
+
+.payroll-pay-group-line {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.2rem 0.65rem;
+  align-items: center;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.payroll-pay-group-line:last-child {
+  border-bottom: none;
+}
+
+.payroll-pay-group-line-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  grid-column: 1 / -1;
+}
+
+.payroll-pay-group-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.payroll-pay-group-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.08rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(31, 122, 76, 0.12);
+  color: #1f7a4c;
+}
+
+.payroll-pay-group-amt {
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.payroll-pay-group-line-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.3rem;
+}
+
+.payroll-pay-group-line .payroll-cell-meta {
+  grid-column: 1 / -1;
 }
 
 .payroll-cell-meta {
@@ -7523,6 +8439,58 @@ body.modal-open .main-panel {
   font-size: 0.72rem;
 }
 
+/* Cash-out evidence notice — serious ack, not a VAT-style multi-step gate */
+.evidence-doc-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0 0 0.55rem;
+  padding: 0.55rem 0.6rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(120, 72, 24, 0.35);
+  background: rgba(255, 214, 160, 0.28);
+  text-align: left;
+}
+
+.evidence-doc-notice--escalate {
+  border-color: rgba(160, 48, 32, 0.45);
+  background: rgba(255, 196, 180, 0.38);
+}
+
+.evidence-doc-title {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 750;
+  color: rgba(72, 36, 12, 0.95);
+}
+
+.evidence-doc-notice--escalate .evidence-doc-title {
+  color: rgba(110, 28, 18, 0.96);
+}
+
+.evidence-doc-body {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: rgba(52, 32, 16, 0.88);
+}
+
+.evidence-doc-ack {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  margin: 0.1rem 0 0;
+  font-size: 0.74rem;
+  font-weight: 650;
+  color: rgba(40, 28, 14, 0.92);
+  cursor: pointer;
+}
+
+.evidence-doc-ack input {
+  margin-top: 0.12rem;
+  flex-shrink: 0;
+}
+
 .trash-btn {
   width: 2.6rem;
   height: 2.6rem;
@@ -8729,6 +9697,350 @@ body.modal-open .main-panel {
   align-items: center;
 }
 
+/* Unified POS hub: report + manage stacked, mini compact */
+.pos-sales-report-page--unified {
+  --pos-hub-fs: 0.74rem;
+  --pos-hub-fs-em: 0.8rem;
+  --pos-hub-fs-micro: 0.68rem;
+  --pos-hub-gap: 0.35rem;
+  --pos-hub-space: 0.4rem;
+  --pos-hub-radius: 0.55rem;
+  --pos-hub-pad-y: 0.4rem;
+  --pos-hub-pad-x: 0.55rem;
+}
+
+.pos-sales-report-page--unified .npos-bo-page-head {
+  margin-bottom: var(--pos-hub-space);
+  gap: 0.3rem 0.65rem;
+  align-items: baseline;
+}
+
+.pos-sales-report-page--unified .pos-sales-page-title {
+  font-size: 0.98rem;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.pos-sales-report-page--unified .pos-sales-page-lead,
+.pos-sales-report-page--unified .pos-manage-lead {
+  margin: 0.08rem 0 0;
+  font-size: var(--pos-hub-fs-micro);
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.pos-hub-section {
+  margin: 0 0 0.55rem;
+  scroll-margin-top: 0.5rem;
+}
+
+.pos-hub-section + .pos-hub-section {
+  padding-top: 0.45rem;
+  border-top: 1px solid rgba(28, 42, 31, 0.1);
+}
+
+.pos-hub-section-title {
+  margin: 0 0 0.28rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #5a6570;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* Phase 2 — jump tabs + card titles already orient; hide duplicate h2 */
+.pos-sales-report-page--unified .pos-hub-section-title {
+  display: none;
+}
+
+.pos-sales-report-page--unified .pos-hub-section {
+  margin-bottom: var(--pos-hub-space);
+}
+
+.pos-sales-report-page--unified .pos-hub-section + .pos-hub-section {
+  padding-top: var(--pos-hub-space);
+  margin-top: 0.1rem;
+}
+
+/* Phase 1 — one card rhythm (pad / radius / gaps) */
+.pos-sales-report-page--unified .npos-slim-sessions {
+  margin-bottom: var(--pos-hub-space);
+  padding: var(--pos-hub-pad-y) var(--pos-hub-pad-x) 0.35rem;
+  border-radius: var(--pos-hub-radius);
+  box-shadow: none;
+}
+
+.pos-sales-report-page--unified .npos-slim-sessions-head {
+  margin-bottom: 0.22rem;
+  padding-bottom: 0.22rem;
+  gap: 0.25rem 0.55rem;
+}
+
+.pos-sales-report-page--unified .npos-slim-sessions-head h3 {
+  font-size: var(--pos-hub-fs-em);
+}
+
+.pos-sales-report-page--unified .npos-slim-summary,
+.pos-sales-report-page--unified .npos-slim-text-btn,
+.pos-sales-report-page--unified .pos-sales-bills-count,
+.pos-sales-report-page--unified .pos-sales-bill-chips button {
+  font-size: var(--pos-hub-fs);
+}
+
+.pos-sales-report-page--unified .npos-slim-summary {
+  margin-bottom: 0.28rem;
+  padding: 0.18rem 0;
+  gap: 0.15rem 0.35rem;
+}
+
+.pos-sales-report-page--unified .npos-slim-summary strong {
+  font-size: var(--pos-hub-fs-em);
+}
+
+.pos-sales-report-page--unified .npos-slim-filters,
+.pos-sales-report-page--unified .npos-slim-search,
+.pos-sales-report-page--unified .npos-slim-bulk {
+  margin-bottom: 0.28rem;
+  gap: 0.1rem 0.3rem;
+}
+
+.pos-sales-report-page--unified .npos-slim-search input[type="search"] {
+  font-size: var(--pos-hub-fs);
+  padding: 0.2rem 0.35rem;
+  border-radius: 0.35rem;
+  line-height: 1.25;
+}
+
+.pos-sales-report-page--unified .npos-slim-pulse {
+  gap: 0.08rem 0.28rem;
+}
+
+.pos-sales-report-page--unified .npos-slim-pulse-label,
+.pos-sales-report-page--unified .npos-slim-pulse-hint {
+  font-size: var(--pos-hub-fs-micro);
+}
+
+.pos-sales-report-page--unified .npos-slim-empty,
+.pos-sales-report-page--unified .npos-slim-foot {
+  margin-top: 0.22rem;
+  font-size: var(--pos-hub-fs-micro);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.pos-sales-report-page--unified .npos-slim-bulk .bulk-status-hint {
+  font-size: var(--pos-hub-fs-micro);
+  margin: 0.08rem 0 0;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.pos-sales-report-page--unified .npos-slim-row,
+.pos-sales-report-page--unified .npos-slim-row--device,
+.pos-sales-report-page--unified .pos-sales-row {
+  font-size: var(--pos-hub-fs);
+  white-space: nowrap;
+}
+
+/* Phase 4 — hairline row density */
+.pos-sales-report-page--unified .npos-slim-row {
+  padding-top: 0.28rem;
+  padding-bottom: 0.28rem;
+  line-height: 1.25;
+}
+
+.pos-sales-report-page--unified .npos-slim-row td,
+.pos-sales-report-page--unified .npos-slim-row th,
+.pos-sales-report-page--unified table.sheet-table--dense td,
+.pos-sales-report-page--unified table.sheet-table--dense th {
+  white-space: nowrap;
+  font-size: var(--pos-hub-fs);
+  padding-top: 0.2rem;
+  padding-bottom: 0.2rem;
+  line-height: 1.25;
+}
+
+.pos-sales-report-page--unified .npos-slim-detail {
+  padding: 0.2rem 0.15rem 0.35rem;
+  font-size: var(--pos-hub-fs-micro);
+  line-height: 1.3;
+}
+
+.pos-sales-report-page--unified .npos-slim-code {
+  font-size: 0.7rem;
+}
+
+.pos-sales-report-page--unified .npos-bills-slim-more {
+  padding: 0.25rem;
+  font-size: var(--pos-hub-fs-micro);
+}
+
+.pos-sales-report-page--unified .pos-sales-issue-lead {
+  margin: 0.15rem 0 0;
+  font-size: var(--pos-hub-fs-micro);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.pos-sales-report-page--unified .pos-manage-stack--slim {
+  gap: var(--pos-hub-gap);
+}
+
+.pos-sales-report-page--unified .pos-manage-stack--slim .settings-fold-title {
+  font-size: var(--pos-hub-fs-em);
+}
+
+.pos-sales-report-page--unified .pos-manage-stack--slim .settings-fold-hint,
+.pos-sales-report-page--unified .pos-manage-stack--slim .settings-fold-hint--collapsed {
+  font-size: var(--pos-hub-fs-micro);
+  margin: 0.1rem 0.5rem 0.3rem;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.pos-sales-report-page--unified .pos-manage-stack--slim .settings-fold-toggle {
+  padding: 0.32rem 0.5rem;
+}
+
+.pos-sales-report-page--unified .npos-manage-embed-head {
+  font-size: 0.72rem;
+}
+
+/* Phase 3 — bill toolbar + fold chrome (iframe heights unchanged) */
+.pos-sales-report-page--unified .pos-sales-bill-toolbar {
+  gap: 0.3rem 0.45rem;
+  margin: 0.18rem 0 0.32rem;
+  align-items: center;
+}
+
+.pos-sales-report-page--unified .pos-sales-bill-search {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: min(100%, 13rem);
+}
+
+.pos-sales-report-page--unified .pos-sales-bill-search > span {
+  font-size: var(--pos-hub-fs-micro);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.pos-sales-report-page--unified .pos-sales-bill-search input {
+  font-size: var(--pos-hub-fs);
+  padding: 0.2rem 0.35rem;
+  border-radius: 0.35rem;
+  line-height: 1.25;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.pos-sales-report-page--unified .pos-sales-bills-summary {
+  font-size: var(--pos-hub-fs-em);
+  gap: 0.25rem 0.55rem;
+  padding: 0.05rem 0;
+}
+
+.pos-sales-report-page--unified .pos-sales-bills-fold {
+  margin-top: 0.28rem;
+}
+
+.pos-sales-report-page--unified.pos-sales-report-page--slim .pos-sales-bills-section {
+  margin-top: 0.28rem;
+  padding: var(--pos-hub-pad-y) var(--pos-hub-pad-x) 0.4rem;
+  border-radius: var(--pos-hub-radius);
+}
+
+.pos-sales-report-page--unified .pos-sales-fold--slim {
+  margin-top: 0.35rem;
+  padding: 0.35rem var(--pos-hub-pad-x) 0.4rem;
+  border-radius: var(--pos-hub-radius);
+}
+
+.pos-sales-report-page--unified .pos-sales-fold--slim > summary {
+  font-size: var(--pos-hub-fs-em);
+  font-weight: 700;
+  padding: 0.1rem 0;
+}
+
+.pos-sales-report-page--unified .pos-sales-fold--slim .pos-sales-report-section {
+  margin-top: 0.35rem;
+  padding-top: 0.28rem;
+}
+
+.pos-sales-report-page--unified .pos-sales-fold--slim .pos-sales-report-section h3 {
+  font-size: var(--pos-hub-fs-em);
+  margin: 0 0 0.2rem;
+}
+
+.pos-sales-report-page--unified .pos-sales-bill-split {
+  gap: 0.45rem;
+}
+
+.pos-sales-report-page--unified .pos-sales-bill-detail-note {
+  margin-top: 0.3rem;
+  font-size: var(--pos-hub-fs-micro);
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.pos-sales-report-page--unified .pos-session-print-docs {
+  margin: 0.32rem 0 0.35rem;
+  padding: var(--pos-hub-pad-y) var(--pos-hub-pad-x) 0.4rem;
+  border-radius: var(--pos-hub-radius);
+}
+
+.pos-sales-report-page--unified .pos-session-print-docs-head {
+  margin-bottom: 0.28rem;
+  gap: 0.3rem 0.55rem;
+  align-items: baseline;
+}
+
+.pos-sales-report-page--unified .pos-session-print-docs-title {
+  font-size: var(--pos-hub-fs-em);
+  font-weight: 700;
+}
+
+.pos-sales-report-page--unified .pos-session-print-docs-sub,
+.pos-sales-report-page--unified .pos-session-print-docs-hint {
+  font-size: var(--pos-hub-fs-micro);
+  margin-top: 0.08rem;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.pos-sales-report-page--unified .pos-session-print-docs-hint {
+  margin: 0 0 0.28rem;
+}
+
+.pos-sales-report-page--unified .pos-session-print-docs-tabs {
+  gap: 0.12rem 0.3rem;
+}
+
+.pos-sales-report-page--unified .pos-session-print-docs-tabs button {
+  border: 0;
+  background: transparent;
+  border-radius: 0.2rem;
+  padding: 0.1rem 0.18rem;
+  font-size: var(--pos-hub-fs);
+  font-weight: 600;
+  color: #5a6570;
+}
+
+.pos-sales-report-page--unified .pos-session-print-docs-tabs button.is-active {
+  background: transparent;
+  color: #e85d04;
+  border-color: transparent;
+  font-weight: 700;
+}
+
 .npos-slim-text-btn {
   appearance: none;
   border: 0;
@@ -8936,32 +10248,87 @@ body.modal-open .main-panel {
   font-weight: 700;
 }
 
+/* Primary cash-compare cols + opener/closer — secondary lives in row detail */
 .npos-slim-row--sessions-super {
   grid-template-columns:
-    minmax(1.35rem, max-content)
-    minmax(2.4rem, max-content)
-    minmax(3.2rem, max-content)
-    minmax(3.6rem, max-content)
-    minmax(5rem, 1.1fr)
-    minmax(2.6rem, max-content)
-    minmax(2.6rem, max-content)
-    minmax(3.2rem, max-content)
-    minmax(1.6rem, max-content)
-    minmax(1.8rem, max-content)
-    minmax(3rem, max-content)
-    minmax(2.4rem, max-content)
-    minmax(2.4rem, max-content)
-    minmax(2.8rem, max-content)
-    minmax(2.8rem, max-content)
-    minmax(2.2rem, max-content);
-  min-width: 60rem;
+    1.25rem
+    max-content
+    max-content
+    max-content
+    max-content
+    max-content
+    max-content
+    max-content
+    max-content
+    max-content
+    max-content
+    max-content
+    max-content
+    max-content
+    max-content;
+  column-gap: 0.55rem;
+  row-gap: 0.12rem;
+  justify-content: start;
+  width: max-content;
+  min-width: 100%;
+  font-size: 0.74rem;
+  padding-top: 0.28rem;
+  padding-bottom: 0.28rem;
+}
+
+.npos-slim-row--sessions-super.npos-slim-row--head {
+  font-size: 0.66rem;
+  letter-spacing: 0.01em;
+  padding-top: 0.12rem;
+  padding-bottom: 0.2rem;
+}
+
+.npos-slim-row--sessions-super > * {
+  min-width: 0;
+  overflow: visible;
+}
+
+.npos-slim-row--sessions-super .npos-slim-device {
+  max-width: 4.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.npos-slim-row--sessions-super .npos-slim-staff {
+  max-width: 5.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.7rem;
+  color: #2f3b35;
+}
+
+.npos-slim-row--sessions-super .npos-slim-time {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.npos-slim-row--sessions-super .npos-slim-num {
+  min-width: 3.4rem;
+  white-space: nowrap;
+}
+
+.npos-slim-row--sessions-super .npos-slim-status {
+  gap: 0.2rem;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.npos-slim-row--sessions-super .npos-slim-remit-status {
+  font-size: 0.7rem;
+  white-space: nowrap;
 }
 
 .npos-slim-check-col {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 1.35rem;
+  width: 1.25rem;
 }
 
 .npos-slim-check-col input[type="checkbox"] {
@@ -9101,28 +10468,13 @@ body.modal-open .main-panel {
 }
 
 @media (max-width: 900px) {
-  .npos-slim-col-session {
-    display: none;
+  .npos-slim-row--sessions-super {
+    column-gap: 0.45rem;
+    font-size: 0.7rem;
   }
 
-  .npos-slim-row--sessions-super {
-    grid-template-columns:
-      minmax(1.35rem, max-content)
-      minmax(2.4rem, max-content)
-      minmax(3.2rem, max-content)
-      minmax(3.6rem, max-content)
-      minmax(2.6rem, max-content)
-      minmax(2.6rem, max-content)
-      minmax(3.2rem, max-content)
-      minmax(1.6rem, max-content)
-      minmax(1.8rem, max-content)
-      minmax(3rem, max-content)
-      minmax(2.4rem, max-content)
-      minmax(2.4rem, max-content)
-      minmax(2.8rem, max-content)
-      minmax(2.8rem, max-content)
-      minmax(2.2rem, max-content);
-    min-width: 48rem;
+  .npos-slim-row--sessions-super .npos-slim-num {
+    min-width: 3rem;
   }
 
   .npos-slim-row--bills-super {
@@ -9148,6 +10500,11 @@ body.modal-open .main-panel {
 .npos-slim-num {
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+.npos-slim-cash {
+  color: var(--danger);
+  font-weight: 600;
 }
 
 .npos-slim-strong {
@@ -9204,6 +10561,105 @@ body.modal-open .main-panel {
 
 .npos-slim-drop-notes li {
   margin: 0.1rem 0;
+}
+
+.npos-slim-sessions-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.6rem;
+}
+
+.npos-slim-remit-status {
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.npos-slim-remit-status.is-pending {
+  color: #9a5b12;
+}
+
+.npos-slim-remit-status.is-handed {
+  color: #1f6b3a;
+}
+
+.npos-slim-remit-status.is-mismatch {
+  color: #a12828;
+}
+
+.npos-slim-remit-handoff {
+  margin-top: 0.45rem;
+  padding: 0.4rem 0.35rem;
+  border-top: 1px dashed rgba(28, 42, 31, 0.12);
+}
+
+.npos-slim-remit-handoff-title {
+  margin: 0 0 0.3rem;
+  font-size: 0.72rem;
+  color: #2c353c;
+}
+
+.npos-slim-remit-handoff-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+  gap: 0.3rem 0.45rem;
+}
+
+.npos-slim-remit-handoff-grid label,
+.npos-slim-manual-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  font-size: 0.68rem;
+  color: #5a6570;
+}
+
+.npos-slim-remit-handoff-grid input,
+.npos-slim-manual-form input {
+  min-height: 1.7rem;
+  padding: 0.15rem 0.35rem;
+  border: 1px solid rgba(28, 42, 31, 0.16);
+  border-radius: 0.25rem;
+  font-size: 0.78rem;
+  background: #fff;
+}
+
+.npos-slim-remit-handoff-note {
+  grid-column: 1 / -1;
+}
+
+.npos-slim-remit-handoff-actions,
+.npos-slim-manual-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+
+.npos-slim-manual-panel {
+  margin-top: 0.65rem;
+  padding: 0.55rem 0.45rem 0.65rem;
+  border-top: 1px solid rgba(28, 42, 31, 0.1);
+}
+
+.npos-slim-manual-head h4 {
+  margin: 0 0 0.15rem;
+  font-size: 0.85rem;
+}
+
+.npos-slim-manual-head p {
+  margin: 0 0 0.4rem;
+  font-size: 0.72rem;
+}
+
+.npos-slim-manual-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+  gap: 0.35rem 0.5rem;
+}
+
+.npos-slim-manual-form-wide {
+  grid-column: 1 / -1;
 }
 
 .npos-slim-row--compact {
@@ -10512,6 +11968,90 @@ body.modal-open .main-panel {
   gap: 0.25rem;
   font-size: 0.74rem;
   margin-top: 0.15rem;
+}
+
+.tasks-progress-notes {
+  margin-top: 0.2rem;
+}
+
+.tasks-progress-list {
+  list-style: none;
+  margin: 0.25rem 0 0.4rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 12rem;
+  overflow: auto;
+}
+
+.tasks-progress-empty {
+  margin: 0;
+  padding: 0.45rem 0.2rem;
+  font-size: 0.74rem;
+}
+
+.tasks-progress-item {
+  position: relative;
+  margin: 0;
+  padding: 0.4rem 1.6rem 0.4rem 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(28, 42, 31, 0.1);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.tasks-progress-item.is-owner {
+  border-color: rgba(87, 15, 15, 0.16);
+  background: rgba(87, 15, 15, 0.04);
+}
+
+.tasks-progress-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.55rem;
+  align-items: baseline;
+  font-size: 0.62rem;
+  color: rgba(28, 42, 31, 0.55);
+}
+
+.tasks-progress-who {
+  font-weight: 700;
+}
+
+.tasks-progress-text {
+  margin: 0.15rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.tasks-progress-del {
+  position: absolute;
+  top: 0.15rem;
+  right: 0.15rem;
+  min-width: 1.2rem;
+  min-height: 1.2rem;
+  padding: 0;
+  line-height: 1;
+  font-size: 0.95rem;
+  color: rgba(28, 42, 31, 0.4);
+}
+
+.tasks-progress-compose {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.tasks-progress-send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  justify-self: end;
+  min-height: 2rem;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.78rem;
 }
 
 .tasks-check-submit {
@@ -12751,6 +14291,114 @@ body.modal-open .main-panel {
 .pos-sales-bill-detail-note {
   margin: 0.55rem 0 0;
   font-size: 0.78rem;
+}
+
+/* BOH print-doc parity (receipt / X / Z) — same builders as thermal */
+.pos-print-doc-frame-wrap {
+  background: #fff;
+  border-radius: 0 0 0.35rem 0.35rem;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.pos-print-doc-zigzag {
+  height: 10px;
+  background:
+    linear-gradient(135deg, #eef0f4 6px, transparent 0) 0 0,
+    linear-gradient(225deg, #eef0f4 6px, transparent 0) 0 0;
+  background-position: left top;
+  background-size: 12px 10px;
+  background-repeat: repeat-x;
+  background-color: #fff;
+}
+
+.pos-print-doc-frame {
+  display: block;
+  width: 100%;
+  height: 28rem;
+  border: 0;
+  background: #fff;
+}
+
+.pos-print-doc-frame-wrap.is-tall .pos-print-doc-frame {
+  height: min(70vh, 40rem);
+}
+
+.pos-receipt-paper--print-parity {
+  box-shadow: none;
+  background: transparent;
+}
+
+.pos-receipt-paper--print-parity .pos-print-doc-frame {
+  height: 26rem;
+}
+
+.pos-receipt-paper-wrap--compact .pos-receipt-paper--print-parity .pos-print-doc-frame {
+  height: 22rem;
+}
+
+.pos-session-print-docs {
+  margin: 0.75rem 0 1rem;
+  padding: 0.75rem 0.85rem 0.9rem;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 0.5rem;
+  background: #f7f8fa;
+}
+
+.pos-session-print-docs-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.65rem 1rem;
+  margin-bottom: 0.55rem;
+}
+
+.pos-session-print-docs-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.pos-session-print-docs-sub,
+.pos-session-print-docs-hint {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+}
+
+.pos-session-print-docs-hint {
+  margin: 0 0 0.55rem;
+}
+
+.pos-session-print-docs-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.pos-session-print-docs-tabs button {
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pos-session-print-docs-tabs button.is-active {
+  border-color: var(--pos-accent-orange, #e85d24);
+  color: var(--pos-accent-orange, #e85d24);
+  background: rgba(232, 93, 36, 0.08);
+}
+
+.pos-session-print-docs-tabs button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pos-session-print-docs .pos-print-doc-frame-wrap {
+  max-width: 22rem;
 }
 
 @media (max-width: 900px) {
@@ -18461,27 +20109,1004 @@ a.ghost-btn {
   color: rgba(28, 42, 31, 0.88);
 }
 
-.vat-import-into-books .vat-table-title {
+/* D5 ข้อเสนอ — ให้อยู่บนและเห็นชัด (ไม่จมใต้ตารางเมล) */
+.vat-month-proposals--d5 {
+  margin: 0.35rem 0 0.75rem;
+  padding: 0.45rem 0.55rem 0.55rem;
+  border: 1px solid rgba(87, 15, 15, 0.28);
+  border-radius: 6px;
+  background: rgba(87, 15, 15, 0.04);
+}
+
+.vat-month-proposals--d5 .vat-table-subtitle {
+  color: rgba(87, 15, 15, 0.95);
+  font-size: 0.92rem;
+}
+
+.vat-d5-merged {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(28, 42, 31, 0.7);
+}
+
+.vat-import-into-books .vat-table-title,
+.vat-month-sources .vat-table-title {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.35rem 0.5rem;
 }
 
+.vat-month-sources .col-seg.muted {
+  color: var(--muted, #6b7280);
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
+.vat-col-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  white-space: nowrap;
+}
+
+.vat-col-head-text {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.05rem;
+  line-height: 1.15;
+}
+
+.vat-col-head-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.vat-col-head-role {
+  font-size: 0.62rem;
+  font-weight: 500;
+  color: rgba(28, 42, 31, 0.55);
+  letter-spacing: 0.01em;
+}
+
+.vat-memo-row td {
+  font-style: italic;
+}
+
+.vat-col-info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.95rem;
+  height: 0.95rem;
+  border-radius: 50%;
+  border: 1px solid rgba(28, 42, 31, 0.28);
+  color: rgba(28, 42, 31, 0.55);
+  font-size: 0.62rem;
+  font-weight: 700;
+  font-style: normal;
+  line-height: 1;
+  cursor: help;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.vat-col-info:hover {
+  border-color: rgba(87, 15, 15, 0.45);
+  color: rgba(87, 15, 15, 0.85);
+  background: rgba(87, 15, 15, 0.06);
+}
+
+.vat-sources-link {
+  margin-left: 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  color: rgba(28, 42, 31, 0.65);
+}
+
+.vat-sources-link:hover {
+  color: rgba(87, 15, 15, 0.9);
+}
+
+.vat-sources-jump {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  margin-left: auto;
+}
+
+.vat-delivery-sources .vat-table-title {
+  margin-top: 0.35rem;
+}
+
+.vat-source-notes-input {
+  width: 100%;
+  min-height: 6.5rem;
+  resize: vertical;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid rgba(28, 42, 31, 0.18);
+  border-radius: 4px;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  font-family: inherit;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.vat-source-notes-input:focus {
+  outline: 1px solid rgba(87, 15, 15, 0.35);
+  border-color: rgba(87, 15, 15, 0.35);
+}
+
+.vat-wipe-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.25rem 0 0.5rem;
+}
+
+.vat-sources-drive-slot {
+  margin-top: 0.75rem;
+  padding-top: 0.35rem;
+  border-top: 1px dashed rgba(28, 42, 31, 0.18);
+}
+
+.vat-sources-drive-checks {
+  list-style: none;
+  margin: 0.35rem 0 0.55rem;
+  padding: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.vat-sources-drive-check {
+  display: grid;
+  grid-template-columns: 1.1rem 1fr auto;
+  gap: 0.4rem;
+  align-items: baseline;
+  font-size: 0.8rem;
+}
+
+.vat-sources-drive-mark {
+  color: rgba(28, 42, 31, 0.45);
+}
+
+.vat-sources-drive-phase {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: rgba(28, 42, 31, 0.55);
+}
+
+.vat-sources-drive-empty {
+  color: rgba(87, 15, 15, 0.75);
+  font-size: 0.78rem;
+}
+
+.vat-sources-drive-count {
+  font-size: 0.78rem;
+  color: rgba(28, 42, 31, 0.7);
+}
+
+.vat-sources-drive-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.25rem 0 0.35rem;
+}
+
+.vat-sources-drive-status-line {
+  margin: 0 0 0.35rem;
+  font-size: 0.78rem;
+}
+
+.vat-ingest-page {
+  margin: 0 0 1.25rem;
+}
+
+.vat-ingest-mail-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.55rem;
+  margin: 0.35rem 0 0.45rem;
+}
+
+.vat-ingest-back {
+  font-size: 0.72rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.vat-ingest-ai-box {
+  margin: 0.35rem 0 0.65rem;
+  padding: 0.45rem 0.5rem;
+  border: 1px solid rgba(28, 42, 31, 0.14);
+  border-radius: 6px;
+  background: rgba(28, 42, 31, 0.03);
+}
+
+.vat-ingest-ai-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.25rem;
+}
+
+.vat-ingest-file-list {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  font-size: 0.75rem;
+}
+
+.vat-ingest-file-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.15rem 0;
+}
+
+.vat-ingest-preview-grid {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.vat-ingest-slot {
+  margin: 0.55rem 0 0.75rem;
+  padding: 0.45rem 0 0.35rem;
+  border-top: 1px solid rgba(28, 42, 31, 0.12);
+}
+
+.vat-ingest-slot-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  margin-bottom: 0.35rem;
+}
+
+.vat-ingest-hint {
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
+.vat-ingest-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
+.vat-ingest-file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.vat-ingest-paste {
+  width: 100%;
+  min-height: 2.4rem;
+  font-size: 0.78rem;
+  line-height: 1.3;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid rgba(28, 42, 31, 0.22);
+  border-radius: 4px;
+  resize: vertical;
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.vat-ingest-push-bar,
+.vat-ingest-ai-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.vat-ingest-ai-actions {
+  margin-bottom: 0.25rem;
+}
+
+.vat-ingest-push-bar {
+  margin: 0.55rem 0 1rem;
+}
+
+/* ปุ่มทีมเว็บ · กว้างพอดีตัวอักษร ไม่เต็มแถว / ไม่จิ๋ว */
+.vat-ingest-page .vat-sales-act-btn.primary-btn,
+.vat-ingest-page .vat-sales-act-btn.ghost-btn {
+  width: auto;
+  min-width: 0;
+  min-height: 2.15rem;
+  height: auto;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.2;
+  border-radius: 999px;
+  box-shadow: none;
+  white-space: nowrap;
+}
+
+.vat-ingest-page .vat-sales-act-btn.primary-btn {
+  box-shadow: 0 6px 14px rgba(47, 107, 79, 0.22);
+}
+
+.vat-ingest-file-list .vat-sales-act-btn {
+  min-height: 1.85rem;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.8rem;
+}
+
+.vat-ingest-preview-block {
+  margin-top: 0.35rem;
+}
+
+.vat-ingest-preview-title {
+  font-size: 0.78rem !important;
+  margin: 0 0 0.12rem !important;
+}
+
+.vat-ingest-preview-wrap {
+  margin: 0.2rem 0 0.35rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ตารางพรีวิวเต็มแถว · ชิดขอบเหมือน vat-month-slim */
+.vat-ingest-preview-slim {
+  width: 100%;
+  min-width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 0.72rem;
+}
+
+.vat-ingest-preview-slim th,
+.vat-ingest-preview-slim td {
+  padding: 0.1rem 0.35rem;
+  line-height: 1.2;
+  height: 1.55rem;
+  white-space: nowrap;
+  vertical-align: middle;
+  overflow: visible;
+  box-sizing: border-box;
+}
+
+.vat-ingest-preview-slim th {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-align: right;
+  letter-spacing: 0.01em;
+}
+
+.vat-ingest-preview-slim th:first-child,
+.vat-ingest-preview-slim .col-seg {
+  text-align: left;
+  font-weight: 600;
+  width: 18%;
+}
+
+.vat-ingest-preview-slim .col-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  width: 20.5%;
+}
+
+.vat-ingest-preview-slim .vat-sales-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  min-height: 1.28rem;
+  height: 1.28rem;
+  padding: 0.02rem 0.22rem;
+  margin: 0;
+  border: 1px solid rgba(28, 42, 31, 0.22);
+  border-radius: 2px;
+  font-size: 0.72rem;
+  line-height: 1.15;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.vat-ingest-preview-slim .col-net {
+  font-weight: 700;
+  padding: 0.1rem 0.35rem;
+}
+
+.vat-ingest-total-row td {
+  font-weight: 700;
+  border-top: 1px solid rgba(28, 42, 31, 0.18);
+}
+
+.vat-ingest-month-confirm .modal-card {
+  max-width: 22rem;
+  width: min(92vw, 22rem);
+  padding: 0.85rem 1rem 1rem;
+}
+
+.vat-ingest-month-confirm-hint {
+  margin: 0.15rem 0 0.65rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.vat-ingest-month-confirm-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.25rem;
+  width: 100%;
+  margin: 0 0 0.55rem;
+}
+
+.vat-ingest-month-confirm-pick select {
+  width: 100%;
+  min-height: 2.25rem;
+}
+
+.vat-ingest-month-confirm-focus {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.vat-ingest-month-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.vat-ingest-result {
+  margin-top: 0.4rem;
+  padding: 0.4rem 0.45rem;
+  border-radius: 4px;
+  background: rgba(28, 42, 31, 0.04);
+}
+
+.vat-ingest-result.is-ok {
+  background: rgba(28, 90, 50, 0.07);
+}
+
+.vat-ingest-result.is-bad {
+  background: rgba(120, 40, 30, 0.06);
+}
+
+.vat-ingest-identity {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.3;
+}
+
+.vat-ingest-kind {
+  font-weight: 650;
+}
+
+.vat-ingest-meta {
+  margin: 0.15rem 0 0.3rem;
+  font-size: 0.72rem;
+}
+
+.vat-ingest-amounts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.25rem 0.4rem;
+  margin: 0;
+}
+
+.vat-ingest-amounts dt {
+  margin: 0;
+  font-size: 0.62rem;
+  color: rgba(28, 42, 31, 0.55);
+}
+
+.vat-ingest-amounts dd {
+  margin: 0;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.vat-ingest-headers {
+  margin: 0.3rem 0 0;
+  font-size: 0.68rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vat-ingest-warnings {
+  margin: 0.3rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.7rem;
+  color: rgba(100, 40, 30, 0.9);
+}
+
+@media (max-width: 640px) {
+  .vat-ingest-amounts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.vat-sources-paused-body {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: rgba(28, 42, 31, 0.78);
+}
+
+.vat-month-process-notes {
+  margin-top: 0.35rem;
+  margin-bottom: 0.55rem;
+}
+
+.vat-autosave-hint {
+  font-size: 0.78rem;
+  margin-right: 0.35rem;
+  align-self: center;
+}
+
+.vat-month-process-notes-input {
+  display: block;
+  width: 100%;
+  min-height: 8.5rem;
+  margin: 0.25rem 0 0;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid rgba(28, 42, 31, 0.18);
+  border-radius: 0;
+  background: rgba(255, 252, 247, 0.92);
+  color: rgba(28, 42, 31, 0.92);
+  font: inherit;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.vat-month-process-notes-input:focus {
+  outline: 2px solid rgba(28, 90, 55, 0.35);
+  outline-offset: 1px;
+}
+
+.vat-month-process-notes-mirror {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+/* รางแนวนอนต่อแอพ — เทียบรางจริงจัง (ไฟล์ | เช็ค | ยอด) */
+.vat-sources-drive-tracks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin: 0.35rem 0 0.25rem;
+}
+
+.vat-sources-drive-track {
+  min-width: 0;
+  padding: 0.5rem 0.6rem 0.55rem;
+  border: 1px solid rgba(28, 42, 31, 0.14);
+  background: rgba(28, 42, 31, 0.025);
+}
+
+.vat-sources-drive-track-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.65rem;
+  margin-bottom: 0.35rem;
+}
+
+.vat-sources-drive-track-head .vat-sources-drive-path {
+  flex: 1 1 100%;
+  margin: 0;
+}
+
+.vat-sources-drive-track-meta {
+  font-size: 0.78rem;
+  color: rgba(28, 42, 31, 0.7);
+}
+
+.vat-sources-drive-track-row {
+  display: grid;
+  grid-template-columns: minmax(10rem, 0.9fr) minmax(12rem, 1fr) minmax(16rem, 1.4fr);
+  gap: 0.55rem 0.75rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .vat-sources-drive-track-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.vat-sources-drive-track-col {
+  min-width: 0;
+}
+
+.vat-sources-drive-track-checks {
+  padding: 0.15rem 0.35rem 0.15rem 0;
+  border-right: 1px dashed rgba(28, 42, 31, 0.12);
+}
+
+@media (max-width: 900px) {
+  .vat-sources-drive-track-checks {
+    border-right: 0;
+    border-bottom: 1px dashed rgba(28, 42, 31, 0.12);
+    padding: 0 0 0.4rem;
+  }
+}
+
+.vat-sources-drive-verify {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.18rem;
+}
+
+.vat-sources-drive-verify-item {
+  display: grid;
+  grid-template-columns: 1rem 1fr;
+  gap: 0.3rem;
+  align-items: baseline;
+  font-size: 0.74rem;
+  line-height: 1.3;
+}
+
+.vat-sources-drive-verify-item[data-ok="1"] .vat-sources-drive-mark {
+  color: rgba(28, 90, 55, 0.85);
+}
+
+.vat-sources-drive-verify-item[data-ok="0"][data-na="0"] .vat-sources-drive-mark {
+  color: rgba(120, 50, 20, 0.8);
+}
+
+.vat-sources-drive-box {
+  min-width: 0;
+  padding: 0.45rem 0.55rem 0.5rem;
+  border: 1px solid rgba(28, 42, 31, 0.14);
+  background: rgba(28, 42, 31, 0.025);
+}
+
+.vat-sources-drive-box-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 0.5rem;
+  margin-bottom: 0.15rem;
+}
+
+.vat-sources-drive-box-title {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 650;
+  color: rgba(28, 42, 31, 0.92);
+}
+
+.vat-sources-drive-path {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  word-break: break-all;
+}
+
+.vat-sources-drive-file-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  min-height: 2.4rem;
+}
+
+.vat-sources-drive-file-empty {
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.vat-sources-drive-file {
+  font-size: 0.78rem;
+  line-height: 1.35;
+  padding: 0.1rem 0;
+  border-top: 1px solid rgba(28, 42, 31, 0.06);
+}
+
+.vat-sources-drive-file:first-child {
+  border-top: 0;
+}
+
+.vat-sources-drive-file-link {
+  color: rgba(20, 70, 55, 0.95);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-word;
+}
+
+.vat-sources-drive-draft {
+  margin-top: 0.45rem;
+  padding-top: 0.4rem;
+  border-top: 1px dashed rgba(28, 42, 31, 0.14);
+}
+
+.vat-sources-drive-draft-title {
+  margin: 0 0 0.25rem;
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: rgba(28, 42, 31, 0.85);
+}
+
+.vat-sources-drive-draft-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.2rem 0.45rem;
+  margin: 0 0 0.3rem;
+}
+
+.vat-sources-drive-draft-grid dt {
+  margin: 0;
+  font-size: 0.68rem;
+  color: rgba(28, 42, 31, 0.55);
+}
+
+.vat-sources-drive-draft-grid dd {
+  margin: 0;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.vat-sources-drive-draft-note {
+  margin: 0 0 0.3rem;
+  font-size: 0.7rem;
+  line-height: 1.3;
+}
+
+.vat-sources-drive-daily {
+  margin-top: 0.4rem;
+  padding-top: 0.35rem;
+  border-top: 1px dashed rgba(28, 42, 31, 0.12);
+}
+
+.vat-sources-drive-daily-table tfoot .vat-sources-drive-total-row,
+.vat-sources-drive-daily-table .vat-sources-drive-total-row {
+  font-weight: 650;
+  background: rgba(28, 42, 31, 0.06);
+}
+
+.vat-sources-drive-daily-table tfoot th,
+.vat-sources-drive-daily-table tfoot td {
+  border-top: 1px solid rgba(28, 42, 31, 0.18);
+  padding-top: 0.35rem;
+}
+
+.vat-sources-drive-daily-wrap {
+  max-height: 14rem;
+  overflow: auto;
+  margin: 0.2rem 0 0.35rem;
+}
+
+.vat-sources-drive-daily-table {
+  font-size: 0.72rem;
+}
+
+.vat-sources-drive-daily-table th,
+.vat-sources-drive-daily-table td {
+  padding: 0.2rem 0.3rem;
+  white-space: nowrap;
+}
+
+.vat-sources-drive-handoff {
+  margin: 0.5rem 0 0;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  border: 1px solid rgba(28, 42, 31, 0.12);
+  background: rgba(28, 42, 31, 0.03);
+  color: rgba(28, 42, 31, 0.7);
+  overflow-x: auto;
+}
+
+.vat-mini-btn--danger {
+  border-color: rgba(87, 15, 15, 0.45);
+  color: rgba(87, 15, 15, 0.95);
+  background: rgba(87, 15, 15, 0.06);
+}
+
+.vat-mini-btn--danger:hover:not(:disabled) {
+  background: rgba(87, 15, 15, 0.12);
+}
+
+.vat-mail-study-toolbar,
+.vat-mail-study-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.25rem 0 0.45rem;
+}
+
+.vat-mail-study-status {
+  font-size: 0.76rem;
+  color: rgba(28, 42, 31, 0.7);
+  margin-right: 0.25rem;
+}
+
+.vat-mail-study-config,
+.vat-mail-study-rules {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.25rem 0 0.55rem;
+  padding: 0.45rem 0.5rem;
+  border: 1px solid rgba(28, 42, 31, 0.12);
+  border-radius: 4px;
+}
+
+.vat-mail-study-field,
+.vat-mail-study-rule-row label,
+.vat-mail-study-filters label {
+  display: grid;
+  gap: 0.15rem;
+  font-size: 0.74rem;
+}
+
+.vat-mail-study-field input,
+.vat-mail-study-rule-row input,
+.vat-mail-study-filters select {
+  min-height: 1.7rem;
+  padding: 0.15rem 0.35rem;
+  font-size: 0.78rem;
+  border: 1px solid rgba(28, 42, 31, 0.18);
+  border-radius: 3px;
+}
+
+.vat-mail-study-rule-row {
+  display: grid;
+  gap: 0.3rem;
+  margin-bottom: 0.35rem;
+}
+
+.vat-mail-study-table tr {
+  cursor: pointer;
+}
+
+.vat-mail-study-table tr.is-open {
+  background: rgba(87, 15, 15, 0.04);
+}
+
+.vat-mail-study-snippet {
+  margin-top: 0.2rem;
+  font-size: 0.72rem;
+  white-space: normal;
+}
+
+.vat-mail-study-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+}
+
+.vat-mail-study-notes {
+  position: relative;
+  margin: 0.25rem 0 0.35rem;
+}
+
+/* อยู่ใน DOM ให้ AI อ่าน · คนไม่ต้องเลื่อนอ่านยาว */
+.vat-mail-study-notes-body {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: pre;
+  border: 0;
+}
+
+.vat-tag-chip {
+  border: 1px solid rgba(28, 42, 31, 0.2);
+  background: transparent;
+  border-radius: 999px;
+  padding: 0.05rem 0.4rem;
+  font-size: 0.68rem;
+  line-height: 1.3;
+  cursor: pointer;
+  color: rgba(28, 42, 31, 0.7);
+}
+
+.vat-tag-chip.is-on {
+  border-color: rgba(87, 15, 15, 0.45);
+  background: rgba(87, 15, 15, 0.08);
+  color: rgba(87, 15, 15, 0.95);
+  font-weight: 600;
+}
+
 .vat-month-books .vat-table-block {
   margin-bottom: 0.65rem;
 }
 
-/* A) แถบส่งหน้าร้าน → ตาราง — แถวเดียว กระชับ */
+/* A) แถบส่งหน้าร้าน — ลอยซ้าย กระชับตามเนื้อหา · ไม่กินเต็มแถว · ไม่ทับทางลัดเจ้าของ */
+.vat-month-books.has-sf-send-float {
+  padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 6.1rem);
+}
+
 .vat-sf-send {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  flex-wrap: wrap;
+  gap: 0.28rem 0.35rem;
   margin: 0.1rem 0 0.35rem;
   min-height: 1.45rem;
   font-size: 0.68rem;
   line-height: 1.1;
   color: rgba(28, 42, 31, 0.78);
+}
+
+.vat-sf-send--float {
+  position: fixed;
+  /* ชิดซ้ายของไอคอนทางลัดตัวแรก (dock เริ่มที่ left:50%) · เว้นช่อง 0.4rem เสมอ */
+  left: auto;
+  right: calc(50% + 0.4rem);
+  bottom: calc(var(--nav-h) + var(--safe-bottom) + 0.45rem);
+  z-index: 12; /* ต่ำกว่า owner-quick-dock — ไอคอนตัวแรกชัด/แตะได้เสมอ */
+  width: fit-content;
+  /* กันล้นขอบซ้ายจอ + ไม่ข้ามเส้น 50% */
+  max-width: min(17.5rem, calc(50vw - 1.1rem), calc(100vw - 50% - 0.85rem));
+  margin: 0;
+  padding: 0.35rem 0.45rem;
+  min-height: 0;
+  height: auto;
+  border: 1px solid rgba(28, 42, 31, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 253, 248, 0.94);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 6px 18px rgba(20, 30, 22, 0.14);
+  align-content: flex-start;
+}
+
+.vat-sf-pos-connect {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0.08rem 0.28rem 0.08rem 0.18rem;
+  border-radius: 8px;
+  border: 1px solid rgba(28, 42, 31, 0.14);
+  background: rgba(28, 42, 31, 0.04);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: rgba(28, 42, 31, 0.72);
+  cursor: pointer;
+  user-select: none;
+}
+
+.vat-sf-pos-connect.is-on {
+  border-color: rgba(47, 107, 79, 0.45);
+  background: rgba(47, 107, 79, 0.12);
+  color: #1b4332;
+}
+
+.vat-sf-pos-connect input {
+  width: 0.78rem;
+  height: 0.78rem;
+  margin: 0;
+  accent-color: #2f6b4f;
+  cursor: pointer;
+}
+
+.vat-sf-pos-connect input:disabled {
+  cursor: not-allowed;
 }
 
 .vat-sf-send-label {
@@ -18491,7 +21116,7 @@ a.ghost-btn {
 }
 
 .vat-sf-send-input {
-  width: 5.4rem;
+  width: 5.2rem;
   min-height: 1.35rem !important;
   height: 1.35rem;
   padding: 0.1rem 0.28rem !important;
@@ -18501,13 +21126,22 @@ a.ghost-btn {
 }
 
 .vat-sf-send-range {
-  flex: 1 1 5rem;
-  min-width: 4.5rem;
-  max-width: 11rem;
+  flex: 0 1 6.5rem;
+  width: 6.5rem;
+  min-width: 5rem;
+  max-width: 7.5rem;
   height: 0.9rem;
   margin: 0;
   accent-color: #2f6b4f;
   cursor: pointer;
+}
+
+/* ลอย: สไลด์ขึ้นบรรทัดใหม่เต็มความกว้างแถบ (ขยายแนว Y) */
+.vat-sf-send--float .vat-sf-send-range {
+  flex: 1 1 100%;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
 }
 
 .vat-sf-send-range:disabled {
@@ -18517,7 +21151,7 @@ a.ghost-btn {
 
 .vat-sf-send-pct {
   flex-shrink: 0;
-  min-width: 2.1rem;
+  min-width: 2rem;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   font-size: 0.66rem;
@@ -18540,6 +21174,14 @@ a.ghost-btn {
   font-weight: 600;
   color: rgba(28, 42, 31, 0.55);
   white-space: nowrap;
+}
+
+@media (max-width: 420px) {
+  .vat-sf-send--float {
+    right: calc(50% + 0.32rem);
+    max-width: min(15.5rem, calc(50vw - 0.95rem), calc(100vw - 50% - 0.7rem));
+    padding: 0.32rem 0.4rem;
+  }
 }
 
 .vat-c-real-note {
@@ -19849,7 +22491,8 @@ a.ghost-btn {
   border-radius: 0.75rem;
   background: rgba(28, 42, 31, 0.035);
   border: 1px solid rgba(28, 42, 31, 0.08);
-  overflow: hidden;
+  /* visible so sticky summary bar can pin while scrolling slips */
+  overflow: visible;
 }
 
 .cash-in-panel-toggle {
@@ -19883,6 +22526,223 @@ a.ghost-btn {
   font-size: 0.68rem;
   font-weight: 500;
   color: rgba(28, 42, 31, 0.5);
+}
+
+.cash-in-panel-meta.is-wait {
+  color: #9a5b12;
+  font-weight: 650;
+}
+
+.cash-in-pending-rounds {
+  margin: 0.4rem 0 0.5rem;
+  padding: 0.4rem 0.35rem 0.45rem;
+  border: 1px solid rgba(154, 91, 18, 0.22);
+  border-radius: 0.4rem;
+  background: rgba(154, 91, 18, 0.05);
+}
+
+.cash-in-pending-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 0.5rem;
+  margin-bottom: 0.3rem;
+  font-size: 0.76rem;
+}
+
+.cash-in-pending-head strong {
+  font-size: 0.8rem;
+}
+
+.cash-in-pending-sum {
+  font-size: 0.68rem;
+}
+
+.cash-in-pending-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.cash-in-pending-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.cash-in-bill-card {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr);
+  column-gap: 0.4rem;
+  align-items: center;
+  width: 100%;
+  margin: 0;
+  padding: 0.28rem 0.35rem 0.28rem 0.28rem;
+  border: 1px solid rgba(28, 42, 31, 0.14);
+  border-radius: 0.3rem;
+  background: #fffdf8;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.cash-in-bill-card:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.cash-in-bill-card:not(:disabled):active {
+  background: rgba(127, 183, 126, 0.18);
+}
+
+.cash-in-bill-body {
+  display: grid;
+  gap: 0.08rem;
+  min-width: 0;
+}
+
+.cash-in-bill-card.is-on {
+  border-color: rgba(47, 107, 79, 0.45);
+  background: rgba(127, 183, 126, 0.16);
+}
+
+.cash-in-bill-check {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  padding: 0;
+  border-radius: 0.22rem;
+  border: 1.5px solid rgba(28, 42, 31, 0.28);
+  background: #fff;
+  color: #1e6036;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cash-in-bill-card.is-on .cash-in-bill-check {
+  border-color: rgba(47, 107, 79, 0.7);
+  background: rgba(47, 107, 79, 0.14);
+}
+
+.cash-in-bill-tag {
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: #7a4a10;
+}
+
+.cash-in-bill-no {
+  font-size: 0.64rem;
+  font-variant-numeric: tabular-nums;
+  color: #6a7380;
+}
+
+.cash-in-bill-amt {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  color: #1c2a1f;
+}
+
+.cash-in-bill-meta {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.3rem;
+  font-size: 0.64rem;
+  color: #5a6570;
+}
+
+.cash-in-bill-use {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  justify-self: end;
+  white-space: nowrap;
+  width: fit-content;
+  padding: 0.2rem 0.45rem;
+  border-radius: 0.25rem;
+  background: rgba(47, 107, 79, 0.12);
+  color: #1e6036;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.cash-in-compact-btn {
+  width: fit-content !important;
+  min-width: 0 !important;
+  padding: 0.2rem 0.45rem !important;
+  font-size: 0.7rem !important;
+  line-height: 1.2 !important;
+  white-space: nowrap;
+}
+
+.cash-in-bundle-bills {
+  margin: 0.35rem 0;
+  padding: 0.35rem 0.4rem;
+  border-radius: 0.35rem;
+  background: rgba(40, 70, 55, 0.06);
+  border: 1px solid rgba(40, 70, 55, 0.12);
+}
+
+.cash-in-bundle-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.cash-in-bundle-head strong {
+  font-size: 0.78rem;
+}
+
+.cash-in-bundle-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.22rem;
+}
+
+.cash-in-bundle-row {
+  padding: 0.28rem 0.35rem;
+  border-radius: 0.28rem;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(40, 70, 55, 0.1);
+}
+
+.cash-in-bundle-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.4rem;
+  font-size: 0.7rem;
+}
+
+.cash-in-bundle-amt {
+  margin-left: auto;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.86rem;
+}
+
+.cash-in-pending-more {
+  margin: 0.3rem 0 0;
+  font-size: 0.66rem;
 }
 
 .cash-in-panel-body {
@@ -20148,6 +23008,136 @@ a.ghost-btn {
   color: rgba(40, 55, 48, 0.92);
   background: rgba(127, 183, 126, 0.12);
   border-radius: 0.35rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.cash-in-summary-bar {
+  /* not sticky — sticky-bottom was covering bill cards 2+ on mobile */
+  position: relative;
+  z-index: 1;
+  margin: 0.45rem 0 0.55rem;
+  padding: 0.55rem 0.55rem;
+  border-radius: 0.45rem;
+  border: 1px solid rgba(47, 107, 79, 0.22);
+  border-top: 1px solid rgba(47, 107, 79, 0.22);
+  background: rgba(245, 250, 246, 0.98);
+  box-shadow: 0 4px 16px rgba(28, 42, 31, 0.08);
+  gap: 0.4rem;
+}
+
+.cash-in-summary-rows {
+  display: grid;
+  gap: 0.22rem;
+}
+
+.cash-in-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.78rem;
+}
+
+.cash-in-summary-row strong {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.92rem;
+}
+
+.cash-in-summary-row.is-net strong {
+  font-size: 1.05rem;
+}
+
+.cash-in-summary-row.is-diff strong {
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.cash-in-summary-row.is-diff.is-short strong {
+  color: #b42318;
+}
+
+.cash-in-summary-row.is-diff.is-over strong {
+  color: #1e6036;
+}
+
+.cash-in-summary-row.is-diff.is-ok strong {
+  color: #1e6036;
+}
+
+.cash-in-summary-row.is-fee {
+  align-items: center;
+}
+
+.cash-in-summary-fee {
+  max-width: 5.5rem !important;
+  min-height: 1.7rem;
+}
+
+.cash-in-summary-formula {
+  margin-top: 0.15rem !important;
+  font-size: 0.66rem;
+  color: rgba(40, 55, 48, 0.72);
+}
+
+.cash-in-summary-slips {
+  margin-top: 0.35rem;
+  padding-top: 0.4rem;
+  border-top: 1px dashed rgba(47, 107, 79, 0.28);
+  display: grid;
+  gap: 0.3rem;
+}
+
+.cash-in-summary-slips-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 0.5rem;
+  font-size: 0.74rem;
+}
+
+.cash-in-summary-slips-head strong {
+  font-size: 0.8rem;
+}
+
+.cash-in-summary-slip-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.28rem;
+}
+
+.cash-in-summary-slip-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.35rem;
+  border-radius: 0.3rem;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(47, 107, 79, 0.14);
+}
+
+.cash-in-summary-slip-idx {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #5a6570;
+}
+
+.cash-in-summary-slip-amt {
+  max-width: 5.8rem !important;
+  min-height: 1.7rem;
+}
+
+.cash-in-summary-slip-amt-ro {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.86rem;
+}
+
+.cash-in-remain-line {
+  margin: 0;
 }
 
 .cash-in-remain .is-ok {
@@ -21099,6 +24089,149 @@ a.ghost-btn {
   background: rgba(28, 42, 31, 0.38);
 }
 
+.staff-presence-chip.is-preview-active {
+  min-width: 2.45rem;
+  max-width: 5.5rem;
+  height: 2.25rem;
+  padding: 0 0.5rem;
+  background: rgba(47, 107, 58, 0.16);
+  border: 2px solid var(--tea-leaf, #2f6b3a);
+  box-shadow:
+    0 0 0 3px rgba(47, 107, 58, 0.18),
+    0 4px 14px rgba(47, 107, 58, 0.22);
+  transform: translateY(-1px) scale(1.08);
+  z-index: 2;
+}
+
+.staff-presence-chip.is-preview-active .staff-presence-name {
+  font-size: 0.72rem;
+  color: var(--tea-leaf, #2f6b3a);
+  font-weight: 800;
+}
+
+.staff-presence-chip.is-preview-active .staff-presence-age {
+  background: var(--tea-leaf, #2f6b3a);
+  font-size: 0.58rem;
+  min-width: 1.35rem;
+  right: -0.28rem;
+  bottom: -0.32rem;
+}
+
+.staff-presence-dock.is-previewing {
+  max-width: min(72%, 18rem);
+}
+
+.staff-presence-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(18, 28, 22, 0.35);
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: calc(3.2rem + var(--safe-top)) 0.65rem 1rem;
+}
+
+.staff-presence-menu {
+  width: min(100%, 19.5rem);
+  max-height: min(78vh, 28rem);
+  overflow: auto;
+  border-radius: 0.85rem;
+  background: #f7f3e8;
+  border: 1px solid rgba(47, 107, 58, 0.22);
+  box-shadow: 0 12px 36px rgba(28, 42, 31, 0.22);
+  padding: 0.65rem 0.7rem 0.55rem;
+}
+
+.staff-presence-menu-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.45rem;
+  margin-bottom: 0.45rem;
+}
+
+.staff-presence-menu-kicker {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--tea-leaf, #2f6b3a);
+  text-align: left;
+}
+
+.staff-presence-menu-title {
+  margin: 0.1rem 0 0;
+  font-size: 1rem;
+  font-weight: 750;
+  color: #1c2a1f;
+  text-align: left;
+  line-height: 1.25;
+}
+
+.staff-presence-menu-meta {
+  margin: 0.2rem 0 0;
+  font-size: 0.72rem;
+  text-align: left;
+}
+
+.staff-presence-menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.staff-presence-menu-item {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr);
+  gap: 0.55rem;
+  align-items: flex-start;
+  text-align: left;
+  border: 1px solid rgba(28, 42, 31, 0.1);
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 0.65rem;
+  padding: 0.55rem 0.6rem;
+  cursor: pointer;
+  color: inherit;
+}
+
+.staff-presence-menu-item strong {
+  display: block;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #1c2a1f;
+}
+
+.staff-presence-menu-item em {
+  display: block;
+  margin-top: 0.12rem;
+  font-size: 0.7rem;
+  font-style: normal;
+  color: rgba(28, 42, 31, 0.55);
+  line-height: 1.35;
+}
+
+.staff-presence-menu-item.is-primary {
+  background: rgba(47, 107, 58, 0.12);
+  border-color: rgba(47, 107, 58, 0.28);
+}
+
+.staff-presence-menu-item.is-primary strong {
+  color: var(--tea-leaf, #2f6b3a);
+}
+
+.staff-presence-menu-item.is-exit {
+  background: rgba(196, 90, 26, 0.1);
+  border-color: rgba(196, 90, 26, 0.28);
+}
+
+.staff-presence-menu-item:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .topbar-email--owner-slim {
   max-width: 4.5rem;
   opacity: 0.72;
@@ -21134,4 +24267,830 @@ a.ghost-btn {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* POS sales dashboard (phase 0–1) */
+.pos-dash {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.pos-dash-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.75rem;
+}
+
+.pos-dash-range-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(28, 42, 31, 0.16);
+  background: #fff;
+  font: inherit;
+  font-size: 0.88rem;
+  color: rgba(28, 42, 31, 0.88);
+  cursor: pointer;
+}
+
+.pos-dash-range-btn:hover {
+  border-color: rgba(28, 42, 31, 0.28);
+}
+
+.pos-dash-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.45rem;
+}
+
+.pos-dash-range-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.55rem 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(28, 42, 31, 0.1);
+  background: #fff;
+}
+
+.pos-dash-range-panel label {
+  display: grid;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+}
+
+.pos-dash-range-panel input[type="date"] {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.28rem 0.4rem;
+  border-radius: 0.4rem;
+  border: 1px solid rgba(28, 42, 31, 0.14);
+  background: #fff;
+}
+
+.pos-dash-range-hint {
+  margin: 0;
+  font-size: 0.72rem;
+  width: 100%;
+}
+
+.pos-dash-top-grid {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 900px) {
+  .pos-dash-top-grid {
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1.15fr) minmax(0, 0.85fr);
+    align-items: stretch;
+  }
+}
+
+.pos-dash-card {
+  background: #fff;
+  border: 1px solid rgba(28, 42, 31, 0.1);
+  border-radius: 0.75rem;
+  padding: 0.85rem 0.95rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.pos-dash-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.pos-dash-card-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1c2a1f;
+}
+
+.pos-dash-more {
+  color: #1a9bb5 !important;
+  font-size: 0.78rem !important;
+}
+
+.pos-dash-net-value {
+  margin: 0;
+  font-size: 1.55rem;
+  font-weight: 700;
+  color: #2f9e44;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.pos-dash-net-value span {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.pos-dash-net-body {
+  display: grid;
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .pos-dash-card--net .pos-dash-net-body {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    gap: 0.85rem;
+  }
+}
+
+.pos-dash-tender-bar {
+  display: flex;
+  width: 100%;
+  height: 0.55rem;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #eef1f3;
+}
+
+.pos-dash-tender-seg--cash {
+  background: #7eb8d8;
+}
+
+.pos-dash-tender-seg--other {
+  background: #f0a06a;
+}
+
+.pos-dash-tender-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 1rem;
+  margin-top: 0.45rem;
+  font-size: 0.72rem;
+  color: rgba(28, 42, 31, 0.72);
+}
+
+.pos-dash-tender-legend strong {
+  font-size: 0.8rem;
+  color: #1c2a1f;
+}
+
+.pos-dash-tender-sub {
+  font-size: 0.68rem;
+}
+
+.pos-dash-breakdown {
+  margin: 0;
+  padding: 0 0 0 0.75rem;
+  border-left: 1px solid rgba(28, 42, 31, 0.12);
+  display: grid;
+  gap: 0.28rem;
+}
+
+.pos-dash-breakdown > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.78rem;
+}
+
+.pos-dash-breakdown dt {
+  margin: 0;
+  color: rgba(28, 42, 31, 0.62);
+}
+
+.pos-dash-breakdown dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.pos-dash-breakdown--total {
+  margin-top: 0.15rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid rgba(28, 42, 31, 0.1);
+  font-weight: 700;
+}
+
+.pos-dash-bills-body {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+}
+
+.pos-dash-donut-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+.pos-dash-donut {
+  width: 7.5rem;
+  height: 7.5rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+
+.pos-dash-donut-hole {
+  width: 5.1rem;
+  height: 5.1rem;
+  border-radius: 50%;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  gap: 0.05rem;
+  padding: 0.25rem;
+}
+
+.pos-dash-donut-hole strong {
+  font-size: 1.15rem;
+  line-height: 1.1;
+}
+
+.pos-dash-donut-label {
+  font-size: 0.68rem;
+  color: rgba(28, 42, 31, 0.55);
+}
+
+.pos-dash-bill-channels {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.pos-dash-bill-channels li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "dot name amt"
+    ". count amt";
+  column-gap: 0.4rem;
+  row-gap: 0.05rem;
+  align-items: baseline;
+  font-size: 0.78rem;
+}
+
+.pos-dash-dot {
+  grid-area: dot;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  margin-top: 0.2rem;
+}
+
+.pos-dash-dot--cash {
+  background: #7eb8d8;
+}
+
+.pos-dash-dot--pp {
+  background: #5bc0de;
+}
+
+.pos-dash-dot--transfer {
+  background: #f0a06a;
+}
+
+.pos-dash-channel-name {
+  grid-area: name;
+  font-weight: 600;
+}
+
+.pos-dash-channel-count {
+  grid-area: count;
+  color: rgba(28, 42, 31, 0.55);
+  font-size: 0.7rem;
+}
+
+.pos-dash-channel-amt {
+  grid-area: amt;
+  font-variant-numeric: tabular-nums;
+  background: rgba(126, 184, 216, 0.18);
+  padding: 0.15rem 0.35rem;
+  border-radius: 0.3rem;
+  align-self: center;
+  white-space: nowrap;
+}
+
+.pos-dash-footnote,
+.pos-dash-empty {
+  margin: 0;
+  font-size: 0.72rem;
+}
+
+.pos-dash-void-box {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+  padding: 0.75rem;
+  border: 1px solid rgba(240, 160, 106, 0.55);
+  border-radius: 0.55rem;
+  background: rgba(255, 248, 240, 0.65);
+}
+
+.pos-dash-void-label {
+  display: block;
+  font-size: 0.78rem;
+  color: rgba(28, 42, 31, 0.62);
+  margin-bottom: 0.2rem;
+}
+
+.pos-dash-void-value {
+  margin: 0 0 0.2rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.pos-dash-void-value--void {
+  color: #d97706;
+}
+
+.pos-dash-void-note {
+  display: grid;
+  align-content: start;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+}
+
+.pos-dash-void-note p {
+  margin: 0;
+}
+
+/* POS sales dashboard charts + products (phase 2–4) */
+.pos-dash-chart-card {
+  background: #fff;
+  border: 1px solid rgba(28, 42, 31, 0.1);
+  border-radius: 0.75rem;
+  padding: 0.85rem 0.95rem 0.55rem;
+  min-width: 0;
+}
+
+.pos-dash-chart-svg-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.pos-dash-chart-svg {
+  display: block;
+  width: 100%;
+  min-width: 280px;
+  height: auto;
+}
+
+.pos-dash-chart-grid {
+  stroke: rgba(28, 42, 31, 0.08);
+  stroke-width: 1;
+}
+
+.pos-dash-chart-axis {
+  fill: rgba(28, 42, 31, 0.5);
+  font-size: 10px;
+  font-family: inherit;
+}
+
+.pos-dash-area-fill {
+  fill: #5bc0de;
+  opacity: 0.55;
+}
+
+.pos-dash-area-line {
+  stroke: #3aa8c5;
+  stroke-width: 2;
+}
+
+.pos-dash-area-dot {
+  fill: #3aa8c5;
+}
+
+.pos-dash-bar--hour {
+  fill: #f0a06a;
+}
+
+.pos-dash-bar--weekday {
+  fill: #8fd19e;
+}
+
+.pos-dash-chart-row {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 900px) {
+  .pos-dash-chart-row {
+    grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.pos-dash-chart-row__hour,
+.pos-dash-chart-row__weekday {
+  min-width: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.pos-dash-bottom-grid {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 900px) {
+  .pos-dash-bottom-grid {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.pos-dash-bottom-side {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.pos-dash-product-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.pos-dash-product-stats > div {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 0.45rem;
+  background: rgba(28, 42, 31, 0.04);
+  font-size: 0.72rem;
+  min-width: 0;
+}
+
+.pos-dash-product-stats strong {
+  font-size: 0.82rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pos-dash-subhead {
+  margin: 0.15rem 0 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.pos-dash-top-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.pos-dash-top-items li {
+  display: grid;
+  grid-template-columns: 1.4rem minmax(0, 1fr) auto auto;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 0.8rem;
+  padding: 0.2rem 0;
+  border-bottom: 1px solid rgba(28, 42, 31, 0.06);
+}
+
+.pos-dash-top-items li:last-child {
+  border-bottom: 0;
+}
+
+.pos-dash-rank {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(28, 42, 31, 0.08);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.pos-dash-item-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pos-dash-item-qty {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  color: rgba(28, 42, 31, 0.62);
+  font-variant-numeric: tabular-nums;
+}
+
+.pos-dash-item-amt {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  min-width: 4.5rem;
+  text-align: right;
+}
+
+.pos-dash-side-value {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1c2a1f;
+}
+
+.pos-dash-side-meta {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.pos-dash-stat-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+}
+
+.pos-dash-stat-pair > div {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.5rem;
+  border-radius: 0.45rem;
+  background: rgba(28, 42, 31, 0.04);
+  font-size: 0.72rem;
+}
+
+.pos-dash-stat-pair strong {
+  font-size: 1rem;
+}
+
+.pos-dash-activity {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.pos-dash-activity li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.82rem;
+  padding: 0.15rem 0;
+}
+
+.pos-dash-activity--total {
+  margin-top: 0.2rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid rgba(28, 42, 31, 0.1);
+  font-weight: 700;
+}
+
+/* POS sales dashboard stock card (phase 5) */
+.pos-dash-stock-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+}
+
+.pos-dash-stock-panel {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.65rem 0.7rem;
+  border-radius: 0.5rem;
+  background: rgba(28, 42, 31, 0.04);
+  font-size: 0.72rem;
+  min-width: 0;
+}
+
+.pos-dash-stock-icon {
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 0.45rem;
+  display: grid;
+  place-items: center;
+  margin-bottom: 0.15rem;
+}
+
+.pos-dash-stock-icon--in {
+  background: rgba(91, 192, 222, 0.2);
+  color: #1a8aa8;
+}
+
+.pos-dash-stock-icon--out {
+  background: rgba(240, 160, 106, 0.22);
+  color: #c45f1a;
+}
+
+.pos-dash-stock-value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1c2a1f;
+  font-variant-numeric: tabular-nums;
+}
+
+.pos-dash-stock-breakdown {
+  white-space: nowrap;
+}
+
+/* ── โนตกิจการ — แถบบน + ตาราง compact ขอบสุด ── */
+.business-notes-page {
+  margin: -0.15rem 0 0;
+}
+
+.business-notes-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  margin: 0 0 0.2rem;
+}
+
+.business-notes-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.2;
+}
+
+.business-notes-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.2rem 0.35rem;
+  margin: 0 0 0.25rem;
+  padding: 0.1rem;
+  border-radius: 0.5rem;
+  background: rgba(28, 42, 31, 0.06);
+  width: 100%;
+}
+
+.business-notes-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.45rem;
+  padding: 0.1rem 0.5rem;
+  border: 0;
+  border-radius: 0.38rem;
+  background: transparent;
+  color: rgba(28, 42, 31, 0.62);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.business-notes-tab.is-active {
+  background: #fff;
+  color: rgba(87, 15, 15, 0.92);
+  box-shadow: 0 1px 2px rgba(28, 42, 31, 0.08);
+}
+
+.business-notes-status {
+  margin-left: auto;
+  font-size: 0.62rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.business-notes-page .sheet-wrap.business-notes-sheet {
+  margin-top: 0;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.business-notes-page .business-notes-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.business-notes-page .business-notes-table .sheet-table--dense th,
+.business-notes-page .business-notes-table.sheet-table--dense th,
+.business-notes-page .business-notes-table.sheet-table--dense td {
+  padding: 0.08rem 0.18rem;
+  line-height: 1.15;
+  vertical-align: middle;
+}
+
+.business-notes-page .bn-col-num {
+  width: 1.55rem;
+  min-width: 1.55rem;
+  max-width: 1.55rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: rgba(28, 42, 31, 0.45);
+  font-size: 0.58rem;
+}
+
+.business-notes-page .bn-col-act {
+  width: 1.45rem;
+  min-width: 1.45rem;
+  max-width: 1.45rem;
+  text-align: center;
+  padding-left: 0;
+  padding-right: 0.1rem;
+}
+
+.business-notes-page .bn-col-text {
+  width: auto;
+  text-align: left;
+}
+
+.business-notes-page .bn-text-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0.14rem 0.2rem;
+  border: 0;
+  border-radius: 0.2rem;
+  background: transparent;
+  font: inherit;
+  font-size: 0.72rem;
+  line-height: 1.25;
+  color: inherit;
+  box-shadow: none;
+}
+
+.business-notes-page .bn-text-input:focus {
+  outline: none;
+  background: rgba(87, 15, 15, 0.04);
+}
+
+.business-notes-page .bn-text-input::placeholder {
+  color: rgba(28, 42, 31, 0.35);
+}
+
+.business-notes-page .bn-del {
+  min-width: 1.2rem;
+  min-height: 1.2rem;
+  padding: 0;
+  line-height: 1;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: rgba(28, 42, 31, 0.4);
+}
+
+.business-notes-page .bn-del:hover {
+  color: rgba(160, 40, 40, 0.9);
+}
+
+/* POS dashboard month picker */
+.pos-dash-month-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.2rem 0.3rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(28, 42, 31, 0.16);
+  background: #fff;
+}
+
+.pos-dash-month-arrow {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: #1c2a1f;
+  width: 1.7rem;
+  height: 1.7rem;
+  display: grid;
+  place-items: center;
+  border-radius: 0.35rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+.pos-dash-month-arrow:hover:not(:disabled) {
+  background: rgba(28, 42, 31, 0.06);
+}
+
+.pos-dash-month-arrow:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.pos-dash-month-select-wrap {
+  margin: 0;
+}
+
+.pos-dash-month-select {
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 0;
+  background: transparent;
+  color: #1c2a1f;
+  padding: 0.2rem 0.15rem;
+  max-width: 11rem;
+  cursor: pointer;
+}
+
+.pos-dash-stock-note {
+  margin: 0;
+  font-size: 0.75rem;
 }

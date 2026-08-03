@@ -1,5 +1,5 @@
 /**
- * Gate: mandatory APK update via BO sync pulse — no Later snooze.
+ * Gate: mandatory APK update via BO sync pulse — no Later snooze, no idle wait.
  */
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
@@ -30,8 +30,31 @@ const prompt = read(
 assert.match(prompt, /reassertPendingUpdate|showPending/);
 assert.match(prompt, /laterBtn\.setVisibility\(View\.GONE\)/);
 assert.match(prompt, /clearPopupDismiss/);
+assert.match(prompt, /UpdateNagVoice/);
+assert.match(prompt, /maybeAutoInstall|openInstallPermission|canInstallPackages/);
+assert.match(prompt, /runPermissionNudge|permissionNudgeTask = this::runPermissionNudge/);
+assert.match(prompt, /บังคับอัปเดตทันที/);
+assert.doesNotMatch(prompt, /UpdateBusyGate|isSellBusy|deferWhileBusy/);
+assert.doesNotMatch(prompt, /รอตะกร้าว่าง/);
 assert.doesNotMatch(prompt, /dismissPopupFor\(activity,\s*UpdateConfig\.POPUP_SNOOZE_MS\)/);
 assert.doesNotMatch(prompt, /30 \* 60_000L/);
+
+assert.ok(
+  !existsSync(join(root, "npos-telltea/app/src/main/java/app/telltea/npos/update/UpdateBusyGate.java")),
+  "UpdateBusyGate removed — force update never waits on cart",
+);
+assert.ok(
+  existsSync(join(root, "npos-telltea/app/src/main/java/app/telltea/npos/update/UpdateNagVoice.java")),
+);
+const nag = read(
+  "npos-telltea/app/src/main/java/app/telltea/npos/update/UpdateNagVoice.java",
+);
+assert.match(nag, /กรุณาอัปเดตโปรแกรม/);
+assert.match(nag, /3000L|3_000L/);
+
+assert.ok(existsSync(join(root, "docs/npos-force-update-idle-checklist.md")));
+const idleDoc = read("docs/npos-force-update-idle-checklist.md");
+assert.match(idleDoc, /บังคับติดตั้งทันที|ไม่รอ|สิทธิ์ติดตั้ง/);
 
 const prefs = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/update/ResumePrefs.java",
@@ -50,6 +73,28 @@ const sell = read(
 assert.match(sell, /refreshMenuButton/);
 assert.match(sell, /setVisibility\(View\.GONE\)/);
 assert.match(sell, /PosShellNav\.bind\(this, PosShellNav\.ACTIVE_SELL, null\)/);
+assert.match(sell, /setBeforeInstall/);
+assert.doesNotMatch(sell, /setBusyGate/);
+assert.doesNotMatch(sell, /onBusyStateChanged/);
+
+const strings = read("npos-telltea/app/src/main/res/values/strings.xml");
+assert.match(strings, /update_popup_body_force/);
+assert.match(strings, /update_popup_body_need_permission/);
+assert.match(strings, /btn_allow_install_permission/);
+assert.match(strings, /btn_install_update">อัปเดต</);
+
+const updateLayout = read(
+  "npos-telltea/app/src/main/res/layout/include_update_popup.xml",
+);
+assert.match(updateLayout, /layout_gravity="center"/);
+assert.match(updateLayout, /288dp/);
+assert.match(updateLayout, /#99000000/);
+assert.match(updateLayout, /updatePopupGo/);
+assert.match(
+  updateLayout,
+  /updatePopupLater[\s\S]*android:visibility="gone"/,
+);
+assert.match(prompt, /MATCH_PARENT/);
 
 assert.match(
   read("npos-telltea/app/src/main/res/layout/activity_sell.xml"),
@@ -61,3 +106,13 @@ assert.match(
 );
 
 console.log("OK test-npos-force-update-pulse");
+
+const hb = read(
+  "npos-telltea/app/src/main/java/app/telltea/npos/diagnose/ForegroundHeartbeat.java",
+);
+assert.match(hb, /MAIN\.post/);
+assert.match(hb, /onServerSyncPulse/);
+assert.match(
+  read("npos-telltea/app/src/main/java/app/telltea/npos/update/UpdatePromptController.java"),
+  /Looper\.getMainLooper/,
+);

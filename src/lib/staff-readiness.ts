@@ -25,11 +25,13 @@ export type StaffReadinessRow = {
 };
 
 function rosterNameForStaff(member: StaffMember, employees: Employee[]): string {
-  if (member.displayName?.trim()) return member.displayName.trim();
+  // รายชื่อร้าน (employees.name) เป็นแหล่งจริง — อย่าโชว์ staff.displayName ที่อาจค้าง
   const emp = member.employeeId
     ? employees.find((e) => e.id === member.employeeId)
     : employees.find((e) => e.linkedStaffId === member.id);
-  return emp?.name || "ยังไม่เชื่อมชื่อ";
+  if (emp?.name?.trim()) return emp.name.trim();
+  if (member.displayName?.trim()) return member.displayName.trim();
+  return "ยังไม่เชื่อมชื่อ";
 }
 
 function assessPersonal(

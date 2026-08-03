@@ -41,7 +41,7 @@ export function StaffUtilityPanel({
   embedded = false,
   initialSlot = "suggestions",
 }: Props) {
-  const { staff, actorId, status } = useAuth();
+  const { staff, actorId, status, isPermPreview, permPreview } = useAuth();
   const isOwner = staff?.role === "owner";
   const [slot, setSlot] = useState<StaffUtilitySlot>(initialSlot);
   const [suggestions, setSuggestions] = useState<StaffSuggestion[]>([]);
@@ -54,16 +54,23 @@ export function StaffUtilityPanel({
 
   const ready = status === "ready" && !!staff;
   const myEmployeeId = staff?.employeeId || "";
+  /** พรีวิว: อ่านข้อเสนอด้วย staff id ของคนที่สวม — ไม่ใช้ actor เจ้าของ */
+  const suggestionActorId = isPermPreview
+    ? permPreview?.memberId || ""
+    : actorId;
 
   useEffect(() => {
-    if (!ready || !actorId) return;
+    if (!ready || !suggestionActorId) {
+      setSuggestions([]);
+      return;
+    }
     return subscribeStaffSuggestions({
       isOwner,
-      actorId,
+      actorId: suggestionActorId,
       onRows: setSuggestions,
       onError: (err) => setError(err.message),
     });
-  }, [ready, isOwner, actorId]);
+  }, [ready, isOwner, suggestionActorId]);
 
   useEffect(() => {
     if (!ready) return;
@@ -88,7 +95,7 @@ export function StaffUtilityPanel({
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (busy) return;
+    if (busy || isPermPreview) return;
     setBusy(true);
     setError(null);
     try {
@@ -109,7 +116,7 @@ export function StaffUtilityPanel({
   }
 
   async function onOwnerStatus(id: string, next: SuggestionStatus) {
-    if (statusBusyId) return;
+    if (statusBusyId || isPermPreview) return;
     setStatusBusyId(id);
     setError(null);
     try {
@@ -169,6 +176,11 @@ export function StaffUtilityPanel({
         <div className="staff-utility-body">
           {!isOwner ? (
             <form className="staff-utility-form" onSubmit={(e) => void onSubmit(e)}>
+              {isPermPreview ? (
+                <p className="muted staff-utility-owner-hint">
+                  พรีวิวมุมพนักงาน — ดูข้อเสนอ/งานได้ · ส่งของจริงไม่ได้จนกว่าจะออกจากมุมมอง
+                </p>
+              ) : null}
               <label>
                 <span>อยากให้ร้านทำอะไร</span>
                 <input
@@ -177,6 +189,7 @@ export function StaffUtilityPanel({
                   maxLength={80}
                   placeholder="หัวข้อสั้นๆ"
                   required
+                  disabled={isPermPreview}
                 />
               </label>
               <label>
@@ -187,10 +200,15 @@ export function StaffUtilityPanel({
                   maxLength={500}
                   rows={3}
                   placeholder="เช่น ซื้อพัดลม / ปรับขั้นตอนปิดร้าน"
+                  disabled={isPermPreview}
                 />
               </label>
-              <button type="submit" className="primary-btn" disabled={busy || !title.trim()}>
-                {busy ? "กำลังส่ง…" : "ส่งข้อเสนอ"}
+              <button
+                type="submit"
+                className="primary-btn"
+                disabled={busy || isPermPreview || !title.trim()}
+              >
+                {busy ? "กำลังส่ง…" : isPermPreview ? "พรีวิว · ส่งไม่ได้" : "ส่งข้อเสนอ"}
               </button>
             </form>
           ) : (

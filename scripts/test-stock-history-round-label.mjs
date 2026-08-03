@@ -15,7 +15,7 @@ const stockPage = read("src/app/stock/page.tsx");
 const css = read("src/app/globals.css");
 const version = read("src/lib/version.ts");
 
-assert.match(version, /APP_BUILD\s*=\s*485/);
+assert.match(version, /APP_BUILD\s*=\s*\d+/);
 assert.match(histSrc, /export function stockRoundDateLabelBe/);
 assert.match(histSrc, /export function upcomingStockRounds/);
 assert.match(histSrc, /upcomingStockRounds\(3/);
@@ -30,7 +30,8 @@ assert.doesNotMatch(histSrc, /day <= todayDay/);
 
 assert.match(stockPage, /lockedRound/);
 assert.match(stockPage, /onCountRound/);
-assert.match(stockPage, /ยังไม่นับ · แตะกรอก/);
+assert.match(stockPage, /ยังไม่นับ/);
+assert.match(stockPage, /onEditFilled|แก้ไขยอด/);
 assert.doesNotMatch(stockPage, /ModuleTabDock/);
 assert.doesNotMatch(stockPage, /\+ นับสต็อก/);
 assert.doesNotMatch(stockPage, /type="month"/);

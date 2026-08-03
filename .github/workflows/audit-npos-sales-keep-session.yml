@@ -1,0 +1,49 @@
+name: Audit nPos sales vs keep session
+
+on:
+  workflow_dispatch:
+    inputs:
+      keep_session_code:
+        description: "BO session code to keep (last 12 chars), e.g. 785414397411"
+        required: true
+        default: "785414397411"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/audit-npos-sales-keep-session.mjs"
+      - ".github/workflows/audit-npos-sales-keep-session.yml"
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Audit leftover sales/sessions
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          # Prefer dispatch input; on push use default keep session (first real BO round).
+          KEEP_SESSION_CODE: ${{ inputs.keep_session_code || '785414397411' }}
+          OUT_DIR: artifacts/npos-sales-audit
+        run: |
+          mkdir -p artifacts/npos-sales-audit
+          node scripts/audit-npos-sales-keep-session.mjs
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: npos-sales-keep-session-audit
+          path: artifacts/npos-sales-audit
+          if-no-files-found: error

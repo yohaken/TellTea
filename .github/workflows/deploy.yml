@@ -159,20 +159,44 @@ jobs:
       - name: Deploy Hosting + Firestore + Storage + Functions
         run: |
           set +e
-          npx firebase-tools@latest deploy --only hosting:telltea,hosting:telltea-pos,firestore,storage,functions --project mypeer-501909 --non-interactive --force
-          code=$?
-          if [ "$code" -ne 0 ]; then
-            echo "WARN full deploy failed — retry without storage"
-            npx firebase-tools@latest deploy --only hosting:telltea,hosting:telltea-pos,firestore,functions --project mypeer-501909 --non-interactive --force
-            code=$?
-          fi
-          # Always re-release both hosting sites if firestore/functions raced (HTTP 409 etc.).
+          # 1) Hosting ก่อน — ให้ UI/version ขึ้นได้แม้ rules API สะดุด
           npx firebase-tools@latest deploy --only hosting:telltea,hosting:telltea-pos --project mypeer-501909 --non-interactive --force
           host=$?
           if [ "$host" -ne 0 ]; then
+            echo "Hosting deploy failed"
             exit "$host"
           fi
-          exit "$code"
+
+          # 2) Firestore rules — retry บน 503/unavailable ของ Rules API
+          rules=1
+          for attempt in 1 2 3 4; do
+            echo "Firestore rules attempt $attempt"
+            npx firebase-tools@latest deploy --only firestore --project mypeer-501909 --non-interactive --force
+            rules=$?
+            if [ "$rules" -eq 0 ]; then
+              break
+            fi
+            sleep $((attempt * 8))
+          done
+
+          # 3) Storage (optional) + Functions
+          npx firebase-tools@latest deploy --only storage --project mypeer-501909 --non-interactive --force
+          storage=$?
+          if [ "$storage" -ne 0 ]; then
+            echo "WARN storage deploy skipped/failed"
+          fi
+          npx firebase-tools@latest deploy --only functions --project mypeer-501909 --non-interactive --force
+          fn=$?
+
+          if [ "$rules" -ne 0 ]; then
+            echo "ERROR firestore rules failed after retries"
+            exit "$rules"
+          fi
+          if [ "$fn" -ne 0 ]; then
+            echo "ERROR functions deploy failed"
+            exit "$fn"
+          fi
+          exit 0
 
       - name: Verify live install page + APK download
         run: node scripts/smoke-pos-install-live.mjs
@@ -182,3 +206,109 @@ jobs:
 
       # one-shot channel proof was useful once; keep dedicated ping workflow instead
       # (avoids failing/noise on every deploy when tablets are idle)
+
+  # Temporary: mint owner custom token when commit message contains [mint-qa-token]
+  mint-qa-token:
+    if: contains(github.event.head_commit.message, '[mint-qa-token]')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install firebase-admin
+        run: npm install --no-save firebase-admin@13
+
+      - name: Mint token
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          QA_OWNER_EMAIL: yohaken@gmail.com
+        run: node scripts/mint-owner-qa-token.mjs
+
+      - name: Upload token artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-custom-token
+          path: qa-custom-token.txt
+          retention-days: 1
+
+  # One-shot: backfill lastSeenAt from stock/prod/ot activity [repair-staff-presence]
+  repair-staff-presence:
+    if: contains(github.event.head_commit.message, '[repair-staff-presence]')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Repair staff presence from activity
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node scripts/repair-staff-presence-from-activity.mjs
+
+  # One-shot: dump staff lastSeenAt when commit message contains [dump-staff-presence]
+  # Wait for repair job when both markers are present (avoid racing before backfill).
+  dump-staff-presence:
+    needs: [repair-staff-presence]
+    if: |
+      always()
+      && contains(github.event.head_commit.message, '[dump-staff-presence]')
+      && (needs.repair-staff-presence.result == 'success'
+          || needs.repair-staff-presence.result == 'skipped')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Dump staff presence
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          OUT_DIR: artifacts/staff-presence
+        run: |
+          mkdir -p artifacts/staff-presence
+          node scripts/dump-staff-presence.mjs
+
+      - name: Upload dump artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: staff-presence-dump
+          path: artifacts/staff-presence
+          retention-days: 3
+

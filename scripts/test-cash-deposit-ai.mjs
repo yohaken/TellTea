@@ -18,7 +18,9 @@ const lib = read("src/lib/cash-deposits.ts");
 const panel = read("src/components/CashInLedgerPanel.tsx");
 const version = read("src/lib/version.ts");
 
-assert.match(version, /APP_BUILD = 386/);
+const buildMatch = version.match(/APP_BUILD\s*=\s*(\d+)/);
+assert.ok(buildMatch);
+assert.ok(Number(buildMatch[1]) >= 653, `APP_BUILD >= 653, got ${buildMatch[1]}`);
 assert.ok(existsSync(join(root, "functions/extract-cash-deposit.js")));
 assert.match(index, /extractCashDepositSlip/);
 assert.match(cf, /mode === "bank"/);
@@ -39,16 +41,17 @@ assert.match(lib, /CashFillSource/);
 assert.match(lib, /bankAmountSource/);
 assert.match(lib, /cashAmountSource/);
 assert.match(panel, /runAiBank/);
-assert.match(panel, /runAiDay/);
-assert.match(panel, /เข้าบช\.สุทธิ/);
-assert.match(panel, /คงเหลือ|remainingToTransfer/);
+assert.doesNotMatch(panel, /runAiDay|extractCashDaySlipFromPhotos/);
+assert.match(panel, /เข้าบช\./);
+assert.match(panel, /เหลือ|remainingToTransfer/);
 assert.match(panel, /คชจ\.|transferFee|workingFee/);
-assert.match(panel, /ใส่โดยพนักงาน|is-staff|cash-in-src/);
-assert.match(panel, /อ่าน AI ใหม่|ให้อ่านสลิปโอนใหม่/);
-assert.match(panel, /\+ สลิปโอน/);
-assert.match(panel, /cash-in-bank-table/);
+assert.match(panel, /อ่านสลิป|title="อ่านสลิป"/);
+assert.match(panel, /\+สลิปโอน|\+สลิป/);
+assert.match(panel, /cash-in-summary-slips|cash-in-bank-table/);
 assert.match(panel, /addBankTransfer/);
-assert.match(panel, /drawerCloseAmount ignored/);
+assert.match(panel, /is-tick|clearAllTicks/);
+assert.doesNotMatch(panel, />\s*ใส่ยอด\s*</);
+assert.match(client, /extractCashDaySlipFromPhotos/);
 
 const runner = `
 import assert from "node:assert/strict";

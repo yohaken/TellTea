@@ -9,10 +9,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 512/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 144/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+112/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.89"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 581/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 166/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+130/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.107"/);
 
 assert.ok(existsSync(join(root, "docs/npos-version-on-sync-checklist.md")));
 const doc = read("docs/npos-version-on-sync-checklist.md");
@@ -36,6 +36,9 @@ const heartbeat = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/diagnose/ForegroundHeartbeat.java",
 );
 assert.match(heartbeat, /UpdateCheckCoordinator\.onServerSyncPulse/);
+assert.match(heartbeat, /MAIN\.post/);
+assert.match(heartbeat, /worker thread|CalledFromWrongThread|view hierarchy|main/);
+
 
 const prompt = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/update/UpdatePromptController.java",

@@ -3,6 +3,7 @@
 import { VatClaimModeToggle } from "@/components/EntryVatFieldset";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { parseVatInputStr } from "@/lib/entry-vat";
+import { evidenceNoticeCopy } from "@/lib/ledger-evidence-policy";
 import type { VatFirstPhase } from "@/lib/ledger-vat-first";
 import { formatVatMoney } from "@/lib/vat-number-format";
 
@@ -90,14 +91,14 @@ export function VatFirstCapturePanel({
         แนบบิลให้ครบ (สลิป + ใบกำกับ) — ระบบอ่านยอดภาษีก่อน แล้วค่อยกรอกรายการ
       </p>
       <PhotoAttachMultiField
-        label="รูปใบเสร็จ / ใบกำกับ"
+        label="รูปใบเสร็จ / แคปแชท"
         values={receiptUrls}
         onChange={onReceiptUrlsChange}
         onError={onError}
         max={maxPhotos}
         storageFolder={storageFolder}
         storageSlotKey={storageSlotKey}
-        hint="ถ่าย/แนบ — AI อ่านยอดภาษีมูลค่าเพิ่มก่อน"
+        hint="บิล หรือแคปแชทถ้าไม่มีบิล · AI อ่าน VAT ก่อน"
       />
       {extractStatus === "loading" ? (
         <p className="muted vat-first-status" aria-live="polite">
@@ -217,6 +218,71 @@ export function VatFirstFormSummary({
           vatInput={vatInput}
         />
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * Serious evidence notice + one ack (shared staff ledger / owner books / bill notice).
+ * Not a VAT-style multi-step gate — one checkbox so the rule is always seen.
+ */
+export function EvidenceDocNotice({
+  description,
+  acked,
+  onAckChange,
+  slipOnly = false,
+  goodsOnly = false,
+  vatReason = "",
+  docKind = "",
+  hasVat = false,
+  disabled,
+  idPrefix = "evidence-doc",
+}: {
+  description: string;
+  acked: boolean;
+  onAckChange: (acked: boolean) => void;
+  slipOnly?: boolean;
+  goodsOnly?: boolean;
+  vatReason?: string;
+  docKind?: string;
+  hasVat?: boolean;
+  disabled?: boolean;
+  idPrefix?: string;
+}) {
+  const copy = evidenceNoticeCopy({
+    description,
+    slipOnly,
+    goodsOnly,
+    vatReason,
+    docKind,
+    hasVat,
+  });
+  const checkboxId = `${idPrefix}-ack`;
+
+  return (
+    <div
+      className={
+        copy.escalate
+          ? "evidence-doc-notice evidence-doc-notice--escalate"
+          : "evidence-doc-notice"
+      }
+      role="group"
+      aria-label="หลักฐานเอกสารรายการจ่าย"
+      data-policy={copy.policy}
+      data-weak={copy.weakKind}
+    >
+      <p className="evidence-doc-title">{copy.title}</p>
+      <p className="evidence-doc-body">{copy.body}</p>
+      <label className="evidence-doc-ack" htmlFor={checkboxId}>
+        <input
+          id={checkboxId}
+          type="checkbox"
+          checked={acked}
+          disabled={disabled}
+          onChange={(e) => onAckChange(e.target.checked)}
+        />
+        <span>{copy.ackLabel}</span>
+      </label>
     </div>
   );
 }

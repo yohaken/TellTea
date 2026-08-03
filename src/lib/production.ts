@@ -258,12 +258,37 @@ export async function listProdWorkers(): Promise<ProdWorker[]> {
 export function subscribeProdEntries(
   onRows: (rows: ProdEntry[]) => void,
   onError?: (err: Error) => void,
-  opts?: { since?: number; until?: number },
+  opts?: { since?: number; until?: number; workerId?: string },
 ): Unsubscribe {
   const since = opts?.since;
   const until = opts?.until;
+  const workerId = (opts?.workerId || "").trim();
   let q = query(entriesCol(), orderBy("date", "desc"), orderBy("createdAt", "desc"));
-  if (since != null && until != null) {
+  if (workerId && since != null && until != null) {
+    q = query(
+      entriesCol(),
+      where("workerIds", "array-contains", workerId),
+      where("date", ">=", since),
+      where("date", "<", until),
+      orderBy("date", "desc"),
+      orderBy("createdAt", "desc"),
+    );
+  } else if (workerId && since != null) {
+    q = query(
+      entriesCol(),
+      where("workerIds", "array-contains", workerId),
+      where("date", ">=", since),
+      orderBy("date", "desc"),
+      orderBy("createdAt", "desc"),
+    );
+  } else if (workerId) {
+    q = query(
+      entriesCol(),
+      where("workerIds", "array-contains", workerId),
+      orderBy("date", "desc"),
+      orderBy("createdAt", "desc"),
+    );
+  } else if (since != null && until != null) {
     q = query(
       entriesCol(),
       where("date", ">=", since),
@@ -362,6 +387,8 @@ export async function addProdEntry(input: ProdEntryInput): Promise<string> {
     createdAt: now,
     updatedAt: now,
   });
+  const { touchStaffPresenceFromActor } = await import("./staff-presence");
+  await touchStaffPresenceFromActor(input.createdBy);
   return ref.id;
 }
 

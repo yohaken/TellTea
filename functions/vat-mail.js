@@ -12,6 +12,21 @@ const {
   needsPdfEnrich,
   signedPdfReadUrl,
 } = require("./vat-mail-pdf");
+const {
+  isNoiseMail,
+  isTaxInvoiceMail,
+  matchChannel,
+  sanitizeChannelRule,
+} = require("./vat-mail-channel");
+const { inferMailStudyTags, tagsChanged } = require("./vat-mail-study-tags");
+const {
+  resolveReportPeriod,
+  periodFieldsFromResolved,
+} = require("./vat-mail-period");
+const {
+  publicDriveStatus,
+  DRIVE_META_DOC,
+} = require("./vat-mail-drive");
 
 const REGION = "asia-southeast1";
 const OWNER_EMAIL = String(process.env.TELLTEA_OWNER_EMAIL || "yohaken@gmail.com")
@@ -25,8 +40,13 @@ const SETTINGS_DOC = "meta/vatSalesSettings";
 const REPORTS_COL = "platformEmailReports";
 
 const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
-const DEFAULT_LOOKBACK_DAYS = 31;
-const MAX_MESSAGES_PER_SYNC = 80;
+const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+/** Gmail อ่านเมล + Drive สร้าง/เขียนเฉพาะไฟล์ที่แอพสร้าง */
+const OAUTH_SCOPES = `${GMAIL_SCOPE} ${DRIVE_SCOPE}`;
+/** ปิดงบต้นเดือนต้องย้อนหลายหน้า Gmail + คาบเกี่ยวเดือนก่อน/หลัง */
+const DEFAULT_LOOKBACK_DAYS = 120;
+const MAX_LOOKBACK_DAYS = 180;
+const MAX_MESSAGES_PER_SYNC = 300;
 
 function reportDocId(messageId) {
   const safe = String(messageId || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80);
@@ -36,19 +56,38 @@ function reportDocId(messageId) {
 const DEFAULT_MAIL_RULES = {
   shopee: {
     enabled: true,
-    fromIncludes: ["shopee", "shopeefood"],
-    subjectIncludes: ["shopeefood", "สรุปยอด", "ยอดขาย", "รายงานยอด"],
-    subjectExcludes: ["otp", "verify"],
+    fromIncludes: [
+      "shopeefood.com",
+      "shopeefood",
+      "shopee.co.th",
+      "shopee.com",
+      "shopee",
+    ],
+    // ห้ามคำกว้างอย่าง สรุปยอด / ยอดขาย — จะไปจับ Grab/LM
+    subjectIncludes: [
+      "shopeefood",
+      "shopee food",
+      "รายงานการโอนเงิน",
+      "ใบแจ้งยอด",
+      "settlement",
+      "ค่าคอมมิชชั่น",
+      "commission",
+    ],
+    subjectExcludes: [
+      "otp",
+      "verify",
+      "chargeback",
+      "รีเซ็ต",
+      "ยืนยันอีเมล",
+    ],
   },
   grab: {
     enabled: true,
     fromIncludes: ["grab.com", "grabfood"],
     subjectIncludes: [
-      "สรุปยอดขาย",
+      "สรุปยอดขายสำหรับคำสั่งซื้อ",
       "grabfood",
       "daily sales",
-      "รายงานยอดขาย",
-      "sales summary",
     ],
     subjectExcludes: [
       "tax invoice",
@@ -56,20 +95,27 @@ const DEFAULT_MAIL_RULES = {
       "receipt/tax",
       "receipt / tax",
       "ใบเสร็จ",
+      "ความเสี่ยง",
+      "account risk",
     ],
   },
   lineman: {
     enabled: true,
-    fromIncludes: ["lineman", "wongnai", "line.me"],
+    fromIncludes: ["lmwn.com", "lmwn", "lineman", "wongnai", "line.me"],
     subjectIncludes: [
       "รายงานยอดขายรายวัน",
+      "รายงานยอดโอนออก",
       "line man",
       "lineman",
-      "wongnai",
-      "สรุปยอด",
-      "ยอดขายรายวัน",
     ],
-    subjectExcludes: ["otp", "verify"],
+    subjectExcludes: [
+      "otp",
+      "verify",
+      "รีเซ็ต",
+      "ยืนยันอีเมล",
+      "password",
+      "reset",
+    ],
   },
 };
 
@@ -132,8 +178,9 @@ async function loadOAuthConfig(db) {
   return { clientId, clientSecret, redirectUri, source: "firestore" };
 }
 
-function publicOAuthStatus(oauthData, hasConfig) {
+function publicOAuthStatus(oauthData, hasConfig, driveMeta) {
   const connected = Boolean(oauthData && oauthData.refreshToken);
+  const drive = publicDriveStatus(oauthData, driveMeta || {});
   return {
     hasConfig: Boolean(hasConfig),
     connected,
@@ -143,6 +190,9 @@ function publicOAuthStatus(oauthData, hasConfig) {
     lastSyncAt: connected ? Number(oauthData.lastSyncAt) || 0 : 0,
     lastSyncError: connected ? asString(oauthData.lastSyncError, 300) : "",
     lastSyncAdded: connected ? Number(oauthData.lastSyncAdded) || 0 : 0,
+    scope: connected ? asString(oauthData.scope, 400) : "",
+    hasDriveScope: drive.hasDriveScope,
+    drive,
   };
 }
 
@@ -247,24 +297,8 @@ function headerMap(headers) {
   return map;
 }
 
-function normalizeRule(raw, fallback) {
-  const o = raw && typeof raw === "object" ? raw : {};
-  const list = (v, fb) => {
-    if (Array.isArray(v) && v.length) {
-      return v.map((x) => String(x).trim().toLowerCase()).filter(Boolean).slice(0, 20);
-    }
-    return [...fb];
-  };
-  const excludes =
-    Array.isArray(o.subjectExcludes) && o.subjectExcludes.length
-      ? o.subjectExcludes.map((x) => String(x).trim().toLowerCase()).filter(Boolean).slice(0, 20)
-      : [...(fallback.subjectExcludes || [])];
-  return {
-    enabled: o.enabled !== false,
-    fromIncludes: list(o.fromIncludes, fallback.fromIncludes),
-    subjectIncludes: list(o.subjectIncludes, fallback.subjectIncludes),
-    subjectExcludes: excludes,
-  };
+function normalizeRule(raw, fallback, channel) {
+  return sanitizeChannelRule(channel, raw, fallback);
 }
 
 function loadMailRules(settings) {
@@ -272,45 +306,127 @@ function loadMailRules(settings) {
     ? settings.mailRules
     : {};
   return {
-    shopee: normalizeRule(raw.shopee, DEFAULT_MAIL_RULES.shopee),
-    grab: normalizeRule(raw.grab, DEFAULT_MAIL_RULES.grab),
-    lineman: normalizeRule(raw.lineman, DEFAULT_MAIL_RULES.lineman),
+    shopee: normalizeRule(raw.shopee, DEFAULT_MAIL_RULES.shopee, "shopee"),
+    grab: normalizeRule(raw.grab, DEFAULT_MAIL_RULES.grab, "grab"),
+    lineman: normalizeRule(raw.lineman, DEFAULT_MAIL_RULES.lineman, "lineman"),
   };
 }
 
-function matchChannel(from, subject, rules) {
+function fromHitsSearchChannel(from, rule) {
   const f = String(from || "").toLowerCase();
-  const s = String(subject || "").toLowerCase();
-  for (const channel of ["shopee", "grab", "lineman"]) {
-    const rule = rules[channel];
-    if (!rule || rule.enabled === false) continue;
-    const excludes = rule.subjectExcludes || [];
-    if (excludes.some((k) => k && s.includes(k))) continue;
-    const fromHit = rule.fromIncludes.some((k) => f.includes(k));
-    const subHit = rule.subjectIncludes.some((k) => s.includes(k));
-    // เงินเข้า: ต้องมีคำในหัวข้อ (กันเมลใบกำกับจาก grab.com)
-    if (subHit) return channel;
-    if (fromHit && /(ยอดขาย|สรุปยอด|daily sales|sales report|รายงานยอด|sales summary)/i.test(s)) {
-      return channel;
-    }
-  }
-  return "unknown";
+  return (rule?.fromIncludes || []).some((k) => k && f.includes(String(k).toLowerCase()));
 }
 
-function buildSearchQuery(rule, lookbackDays) {
+async function reclassifyStoredReports(db, rules, actorId) {
+  const snap = await db.collection(REPORTS_COL).limit(500).get();
+  let reclassified = 0;
+  let noiseTagged = 0;
+  let tagged = 0;
+  let periodFixed = 0;
+  for (const docSnap of snap.docs) {
+    const d = docSnap.data() || {};
+    const from = String(d.from || "");
+    const subject = String(d.subject || "");
+    const next = matchChannel(from, subject, rules);
+    const noise = isNoiseMail(from, subject) || isTaxInvoiceMail(subject);
+    const period = periodFieldsFromResolved(
+      resolveReportPeriod({
+        subject,
+        snippet: d.snippet,
+        rawText: d.rawText,
+        receivedAt: d.receivedAt || d.internalDate,
+      }),
+    );
+    const nextTags = inferMailStudyTags(
+      {
+        from,
+        subject,
+        channel: next !== "unknown" ? next : d.channel,
+        pdfFilenames: d.pdfFilenames,
+        studyTags: d.studyTags,
+        reportKind: period.reportKind,
+        snippet: d.snippet,
+        rawText: d.rawText,
+      },
+      rules,
+    );
+    const patch = {};
+    if (next !== "unknown" && next !== d.channel) {
+      patch.channel = next;
+    }
+    if (
+      d.reportDateGuess !== period.reportDateGuess ||
+      d.reportKind !== period.reportKind ||
+      d.periodMonthKey !== period.periodMonthKey ||
+      d.periodStart !== period.periodStart ||
+      d.periodEnd !== period.periodEnd
+    ) {
+      Object.assign(patch, period);
+      periodFixed += 1;
+    }
+    if (tagsChanged(d.studyTags, nextTags)) {
+      patch.studyTags = nextTags;
+      patch.studyTagsUpdatedAt = Date.now();
+    }
+    if (!Object.keys(patch).length) continue;
+    patch.channelReclassifiedAt = Date.now();
+    patch.channelReclassifiedBy = actorId || "sync";
+    await docSnap.ref.set(patch, { merge: true });
+    reclassified += 1;
+    if (patch.studyTags) tagged += 1;
+    if (noise && nextTags.includes("ข้าม")) noiseTagged += 1;
+  }
+  return { reclassified, noiseTagged, tagged, periodFixed, scanned: snap.size };
+}
+
+function unionUnique(a, b, max = 12) {
+  const out = [];
+  const seen = new Set();
+  for (const raw of [...(a || []), ...(b || [])]) {
+    const t = String(raw || "").trim().toLowerCase();
+    if (!t || seen.has(t)) continue;
+    seen.add(t);
+    out.push(t);
+    if (out.length >= max) break;
+  }
+  return out;
+}
+
+/** รวมกฎที่เซฟไว้กับ default — กัน settings เก่าทำให้ Shopee/ช่วงย้อนหาย */
+function expandRuleForSearch(channel, rule) {
+  const fb = DEFAULT_MAIL_RULES[channel] || rule;
+  return {
+    ...rule,
+    fromIncludes: unionUnique(rule?.fromIncludes, fb.fromIncludes, 8),
+    subjectIncludes: unionUnique(rule?.subjectIncludes, fb.subjectIncludes, 10),
+    subjectExcludes: unionUnique(rule?.subjectExcludes, fb.subjectExcludes, 10),
+  };
+}
+
+function buildSearchQuery(rule, lookbackDays, channel) {
   const after = new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000);
   const y = after.getUTCFullYear();
   const m = String(after.getUTCMonth() + 1).padStart(2, "0");
   const d = String(after.getUTCDate()).padStart(2, "0");
   const parts = [`after:${y}/${m}/${d}`];
-  const fromTerms = rule.fromIncludes.slice(0, 4).map((t) => `from:${t}`);
-  const subTerms = rule.subjectIncludes.slice(0, 5).map((t) => {
-    const q = String(t).includes(" ") ? `"${t}"` : t;
-    return `subject:${q}`;
-  });
-  if (fromTerms.length) parts.push(`(${fromTerms.join(" OR ")})`);
-  if (subTerms.length) parts.push(`(${subTerms.join(" OR ")})`);
-  for (const ex of (rule.subjectExcludes || []).slice(0, 5)) {
+  // ค้นจาก From เป็นหลัก (กัน subject กว้างดึงข้ามช่อง)
+  const fromTerms = (rule.fromIncludes || []).slice(0, 6).map((t) => `from:${t}`);
+  if (fromTerms.length) {
+    parts.push(`(${fromTerms.join(" OR ")})`);
+  } else {
+    const subTerms = (rule.subjectIncludes || []).slice(0, 5).map((t) => {
+      const q = String(t).includes(" ") ? `"${t}"` : t;
+      return `subject:${q}`;
+    });
+    if (subTerms.length) parts.push(`(${subTerms.join(" OR ")})`);
+  }
+  // Shopee มักเป็นไฟล์แนบ Excel/CSV — บังคับมีแนบหรือชื่อไฟล์
+  if (channel === "shopee") {
+    parts.push(
+      "(has:attachment OR filename:xlsx OR filename:xls OR filename:csv OR filename:pdf)",
+    );
+  }
+  for (const ex of (rule.subjectExcludes || []).slice(0, 8)) {
     const q = String(ex).includes(" ") ? `"${ex}"` : ex;
     parts.push(`-subject:${q}`);
   }
@@ -442,12 +558,17 @@ exports.vatMailStatus = functions
   .https.onCall(async (data, context) => {
     const { actorId } = await assertOwner(context);
     const db = getFirestore();
-    const [oauthSnap, config] = await Promise.all([
+    const [oauthSnap, config, driveSnap] = await Promise.all([
       db.doc(OAUTH_DOC).get(),
       loadOAuthConfig(db),
+      db.doc(DRIVE_META_DOC).get(),
     ]);
     return {
-      ...publicOAuthStatus(oauthSnap.exists ? oauthSnap.data() : null, Boolean(config)),
+      ...publicOAuthStatus(
+        oauthSnap.exists ? oauthSnap.data() : null,
+        Boolean(config),
+        driveSnap.exists ? driveSnap.data() : null,
+      ),
       actorId,
     };
   });
@@ -476,7 +597,7 @@ exports.vatMailOAuthStart = functions
     url.searchParams.set("client_id", config.clientId);
     url.searchParams.set("redirect_uri", config.redirectUri);
     url.searchParams.set("response_type", "code");
-    url.searchParams.set("scope", GMAIL_SCOPE);
+    url.searchParams.set("scope", OAUTH_SCOPES);
     url.searchParams.set("access_type", "offline");
     url.searchParams.set("prompt", "consent select_account");
     url.searchParams.set("state", state);
@@ -530,7 +651,7 @@ exports.vatMailOAuthCallback = functions
           {
             provider: "gmail",
             email,
-            scope: GMAIL_SCOPE,
+            scope: asString(tokenJson.scope, 400) || OAUTH_SCOPES,
             connectedAt: Date.now(),
             connectedBy: asString(stateData.actorId, 120),
             updatedAt: Date.now(),
@@ -544,7 +665,7 @@ exports.vatMailOAuthCallback = functions
             provider: "gmail",
             email,
             refreshToken,
-            scope: GMAIL_SCOPE,
+            scope: asString(tokenJson.scope, 400) || OAUTH_SCOPES,
             connectedAt: Date.now(),
             connectedBy: asString(stateData.actorId, 120),
             lastSyncAt: FieldValue.delete(),
@@ -579,7 +700,7 @@ exports.vatMailDisconnect = functions
 
 exports.vatMailSync = functions
   .region(REGION)
-  .runWith({ timeoutSeconds: 120, memory: "512MB" })
+  .runWith({ timeoutSeconds: 300, memory: "1GB" })
   .https.onCall(async (data, context) => {
     const { actorId } = await assertOwner(context);
     const db = getFirestore();
@@ -599,7 +720,7 @@ exports.vatMailSync = functions
     }
     const refreshToken = asString(oauthSnap.get("refreshToken"), 500);
     const lookbackDays = Math.min(
-      90,
+      MAX_LOOKBACK_DAYS,
       Math.max(1, Number(data?.lookbackDays) || DEFAULT_LOOKBACK_DAYS),
     );
 
@@ -620,9 +741,9 @@ exports.vatMailSync = functions
 
       for (const channel of channels) {
         if (channelsEnabled[channel] === false) continue;
-        const rule = rules[channel];
+        const rule = expandRuleForSearch(channel, rules[channel]);
         if (!rule.enabled) continue;
-        const q = buildSearchQuery(rule, lookbackDays);
+        const q = buildSearchQuery(rule, lookbackDays, channel);
         const ids = await listMessageIds(accessToken, q, MAX_MESSAGES_PER_SYNC);
         for (const messageId of ids) {
           if (seen.has(messageId)) continue;
@@ -699,12 +820,20 @@ exports.vatMailSync = functions
             skipped += 1;
             continue;
           }
-          if (/tax\s*invoice|ใบกำกับภาษี|receipt\s*\/\s*tax|receipt\/tax/.test(subjLower)) {
+          if (isTaxInvoiceMail(subject) || isNoiseMail(from, subject)) {
             skipped += 1;
             continue;
           }
           const matched = matchChannel(from, subject, rules);
-          const channelFinal = matched === "unknown" ? channel : matched;
+          let channelFinal = matched;
+          if (matched === "unknown") {
+            // ไม่ fallback เป็นช่องค้นหา — กันเมล LM/Grab ที่โผล่จาก query Shopee
+            if (!fromHitsSearchChannel(from, rules[channel])) {
+              skipped += 1;
+              continue;
+            }
+            channelFinal = channel;
+          }
           let rawText = String(bodies.text || "").slice(0, 200000);
           const rawHtml = String(bodies.html || "").slice(0, 200000);
           let pdfFilenames = [];
@@ -733,6 +862,26 @@ exports.vatMailSync = functions
               console.warn("pdf extract", messageId, pdfError);
             }
           }
+          const period = periodFieldsFromResolved(
+            resolveReportPeriod({
+              subject,
+              snippet: msg.snippet,
+              rawText,
+              receivedAt: internalDate,
+            }),
+          );
+          const studyTags = inferMailStudyTags(
+            {
+              from,
+              subject,
+              channel: channelFinal,
+              pdfFilenames,
+              reportKind: period.reportKind,
+              snippet: msg.snippet,
+              rawText,
+            },
+            rules,
+          );
           await db.collection(REPORTS_COL).doc(docId).set({
             channel: channelFinal,
             provider: "gmail",
@@ -748,8 +897,9 @@ exports.vatMailSync = functions
             ...(pdfFilenames.length ? { pdfFilenames } : {}),
             ...(pdfStoragePaths.length ? { pdfStoragePaths } : {}),
             ...(pdfError ? { pdfError } : { pdfError: "" }),
-            reportDateGuess: guessReportDate(subject, internalDate),
-            reportKind: guessReportKind(subject),
+            ...period,
+            studyTags,
+            studyTagsUpdatedAt: Date.now(),
             parseStatus: "pending",
             parseError: "",
             syncedAt: Date.now(),
@@ -759,6 +909,8 @@ exports.vatMailSync = functions
         }
       }
 
+      const fix = await reclassifyStoredReports(db, rules, actorId);
+
       await db.doc(OAUTH_DOC).set(
         {
           lastSyncAt: Date.now(),
@@ -766,12 +918,22 @@ exports.vatMailSync = functions
           lastSyncAdded: added,
           lastSyncScanned: scanned,
           lastSyncPdfEnriched: pdfEnriched,
+          lastSyncReclassified: fix.reclassified,
           updatedAt: Date.now(),
         },
         { merge: true },
       );
 
-      return { ok: true, scanned, added, skipped, pdfEnriched, lookbackDays };
+      return {
+        ok: true,
+        scanned,
+        added,
+        skipped,
+        pdfEnriched,
+        reclassified: fix.reclassified,
+        noiseTagged: fix.noiseTagged,
+        lookbackDays,
+      };
     } catch (e) {
       const msg = asString(e?.message || String(e), 300);
       await db.doc(OAUTH_DOC).set(

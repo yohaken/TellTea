@@ -1,11 +1,12 @@
 # nPos / หลังร้าน — เฟสงานเคาน์เตอร์ถัดไป (รอบกะ · เมนู · เสียง)
 
-อัปเดต: **O3+O4 ship 1.14.89** · อ้างอิง `/pos-sales` + nPos 1.14.89  
+อัปเดต: **O3+O4 ship 1.14.96** · อ้างอิง `/pos-sales` + nPos 1.14.96 · ship **1.14.107** · remit rounds **APP_BUILD 565 / POS 162**
 หลัก: **ทำทีละเฟสให้จบและเทสได้** · ไม่ขยาย PIN / delta เมนู / cloud TTS ในรอบแรก
 
 ดูเช็คลิสย่อย:
 [npos-shift-opener-checklist.md](./npos-shift-opener-checklist.md) ·
 [npos-session-cash-detail-checklist.md](./npos-session-cash-detail-checklist.md) ·
+[npos-remit-rounds-phases.md](./npos-remit-rounds-phases.md) ·
 [npos-menu-version-sync-checklist.md](./npos-menu-version-sync-checklist.md) ·
 [npos-payment-voice-checklist.md](./npos-payment-voice-checklist.md)
 
@@ -94,7 +95,7 @@ O0 คนเทสฐาน → O1 ใครเข้ากะ → O2 ราย�
 
 ---
 
-## O3 — เมนูซิงก์ตอนแอปค้าง · **ship 1.14.89**
+## O3 — เมนูซิงก์ตอนแอปค้าง · **ship 1.14.91**
 
 **ปัญหา:** แก้เมนูหลังร้านแล้วหน้าขายที่เปิดอยู่ไม่เปลี่ยน  
 **เป้า:** bump `menuVersion` → heartbeat/shop บอกเครื่อง → โหลดเมนูทั้งชุดเงียบๆ  
@@ -114,7 +115,7 @@ O0 คนเทสฐาน → O1 ใครเข้ากะ → O2 ราย�
 
 ---
 
-## O4 — เสียงพูดรับเงิน / ทอน · **ship 1.14.89** (ฝังคลิป)
+## O4 — เสียงพูดรับเงิน / ทอน · **ship 1.14.91** (ฝังคลิป)
 
 **ปัญหา:** มองแถบทอนอย่างเดียว · มือยุ่งอาจพลาดตัวเลข · เครื่องไม่มี TTS ไทย  
 **เป้า:** พูดไทยสั้น «รับมา X บาท ทอน Y บาท» หลังขายสด  

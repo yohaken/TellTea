@@ -200,6 +200,12 @@ public final class BlindCloseFlow {
                                           activity, R.string.shift_closed, Toast.LENGTH_SHORT)
                                       .show();
                                   if (done != null) done.onClosed();
+                                } else if (SaleSync.hasUnsyncedWork(activity)) {
+                                  Toast.makeText(
+                                          activity,
+                                          R.string.blind_close_sync_required,
+                                          Toast.LENGTH_LONG)
+                                      .show();
                                 } else {
                                   Toast.makeText(
                                           activity,

@@ -232,7 +232,9 @@ exports.nposToggleSoldOut = functions.region("asia-southeast1").https.onRequest(
       return;
     }
     await ref.set({ active: !soldOut, updatedAt: Date.now(), soldOutBy: installId }, { merge: true });
-    res.status(200).json({ ok: true, itemId, active: !soldOut, soldOut });
+    const menuVersion = Date.now();
+    await db.doc("meta/pos").set({ menuVersion }, { merge: true });
+    res.status(200).json({ ok: true, itemId, active: !soldOut, soldOut, menuVersion });
   } catch (err) {
     console.error("nposToggleSoldOut", err);
     res.status(500).json({ ok: false, error: "toggle_failed" });
@@ -362,17 +364,30 @@ exports.nposSessionOpen = functions.region("asia-southeast1").https.onRequest(as
         const prevDevice = asString(best.data.deviceId, 64);
         const openedAt = Number(best.data.openedAt) || now;
         const correctDate = startOfBangkokDay(openedAt);
-        await best.ref.set(
-          {
-            deviceId: installId,
-            previousDeviceId: prevDevice && prevDevice !== installId ? prevDevice : best.data.previousDeviceId || "",
-            resumedAt: now,
-            updatedAt: now,
-            // Repair legacy UTC-midnight date keys so BO today query matches.
-            date: correctDate,
-          },
-          { merge: true },
-        );
+        // Tablet always sends who clocked in — backfill when the open round still has no opener
+        // (common: resume / seat handoff / sync after local-first open). Do not overwrite a name.
+        const bodyOpenerId = asString(body.openedByEmployeeId, 64);
+        const bodyOpenerName = asString(body.openedByName, 80);
+        const existingOpenerId = asString(best.data.openedByEmployeeId, 64);
+        const existingOpenerName = asString(best.data.openedByName, 80);
+        const resumePatch = {
+          deviceId: installId,
+          previousDeviceId: prevDevice && prevDevice !== installId ? prevDevice : best.data.previousDeviceId || "",
+          resumedAt: now,
+          updatedAt: now,
+          // Repair legacy UTC-midnight date keys so BO today query matches.
+          date: correctDate,
+        };
+        if (bodyOpenerName && !existingOpenerName) {
+          resumePatch.openedByName = bodyOpenerName;
+          resumePatch.openedByEmployeeId = bodyOpenerId || "";
+        }
+        await best.ref.set(resumePatch, { merge: true });
+        const openedByNameOut = resumePatch.openedByName || existingOpenerName;
+        const openedByEmployeeIdOut =
+          typeof resumePatch.openedByEmployeeId === "string"
+            ? resumePatch.openedByEmployeeId
+            : existingOpenerId;
         res.status(200).json({
           ok: true,
           sessionId: best.id,
@@ -387,8 +402,8 @@ exports.nposSessionOpen = functions.region("asia-southeast1").https.onRequest(as
           transferTotal: Number(best.data.transferTotal) || 0,
           voidedCount: Number(best.data.voidedCount) || 0,
           discountTotal: Number(best.data.discountTotal) || 0,
-          openedByEmployeeId: asString(best.data.openedByEmployeeId, 64),
-          openedByName: asString(best.data.openedByName, 80),
+          openedByEmployeeId: openedByEmployeeIdOut,
+          openedByName: openedByNameOut,
         });
         return;
       }
@@ -527,6 +542,24 @@ exports.nposSessionClose = functions.region("asia-southeast1").https.onRequest(a
     if (alreadyClosed) {
       patch.zFinalizedAt = now;
       patch.zFinalizedBy = installId;
+      // Keep BO force-close actor; do not overwrite closedByName on Z finalize.
+    } else {
+      const closedByName = asString(body.closedByName, 80);
+      const closedByEmployeeId = asString(body.closedByEmployeeId, 64);
+      const openerName = asString(data.openedByName, 80);
+      const openerId = asString(data.openedByEmployeeId, 64);
+      if (closedByName) {
+        patch.closedByName = closedByName;
+        patch.closedByEmployeeId = closedByEmployeeId || "";
+        patch.closeSource = "tablet";
+      } else if (openerName) {
+        // Default closer = opener when tablet omits explicit closer.
+        patch.closedByName = openerName;
+        patch.closedByEmployeeId = openerId || "";
+        patch.closeSource = "tablet";
+      } else {
+        patch.closeSource = "tablet";
+      }
     }
     await ref.set(patch, { merge: true });
     res.status(200).json({
@@ -666,7 +699,9 @@ exports.nposReorderCategories = functions.region("asia-southeast1").https.onRequ
       return;
     }
     await batch.commit();
-    res.status(200).json({ ok: true, count: n });
+    const menuVersion = Date.now();
+    await db.doc("meta/pos").set({ menuVersion }, { merge: true });
+    res.status(200).json({ ok: true, count: n, menuVersion });
   } catch (err) {
     console.error("nposReorderCategories", err);
     res.status(500).json({ ok: false, error: "reorder_failed" });

@@ -119,6 +119,43 @@ export function isPeriodDismissed(
   return (template.dismissedPeriodKeys || []).includes(periodKey);
 }
 
+/** รวม period ที่เพิ่ง dismiss ฝั่ง client — กัน sync สร้างซ้ำก่อน snapshot ตามทัน */
+export function mergeDismissedPeriodKeys(
+  template: TaskTemplate,
+  extraKeys: string[],
+): TaskTemplate {
+  if (!extraKeys.length) return template;
+  const set = new Set([...(template.dismissedPeriodKeys || []), ...extraKeys.map(String)]);
+  return { ...template, dismissedPeriodKeys: [...set] };
+}
+
+/**
+ * ใส่ dismissedPeriodKeys จากบล็อก session ลงเทมเพลตก่อน sync
+ * blockKeys รูปแบบ `${templateId}:${periodKey}`
+ */
+export function applyDismissBlocksToTemplates(
+  templates: TaskTemplate[],
+  blockKeys: Iterable<string>,
+): TaskTemplate[] {
+  const byTpl = new Map<string, string[]>();
+  for (const raw of blockKeys) {
+    const s = String(raw || "");
+    const i = s.indexOf(":");
+    if (i <= 0) continue;
+    const tid = s.slice(0, i);
+    const pk = s.slice(i + 1);
+    if (!tid || !pk) continue;
+    const arr = byTpl.get(tid) || [];
+    arr.push(pk);
+    byTpl.set(tid, arr);
+  }
+  if (!byTpl.size) return templates;
+  return templates.map((tpl) => {
+    const extra = byTpl.get(tpl.id);
+    return extra?.length ? mergeDismissedPeriodKeys(tpl, extra) : tpl;
+  });
+}
+
 export function computeCompletedKind(
   dueDate: number,
   completedAt: number,
@@ -404,8 +441,8 @@ export function newChecklistItemId() {
 }
 
 export function validateTaskCompleteInput(input: {
-  checklist: TaskChecklistItem[];
-  checkedIds: string[];
+  checklist?: TaskChecklistItem[];
+  checkedIds?: string[];
   proofImg?: string;
   proofImgs?: string[];
 }): string | null {
@@ -416,11 +453,36 @@ export function validateTaskCompleteInput(input: {
     .map((u) => u.trim())
     .filter(Boolean);
   if (!proofs.length) return "แนบรูปหลักฐานก่อนส่งงาน";
-  const set = new Set(input.checkedIds);
-  if (!input.checklist.every((item) => set.has(item.id))) {
-    return "ติ๊ก checklist ให้ครบทุกข้อก่อนส่ง";
-  }
+  // เลิกบังคับติ๊กเช็คลิสย่อย — ใช้โนตความคืบแทน
   return null;
+}
+
+export function newProgressNoteId() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `pn-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export function formatTaskProgressNotesPreview(
+  notes:
+    | { text?: string; createdByName?: string; createdAt?: number }[]
+    | undefined,
+  max = 2,
+): string {
+  const rows = Array.isArray(notes) ? [...notes] : [];
+  if (!rows.length) return "";
+  rows.sort((a, b) => (Number(a.createdAt) || 0) - (Number(b.createdAt) || 0));
+  return rows
+    .slice(-max)
+    .map((n) => {
+      const who = String(n.createdByName || "").trim();
+      const text = String(n.text || "").trim();
+      if (!text) return "";
+      return who ? `${who}: ${text}` : text;
+    })
+    .filter(Boolean)
+    .join(" · ");
 }
 
 export const TASK_PROOF_MAX = 6;

@@ -68,6 +68,18 @@ export type CashDepositDayLine = {
   dateSource: CashFillSource;
   note: string;
   slipUrls: string[];
+  /**
+   * Optional link to closed posSessions — when filled from nPos remits,
+   * cashAmount should equal Σ effective cash of these ids
+   * (sessionActualAmounts[id] if set, else session.remitAmount).
+   */
+  sessionIds: string[];
+  /**
+   * Per-session staff override of cash counted from the physical round slip
+   * (เทียบเอกสาร — not a bank transfer). Keys = sessionIds.
+   * Missing key → use system remit for that session.
+   */
+  sessionActualAmounts: Record<string, number>;
 };
 
 export type CashDeposit = {
@@ -165,6 +177,24 @@ export function sumCashDepositDays(days: Pick<CashDepositDayLine, "cashAmount">[
   return days.reduce((sum, d) => sum + (Number(d.cashAmount) || 0), 0);
 }
 
+/**
+ * Day amounts that count toward 「ต้องโอน」must be linked to nPos remit sessions.
+ * cashAmount 0 (ร้านปิด) is allowed without sessionIds.
+ */
+export function assertCashDepositDaysNposLinked(
+  days: Pick<CashDepositDayLine, "date" | "cashAmount" | "sessionIds">[],
+): void {
+  for (const d of days) {
+    const amt = Number(d.cashAmount) || 0;
+    if (amt <= 0) continue;
+    if ((d.sessionIds || []).some((id) => String(id || "").trim())) continue;
+    const label = d.date ? formatCashDayShort(d.date) : "วันนี้";
+    throw new Error(
+      `${label}: ยอดบิลนำส่งต้องดึงจากรอบปิด nPos เท่านั้น (กด「จากรอบ」หรือใช้บิลรอโอน)`,
+    );
+  }
+}
+
 export function sumBankTransferAmounts(
   rows: Pick<CashDepositBankTransfer, "amount">[],
 ) {
@@ -214,6 +244,9 @@ export function labelCashDepositRound(
  * ผลต่างหลังคิดค่าธรรมเนียม:
  * (ยอดเข้าบัญชี + ค่าธรรมเนียม) − รวมเงินสดจากสลิป
  * = 0 แปลว่าตรง
+ *
+ * พนักงานมัดรวมหลายบิลแล้วโอนครั้งเดียว:
+ * ยอดโอนเข้าบช. = มัดรวมจริง − คชจ.โอน (ไม่ต้องเบิกคชจ.แยก)
  */
 export function cashDepositVariance(
   bankAmount: number,
@@ -226,6 +259,16 @@ export function cashDepositVariance(
   return Math.round((bank + fee - cash) * 100) / 100;
 }
 
+/** ยอดที่ควรโอนเข้าบัญชี = มัดรวมบิลนำส่ง − คชจ.โอน */
+export function suggestedNetBankTransfer(
+  bundleCashTotal: number,
+  transferFee = 0,
+) {
+  const cash = Number(bundleCashTotal) || 0;
+  const fee = Math.max(0, Number(transferFee) || 0);
+  return Math.round(Math.max(0, cash - fee) * 100) / 100;
+}
+
 export function normalizeCashFillSource(raw: unknown): CashFillSource {
   const s = String(raw || "").trim();
   if (s === "ai" || s === "staff") return s;
@@ -235,13 +278,80 @@ export function normalizeCashFillSource(raw: unknown): CashFillSource {
 export function labelCashDepositStatus(status: CashDepositStatus) {
   switch (status) {
     case "matched":
-      return "ตรง";
+      return "โอนแล้ว";
     case "mismatch":
       return "ไม่ตรง";
     case "void":
       return "ยกเลิก";
     default:
-      return "รอตรวจ";
+      // legacy rows only — new saves auto-match (no owner verify)
+      return "โอนแล้ว";
+  }
+}
+
+/** Bank e-slip URLs for a deposit (transfers preferred, legacy flat list fallback). */
+export function cashDepositBankSlipUrls(
+  entry: Pick<CashDeposit, "bankTransfers" | "bankSlipUrls" | "bankAmount" | "transferFee" | "bankRef" | "transferDate" | "bankAmountSource" | "transferFeeSource">,
+): string[] {
+  const transfers = entry.bankTransfers?.length
+    ? entry.bankTransfers
+    : coerceBankTransfers(entry);
+  const fromTransfers = flattenBankTransferUrls(transfers);
+  if (fromTransfers.length) return fromTransfers;
+  return (entry.bankSlipUrls || [])
+    .map((u) => String(u || "").trim())
+    .filter(Boolean)
+    .slice(0, CASH_DEPOSIT_BANK_TRANSFER_MAX * CASH_DEPOSIT_BANK_SLIP_MAX);
+}
+
+export function cashDepositHasBankSlipEvidence(
+  entry: Pick<CashDeposit, "bankTransfers" | "bankSlipUrls" | "bankAmount" | "transferFee" | "bankRef" | "transferDate" | "bankAmountSource" | "transferFeeSource">,
+): boolean {
+  return cashDepositBankSlipUrls(entry).length > 0;
+}
+
+/**
+ * UI transfer state — round-print photos (ใบรอบ) are document compare only.
+ * Without a bank e-slip, never present as 「โอนแล้ว」.
+ */
+export type CashDepositTransferUiState =
+  | "void"
+  | "mismatch"
+  | "awaiting_bank_slip"
+  | "transferred";
+
+export function deriveCashDepositTransferUiState(
+  entry: Pick<
+    CashDeposit,
+    | "status"
+    | "bankTransfers"
+    | "bankSlipUrls"
+    | "bankAmount"
+    | "transferFee"
+    | "bankRef"
+    | "transferDate"
+    | "bankAmountSource"
+    | "transferFeeSource"
+  >,
+): CashDepositTransferUiState {
+  if (entry.status === "void") return "void";
+  if (entry.status === "mismatch") return "mismatch";
+  if (!cashDepositHasBankSlipEvidence(entry)) return "awaiting_bank_slip";
+  return "transferred";
+}
+
+export function labelCashDepositTransferUiState(
+  state: CashDepositTransferUiState,
+): string {
+  switch (state) {
+    case "void":
+      return "ยกเลิก";
+    case "mismatch":
+      return "ไม่ตรง";
+    case "awaiting_bank_slip":
+      return "รอสลิปโอน";
+    default:
+      return "โอนแล้ว";
   }
 }
 
@@ -272,6 +382,16 @@ function normalizeDay(raw: unknown): CashDepositDayLine | null {
   if (!(cashAmount >= 0)) return null;
   const slipKindRaw = String(d.slipKind || "unknown") as CashSlipKind;
   const slipKind = SLIP_KIND_SET.has(slipKindRaw) ? slipKindRaw : "unknown";
+  const sessionIds = Array.isArray(d.sessionIds)
+    ? d.sessionIds
+        .map((x) => String(x || "").trim())
+        .filter(Boolean)
+        .slice(0, 40)
+    : [];
+  const sessionActualAmounts = normalizeSessionActualAmounts(
+    d.sessionActualAmounts,
+    sessionIds,
+  );
   return {
     id: String(d.id || newCashDepositDayId()),
     date: Number(d.date) || 0,
@@ -284,7 +404,30 @@ function normalizeDay(raw: unknown): CashDepositDayLine | null {
     dateSource: normalizeCashFillSource(d.dateSource),
     note: typeof d.note === "string" ? d.note : "",
     slipUrls: normalizeUrls(d.slipUrls, CASH_DEPOSIT_DAY_SLIP_MAX),
+    sessionIds,
+    sessionActualAmounts,
   };
+}
+
+/** Keep only non-negative finite overrides for known session ids. */
+export function normalizeSessionActualAmounts(
+  raw: unknown,
+  sessionIds: string[],
+): Record<string, number> {
+  const allow = new Set(
+    sessionIds.map((id) => String(id || "").trim()).filter(Boolean),
+  );
+  const out: Record<string, number> = {};
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+  if (!allow.size) return out;
+  for (const [key, val] of Object.entries(raw as Record<string, unknown>)) {
+    const id = String(key || "").trim();
+    if (!id || !allow.has(id)) continue;
+    const n = Number(val);
+    if (!Number.isFinite(n) || n < 0) continue;
+    out[id] = Math.round(n * 100) / 100;
+  }
+  return out;
 }
 
 function normalizeBankTransfer(raw: unknown): CashDepositBankTransfer | null {
@@ -459,8 +602,8 @@ export type CashDayCoverage = {
 };
 
 /**
- * 1 บิล = 1 วันปฏิทิน · รอบยืดหยุ่น (5/7/10…)
- * ตรวจ: ซ้ำในรอบ · ข้ามวัน · ชนกับรอบอื่น · เกินวันในเดือน
+ * มัดรวมบิล nPos · วันอาจไม่ต่อเนื่องได้เมื่อ allowGaps (ค่าเริ่มต้น true)
+ * ตรวจ: ว่าง · ยอดติดลบ · วันซ้ำในรอบ · ชนรอบอื่น · เกินวันในเดือน
  */
 export function analyzeCashDepositDays(
   days: Pick<CashDepositDayLine, "date" | "cashAmount">[],
@@ -470,27 +613,38 @@ export function analyzeCashDepositDays(
     excludeDepositId?: string;
     /** Other deposits' day keys by month for month-cap (excluding self) */
     occupiedMonthCounts?: Map<string, number>;
+    /**
+     * false = บังคับวันต่อเนื่องแบบระบบเดิม
+     * true/omit = มัดรวมบิลข้ามวันได้ (ค่าเริ่มต้น)
+     */
+    allowGaps?: boolean;
   },
 ): CashDayCoverage {
   const issues: CashDayIssue[] = [];
   if (!days.length) {
-    issues.push({ code: "empty", message: "ต้องมีอย่างน้อย 1 วันจากสลิป POS" });
+    issues.push({ code: "empty", message: "ต้องมีอย่างน้อย 1 บิลนำส่งในมัดรวม" });
     return { issues, sortedDates: [], periodStart: 0, periodEnd: 0, dayCount: 0 };
   }
   if (days.length > CASH_DEPOSIT_DAY_MAX) {
     issues.push({
       code: "too_long",
-      message: `รอบหนึ่งใส่ได้สูงสุด ${CASH_DEPOSIT_DAY_MAX} วัน (เท่าเดือนที่ยาวที่สุด)`,
+      message: `มัดรวมหนึ่งมีได้สูงสุด ${CASH_DEPOSIT_DAY_MAX} วัน`,
     });
   }
 
   if (days.some((day) => !day.date)) {
-    issues.push({ code: "empty", message: "ต้องใส่วันที่บนสลิปทุกแถว" });
+    issues.push({ code: "empty", message: "ทุกบิลต้องมีวันที่รอบขาย" });
   }
-  if (days.some((day) => !(Number(day.cashAmount) > 0))) {
+  if (days.some((day) => Number(day.cashAmount) < 0)) {
     issues.push({
       code: "bad_amount",
-      message: "ยอดเงินสดในสลิปต้องมากกว่า 0 ทุกวัน",
+      message: "ยอดบิลนำส่งติดลบไม่ได้",
+    });
+  }
+  if (!days.some((day) => Number(day.cashAmount) > 0)) {
+    issues.push({
+      code: "bad_amount",
+      message: "มัดรวมต้องมียอดบิลนำส่งรวมมากกว่า 0 — กด「ใส่บิลนี้」",
     });
   }
 
@@ -503,7 +657,7 @@ export function analyzeCashDepositDays(
     if (count > 1) {
       issues.push({
         code: "duplicate",
-        message: `บิลซ้ำวันที่ ${formatCashDayShort(key)} — หนึ่งวันมีได้ใบเดียว`,
+        message: `วันซ้ำ ${formatCashDayShort(key)} ในมัดรวม — รวมบิลวันเดียวกันไว้แถวเดียว`,
         dateMs: key,
       });
     }
@@ -513,7 +667,7 @@ export function analyzeCashDepositDays(
   const periodStart = sortedDates[0] || 0;
   const periodEnd = sortedDates[sortedDates.length - 1] || 0;
 
-  if (sortedDates.length >= 2) {
+  if (opts?.allowGaps === false && sortedDates.length >= 2) {
     const expected = calendarDaysInclusive(periodStart, periodEnd);
     const have = new Set(sortedDates);
     const missing = expected.filter((d) => !have.has(d));
@@ -667,6 +821,9 @@ function buildPayload(
   const bankAmount = sumBankTransferAmounts(bankTransfers);
   const transferFee = sumBankTransferFees(bankTransfers);
   const bankSlipUrls = flattenBankTransferUrls(bankTransfers);
+  if (!bankSlipUrls.length) {
+    throw new Error("ต้องแนบรูปสลิปโอนเข้าบัญชีอย่างน้อย 1 รูป (ใบรอบ POS ไม่นับ)");
+  }
   const bankRef =
     bankTransfers.map((t) => t.bankRef).find((r) => r.trim()) ||
     (input.bankRef || "").trim();
@@ -749,12 +906,14 @@ export async function addCashDeposit(input: CashDepositInput) {
   const occupancy = await loadOccupancy();
   const payload = buildPayload(input, occupancy);
   const now = Date.now();
+  const actor = (input.createdBy || "").trim();
   const ref = await addDoc(cashDepositsCol(), {
     ...payload,
-    status: "pending" satisfies CashDepositStatus,
+    // พนักงานบันทึก = โอนตามระบบแล้ว · ไม่รอเจ้าของตรวจ
+    status: "matched" satisfies CashDepositStatus,
     ownerNote: "",
-    verifiedBy: "",
-    verifiedAt: 0,
+    verifiedBy: actor,
+    verifiedAt: now,
     createdAt: now,
     updatedAt: now,
   });
@@ -769,13 +928,13 @@ export async function updateCashDeposit(id: string, input: CashDepositUpdateInpu
   const payload = buildPayload({ ...input, createdBy: "_" }, occupancy, id);
   const { createdBy: _omit, ...rest } = payload;
   void _omit;
+  const now = Date.now();
   await updateDoc(doc(getDb(), "cashDeposits", id), {
     ...rest,
-    updatedAt: Date.now(),
-    // Editing resets verify state — owner must re-check.
-    status: "pending" satisfies CashDepositStatus,
-    verifiedBy: "",
-    verifiedAt: 0,
+    updatedAt: now,
+    // ไม่รีเซ็ตเป็นรอตรวจ — พนักงานแก้แล้วยังถือว่าโอนตามระบบ
+    status: "matched" satisfies CashDepositStatus,
+    verifiedAt: now,
   });
 }
 
@@ -821,6 +980,8 @@ export function emptyCashDepositDay(dateMs: number): CashDepositDayLine {
     dateSource: "",
     note: "",
     slipUrls: [],
+    sessionIds: [],
+    sessionActualAmounts: {},
   };
 }
 

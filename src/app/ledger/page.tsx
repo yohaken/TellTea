@@ -14,6 +14,8 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
+import { can } from "@/lib/permissions";
+import { staffHomeHref } from "@/lib/nav-menu";
 import {
   addLedgerEntry,
   deleteLedgerEntry,
@@ -99,10 +101,23 @@ export default function LedgerPage() {
 }
 
 function LedgerView() {
-  const { actorId, staff } = useAuth();
+  const { actorId, staff, isPermPreview } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const isOwner = staff?.role === "owner";
+  const canUseLedger = can(staff, "ledger");
+  const canTransferIn = can(staff, "transferIn") && !isPermPreview;
+  /** พนักงานแก้/เพิ่มรูปได้เฉพาะรายการออกที่ตัวเองสร้าง · พรีวิว = ดูอย่างเดียว */
+  function canMutateLedgerRow(row: { createdBy?: string; amountIn?: number }) {
+    if (isPermPreview) return false;
+    if (isOwner) return true;
+    if (!actorId) return false;
+    return row.createdBy === actorId && !(Number(row.amountIn) > 0);
+  }
+
+  useEffect(() => {
+    if (staff && !canUseLedger) router.replace(staffHomeHref(staff));
+  }, [staff, canUseLedger, router]);
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [balance, setBalance] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -156,13 +171,13 @@ function LedgerView() {
       router.replace("/ledger/", { scroll: false });
       return;
     }
-    if (!isOwner) return;
+    if (!canTransferIn) return;
     if (searchParams.get("transferIn") === "1") {
       setTransferInOpen(true);
       setAdding(false);
       router.replace("/ledger/", { scroll: false });
     }
-  }, [isOwner, searchParams, router]);
+  }, [canTransferIn, searchParams, router]);
 
   useLayoutEffect(() => {
     const cached = loadCachedLedger();
@@ -190,6 +205,7 @@ function LedgerView() {
   );
 
   useEffect(() => {
+    if (!canUseLedger) return;
     const unsub = subscribeLedgerBalance(
       (next) => {
         setBalance(next);
@@ -220,9 +236,10 @@ function LedgerView() {
     }
 
     return unsub;
-  }, []);
+  }, [canUseLedger]);
 
   useEffect(() => {
+    if (!canUseLedger) return;
     setError(null);
     if (hasRowsRef.current) setRefreshing(true);
     else setLoading(true);
@@ -250,10 +267,10 @@ function LedgerView() {
     );
 
     return () => unsub();
-  }, [liveLimit, persistSnapshot]);
+  }, [canUseLedger, liveLimit, persistSnapshot]);
 
   useEffect(() => {
-    if (!deferredQuery) {
+    if (!canUseLedger || !deferredQuery) {
       setSearchPool(null);
       setSearchLoading(false);
       return;
@@ -273,7 +290,7 @@ function LedgerView() {
     return () => {
       cancelled = true;
     };
-  }, [deferredQuery]);
+  }, [canUseLedger, deferredQuery]);
 
   const filteredEntries = useMemo(() => {
     const source = deferredQuery ? searchPool ?? entries : entries;
@@ -348,6 +365,8 @@ function LedgerView() {
   const cashInStaffName =
     personalProfileLabel(staff) || staff?.displayName || staff?.email || "";
 
+  if (!canUseLedger) return null;
+
   return (
     <div className="ledger-page module-page">
       {actorId ? (
@@ -358,6 +377,7 @@ function LedgerView() {
             staffName={cashInStaffName}
             forceOpen={cashInForceOpen}
             onForceOpenConsumed={() => setCashInForceOpen(false)}
+            readOnly={isPermPreview}
           />
           <BillNoticeLedgerPanel
             actorId={actorId}
@@ -365,6 +385,7 @@ function LedgerView() {
             staffName={cashInStaffName}
             forceOpen={billNoticeForceOpen}
             onForceOpenConsumed={() => setBillNoticeForceOpen(false)}
+            readOnly={isPermPreview}
           />
         </div>
       ) : null}
@@ -441,14 +462,20 @@ function LedgerView() {
                     </td>
                     <td className="col-desc">
                       <div className="desc-with-photo">
-                        <button
-                          type="button"
-                          className="desc-link"
-                          title="แตะเพื่อแก้ไข · ช่อง VAT ในกล่อง"
-                          onClick={() => setEditing(row)}
-                        >
-                          {row.description}
-                        </button>
+                        {canMutateLedgerRow(row) ? (
+                          <button
+                            type="button"
+                            className="desc-link"
+                            title="แตะเพื่อแก้ไข · ช่อง VAT ในกล่อง"
+                            onClick={() => setEditing(row)}
+                          >
+                            {row.description}
+                          </button>
+                        ) : (
+                          <span className="desc-link desc-link--readonly" title="ดูอย่างเดียว">
+                            {row.description}
+                          </span>
+                        )}
                         {getLedgerReceiptUrls(row).length ? (
                           <EntryPhotoIndicator
                             imageUrls={getLedgerReceiptUrls(row)}
@@ -461,7 +488,7 @@ function LedgerView() {
                               })
                             }
                           />
-                        ) : (
+                        ) : canMutateLedgerRow(row) ? (
                           <button
                             type="button"
                             className="photo-status"
@@ -474,7 +501,7 @@ function LedgerView() {
                           >
                             <span className="photo-status-plus" aria-hidden>+</span>
                           </button>
-                        )}
+                        ) : null}
                       </div>
                     </td>
                     <td className="col-in">{row.amountIn > 0 ? formatPlainNumber(row.amountIn) : ""}</td>
@@ -540,7 +567,7 @@ function LedgerView() {
         />
       ) : null}
 
-      {transferInOpen && isOwner && actorId ? (
+      {transferInOpen && canTransferIn && actorId ? (
         <TransferInModal
           createdBy={actorId}
           onClose={() => setTransferInOpen(false)}
@@ -629,18 +656,20 @@ function LedgerView() {
         </div>
       ) : null}
 
-      <ModuleTabDock
-        ariaLabel="บันทึกรายการ"
-        formOpen={adding}
-        onAdd={() => {
-          setTransferInOpen(false);
-          setAdding(true);
-        }}
-        addLabel="+ ออก"
-        variant="glass-out"
-      />
+      {!isPermPreview ? (
+        <ModuleTabDock
+          ariaLabel="บันทึกรายการ"
+          formOpen={adding}
+          onAdd={() => {
+            setTransferInOpen(false);
+            setAdding(true);
+          }}
+          addLabel="+ ออก"
+          variant="glass-out"
+        />
+      ) : null}
 
-      {isOwner ? (
+      {canTransferIn ? (
         <button
           type="button"
           className="ledger-transfer-in-fab"

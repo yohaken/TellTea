@@ -9,9 +9,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 512/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+112/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.89"/);
+assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)[1]) >= 673);
+assert.ok(Number(read("src/lib/pos-version.ts").match(/POS_BUILD = (\d+)/)[1]) >= 177);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+133/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.110"/);
 assert.match(read("docs/npos-blind-shift-close-checklist.md"), /Blind|Over|Short|B1/);
 
 assert.ok(
@@ -31,6 +32,7 @@ assert.match(flow, /revealSummary|discrepancyLabel/);
 assert.match(flow, /leaveFloat/);
 assert.match(flow, /flushThenCloseSession/);
 assert.match(flow, /NposNumberPad/);
+assert.match(flow, /hasUnsyncedWork|blind_close_sync_required/);
 assert.doesNotMatch(flow, /listPending/);
 
 const prefs = read(
@@ -42,6 +44,18 @@ const sync = read("npos-telltea/app/src/main/java/app/telltea/npos/sell/SaleSync
 assert.match(sync, /BlindCloseReport/);
 assert.match(sync, /closingCashCounted|cashDifference|leaveFloat/);
 assert.match(sync, /flushThenCloseSession|flushPendingBlocking/);
+// Hard gate: Z-close blocked while sale outbox or void queue remains.
+assert.match(sync, /hasUnsyncedWork/);
+assert.match(sync, /ปิดรอบถูกบล็อก — ยังมีบิล\/ทำลายค้างซิงก์/);
+const closeIdx = sync.indexOf("public void flushThenCloseSession(");
+assert.ok(closeIdx > 0);
+const closeChunk = sync.slice(closeIdx, closeIdx + 2200);
+assert.match(closeChunk, /hasUnsyncedWork\(app\)/);
+assert.match(closeChunk, /postCloseSession/);
+
+const strings = read("npos-telltea/app/src/main/res/values/strings.xml");
+assert.match(strings, /blind_close_sync_required/);
+assert.match(strings, /ต้องต่อเน็ตและซิงก์/);
 
 const cf = read("functions/npos-sell.js");
 assert.match(cf, /closingCashCounted/);

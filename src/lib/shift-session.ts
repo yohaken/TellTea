@@ -262,14 +262,28 @@ export function ownerQualityHints(flags: ShiftQualityFlags | null): string[] {
   return hints;
 }
 
-/** ขั้นตอนผิดลำดับ — ควรสอนพนักงาน (ไม่รวมวางแผนก่อนปิดกะซึ่งโอเค) */
+/**
+ * เคยใช้เตือน “เช็คเปิดกะตอนปิดกะ” — ไม่โชว์ ⚠ ในตารางแล้ว
+ * (ถ้า SOP กะนั้นครบแล้ว ไม่ต้องตกใจ; ⚠ เหลือแค่ค้างจริง)
+ * เก็บไว้ให้ ownerQualityHints / วิเคราะห์ย้อนหลัง
+ */
 export function hasOtProcessOrderIssue(flags: ShiftQualityFlags | null): boolean {
   return !!(flags && (flags.singleBatch || flags.openSopBackfilled));
 }
 
-export function staffProcessOrderHint(flags: ShiftQualityFlags | null): string {
-  if (!hasOtProcessOrderIssue(flags)) return "";
-  return "ควรเช็ค SmartCheck / SOP ตามขั้นตอนก่อน (เปิดกะหรือระหว่างกะ) ไม่ใช่รอมาเช็คทีหลังตอนปิดกะ";
+/** @deprecated ไม่ใช้เตือนพนักงานใน UI แล้ว — คืนค่าว่างเสมอ */
+export function staffProcessOrderHint(_flags: ShiftQualityFlags | null): string {
+  return "";
+}
+
+/** ⚠ ในตารางชง — เฉพาะกะที่ยังค้างขั้นตอน (พนักงาน/SOP/ยอด) ไม่ใช่แค่ลำดับเช็ค */
+export function shouldShowOtIncompleteWarn(progress: Pick<ShiftProgress, "status" | "missingLabels">): boolean {
+  return progress.status === "partial" && progress.missingLabels.length > 0;
+}
+
+export function otIncompleteWarnTitle(progress: Pick<ShiftProgress, "missingLabels">): string {
+  if (!progress.missingLabels.length) return "ยังค้าง";
+  return `ยังค้าง: ${progress.missingLabels.join(" · ")}`;
 }
 
 export function todayShiftBannerLabel(shift: OtShiftId) {

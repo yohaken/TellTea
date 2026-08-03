@@ -7,15 +7,19 @@ import { X } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import {
   DEFAULT_OWNER_QUICK_KEYS,
-  moveOwnerQuickKey,
+  OWNER_QUICK_ABBR_MAX,
   OWNER_QUICK_CATALOG,
   OWNER_QUICK_MAX,
+  abbrForOwnerQuickKey,
+  moveOwnerQuickKey,
   resolveOwnerQuickItems,
-  saveOwnerQuickKeys,
+  saveOwnerQuickSettings,
+  setOwnerQuickAbbr,
   setupOwnerQuickListOrder,
-  subscribeOwnerQuickKeys,
+  subscribeOwnerQuickSettings,
   toggleOwnerQuickKey,
   type OwnerQuickKey,
+  type OwnerQuickSettings,
 } from "@/lib/owner-quick-dock";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { cn } from "@/lib/utils";
@@ -24,33 +28,36 @@ const LONG_PRESS_MS = 480;
 
 /**
  * ทางลัดเจ้าของ — ชิปตัวย่อลอยเหนือเมนูล่างทุกหน้า
- * แตะ = ไปหน้า · กดค้าง = ตั้งค่าลำดับ
+ * แตะ = ไปหน้า · กดค้าง = ตั้งค่าลำดับ/ชื่อย่อ
  */
 export function OwnerQuickDock() {
   const pathname = usePathname();
   const { staff, user } = useAuth();
   const isOwner = staff?.role === "owner";
-  const [keys, setKeys] = useState<OwnerQuickKey[]>([...DEFAULT_OWNER_QUICK_KEYS]);
+  const [settings, setSettings] = useState<OwnerQuickSettings>({
+    keys: [...DEFAULT_OWNER_QUICK_KEYS],
+    abbrs: {},
+  });
   const [setupOpen, setSetupOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pressFired = useRef(false);
-  const keysRef = useRef(keys);
-  keysRef.current = keys;
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
 
   useEffect(() => {
     if (!isOwner) return;
-    return subscribeOwnerQuickKeys(setKeys);
+    return subscribeOwnerQuickSettings(setSettings);
   }, [isOwner]);
 
   useBodyScrollLock(setupOpen);
 
   if (!isOwner) return null;
-  // POS ใช้ shell คนละชุด — กันไว้ถ้าเคยหุ้ม AppShell
-  if (pathname.startsWith("/pos")) return null;
+  // แสดงทุกหน้าหลังร้าน (AppShell) — อย่าใช้ startsWith("/pos") เพราะจะซ่อน /pos-sales/ ด้วย
+  // แท็บเล็ต POS (/pos/…) ไม่ผ่าน AppShell อยู่แล้ว
 
-  const items = resolveOwnerQuickItems(keys);
+  const items = resolveOwnerQuickItems(settings.keys, settings.abbrs);
   const actorId = user?.uid || staff?.id || "";
 
   function clearPress() {
@@ -76,10 +83,9 @@ export function OwnerQuickDock() {
     }
   }
 
-  async function persist(next: OwnerQuickKey[]) {
-    // อัปเดตทันทีให้ ↑↓ / ชิปเห็นลำดับจริง แล้วค่อยเขียน Firestore
-    setKeys(next);
-    keysRef.current = next;
+  async function persist(next: OwnerQuickSettings) {
+    setSettings(next);
+    settingsRef.current = next;
     setError(null);
     if (!actorId) {
       setError("บันทึกลำดับไม่ได้ — ลองเข้าสู่ระบบใหม่");
@@ -87,7 +93,9 @@ export function OwnerQuickDock() {
     }
     setBusy(true);
     try {
-      await saveOwnerQuickKeys(next, actorId);
+      const saved = await saveOwnerQuickSettings(next, actorId);
+      setSettings(saved);
+      settingsRef.current = saved;
     } catch (err) {
       setError((err as Error).message || "บันทึกลำดับไม่สำเร็จ");
     } finally {
@@ -133,7 +141,7 @@ export function OwnerQuickDock() {
 
       {setupOpen ? (
         <OwnerQuickSetupModal
-          keys={keys}
+          settings={settings}
           busy={busy}
           error={error}
           onClose={() => {
@@ -141,12 +149,29 @@ export function OwnerQuickDock() {
             setError(null);
           }}
           onToggle={(key, on) =>
-            void persist(toggleOwnerQuickKey(keysRef.current, key, on))
+            void persist({
+              ...settingsRef.current,
+              keys: toggleOwnerQuickKey(settingsRef.current.keys, key, on),
+            })
           }
           onMove={(key, dir) =>
-            void persist(moveOwnerQuickKey(keysRef.current, key, dir))
+            void persist({
+              ...settingsRef.current,
+              keys: moveOwnerQuickKey(settingsRef.current.keys, key, dir),
+            })
           }
-          onReset={() => void persist([...DEFAULT_OWNER_QUICK_KEYS])}
+          onAbbr={(key, raw) =>
+            void persist({
+              ...settingsRef.current,
+              abbrs: setOwnerQuickAbbr(settingsRef.current.abbrs, key, raw),
+            })
+          }
+          onReset={() =>
+            void persist({
+              keys: [...DEFAULT_OWNER_QUICK_KEYS],
+              abbrs: {},
+            })
+          }
         />
       ) : null}
     </>
@@ -154,24 +179,44 @@ export function OwnerQuickDock() {
 }
 
 function OwnerQuickSetupModal({
-  keys,
+  settings,
   busy,
   error,
   onClose,
   onToggle,
   onMove,
+  onAbbr,
   onReset,
 }: {
-  keys: OwnerQuickKey[];
+  settings: OwnerQuickSettings;
   busy: boolean;
   error: string | null;
   onClose: () => void;
   onToggle: (key: OwnerQuickKey, on: boolean) => void;
   onMove: (key: OwnerQuickKey, dir: -1 | 1) => void;
+  onAbbr: (key: OwnerQuickKey, raw: string) => void;
   onReset: () => void;
 }) {
+  const { keys, abbrs } = settings;
   const active = new Set(keys);
   const listOrder = setupOwnerQuickListOrder(keys);
+  const [draftAbbrs, setDraftAbbrs] = useState<Record<string, string>>(() => {
+    const d: Record<string, string> = {};
+    for (const key of listOrder) {
+      d[key] = abbrForOwnerQuickKey(key, abbrs);
+    }
+    return d;
+  });
+
+  useEffect(() => {
+    setDraftAbbrs(() => {
+      const next: Record<string, string> = {};
+      for (const key of Object.keys(OWNER_QUICK_CATALOG) as OwnerQuickKey[]) {
+        next[key] = abbrForOwnerQuickKey(key, abbrs);
+      }
+      return next;
+    });
+  }, [abbrs]);
 
   return (
     <div
@@ -198,7 +243,7 @@ function OwnerQuickSetupModal({
           </button>
         </div>
         <p className="muted owner-quick-setup-hint">
-          เลือกสูงสุด {OWNER_QUICK_MAX} · ใช้ ↑↓ เลื่อนลำดับซ้าย→ขวาบนแถบ · เฉพาะเจ้าของ
+          เลือกสูงสุด {OWNER_QUICK_MAX} · ชื่อย่อ / ↑↓ · หรือไป อื่นๆ → ตั้งค่าโมดูล
           {busy ? " · กำลังบันทึก…" : ""}
         </p>
         {error ? <p className="error-text">{error}</p> : null}
@@ -233,7 +278,23 @@ function OwnerQuickSetupModal({
                       ·
                     </span>
                   )}
-                  <span className="owner-quick-setup-abbr">{item.abbr}</span>
+                  <input
+                    type="text"
+                    className="owner-quick-abbr-input owner-quick-setup-abbr-input"
+                    value={draftAbbrs[key] ?? item.abbr}
+                    maxLength={OWNER_QUICK_ABBR_MAX}
+                    aria-label={`ชื่อย่อ ${item.label}`}
+                    onChange={(e) =>
+                      setDraftAbbrs((prev) => ({
+                        ...prev,
+                        [key]: e.target.value,
+                      }))
+                    }
+                    onBlur={() => onAbbr(key, draftAbbrs[key] ?? "")}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") e.currentTarget.blur();
+                    }}
+                  />
                   <span className="owner-quick-setup-label">{item.label}</span>
                 </label>
                 {on ? (
@@ -264,11 +325,7 @@ function OwnerQuickSetupModal({
         </ul>
 
         <div className="entry-actions">
-          <button
-            type="button"
-            className="ghost-btn"
-            onClick={onReset}
-          >
+          <button type="button" className="ghost-btn" onClick={onReset}>
             คืนค่าเริ่มต้น
           </button>
           <button type="button" className="primary-btn" onClick={onClose}>

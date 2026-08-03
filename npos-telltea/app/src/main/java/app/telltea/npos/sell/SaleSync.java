@@ -54,7 +54,10 @@ public final class SaleSync {
         void onError(String humanMessage);
     }
 
+    /** Local save + queue print/drawer — must stay snappy for the next cash sale. */
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    /** HTTP sale sync only — never block local save / paper on network RTT. */
+    private final ExecutorService syncExecutor = Executors.newSingleThreadExecutor();
     private final PrinterTransport transport = new PrinterTransport();
 
     public void openSession(Context context, Runnable done) {
@@ -131,6 +134,7 @@ public final class SaleSync {
                                             res.optInt("voidedCount", 0),
                                             res.optDouble("discountTotal", 0));
                                     applyOpenedByFromServer(app, res);
+                                    noteOpenerSyncResult(app, openerName, res);
                                     OpsLogger.info(app, "shift", "ต่อรอบเดิมหลังสลับเครื่อง", sid);
                                 } else if (!sid.equals(sessionId)) {
                                     ShiftPrefs.open(
@@ -143,10 +147,12 @@ public final class SaleSync {
                                             openerName);
                                     applyOpenedByFromServer(app, res);
                                     ShiftPrefs.markServerSessionSynced(app, true);
+                                    noteOpenerSyncResult(app, openerName, res);
                                     OpsLogger.info(app, "shift", "เปิดรอบเซิร์ฟเวอร์", sid);
                                 } else {
                                     applyOpenedByFromServer(app, res);
                                     ShiftPrefs.markServerSessionSynced(app, true);
+                                    noteOpenerSyncResult(app, openerName, res);
                                     OpsLogger.info(app, "shift", "ซิงก์รอบแล้ว", sid);
                                 }
                             } else if (isRemoteSessionClosed(res)) {
@@ -197,6 +203,15 @@ public final class SaleSync {
         if (!name.isEmpty()) body.put("openedByName", name);
     }
 
+    /** Closer for BO sessions table — defaults to opener when no separate pick UI. */
+    private static void putClosedBy(JSONObject body, String closedByEmployeeId, String closedByName)
+            throws Exception {
+        String id = closedByEmployeeId == null ? "" : closedByEmployeeId.trim();
+        String name = closedByName == null ? "" : closedByName.trim();
+        if (!id.isEmpty()) body.put("closedByEmployeeId", id);
+        if (!name.isEmpty()) body.put("closedByName", name);
+    }
+
     private static void applyOpenedByFromServer(Context context, JSONObject data) {
         if (context == null || data == null) return;
         String id = data.optString("openedByEmployeeId", "");
@@ -206,17 +221,34 @@ public final class SaleSync {
         }
     }
 
+    /** Mark opener ack from CF open/resume — keep retrying while BO still has no name. */
+    private static void noteOpenerSyncResult(
+            Context context, String localOpenerName, JSONObject res) {
+        if (context == null) return;
+        String local = localOpenerName == null ? "" : localOpenerName.trim();
+        if (local.isEmpty()) {
+            ShiftPrefs.markOpenerServerOk(context, true);
+            return;
+        }
+        String server = res == null ? "" : res.optString("openedByName", "").trim();
+        ShiftPrefs.markOpenerServerOk(context, !server.isEmpty());
+    }
+
     /**
      * If local shift is open but CF open never landed, retry until BO can see the session.
+     * Also retries while local opener name has not been ack'd on the server session doc.
      * Called from flushPending + heartbeat pulse.
      */
     public void ensureOpenSessionSynced(Context context) {
         Context app = context.getApplicationContext();
         if (!ShiftPrefs.isOpen(app)) return;
-        if (ShiftPrefs.isServerSessionSynced(app)) return;
+        boolean needSession = !ShiftPrefs.isServerSessionSynced(app);
+        boolean needOpener = ShiftPrefs.needsOpenerServerSync(app);
+        if (!needSession && !needOpener) return;
         if (StoreClaimPrefs.blocksWrites(app)) return;
         String sessionId = ShiftPrefs.sessionId(app);
         if (sessionId == null || sessionId.isEmpty()) return;
+        final String localOpener = ShiftPrefs.openedByName(app);
         try {
             JSONObject body = new JSONObject();
             body.put("installId", DeviceIdentity.getOrCreateInstallId(app));
@@ -226,7 +258,7 @@ public final class SaleSync {
             putOpenedBy(
                     body,
                     ShiftPrefs.openedByEmployeeId(app),
-                    ShiftPrefs.openedByName(app));
+                    localOpener);
             JSONObject res = MenuRepository.postJson(OPEN_URL, body, 4_000, 6_000);
             if (res.optBoolean("ok", false)) {
                 String sid = res.optString("sessionId", sessionId);
@@ -248,7 +280,12 @@ public final class SaleSync {
                     applyOpenedByFromServer(app, res);
                     ShiftPrefs.markServerSessionSynced(app, true);
                 }
-                OpsLogger.info(app, "shift", "ซิงก์รอบค้างสำเร็จ", sid);
+                noteOpenerSyncResult(app, localOpener, res);
+                OpsLogger.info(
+                        app,
+                        "shift",
+                        needOpener && !needSession ? "ซิงก์ชื่อผู้เปิดรอบ" : "ซิงก์รอบค้างสำเร็จ",
+                        sid);
             } else if (isRemoteSessionClosed(res)) {
                 ShiftPrefs.applyRemoteSessionClosed(
                         app,
@@ -325,24 +362,47 @@ public final class SaleSync {
     }
 
     /**
-     * Flush outbox + ensure session open on server, then close CF.
-     * Only clears local shift when server close succeeds — so BO always gets closedAt.
+     * Flush outbox + voids + ensure session on server, then close CF.
+     * Hard gate: cannot close while bills/voids still unsynced, or if server close fails.
+     * Local shift clears only after server accepts close.
      */
     public void flushThenCloseSession(
             Context context, BlindCloseReport report, CloseResult result) {
         Context app = context.getApplicationContext();
-        executor.execute(
+        // Same syncExecutor as sale flushes — close waits for queued bills in order.
+        syncExecutor.execute(
                 () -> {
                     boolean serverOk = false;
                     try {
                         ensureOpenSessionSynced(app);
                         flushPendingBlocking(app);
                         ensureOpenSessionSynced(app);
-                        serverOk = postCloseSession(app, report);
-                        if (!serverOk) {
-                            ensureOpenSessionSynced(app);
+                        // Retry once if anything still queued (brief net blip).
+                        if (hasUnsyncedWork(app)) {
                             flushPendingBlocking(app);
+                            ensureOpenSessionSynced(app);
+                        }
+                        if (hasUnsyncedWork(app)) {
+                            OpsLogger.warn(
+                                    app,
+                                    "shift",
+                                    "ปิดรอบถูกบล็อก — ยังมีบิล/ทำลายค้างซิงก์",
+                                    unsyncedWorkSummary(app));
+                        } else {
                             serverOk = postCloseSession(app, report);
+                            if (!serverOk) {
+                                ensureOpenSessionSynced(app);
+                                flushPendingBlocking(app);
+                                if (!hasUnsyncedWork(app)) {
+                                    serverOk = postCloseSession(app, report);
+                                } else {
+                                    OpsLogger.warn(
+                                            app,
+                                            "shift",
+                                            "ปิดรอบถูกบล็อก — ยังมีบิล/ทำลายค้างซิงก์",
+                                            unsyncedWorkSummary(app));
+                                }
+                            }
                         }
                     } catch (Exception e) {
                         OpsLogger.warn(
@@ -377,6 +437,29 @@ public final class SaleSync {
                     }
                     if (result != null) result.onDone(serverOk);
                 });
+    }
+
+    /** True when sale outbox or void queue still has rows — Z-close must wait. */
+    public static boolean hasUnsyncedWork(Context context) {
+        if (context == null) return false;
+        Context app = context.getApplicationContext();
+        int[] box = outboxCounts(app);
+        return box[0] + box[1] > 0 || voidQueueCount(app) > 0;
+    }
+
+    public static int voidQueueCount(Context context) {
+        if (context == null) return 0;
+        try {
+            return readVoidQueue(context.getApplicationContext()).length();
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    public static String unsyncedWorkSummary(Context context) {
+        int[] box = outboxCounts(context);
+        int voids = voidQueueCount(context);
+        return "pending=" + box[0] + " failed=" + box[1] + " voids=" + voids;
     }
 
     private void flushPendingBlocking(Context app) {
@@ -448,6 +531,11 @@ public final class SaleSync {
         } catch (Exception ignored) {
             body.put("cashDropNotes", new JSONArray());
         }
+        // Closer defaults to opener (name pick at open) — BO can show พนักงานปิดรอบ.
+        putClosedBy(
+                body,
+                ShiftPrefs.openedByEmployeeId(app),
+                ShiftPrefs.openedByName(app));
         JSONObject res = MenuRepository.postJson(CLOSE_URL, body);
         if (res.optBoolean("ok", false)) {
             OpsLogger.info(
@@ -506,7 +594,9 @@ public final class SaleSync {
                             JSONObject o = new JSONObject();
                             o.put("menuItemId", line.menuItemId);
                             o.put("name", line.name);
+                            // Server + web use "price"; keep unitPrice for native readers / hold carts.
                             o.put("price", line.unitPrice);
+                            o.put("unitPrice", line.unitPrice);
                             o.put("qty", line.qty);
                             if (line.optionsJson != null && line.optionsJson.length() > 0) {
                                 o.put("options", line.optionsJson);
@@ -551,36 +641,68 @@ public final class SaleSync {
                         boolean print = autoPrint;
                         if (shop != null) print = shop.optBoolean("autoPrintReceipt", true);
 
-                        try {
-                            flushOne(app, payload, shop, print, method, callback);
-                        } catch (Exception syncErr) {
-                            String msg =
-                                    syncErr.getMessage() == null
-                                            ? syncErr.getClass().getSimpleName()
-                                            : syncErr.getMessage();
-                            markQueueAttempt(app, mutationId, msg, isPermanentSaleError(msg));
-                            OpsLogger.warn(app, "sync", "ซิงก์บิลค้างในคิว", msg);
-                            // Offline / sync fail — still give customer paper (provisional #).
-                            if (print && !isReceiptPrinted(app, mutationId)) {
-                                maybePrintAndKick(
-                                        app,
-                                        shop,
-                                        payload,
-                                        provisionalBillNo(mutationId),
-                                        total,
-                                        method,
-                                        CashDrawerPolicy.shouldKickAfterSale(method));
-                                markReceiptPrinted(app, mutationId);
-                                try {
-                                    payload.put("receiptPrinted", true);
-                                } catch (Exception ignored) {
-                                    /* ignore */
-                                }
-                            }
-                            if (callback != null) {
-                                callback.onError("บันทึกในเครื่องแล้ว — รอซิงก์เมื่อมีเน็ต");
+                        // Fast path: drawer (+ paper) as soon as the sale is local.
+                        // HTTP sync runs on syncExecutor so the next cash keypad sale is not blocked.
+                        if (print && !isReceiptPrinted(app, mutationId)) {
+                            maybePrintAndKick(
+                                    app,
+                                    shop,
+                                    payload,
+                                    provisionalBillNo(mutationId),
+                                    total,
+                                    method,
+                                    CashDrawerPolicy.shouldKickAfterSale(method));
+                            markReceiptPrinted(app, mutationId);
+                            try {
+                                payload.put("receiptPrinted", true);
+                            } catch (Exception ignored) {
+                                /* ignore */
                             }
                         }
+
+                        final boolean printFlag = print;
+                        final String payMethod = method;
+                        syncExecutor.execute(
+                                () -> {
+                                    try {
+                                        flushOne(app, payload, shop, printFlag, payMethod, callback);
+                                    } catch (Exception syncErr) {
+                                        String msg =
+                                                syncErr.getMessage() == null
+                                                        ? syncErr.getClass().getSimpleName()
+                                                        : syncErr.getMessage();
+                                        try {
+                                            markQueueAttempt(
+                                                    app,
+                                                    mutationId,
+                                                    msg,
+                                                    isPermanentSaleError(msg));
+                                        } catch (Exception ignored) {
+                                            /* queue mark best-effort */
+                                        }
+                                        OpsLogger.warn(app, "sync", "ซิงก์บิลค้างในคิว", msg);
+                                        // Offline / sync fail — paper already attempted above when autoPrint.
+                                        if (printFlag && !isReceiptPrinted(app, mutationId)) {
+                                            maybePrintAndKick(
+                                                    app,
+                                                    shop,
+                                                    payload,
+                                                    provisionalBillNo(mutationId),
+                                                    total,
+                                                    payMethod,
+                                                    CashDrawerPolicy.shouldKickAfterSale(payMethod));
+                                            markReceiptPrinted(app, mutationId);
+                                            try {
+                                                payload.put("receiptPrinted", true);
+                                            } catch (Exception ignored) {
+                                                /* ignore */
+                                            }
+                                        }
+                                        if (callback != null) {
+                                            callback.onError("บันทึกในเครื่องแล้ว — รอซิงก์เมื่อมีเน็ต");
+                                        }
+                                    }
+                                });
                     } catch (Exception e) {
                         OpsLogger.error(
                                 app,
@@ -596,13 +718,13 @@ public final class SaleSync {
 
     public void flushPending(Context context) {
         Context app = context.getApplicationContext();
-        executor.execute(() -> flushPendingBlocking(app));
+        syncExecutor.execute(() -> flushPendingBlocking(app));
     }
 
     /** Retry one pending/failed outbox row (clears failed → pending). */
     public void retryPending(Context context, String mutationId, Runnable done) {
         Context app = context.getApplicationContext();
-        executor.execute(
+        syncExecutor.execute(
                 () -> {
                     try {
                         JSONObject row = findQueueRow(app, mutationId);
@@ -703,7 +825,7 @@ public final class SaleSync {
         return new ArrayList<>(all.subList(0, 40));
     }
 
-    /** All stored local receipts, newest first (cap ~60 in prefs). */
+    /** All stored local receipts, newest first (cap ~250 in prefs). */
     public List<JSONObject> listReceiptsNewestFirst(Context context) {
         List<JSONObject> out = new ArrayList<>();
         try {
@@ -865,6 +987,9 @@ public final class SaleSync {
         executor.execute(
                 () -> {
                     try {
+                        // Push pending sales + queued voids before paper so BO "ยอดในระบบ"
+                        // matches the slip (common drift: local void, server still counting cash).
+                        flushPendingBlocking(app);
                         PrinterEndpoint ep = PrinterPrefs.savedOrNull(app);
                         if (ep == null) {
                             OpsLogger.warn(app, "printer", "ข้ามพิมพ์สรุปรอบ — ยังไม่เลือกปริ้นเตอร์", reportKind);
@@ -958,7 +1083,7 @@ public final class SaleSync {
                                                 "printer",
                                                 result.ok
                                                         ? ("close".equals(reportKind)
-                                                                ? "พิมพ์ปิดรอบแล้ว"
+                                                                ? "พิมพ์ใบส่งเงินสดแล้ว"
                                                                 : "พิมพ์สรุปกลางรอบแล้ว")
                                                         : "พิมพ์สรุปรอบไม่สำเร็จ",
                                                 result.message,
@@ -986,6 +1111,7 @@ public final class SaleSync {
     public void shutdown() {
         transport.shutdown();
         executor.shutdownNow();
+        syncExecutor.shutdownNow();
     }
 
     private void flushOne(
@@ -1142,6 +1268,21 @@ public final class SaleSync {
                 /* ignore */
             }
         }
+        // Cash: queue drawer BEFORE paper so staff can make change while the slip prints.
+        // Still cash-only via CashDrawerPolicy; never on reprint / transfer / PromptPay.
+        if (kickDrawer && CashDrawerPolicy.shouldKickAfterSale(paymentMethod)) {
+            transport.send(
+                    app,
+                    ep,
+                    EscPos.drawerKick(),
+                    kick ->
+                            OpsLogger.result(
+                                    app,
+                                    "drawer",
+                                    kick.ok ? "เปิดลิ้นชักหลังขาย" : "ลิ้นชักไม่เปิด",
+                                    kick.message,
+                                    kick.ok));
+        }
         String body = ReceiptFormBuilder.build(shopJson, payload, billNo, total, PrinterPrefs.receiptCols(app));
         byte[] receipt = EscPos.documentReceipt(body);
         transport.send(
@@ -1151,19 +1292,6 @@ public final class SaleSync {
                 result -> {
                     if (result.ok) {
                         OpsLogger.result(app, "printer", "พิมพ์ใบเสร็จแล้ว", billNo, true);
-                        if (kickDrawer && CashDrawerPolicy.shouldKickAfterSale(paymentMethod)) {
-                            transport.send(
-                                    app,
-                                    ep,
-                                    EscPos.drawerKick(),
-                                    kick ->
-                                            OpsLogger.result(
-                                                    app,
-                                                    "drawer",
-                                                    kick.ok ? "เปิดลิ้นชักหลังขาย" : "ลิ้นชักไม่เปิด",
-                                                    kick.message,
-                                                    kick.ok));
-                        }
                     } else {
                         OpsLogger.error(app, "printer", "พิมพ์ใบเสร็จไม่สำเร็จ", result.message);
                     }
@@ -1382,7 +1510,8 @@ public final class SaleSync {
         String transferRef = payload.optString("transferRef", "").trim();
         if (!transferRef.isEmpty()) row.put("transferRef", transferRef);
         arr.put(row);
-        while (arr.length() > 60) {
+        // Busy morning shifts often exceed 60 bills; X/Z item/category detail needs the full round.
+        while (arr.length() > 250) {
             JSONArray trimmed = new JSONArray();
             for (int i = 1; i < arr.length(); i++) trimmed.put(arr.get(i));
             arr = trimmed;

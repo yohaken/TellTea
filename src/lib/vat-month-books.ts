@@ -143,10 +143,12 @@ export function retToMonthBooksDraft(ret: VatMonthlyReturn): MonthBooksDraft {
     gpFee[k] = normalizeMoney(gp[k].amount);
     gpVatOverride[k] = normalizeMoney(gp[k].gpVatOverride);
   }
-  // หน้าร้าน: โอนจริงจาก gp · ถ้าไม่มี ใช้ยอดขายหน้าร้าน
+  // หน้าร้าน: ยอดที่เซฟใน gp (mode transfer) ต้องจำได้แม้เป็น 0
+  // legacy ที่ยังไม่มีโอน — ค่อย fallback ยอดขาย
   const sfNet = normalizeMoney(gp.storefront.netTransfer);
   const sfSales = normalizeMoney(ret.storefront.reportedGross);
-  transfer.storefront = sfNet > 0 ? sfNet : sfSales;
+  transfer.storefront =
+    gp.storefront.mode === "transfer" || sfNet > 0 ? sfNet : sfSales;
 
   return {
     monthKey: ret.monthKey,
@@ -434,6 +436,28 @@ export function patchSfSendIntoDraft(
       ...next.sales,
       storefrontTransfer: n,
       storefrontCash: 0,
+    },
+  };
+}
+
+/**
+ * แถบส่งหน้าร้านจาก nPOS (แยกสด/โอน) → A รายได้ + D ยอดขาย
+ * A income = cash + transfer · D เก็บทั้ง storefrontCash และ storefrontTransfer
+ */
+export function patchSfSendTendersIntoDraft(
+  draft: MonthBooksDraft,
+  tenders: { cash: number; transfer: number },
+): MonthBooksDraft {
+  const cash = normalizeMoney(tenders.cash);
+  const transfer = normalizeMoney(tenders.transfer);
+  const income = roundMoney(cash + transfer);
+  const next = patchTransfer(draft, "storefront", income);
+  return {
+    ...next,
+    sales: {
+      ...next.sales,
+      storefrontCash: cash,
+      storefrontTransfer: transfer,
     },
   };
 }

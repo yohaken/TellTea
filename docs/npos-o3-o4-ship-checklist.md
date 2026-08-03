@@ -1,6 +1,6 @@
 # nPos — ship O3 + O4 + แป้น/หน้าต่างเข้างาน
 
-อัปเดต: **ship 1.14.89** · เฟส [npos-counter-ops-phases.md](./npos-counter-ops-phases.md)
+อัปเดต: **ship 1.14.91** · เฟส [npos-counter-ops-phases.md](./npos-counter-ops-phases.md)
 
 ## ลำดับทำ (ทีละเฟส)
 

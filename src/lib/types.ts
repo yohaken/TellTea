@@ -23,8 +23,25 @@ export type StaffMember = {
   createdAt: number;
   /** Fine-grained page/feature access — owners always get full set in resolvePermissions */
   permissions?: Partial<StaffPermissions>;
+  /** อ้างอิง permissionLevels/{id} — แม่แบบสิทธิ์ */
+  permissionLevelId?: string;
+  /** true เมื่อติ๊กสิทธิ์ต่างจากลำดับที่ผูก (ไม่ sync ตามลำดับอัตโนมัติ) */
+  permissionsCustomized?: boolean;
   /** เข้าใช้แอปหลังสุด (heartbeat) — เจ้าของใช้ดูว่าใครอยู่ในระบบ */
   lastSeenAt?: number;
+};
+
+/** ลำดับสิทธิ์ (แม่แบบ) — สร้าง/แก้ได้ที่ศูนย์พนักงาน */
+export type PermissionLevel = {
+  id: string;
+  name: string;
+  sortOrder: number;
+  active: boolean;
+  /** seed/ระบบ — ลบไม่ได้; ลำดับเจ้าของแก้ชุดสิทธิ์ไม่ได้ */
+  isSystem: boolean;
+  permissions: StaffPermissions;
+  createdAt: number;
+  updatedAt: number;
 };
 
 /** ข้อมูลส่วนตัวละเอียดอ่อน — คอลเลกชัน staffPersonal (เจ้าของอ่านได้) */
@@ -73,6 +90,10 @@ export type LedgerEntry = {
   vatVerified?: boolean;
   /** รวมเข้าหักภาษีซื้อ VAT เดือน — ติ๊กที่ตารางเดือนเป็นหลัก */
   vatClaim?: boolean;
+  /** purchase | staff_transfer — กติกาหลักฐานตอนสร้างรายการ */
+  evidenceDocPolicy?: string;
+  /** พนักงาน/เจ้าของติ๊กเข้าใจกติกาหลักฐานแล้ว */
+  evidenceDocAck?: boolean;
 };
 
 export type LedgerEntryInput = {
@@ -93,6 +114,8 @@ export type LedgerEntryInput = {
   vatSource?: string;
   vatVerified?: boolean;
   vatClaim?: boolean;
+  evidenceDocPolicy?: string;
+  evidenceDocAck?: boolean;
 };
 
 /** Perpetual inventory — วัตถุดิบร้าน (Products) */
@@ -182,6 +205,9 @@ export type StockCountSession = {
   inspectorId?: string;
   submittedAt: number;
   createdBy: string;
+  /** คนแก้ล่าสุด (ถ้ามี) */
+  updatedBy?: string;
+  updatedAt?: number;
   lines: StockCountLine[];
 };
 
@@ -193,6 +219,7 @@ export type StockCountSessionInput = {
   inspector: string;
   inspectorId?: string;
   submittedAt: number;
+  /** ผู้บันทึก/แก้รอบนี้ — create ใช้เป็น createdBy · update ใช้เป็น updatedBy */
   createdBy: string;
   lines: StockCountLine[];
 };
@@ -331,13 +358,34 @@ export type PosSession = {
   discrepancyLabel?: string;
   /** ยอดนำส่ง = นับลิ้นชัก − ทอนค้าง */
   remitAmount?: number;
+  /**
+   * สถานะส่งเงินมือหลังปิดรอบ · ไม่มี =  derivable เป็น pending เมื่อมี remit
+   * pending = ค้างส่ง · handed = ตรง · mismatch = รับจริง ≠ นำส่ง
+   */
+  remitStatus?: "pending" | "handed" | "mismatch";
+  /** ยอดเงินสดที่รับจริงตอนส่ง */
+  remitHandedAmount?: number;
+  remitHandedAt?: number;
+  /** actorId ผู้บันทึก */
+  remitHandedBy?: string;
+  remitHandedByName?: string;
+  remitReceivedByName?: string;
+  remitHandoffNote?: string;
   cashBillCount?: number;
   promptpayBillCount?: number;
   transferBillCount?: number;
   source?: string;
+  /** Manual/external counter label (source === "manual") */
+  counterLabel?: string;
   /** Who opened this nPos round (name pick at clock-in — not OT-linked). */
   openedByEmployeeId?: string;
   openedByName?: string;
+  /** Who closed this round (tablet default = opener · BO force = owner/staff). */
+  closedBy?: string;
+  closedByEmployeeId?: string;
+  closedByName?: string;
+  /** tablet | bo-force | bo-manual */
+  closeSource?: string;
 };
 
 export type PosSalePaymentMethod = "cash" | "promptpay" | "transfer";

@@ -20,6 +20,7 @@ import {
   STAFF_ID_CARD_MAX,
 } from "@/lib/staff-personal";
 import { saveCachedStaff } from "@/lib/cache";
+import { staffHomeHref } from "@/lib/nav-menu";
 import { formatPhoneDisplay, staffAccountLabel } from "@/lib/utils";
 
 export default function ProfilePage() {
@@ -31,7 +32,7 @@ export default function ProfilePage() {
 }
 
 function ProfileView() {
-  const { user, staff, refreshStaff } = useAuth();
+  const { user, staff, refreshStaff, isPermPreview } = useAuth();
   const router = useRouter();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [employeeId, setEmployeeId] = useState(staff?.employeeId || "");
@@ -51,6 +52,11 @@ function ProfileView() {
   const selected = employees.find((e) => e.id === employeeId);
   const showPersonal = !isOwner;
   const showRoster = !isOwner;
+
+  useEffect(() => {
+    if (!isPermPreview || !staff) return;
+    router.replace(staffHomeHref(staff));
+  }, [isPermPreview, staff, router]);
 
   useEffect(() => {
     if (!staff) return;

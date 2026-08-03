@@ -3,17 +3,28 @@
 import { useMemo, useState } from "react";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
-import { listActiveEmployees, type Employee } from "@/lib/employees";
+import {
+  StaffLatestTransferCard,
+  type StaffBonusExplain,
+} from "@/components/StaffLatestTransferCard";
+import { listActiveEmployeesWithPay, type Employee } from "@/lib/employees";
 import type { OtEntry } from "@/lib/ot";
 import {
+  comparePayrollQueueRows,
   createSpecialPayrollItem,
   generatePayrollForPeriod,
+  groupPendingPayrollByEmployee,
+  isCombinedPairLine,
   kindUsesMonthEndAccount,
+  listPendingMonthEndBonusPairs,
   markPayrollPaid,
+  markPayrollPaidCombined,
   PAYROLL_KIND_LABELS,
   PAYROLL_SLIP_MAX,
   PAYROLL_STATUS_LABELS,
   payrollDescription,
+  pendingPayrollNeedingAdvanceRefresh,
+  recordEmployeeAdvance,
   restorePayrollItem,
   summarizePayrollItems,
   voidPayrollItem,
@@ -21,10 +32,21 @@ import {
   type PayrollGenerateScope,
   type PayrollItem,
   type PayrollKind,
+  type PayrollMonthEndBonusPair,
   type PayrollSchedule,
 } from "@/lib/payroll";
+import {
+  buildCombinedTransferClipboard,
+  digitsOnlyAccount,
+  plainTransferAmount,
+} from "@/lib/payroll-staff-receipt";
 import type { ProdEntry } from "@/lib/production";
-import { formatDateShortBe, formatPlainNumber } from "@/lib/utils";
+import {
+  formatDateShortBe,
+  formatPlainNumber,
+  parseDateInput,
+  todayInputValue,
+} from "@/lib/utils";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
 function fmt(n: number) {
@@ -32,7 +54,9 @@ function fmt(n: number) {
 }
 
 type PayTarget = {
+  mode: "single" | "combined";
   item: PayrollItem;
+  pair?: PayrollMonthEndBonusPair;
   slipUrls: string[];
   note: string;
 };
@@ -42,6 +66,15 @@ type SpecialDraft = {
   amount: string;
   note: string;
   skipGroup: boolean;
+};
+
+type AdvanceDraft = {
+  employeeId: string;
+  amount: string;
+  date: string;
+  note: string;
+  slipUrls: string[];
+  voidPendingThenHint: boolean;
 };
 
 function shortKind(kind: PayrollKind): string {
@@ -63,6 +96,9 @@ export function PayrollPayPanel({
   prodEntries,
   otEntries,
   canPay,
+  bonusExplain,
+  onOpenBonusMonth,
+  onOpenHistory,
   onError,
   onInfo,
   onEmployeesChange,
@@ -79,6 +115,10 @@ export function PayrollPayPanel({
   prodEntries: ProdEntry[];
   otEntries: OtEntry[];
   canPay: boolean;
+  /** อธิบายหักโบนัสงวดที่เลือก — มุมพนักงาน */
+  bonusExplain?: StaffBonusExplain | null;
+  onOpenBonusMonth?: (periodMonth: string) => void;
+  onOpenHistory?: (periodMonth: string) => void;
   onError: (msg: string) => void;
   onInfo?: (msg: string) => void;
   onEmployeesChange?: (emps: Employee[]) => void;
@@ -93,12 +133,21 @@ export function PayrollPayPanel({
     note: "",
     skipGroup: true,
   });
+  const [advanceOpen, setAdvanceOpen] = useState(false);
+  const [advanceDraft, setAdvanceDraft] = useState<AdvanceDraft>({
+    employeeId: "",
+    amount: "",
+    date: todayInputValue(),
+    note: "",
+    slipUrls: [],
+    voidPendingThenHint: true,
+  });
   const [slipPreview, setSlipPreview] = useState<{
     urls: string[];
     title: string;
   } | null>(null);
 
-  useBodyScrollLock(!!payTarget || specialOpen || !!slipPreview);
+  useBodyScrollLock(!!payTarget || specialOpen || advanceOpen || !!slipPreview);
 
   const periodItems = useMemo(
     () => items.filter((i) => i.periodMonth === periodMonth),
@@ -110,12 +159,24 @@ export function PayrollPayPanel({
     if (filter === "pending") rows = rows.filter((i) => i.status === "pending");
     else if (filter === "void") rows = rows.filter((i) => i.status === "void");
     else if (filter !== "all") rows = rows.filter((i) => i.kind === filter);
-    return [...rows].sort((a, b) => {
-      if (a.status === "pending" && b.status !== "pending") return -1;
-      if (a.status !== "pending" && b.status === "pending") return 1;
-      return a.dueDate - b.dueDate || a.employeeName.localeCompare(b.employeeName, "th");
-    });
+    return [...rows].sort(comparePayrollQueueRows);
   }, [periodItems, filter]);
+
+  const combinedPairs = useMemo(
+    () => listPendingMonthEndBonusPairs(periodItems, periodMonth),
+    [periodItems, periodMonth],
+  );
+  const combinedPairByEmp = useMemo(() => {
+    const map = new Map<string, PayrollMonthEndBonusPair>();
+    for (const p of combinedPairs) map.set(p.employeeId, p);
+    return map;
+  }, [combinedPairs]);
+
+  const pendingGroups = useMemo(
+    () => groupPendingPayrollByEmployee(periodItems, periodMonth),
+    [periodItems, periodMonth],
+  );
+  const useGroupedPending = shopView && filter === "pending";
 
   const voidCount = useMemo(
     () => periodItems.filter((i) => i.status === "void").length,
@@ -148,6 +209,15 @@ export function PayrollPayPanel({
     [employees],
   );
 
+  const advancePendingRows = useMemo(() => {
+    if (!advanceDraft.employeeId) return [];
+    return pendingPayrollNeedingAdvanceRefresh(
+      periodItems,
+      advanceDraft.employeeId,
+      periodMonth,
+    );
+  }, [advanceDraft.employeeId, periodItems, periodMonth]);
+
   const showActions = shopView && (isOwner || canPay);
 
   function openSpecialForm() {
@@ -158,6 +228,79 @@ export function PayrollPayPanel({
       skipGroup: true,
     });
     setSpecialOpen(true);
+  }
+
+  function openAdvanceForm(employeeId?: string) {
+    setAdvanceDraft({
+      employeeId: employeeId || activeRoster[0]?.id || "",
+      amount: "",
+      date: todayInputValue(),
+      note: "",
+      slipUrls: [],
+      voidPendingThenHint: true,
+    });
+    setAdvanceOpen(true);
+  }
+
+  async function onRecordAdvance() {
+    if (!isOwner) return;
+    const emp = activeRoster.find((e) => e.id === advanceDraft.employeeId);
+    if (!emp) {
+      onError("เลือกพนักงานก่อน");
+      return;
+    }
+    const amountNum = Number(advanceDraft.amount);
+    if (!Number.isFinite(amountNum) || amountNum <= 0) {
+      onError("ใส่ยอดเบิกให้ถูกต้อง");
+      return;
+    }
+    let dateMs: number;
+    try {
+      dateMs = parseDateInput(advanceDraft.date);
+    } catch {
+      onError("ใส่วันที่เบิกให้ถูกต้อง");
+      return;
+    }
+    setBusy(true);
+    try {
+      const result = await recordEmployeeAdvance({
+        employeeId: emp.id,
+        employeeName: emp.name,
+        amount: amountNum,
+        createdBy: actorId,
+        date: dateMs,
+        note: advanceDraft.note,
+        slipUrls: advanceDraft.slipUrls,
+        postToBooks: true,
+      });
+
+      let voided = 0;
+      if (advanceDraft.voidPendingThenHint && advancePendingRows.length) {
+        for (const row of advancePendingRows) {
+          await voidPayrollItem(row.id, actorId);
+          voided += 1;
+        }
+      }
+
+      const refreshed = await listActiveEmployeesWithPay();
+      onEmployeesChange?.(refreshed);
+      setAdvanceOpen(false);
+      setFilter("pending");
+      const noSalary = !(Number(emp.monthlySalary) > 0);
+      onInfo?.(
+        `บันทึกเบิก · ${emp.name} · ฿${fmt(amountNum)} · ค้างหัก ฿${fmt(result.advanceBalance)} · ลงบช.เจ้าของแล้ว` +
+          (advanceDraft.slipUrls.length ? " · มีสลิป" : "") +
+          (voided > 0 ? ` · ยกเลิกคิวเก่า ${voided}` : "") +
+          " · เปิดเข้ารอบกลุ่มแล้ว" +
+          (noSalary
+            ? " · ยังไม่ตั้งเงินเดือน — ไปตั้งค่าจ่ายใส่ยอดก่อน แล้วค่อยสร้างเงินเดือน"
+            : " · กด「สร้างเงินเดือน」แล้วดูแท็บรอโอน"),
+      );
+    } catch (err) {
+      onError((err as Error).message || "บันทึกเบิกไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function onCreateSpecial() {
@@ -183,7 +326,7 @@ export function PayrollPayPanel({
         markSkipGroupPayroll: specialDraft.skipGroup,
       });
       if (specialDraft.skipGroup || onEmployeesChange) {
-        const refreshed = await listActiveEmployees();
+        const refreshed = await listActiveEmployeesWithPay();
         onEmployeesChange?.(refreshed);
       }
       setSpecialOpen(false);
@@ -203,9 +346,12 @@ export function PayrollPayPanel({
     if (!isOwner) return;
     setBusy(true);
     try {
+      // โหลดเงินเดือน/เบิกค้างล่าสุดก่อนสร้าง — กันคิวไม่หักหลังบันทึกเบิก
+      const freshEmployees = await listActiveEmployeesWithPay();
+      onEmployeesChange?.(freshEmployees);
       const result = await generatePayrollForPeriod({
         periodMonth,
-        employees,
+        employees: freshEmployees,
         bonusByEmployee,
         createdBy: actorId,
         schedule,
@@ -216,20 +362,47 @@ export function PayrollPayPanel({
       const parts: string[] = [];
       if (result.created > 0) parts.push(`สร้าง ${result.created}`);
       if (result.restored > 0) parts.push(`กู้คืน ${result.restored}`);
+      if (result.updated > 0) parts.push(`อัปเดตหักเบิก ${result.updated}`);
+      if (result.forceIncludedNames.length) {
+        parts.push(
+          `รวมคนมีเบิกค้าง ${result.forceIncludedNames.slice(0, 4).join(", ")}`,
+        );
+      }
+      const issueNote = result.issues.length
+        ? " · " +
+          result.issues
+            .slice(0, 4)
+            .map((i) => `${i.employeeName}: ${i.reason}`)
+            .join(" | ") +
+          (result.issues.length > 4 ? ` (+${result.issues.length - 4})` : "")
+        : "";
+      const skipGroupNote = result.skippedGroupNames.length
+        ? ` · ข้ามรอบกลุ่ม: ${result.skippedGroupNames.slice(0, 5).join(", ")}` +
+          (result.skippedGroupNames.length > 5
+            ? ` (+${result.skippedGroupNames.length - 5})`
+            : "") +
+          " — ปิดติ๊กที่ตั้งค่าจ่าย"
+        : "";
+      setFilter("pending");
       if (parts.length) {
         onInfo?.(
-          `${scopeLabel}: ${parts.join(" · ")} รายการรอโอน` +
-            (result.skipped ? ` · ข้าม ${result.skipped}` : ""),
+          `${scopeLabel}: ${parts.join(" · ")} → ดูแท็บรอโอน` +
+            (result.skipped ? ` · ข้าม ${result.skipped}` : "") +
+            skipGroupNote +
+            issueNote,
         );
-      } else if (result.skipped) {
+      } else if (issueNote || result.skipped) {
         onInfo?.(
-          `${scopeLabel}: ไม่มีรายการใหม่ (ข้าม ${result.skipped} — มีอยู่แล้วหรือยอด 0)`,
+          `${scopeLabel}: ไม่มีคิวใหม่` +
+            (result.skipped ? ` (ข้าม ${result.skipped})` : "") +
+            skipGroupNote +
+            issueNote,
         );
       } else {
         onInfo?.(
           scope === "bonus"
             ? "ยังไม่มีโบนัสให้สร้าง — ตรวจสรุปโบนัส/หักก่อน"
-            : "ไม่มีรายการให้สร้าง — ตั้งเงินเดือนที่แท็บตั้งค่าจ่าย",
+            : "ไม่มีรายการให้สร้าง — ตั้งเงินเดือนที่แท็บตั้งค่าจ่าย" + skipGroupNote,
         );
       }
     } catch (err) {
@@ -239,20 +412,96 @@ export function PayrollPayPanel({
     }
   }
 
+  function openSinglePay(item: PayrollItem) {
+    setPayTarget({
+      mode: "single",
+      item,
+      slipUrls: [...item.slipUrls],
+      note: item.note,
+    });
+  }
+
+  function openCombinedPay(pair: PayrollMonthEndBonusPair) {
+    setPayTarget({
+      mode: "combined",
+      item: pair.salary,
+      pair,
+      slipUrls: [...pair.salary.slipUrls, ...pair.bonus.slipUrls].filter(
+        (u, i, arr) => u && arr.indexOf(u) === i,
+      ),
+      note: "",
+    });
+  }
+
+  async function copyPlainText(text: string, okMsg: string) {
+    const value = (text || "").trim();
+    if (!value) {
+      onError("ยังไม่มีตัวเลขให้คัดลอก");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(value);
+      onInfo?.(okMsg);
+    } catch {
+      onError("คัดลอกไม่สำเร็จ — ลองเลือกข้อความเอง");
+    }
+  }
+
+  async function copyCombinedAccount(pair: PayrollMonthEndBonusPair) {
+    const emp = employees.find((e) => e.id === pair.employeeId);
+    await copyPlainText(
+      digitsOnlyAccount(emp?.payAccountNo),
+      "คัดลอกเลขบัญชีแล้ว",
+    );
+  }
+
+  async function copyCombinedAmount(pair: PayrollMonthEndBonusPair) {
+    await copyPlainText(
+      plainTransferAmount(pair.transferTotal),
+      `คัดลอกยอดแล้ว · ${plainTransferAmount(pair.transferTotal)}`,
+    );
+  }
+
+  async function copyCombinedTransfer(pair: PayrollMonthEndBonusPair) {
+    const emp = employees.find((e) => e.id === pair.employeeId);
+    const text = buildCombinedTransferClipboard({
+      payAccountNo: emp?.payAccountNo,
+      transferTotal: pair.transferTotal,
+    });
+    await copyPlainText(text, "คัดลอกเลขบัญชี + ยอดแล้ว (ตัวเลขอย่างเดียว)");
+  }
+
   async function onConfirmPay() {
     if (!payTarget || !canPay) return;
     setBusy(true);
     try {
-      await markPayrollPaid({
-        id: payTarget.item.id,
-        paidBy: actorId,
-        slipUrls: payTarget.slipUrls,
-        note: payTarget.note,
-        prodEntries,
-        otEntries,
-      });
-      setPayTarget(null);
-      onInfo?.(`จ่ายแล้ว · ${payrollDescription(payTarget.item)}`);
+      if (payTarget.mode === "combined" && payTarget.pair) {
+        const result = await markPayrollPaidCombined({
+          salaryId: payTarget.pair.salary.id,
+          bonusId: payTarget.pair.bonus.id,
+          paidBy: actorId,
+          slipUrls: payTarget.slipUrls,
+          note: payTarget.note,
+          prodEntries,
+          otEntries,
+        });
+        setPayTarget(null);
+        onInfo?.(
+          `โอนรวมแล้ว · ${payTarget.pair.employeeName} · ฿${fmt(result.transferTotal)}` +
+            ` (สิ้นเดือน ฿${fmt(payTarget.pair.salary.amount)} + โบนัส ฿${fmt(payTarget.pair.bonus.amount)})`,
+        );
+      } else {
+        await markPayrollPaid({
+          id: payTarget.item.id,
+          paidBy: actorId,
+          slipUrls: payTarget.slipUrls,
+          note: payTarget.note,
+          prodEntries,
+          otEntries,
+        });
+        setPayTarget(null);
+        onInfo?.(`จ่ายแล้ว · ${payrollDescription(payTarget.item)}`);
+      }
     } catch (err) {
       onError((err as Error).message || "บันทึกจ่ายไม่สำเร็จ");
     } finally {
@@ -343,11 +592,21 @@ export function PayrollPayPanel({
             >
               จ่ายแยก
             </button>
+            <button
+              type="button"
+              className="ghost-btn"
+              disabled={busy || !activeRoster.length}
+              onClick={() => openAdvanceForm()}
+              title="บันทึกเบิกล่วงหน้า — วันที่ + สลิป + ลงบช.เจ้าของ แล้วหักจากรอบจ่าย"
+            >
+              บันทึกเบิก
+            </button>
           </div>
           <p className="muted payroll-actions-hint">
-            แยกสร้าง: เงินเดือนได้เลย · โบนัสหลังปิดเดือนที่สรุปโบนัส · สิ้นเดือนลงบัญชีวันสิ้นเดือน (โอนวันที่{" "}
-            {schedule.salarySplits[1]?.dayOfMonth ?? 1}) · จ่ายแยก = ยอดกำหนดเองเข้าคิวเดียวกัน ·
-            หักเบิกค้างอัตโนมัติ · ยกเลิกแล้วกดสร้างใหม่ได้
+            ปิดเดือน: สร้างเงินเดือน → หักโบนัสนิ่ง → สร้างโบนัส →「โอนรวม」สลิปเดียว (คิวยังแยกสิ้นเดือน/โบนัสให้พนักงานเห็น) ·
+            อย่ากดโอนเงินเดือนก่อนถ้าจะรวมโบนัส · เบิกก่อนรอบ →「บันทึกเบิก」·
+            จ่ายแยก = ยอดกำหนดเอง · สิ้นเดือนลงบัญชีวันสิ้นเดือน (โอนวันที่{" "}
+            {schedule.salarySplits[1]?.dayOfMonth ?? 1})
             {missingSalary
               ? ` · ยังไม่มีเงินเดือน ${missingSalary} คน — ไปแท็บตั้งค่าจ่าย`
               : ""}
@@ -360,9 +619,19 @@ export function PayrollPayPanel({
         <p className="muted payroll-actions-hint">คิวโอนทั้งร้าน — กดโอนแล้วเมื่อโอนเสร็จ (แนบสลิปได้)</p>
       ) : (
         <p className="muted payroll-actions-hint">
-          รายการจ่ายของคุณ · รอเจ้าของโอน — ไม่เห็นยอดคนอื่น
+          รายการจ่ายของคุณ · รอเจ้าของโอน — ไม่เห็นยอดคนอื่น · ไม่แจ้งแชทตอนโอน
         </p>
       )}
+
+      {!shopView ? (
+        <StaffLatestTransferCard
+          items={items}
+          periodMonth={periodMonth}
+          bonusExplain={bonusExplain}
+          onOpenBonusMonth={onOpenBonusMonth}
+          onOpenHistory={onOpenHistory}
+        />
+      ) : null}
 
       <div className="payroll-filter" role="tablist" aria-label="กรองรายการจ่าย">
         {(
@@ -389,11 +658,138 @@ export function PayrollPayPanel({
         ))}
       </div>
 
-      {!visible.length ? (
+      {shopView && combinedPairs.length > 0 && filter === "pending" ? (
+        <p className="muted payroll-combined-hint">
+          พร้อมโอนรวม {combinedPairs.length} คน · รวม ฿
+          {fmt(combinedPairs.reduce((s, p) => s + p.transferTotal, 0))} — กดปุ่มเขียว「โอนรวม」ต่อคน
+          (รายการเงินเดือน/โบนัสยังแยกให้พนักงานเห็น)
+        </p>
+      ) : null}
+
+      {useGroupedPending ? (
+        !pendingGroups.length ? (
+          <p className="empty">ยังไม่มีรายการรอโอน — กดสร้างเงินเดือน / สร้างโบนัส</p>
+        ) : (
+          <div className="payroll-pay-groups" aria-label="คิวรอโอนจัดกลุ่มตามพนักงาน">
+            {pendingGroups.map((group) => {
+              const emp = employees.find((e) => e.id === group.employeeId);
+              const accountBits = [emp?.payBank, emp?.payAccountNo]
+                .map((s) => (s || "").trim())
+                .filter(Boolean);
+              const pair = group.pair;
+              return (
+                <article key={group.employeeId} className="payroll-pay-group">
+                  <header className="payroll-pay-group-head">
+                    <div className="payroll-pay-group-who">
+                      <h3 className="payroll-pay-group-name">{group.employeeName}</h3>
+                      <p className="muted payroll-pay-group-meta">
+                        {pair
+                          ? `โอนรวมสิ้นเดือน+โบนัส ฿${fmt(pair.transferTotal)}`
+                          : `รอโอน ฿${fmt(group.groupTotal)}`}
+                        {accountBits.length ? ` · ${accountBits.join(" ")}` : ""}
+                        {group.items.length > (pair ? 2 : 0) && pair
+                          ? ` · อื่นๆในคิว ฿${fmt(
+                              group.groupTotal - pair.transferTotal,
+                            )}`
+                          : ""}
+                      </p>
+                    </div>
+                    {pair && canPay ? (
+                      <button
+                        type="button"
+                        className="payroll-combined-btn"
+                        disabled={busy}
+                        title={`โอนครั้งเดียว ฿${fmt(pair.transferTotal)} · สิ้นเดือน+โบนัส · สลิปเดียว`}
+                        onClick={() => openCombinedPay(pair)}
+                      >
+                        โอนรวม
+                        <span className="payroll-combined-btn-amt">
+                          ฿{fmt(pair.transferTotal)}
+                        </span>
+                      </button>
+                    ) : null}
+                  </header>
+                  <ul className="payroll-pay-group-lines">
+                    {group.items.map((item) => {
+                      const inCombined = isCombinedPairLine(item, pair);
+                      const lineMeta: string[] = [];
+                      if (item.advanceDeduct > 0) {
+                        lineMeta.push(`หักเบิก ฿${fmt(item.advanceDeduct)}`);
+                      }
+                      if (kindUsesMonthEndAccount(item.kind)) {
+                        lineMeta.push(
+                          `บช.${formatDateShortBe(item.accountDate || item.dueDate)}`,
+                        );
+                      }
+                      return (
+                        <li key={item.id} className="payroll-pay-group-line">
+                          <div className="payroll-pay-group-line-main">
+                            <span className="payroll-pay-group-kind">
+                              {shortKind(item.kind)}
+                              {inCombined ? (
+                                <span className="payroll-pay-group-tag">รวมโอน</span>
+                              ) : null}
+                            </span>
+                            <strong className="payroll-pay-group-amt">
+                              ฿{fmt(item.amount)}
+                            </strong>
+                          </div>
+                          {lineMeta.length ? (
+                            <div className="muted payroll-cell-meta">
+                              {lineMeta.join(" · ")}
+                            </div>
+                          ) : null}
+                          <div className="payroll-pay-group-line-actions">
+                            {item.slipUrls.length ? (
+                              <EntryPhotoIndicator
+                                imageUrls={item.slipUrls}
+                                label="สลิป"
+                                onView={() =>
+                                  setSlipPreview({
+                                    urls: item.slipUrls,
+                                    title: payrollDescription(item),
+                                  })
+                                }
+                              />
+                            ) : null}
+                            {/* มีคู่โอนรวมแล้ว — ไม่โชว์โอนแยกบนสิ้นเดือน/โบนัส */}
+                            {!inCombined && canPay ? (
+                              <button
+                                type="button"
+                                className="ghost-btn payroll-table-btn"
+                                disabled={busy}
+                                onClick={() => openSinglePay(item)}
+                              >
+                                {item.amount > 0 ? "โอนแยก" : "เคลียร์"}
+                              </button>
+                            ) : null}
+                            {isOwner ? (
+                              <button
+                                type="button"
+                                className="ghost-btn payroll-table-btn"
+                                disabled={busy}
+                                onClick={() => void onVoid(item)}
+                              >
+                                ยกเลิก
+                              </button>
+                            ) : null}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </article>
+              );
+            })}
+          </div>
+        )
+      ) : !visible.length ? (
         <p className="empty">
           {shopView
             ? "ยังไม่มีรายการในมุมมองนี้ — กดสร้างรายการรอโอน"
-            : "ยังไม่มีรายการจ่ายของคุณในเดือนนี้"}
+            : filter === "pending"
+              ? "ไม่มีรายการรอโอนในเดือนนี้ — ดูรอบล่าสุดด้านบน หรือแท็บทั้งหมด / ประวัติ"
+              : "ยังไม่มีรายการจ่ายของคุณในมุมมองนี้"}
         </p>
       ) : (
         <div className="sheet-scroll payroll-sheet sheet-bleed">
@@ -418,12 +814,21 @@ export function PayrollPayPanel({
                 const dueLabel = kindUsesMonthEndAccount(item.kind)
                   ? `${formatDateShortBe(item.dueDate)}`
                   : formatDateShortBe(item.dueDate);
+                const pair = combinedPairByEmp.get(item.employeeId);
+                const inCombined =
+                  item.status === "pending" && isCombinedPairLine(item, pair || null);
                 const metaBits: string[] = [];
                 if (kindUsesMonthEndAccount(item.kind)) {
                   metaBits.push(`บช.${formatDateShortBe(item.accountDate || item.dueDate)}`);
                 }
                 if (item.advanceDeduct > 0) {
                   metaBits.push(`หักเบิก ฿${fmt(item.advanceDeduct)}`);
+                }
+                if (item.combinedPayId) {
+                  metaBits.push("โอนรวมสิ้นเดือน+โบนัส");
+                }
+                if (!shopView && item.note.trim()) {
+                  metaBits.push(item.note.trim());
                 }
                 if (shopView && accountBits.length) {
                   metaBits.push(accountBits.join(" "));
@@ -472,23 +877,26 @@ export function PayrollPayPanel({
                       <td className="payroll-col-act col-act">
                         {item.status === "pending" && canPay ? (
                           <div className="payroll-inline-actions">
-                            <button
-                              type="button"
-                              className="primary-btn payroll-table-btn"
-                              disabled={busy || (!canPay && item.amount > 0)}
-                              title={
-                                item.amount > 0 && !canPay ? "ต้องมีสิทธิ์บช.เจ้าของ" : undefined
-                              }
-                              onClick={() =>
-                                setPayTarget({
-                                  item,
-                                  slipUrls: [...item.slipUrls],
-                                  note: item.note,
-                                })
-                              }
-                            >
-                              {item.amount > 0 ? "โอน" : "เคลียร์"}
-                            </button>
+                            {inCombined && pair && item.kind === "salary_month_end" ? (
+                              <button
+                                type="button"
+                                className="payroll-combined-btn payroll-combined-btn--compact"
+                                disabled={busy}
+                                onClick={() => openCombinedPay(pair)}
+                              >
+                                โอนรวม ฿{fmt(pair.transferTotal)}
+                              </button>
+                            ) : null}
+                            {!inCombined ? (
+                              <button
+                                type="button"
+                                className="primary-btn payroll-table-btn"
+                                disabled={busy || (!canPay && item.amount > 0)}
+                                onClick={() => openSinglePay(item)}
+                              >
+                                {item.amount > 0 ? "โอน" : "เคลียร์"}
+                              </button>
+                            ) : null}
                             {isOwner ? (
                               <button
                                 type="button"
@@ -530,11 +938,83 @@ export function PayrollPayPanel({
             aria-label="ยืนยันการโอน"
           >
             <h2 className="panel-title" style={{ fontSize: "1rem", marginBottom: "0.65rem" }}>
-              ยืนยันโอน · ฿{fmt(payTarget.item.amount)}
+              {payTarget.mode === "combined" && payTarget.pair
+                ? `ยืนยันโอนรวม · ฿${fmt(payTarget.pair.transferTotal)}`
+                : `ยืนยันโอน · ฿${fmt(payTarget.item.amount)}`}
             </h2>
-            <p className="muted" style={{ marginBottom: "0.75rem" }}>
-              {payrollDescription(payTarget.item)}
-            </p>
+            {payTarget.mode === "combined" && payTarget.pair ? (
+              <div className="muted" style={{ marginBottom: "0.75rem" }}>
+                <p style={{ margin: "0 0 0.35rem" }}>
+                  {payTarget.pair.employeeName} · โอนครั้งเดียว สลิปเดียว
+                </p>
+                {(() => {
+                  const emp = employees.find(
+                    (e) => e.id === payTarget.pair!.employeeId,
+                  );
+                  const bankBits = [emp?.payBank, emp?.payAccountNo]
+                    .map((s) => (s || "").trim())
+                    .filter(Boolean);
+                  return bankBits.length ? (
+                    <p style={{ margin: "0 0 0.35rem" }}>
+                      บัญชี {bankBits.join(" ")}
+                      {emp?.payAccountName
+                        ? ` · ${emp.payAccountName}`
+                        : ""}
+                    </p>
+                  ) : (
+                    <p style={{ margin: "0 0 0.35rem" }}>
+                      ยังไม่มีเลขบัญชีในตั้งค่าจ่าย — ใส่ก่อนโอนจะคัดลอกง่ายขึ้น
+                    </p>
+                  );
+                })()}
+                <ul className="payroll-combined-breakdown">
+                  <li>
+                    สิ้นเดือน ฿{fmt(payTarget.pair.salary.amount)}
+                    {payTarget.pair.salary.advanceDeduct > 0
+                      ? ` (หักเบิก ฿${fmt(payTarget.pair.salary.advanceDeduct)})`
+                      : ""}
+                  </li>
+                  <li>โบนัส ฿{fmt(payTarget.pair.bonus.amount)}</li>
+                </ul>
+                <p style={{ margin: "0.35rem 0 0" }}>
+                  พนักงานยังเห็น 2 รายการแยกในคิวของตัวเอง
+                </p>
+                <div
+                  className="payroll-copy-digits"
+                  style={{ marginTop: "0.5rem", display: "flex", flexWrap: "wrap", gap: "0.35rem" }}
+                >
+                  <button
+                    type="button"
+                    className="ghost-btn"
+                    disabled={busy}
+                    onClick={() => void copyCombinedAccount(payTarget.pair!)}
+                  >
+                    คัดลอกเลขบัญชี
+                  </button>
+                  <button
+                    type="button"
+                    className="ghost-btn"
+                    disabled={busy}
+                    onClick={() => void copyCombinedAmount(payTarget.pair!)}
+                  >
+                    คัดลอกยอด
+                  </button>
+                  <button
+                    type="button"
+                    className="ghost-btn"
+                    disabled={busy}
+                    onClick={() => void copyCombinedTransfer(payTarget.pair!)}
+                    title="เลขบัญชีบรรทัดหนึ่ง · ยอดบรรทัดสอง"
+                  >
+                    คัดลอกทั้งคู่
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="muted" style={{ marginBottom: "0.75rem" }}>
+                {payrollDescription(payTarget.item)}
+              </p>
+            )}
             <PhotoAttachMultiField
               label="สลิปโอน"
               values={payTarget.slipUrls}
@@ -542,8 +1022,16 @@ export function PayrollPayPanel({
               onError={onError}
               max={PAYROLL_SLIP_MAX}
               storageFolder="payroll"
-              storageSlotKey={payTarget.item.id}
-              hint="แนบสลิปหลังโอน (ถ้ามี)"
+              storageSlotKey={
+                payTarget.mode === "combined" && payTarget.pair
+                  ? `${payTarget.pair.salary.id}_combined`
+                  : payTarget.item.id
+              }
+              hint={
+                payTarget.mode === "combined"
+                  ? "แนบสลิปหลังโอนยอดรวม (ติดทั้ง 2 รายการ)"
+                  : "แนบสลิปหลังโอน (ถ้ามี)"
+              }
             />
             <label className="field" style={{ marginTop: "0.75rem" }}>
               <span>หมายเหตุ</span>
@@ -557,9 +1045,11 @@ export function PayrollPayPanel({
             </label>
             <p className="muted form-hint-inline">
               จะลงบช.เจ้าของเป็นค่าใช้จ่าย (sga)
-              {payTarget.item.kind === "bonus"
-                ? " และล็อกแถวผลิต/ชงของคนนี้ในเดือนอ้างอิง"
-                : ""}
+              {payTarget.mode === "combined"
+                ? " 2 แถว (สิ้นเดือน + โบนัส) สลิปชุดเดียวกัน"
+                : payTarget.item.kind === "bonus"
+                  ? " และล็อกแถวผลิต/ชงของคนนี้ในเดือนอ้างอิง"
+                  : ""}
             </p>
             <div className="module-form-actions">
               <button
@@ -576,7 +1066,11 @@ export function PayrollPayPanel({
                 disabled={busy || !canPay}
                 onClick={() => void onConfirmPay()}
               >
-                {busy ? "กำลังบันทึก..." : "ยืนยันจ่าย"}
+                {busy
+                  ? "กำลังบันทึก..."
+                  : payTarget.mode === "combined"
+                    ? "ยืนยันโอนรวม"
+                    : "ยืนยันจ่าย"}
               </button>
             </div>
           </div>
@@ -589,6 +1083,134 @@ export function PayrollPayPanel({
           title={slipPreview.title}
           onClose={() => setSlipPreview(null)}
         />
+      ) : null}
+
+      {advanceOpen ? (
+        <div
+          className="modal-backdrop edit-modal is-module-form"
+          onClick={() => !busy && setAdvanceOpen(false)}
+        >
+          <div
+            className="modal-card module-form-card"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-label="บันทึกเบิกล่วงหน้า"
+          >
+            <h2 className="panel-title" style={{ fontSize: "1rem", marginBottom: "0.45rem" }}>
+              บันทึกเบิก · ลงบช.เจ้าของ
+            </h2>
+            <p className="muted" style={{ marginBottom: "0.75rem" }}>
+              จ่ายเงินล่วงหน้า (เช่น วันที่ 28) — ระบบเพิ่มเบิกค้าง หักจากรอบจ่ายถัดไป · สลิปไปโพสต์บช.ส่วนตัว
+            </p>
+            <label className="field">
+              <span>พนักงาน</span>
+              <select
+                value={advanceDraft.employeeId}
+                onChange={(e) =>
+                  setAdvanceDraft((d) => ({ ...d, employeeId: e.target.value }))
+                }
+                disabled={busy}
+              >
+                {activeRoster.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.name}
+                    {Number(emp.advanceBalance) > 0
+                      ? ` · ค้าง ฿${fmt(Number(emp.advanceBalance))}`
+                      : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span>วันที่เบิก</span>
+              <input
+                type="date"
+                value={advanceDraft.date}
+                onChange={(e) =>
+                  setAdvanceDraft((d) => ({ ...d, date: e.target.value }))
+                }
+                disabled={busy}
+                required
+              />
+            </label>
+            <label className="field">
+              <span>ยอดเบิก (บาท)</span>
+              <input
+                type="number"
+                min={0.01}
+                step={100}
+                inputMode="decimal"
+                value={advanceDraft.amount}
+                onChange={(e) =>
+                  setAdvanceDraft((d) => ({ ...d, amount: e.target.value }))
+                }
+                disabled={busy}
+                placeholder="เช่น 7500"
+                autoFocus
+              />
+            </label>
+            <label className="field">
+              <span>หมายเหตุ</span>
+              <input
+                value={advanceDraft.note}
+                onChange={(e) =>
+                  setAdvanceDraft((d) => ({ ...d, note: e.target.value }))
+                }
+                disabled={busy}
+                placeholder="optional"
+              />
+            </label>
+            <PhotoAttachMultiField
+              label="สลิปโอน/จ่ายเบิก"
+              values={advanceDraft.slipUrls}
+              onChange={(urls) => setAdvanceDraft((d) => ({ ...d, slipUrls: urls }))}
+              onError={onError}
+              max={PAYROLL_SLIP_MAX}
+              storageFolder="payroll"
+              storageSlotKey={`advance-${advanceDraft.employeeId || "new"}`}
+              hint="แนบสลิป — ไปกับแถวบช.เจ้าของ"
+            />
+            {advancePendingRows.length ? (
+              <label className="payroll-special-skip" style={{ marginTop: "0.65rem" }}>
+                <input
+                  type="checkbox"
+                  checked={advanceDraft.voidPendingThenHint}
+                  onChange={(e) =>
+                    setAdvanceDraft((d) => ({
+                      ...d,
+                      voidPendingThenHint: e.target.checked,
+                    }))
+                  }
+                  disabled={busy}
+                />
+                ยกเลิกคิวรอโอนของคนนี้ในเดือนนี้ ({advancePendingRows.length} รายการที่ยังไม่หักเบิก)
+                — แล้วกดสร้างเงินเดือนใหม่ให้หัก
+              </label>
+            ) : (
+              <p className="muted form-hint-inline" style={{ marginTop: "0.65rem" }}>
+                ยังไม่มีคิวรอโอนที่ต้องรีเซ็ต — หลังบันทึกกด「สร้างเงินเดือน」ได้เลยถ้ายังไม่สร้าง
+              </p>
+            )}
+            <div className="module-form-actions">
+              <button
+                type="button"
+                className="ghost-btn"
+                disabled={busy}
+                onClick={() => setAdvanceOpen(false)}
+              >
+                ออก
+              </button>
+              <button
+                type="button"
+                className="primary-btn"
+                disabled={busy}
+                onClick={() => void onRecordAdvance()}
+              >
+                {busy ? "กำลังบันทึก..." : "บันทึกเบิก + ลงบช."}
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
 
       {specialOpen ? (

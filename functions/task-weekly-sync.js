@@ -252,6 +252,7 @@ async function runSyncWithAdmin(db) {
       openAt: op.openAt,
       status: "pending",
       checklistDone: [],
+      progressNotes: [],
       proofImg: "",
       createdAt: now,
       updatedAt: now,

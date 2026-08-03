@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
+import { OwnerBooksModeSwitch } from "@/components/OwnerBooksModeSwitch";
 import { PnlVatIncomePanel } from "@/components/vat-sales/PnlVatIncomePanel";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
@@ -263,7 +264,8 @@ function PnlView() {
   }
 
   return (
-    <div className="pnl-page">
+    <div className="pnl-page owner-books-page">
+      {isOwner ? <OwnerBooksModeSwitch active="pnl" /> : null}
       <h1 className="panel-title">สรุปรายเดือน</h1>
       <p className="muted" style={{ marginBottom: "0.85rem", textAlign: "left" }}>
         {isOwner

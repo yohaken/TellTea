@@ -25,6 +25,8 @@ const BACK_OFFICE_ROUTES = [
   "more",
   "profile",
   "owner-books",
+  "vat-sales",
+  "vat-sales/sources",
   "pnl",
   "export",
   "pos-sales",

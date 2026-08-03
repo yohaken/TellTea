@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  getDoc,
   onSnapshot,
   orderBy,
   query,
@@ -8,16 +9,17 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
-import type { Employee } from "./employees";
+import { resolveLinkedEmployee, type Employee } from "./employees";
 import type { StaffMember } from "./types";
 import { mapFirestoreError } from "./firestore-errors";
+import { normalizeEmail, normalizePhone, phoneDocId } from "./utils";
 
-/** วนปัก lastSeenAt ระหว่างใช้งาน (~10 นาที) — ตาราง staff เป็นแหล่งความจริง */
-export const STAFF_PRESENCE_HEARTBEAT_MS = 10 * 60_000;
+/** วนปัก lastSeenAt ระหว่างใช้งาน (~2 นาที) — ตาราง staff เป็นแหล่งความจริง */
+export const STAFF_PRESENCE_HEARTBEAT_MS = 2 * 60_000;
 /** รีเฟรชป้ายอายุบน dock ของเจ้าของ (คำนวณจาก lastSeenAt ในตาราง) */
 export const STAFF_PRESENCE_AGE_TICK_MS = 30_000;
-/** ออนไลน์สด (เขียว) — เห็นภายใน 15 นาทีหลัง heartbeat */
-export const STAFF_PRESENCE_ONLINE_MS = 15 * 60_000;
+/** ออนไลน์สด (เขียว) — เห็นภายใน 5 นาทีหลัง heartbeat */
+export const STAFF_PRESENCE_ONLINE_MS = 5 * 60_000;
 
 export type StaffPresenceItem = {
   staffId: string;
@@ -39,14 +41,24 @@ export function staffShortLabel(source: string, max = 2): string {
   return chars.slice(0, max).join("");
 }
 
+/**
+ * หาแถว roster ที่ผูกบัญชี — ลำดับเดียวกับ resolveLinkedEmployee
+ * (employeeId → linkedStaffId/email/phone → ชื่อ/ชื่อเล่น)
+ * ใช้ตอนพรีวิวจาก dock เพื่อส่ง employeeId ครบ
+ */
+export function findEmployeeForPresence(
+  member: StaffMember,
+  employees: Employee[],
+): Employee | undefined {
+  return resolveLinkedEmployee(employees, member) || undefined;
+}
+
 /** ชื่อเล่นเต็มก่อน · ไม่มีชื่อเล่นค่อยย่อจากชื่อจริง */
 export function resolvePresenceLabel(
   member: StaffMember,
   employees: Employee[],
 ): { label: string; fullName: string } {
-  const emp =
-    (member.employeeId && employees.find((e) => e.id === member.employeeId)) ||
-    employees.find((e) => e.linkedStaffId === member.id);
+  const emp = findEmployeeForPresence(member, employees);
   const nick = emp?.nickname?.trim();
   const fullName = (emp?.name || member.displayName || "").trim() || member.id;
   if (nick) {
@@ -66,6 +78,34 @@ export function formatPresenceAge(lastSeenAt: number, now = Date.now()): string 
   if (hr < 48) return `${hr}ช`;
   const day = Math.floor(hr / 24);
   return `${day}ว`;
+}
+
+/** นาฬิกาเข้าล่าสุด — วันนี้/เมื่อวาน/วันที่ · บอกว่าล็อกอินตอนไหน */
+export function formatPresenceLastLogin(lastSeenAt: number, now = Date.now()): string {
+  if (!lastSeenAt || lastSeenAt <= 0) return "ยังไม่เคยเข้า";
+  const time = new Intl.DateTimeFormat("th-TH", {
+    timeZone: "Asia/Bangkok",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(lastSeenAt));
+  const dayKey = (ms: number) =>
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Bangkok",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date(ms));
+  const seenDay = dayKey(lastSeenAt);
+  const today = dayKey(now);
+  const yDay = dayKey(now - 24 * 60 * 60 * 1000);
+  if (seenDay === today) return `วันนี้ ${time}`;
+  if (seenDay === yDay) return `เมื่อวาน ${time}`;
+  const date = new Intl.DateTimeFormat("th-TH", {
+    timeZone: "Asia/Bangkok",
+    day: "numeric",
+    month: "short",
+  }).format(new Date(lastSeenAt));
+  return `${date} ${time}`;
 }
 
 /** แสดงพนักงานทุกคน — ยังไม่มี lastSeenAt ก็โชว์รอ (ป้าย —) */
@@ -99,6 +139,9 @@ export function buildStaffPresenceItems(
 }
 
 function mapStaffDoc(id: string, data: Record<string, unknown>): StaffMember {
+  const permissionLevelId =
+    typeof data.permissionLevelId === "string" ? data.permissionLevelId : undefined;
+  const rawPerms = data.permissions;
   return {
     id,
     email: typeof data.email === "string" ? data.email : undefined,
@@ -106,10 +149,57 @@ function mapStaffDoc(id: string, data: Record<string, unknown>): StaffMember {
     role: data.role === "owner" ? "owner" : "staff",
     displayName: typeof data.displayName === "string" ? data.displayName : undefined,
     employeeId: typeof data.employeeId === "string" ? data.employeeId : undefined,
+    // ต้องมี level/perms ครบ — พรีวิวจาก dock ถึงได้สิทธิ์ + กรองข้อมูลเหมือนล็อกอินจริง
+    permissionLevelId,
+    permissions:
+      rawPerms && typeof rawPerms === "object"
+        ? (rawPerms as StaffMember["permissions"])
+        : undefined,
+    permissionsCustomized: data.permissionsCustomized === true,
     profileComplete: data.profileComplete === true,
-    lastSeenAt: typeof data.lastSeenAt === "number" ? data.lastSeenAt : undefined,
+    lastSeenAt: coercePresenceMs(data.lastSeenAt),
     createdAt: typeof data.createdAt === "number" ? data.createdAt : 0,
   };
+}
+
+/** Firestore อาจส่ง number / numeric string — อย่าทิ้งเป็น undefined แล้วชิปโชว์ — */
+function coercePresenceMs(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) return value;
+  if (typeof value === "string" && value.trim()) {
+    const n = Number(value);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return undefined;
+}
+
+/**
+ * แปลง actorId จากงาน (อีเมล / E.164 / p_…) → staff doc id
+ * เบอร์โทรต้อง map ผ่าน staffPhones หรือ p_<digits> — ห้าม updateDoc ด้วย +66…
+ */
+export async function resolvePresenceStaffId(
+  actorId: string | null | undefined,
+): Promise<string | null> {
+  const raw = String(actorId || "").trim();
+  if (!raw) return null;
+  if (raw.includes("@")) return normalizeEmail(raw);
+  if (raw.startsWith("p_")) return raw;
+
+  if (raw.startsWith("+") || /^0\d{8,}$/.test(raw)) {
+    try {
+      const e164 = normalizePhone(raw);
+      const digits = e164.slice(1);
+      const index = await getDoc(doc(getDb(), "staffPhones", digits));
+      const mapped = index.exists()
+        ? String((index.data() as { staffId?: string }).staffId || "").trim()
+        : "";
+      if (mapped) return mapped;
+      return phoneDocId(e164);
+    } catch {
+      return null;
+    }
+  }
+
+  return raw;
 }
 
 /** เจ้าของฟังรายชื่อ + lastSeenAt แบบสด */
@@ -134,25 +224,57 @@ export function subscribeEmployeesForPresence(
     query(collection(getDb(), "employees"), orderBy("name", "asc")),
     (snap) => {
       onEmployees(
-        snap.docs.map((d) => ({
-          id: d.id,
-          ...(d.data() as Omit<Employee, "id">),
-        })),
+        snap.docs.map((d) => {
+          const data = d.data() as Record<string, unknown>;
+          return {
+            id: d.id,
+            name: String(data.name || ""),
+            nickname: data.nickname ? String(data.nickname) : undefined,
+            active: data.active !== false,
+            linkedEmail: data.linkedEmail ? String(data.linkedEmail) : undefined,
+            linkedPhone: data.linkedPhone ? String(data.linkedPhone) : undefined,
+            linkedStaffId: data.linkedStaffId ? String(data.linkedStaffId) : undefined,
+            createdAt: Number(data.createdAt) || 0,
+            updatedAt: Number(data.updatedAt) || 0,
+          } satisfies Employee;
+        }),
       );
     },
     (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
   );
 }
 
-/** พนักงาน/เจ้าของอัปเดตว่ายังอยู่ในระบบ */
-export async function touchStaffPresence(staffId: string): Promise<void> {
-  if (!staffId) return;
+/** พนักงาน/เจ้าของอัปเดตว่ายังอยู่ในระบบ — คืน true เมื่อเขียนสำเร็จ */
+export async function touchStaffPresence(staffId: string): Promise<boolean> {
+  if (!staffId) return false;
   try {
     await updateDoc(doc(getDb(), "staff", staffId), { lastSeenAt: Date.now() });
+    return true;
   } catch (err) {
-    // ไม่รบกวน UI — heartbeat เงียบ
+    // ไม่รบกวน UI — heartbeat เงียบ (caller อาจ retry)
     if (typeof console !== "undefined") {
       console.warn(mapFirestoreError(err, "อัปเดตสถานะออนไลน์", "staff"));
     }
+    return false;
   }
+}
+
+const PRESENCE_TOUCH_RETRIES_MS = [0, 1_500, 5_000] as const;
+
+/**
+ * ปัก lastSeenAt หลังบันทึกงานจริง (สต็อก/ผลิต/OT…) — resolve actor → staff id + retry
+ * มือถือเปิดคีย์บอร์ดมักได้ visibility=hidden ทำให้ heartbeat เงียบ — ทางนี้ไม่พึ่ง interval
+ */
+export async function touchStaffPresenceFromActor(
+  actorId: string | null | undefined,
+): Promise<boolean> {
+  const id = await resolvePresenceStaffId(actorId);
+  if (!id) return false;
+  for (const delay of PRESENCE_TOUCH_RETRIES_MS) {
+    if (delay) {
+      await new Promise((r) => setTimeout(r, delay));
+    }
+    if (await touchStaffPresence(id)) return true;
+  }
+  return false;
 }

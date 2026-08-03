@@ -16,7 +16,10 @@ import {
 import { getDb } from "./firebase";
 import { assertBonusMonthOpenForDate } from "./bonus-month-guard";
 
-/** หน้าชงโหลดเฉพาะช่วงนี้ — ไม่ดึงประวัติทั้งก้อน (เดิมช้าเพราะ unbounded onSnapshot) */
+/**
+ * Lookback แบบกลิ้ง (legacy) — หน้าชงใช้ otViewWindow แทนแล้ว
+ * คง helper ไว้ให้ checklist / สคริปต์อื่นที่ยังอ้าง
+ */
 export const OT_HISTORY_LOOKBACK_DAYS = 60;
 
 export function otHistorySinceMs(
@@ -389,12 +392,37 @@ export async function saveOtSettings(bonusRate: number): Promise<void> {
 export function subscribeOtEntries(
   onRows: (rows: OtEntry[]) => void,
   onError?: (err: Error) => void,
-  opts?: { since?: number; until?: number },
+  opts?: { since?: number; until?: number; workerId?: string },
 ): Unsubscribe {
   const since = opts?.since;
   const until = opts?.until;
+  const workerId = (opts?.workerId || "").trim();
   let q = query(entriesCol(), orderBy("date", "desc"), orderBy("createdAt", "desc"));
-  if (since != null && until != null) {
+  if (workerId && since != null && until != null) {
+    q = query(
+      entriesCol(),
+      where("workerIds", "array-contains", workerId),
+      where("date", ">=", since),
+      where("date", "<", until),
+      orderBy("date", "desc"),
+      orderBy("createdAt", "desc"),
+    );
+  } else if (workerId && since != null) {
+    q = query(
+      entriesCol(),
+      where("workerIds", "array-contains", workerId),
+      where("date", ">=", since),
+      orderBy("date", "desc"),
+      orderBy("createdAt", "desc"),
+    );
+  } else if (workerId) {
+    q = query(
+      entriesCol(),
+      where("workerIds", "array-contains", workerId),
+      orderBy("date", "desc"),
+      orderBy("createdAt", "desc"),
+    );
+  } else if (since != null && until != null) {
     q = query(
       entriesCol(),
       where("date", ">=", since),
@@ -466,6 +494,8 @@ export async function addOtEntry(input: OtEntryInput): Promise<string> {
     createdAt: now,
     updatedAt: now,
   });
+  const { touchStaffPresenceFromActor } = await import("./staff-presence");
+  await touchStaffPresenceFromActor(input.createdBy);
   return ref.id;
 }
 
@@ -499,29 +529,20 @@ export async function updateOtEntry(
       | "status"
     >
   >,
+  /** แถวจาก UI — ข้าม getDoc ถ้ามี (กันพลาดสิทธิ์ตอนลงย้อนหลัง) */
+  knownCurrent?: OtEntry | null,
 ): Promise<void> {
   const ref = doc(getDb(), "otEntries", id);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) throw new Error("ไม่พบรายการ");
-  const current = mapOtEntryDoc(snap.id, snap.data() as Record<string, unknown>);
-  assertOtEntryEditable(current, patch);
-  const touchesQty =
-    patch.date != null ||
-    patch.shift != null ||
-    patch.workerIds != null ||
-    patch.workerNames != null ||
-    patch.machineCount != null ||
-    patch.otherCups != null ||
-    patch.iceCreamCones != null ||
-    patch.breadSlices != null ||
-    patch.claimCups != null ||
-    patch.deductQty != null ||
-    patch.addQty != null ||
-    patch.bonusRate != null;
-  if (touchesQty) {
-    await assertBonusMonthOpenForDate(current.date);
-    if (patch.date != null) await assertBonusMonthOpenForDate(patch.date);
+  let current = knownCurrent && knownCurrent.id === id ? knownCurrent : null;
+  if (!current) {
+    const snap = await getDoc(ref);
+    if (!snap.exists()) throw new Error("ไม่พบรายการ");
+    current = mapOtEntryDoc(snap.id, snap.data() as Record<string, unknown>);
   }
+  assertOtEntryEditable(current, patch);
+  // เดือนปิดโบนัส — ห้ามแก้ทุกอย่าง (ยอด/รูป/SOP) ไม่ใช่แค่ยอด
+  await assertBonusMonthOpenForDate(current.date);
+  if (patch.date != null) await assertBonusMonthOpenForDate(patch.date);
 
   const next: Record<string, string | number | boolean | string[]> = {
     updatedAt: Date.now(),
@@ -599,6 +620,7 @@ export async function deleteOtEntry(id: string): Promise<void> {
     if (isOtEntryLocked(current)) {
       throw new Error("รายการจ่ายแล้ว — ลบไม่ได้");
     }
+    await assertBonusMonthOpenForDate(current.date);
   }
   await deleteDoc(ref);
 }

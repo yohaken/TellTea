@@ -40,6 +40,13 @@ function salesCol() {
   return collection(getDb(), POS_SALES_COL);
 }
 
+function normalizeAdminPaymentMethod(raw: unknown): PosSale["paymentMethod"] {
+  const m = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+  if (m === "promptpay") return "promptpay";
+  if (m === "transfer" || m === "bank" || m === "bank_transfer") return "transfer";
+  return "cash";
+}
+
 function mapPosSale(id: string, data: Record<string, unknown>): PosSale {
   const subtotal = typeof data.subtotal === "number" ? data.subtotal : 0;
   const total = typeof data.total === "number" ? data.total : 0;
@@ -61,7 +68,7 @@ function mapPosSale(id: string, data: Record<string, unknown>): PosSale {
     subtotal,
     ...(discountBaht > 0 ? { discountBaht } : {}),
     total,
-    paymentMethod: data.paymentMethod === "promptpay" ? "promptpay" : "cash",
+    paymentMethod: normalizeAdminPaymentMethod(data.paymentMethod),
     cashReceived: typeof data.cashReceived === "number" ? data.cashReceived : 0,
     change: typeof data.change === "number" ? data.change : 0,
     ledgerEntryId: typeof data.ledgerEntryId === "string" ? data.ledgerEntryId : undefined,
@@ -212,6 +219,7 @@ export async function closePosSessionAdmin(
   sessionId: string,
   actorId: string,
   note = "",
+  opts?: { closedByName?: string; closedByEmployeeId?: string },
 ): Promise<void> {
   const id = (sessionId || "").trim();
   if (!id) throw new Error("ไม่พบรหัสรอบ");
@@ -222,14 +230,21 @@ export async function closePosSessionAdmin(
     const data = snap.data() as Record<string, unknown>;
     if (data.status === "closed") throw new Error("รอบนี้ปิดแล้ว");
     const now = Date.now();
-    await updateDoc(ref, {
+    const closedByName = String(opts?.closedByName || "").trim().slice(0, 80);
+    const closedByEmployeeId = String(opts?.closedByEmployeeId || "")
+      .trim()
+      .slice(0, 64);
+    const patch: Record<string, unknown> = {
       status: "closed",
       closedAt: now,
       updatedAt: now,
       closedBy: actorId || "owner",
       closeSource: "bo-force",
       discrepancyNote: String(note || "ปิดจากหลังร้าน (ทดลอง)").slice(0, 240),
-    });
+    };
+    if (closedByName) patch.closedByName = closedByName;
+    if (closedByEmployeeId) patch.closedByEmployeeId = closedByEmployeeId;
+    await updateDoc(ref, patch);
   } catch (err) {
     if (err instanceof Error && /ไม่พบ|ปิดแล้ว/.test(err.message)) throw err;
     throw new Error(mapFirestoreError(err, "ปิดรอบจากหลังร้าน"));

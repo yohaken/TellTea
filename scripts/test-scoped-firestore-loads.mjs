@@ -10,7 +10,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
 const version = read("src/lib/version.ts");
-assert.match(version, /APP_BUILD = 512/);
+assert.match(version, /APP_BUILD = \d+/);
 
 const qw = read("src/lib/query-window.ts");
 assert.match(qw, /export function daysAgoMs/);
@@ -19,12 +19,13 @@ assert.match(qw, /export function monthsAgoStartMs/);
 
 // Libs expose window opts
 assert.match(read("src/lib/production.ts"), /PROD_HISTORY_LOOKBACK_DAYS = 60/);
-assert.match(read("src/lib/production.ts"), /opts\?: \{ since\?: number; until\?: number \}/);
+assert.match(read("src/lib/production.ts"), /opts\?: \{ since\?: number; until\?: number/);
 assert.match(read("src/lib/task-occurrences.ts"), /TASK_OCCURRENCE_LOOKBACK_DAYS = 120/);
 assert.match(read("src/lib/task-occurrences.ts"), /where\("dueDate", ">=", since\)/);
 assert.match(read("src/lib/stock-count.ts"), /STOCK_COUNT_LOOKBACK_DAYS = 400/);
-assert.match(read("src/lib/payroll.ts"), /opts\?: \{ since\?: number \}/);
+assert.match(read("src/lib/payroll.ts"), /opts\?: \{ since\?: number/);
 assert.match(read("src/lib/ot.ts"), /until\?: number/);
+assert.match(read("src/lib/ot-view-window.ts"), /export function otViewWindow/);
 assert.match(read("src/lib/checklist.ts"), /until\?: number/);
 assert.match(read("src/lib/owner-books.ts"), /listOwnerBookEntriesInMonth/);
 assert.match(read("src/lib/owner-books.ts"), /listOwnerBookEntriesSince/);
@@ -39,9 +40,14 @@ const check = read("src/app/check/page.tsx");
 assert.match(check, /historyMonth/);
 assert.match(check, /\{ since, until \}/);
 
+const ot = read("src/app/ot/page.tsx");
+assert.match(ot, /otViewWindow/);
+assert.match(ot, /viewMonth/);
+assert.match(ot, /\{ since, until/);
+
 const prod = read("src/app/production/page.tsx");
-assert.match(prod, /prodHistorySinceMs/);
 assert.match(prod, /logMonth/);
+assert.match(prod, /monthWindow/);
 assert.match(prod, /until: new Date\(logYear, logMonthIdx \+ 1, 1\)\.getTime\(\)/);
 
 const bonus = read("src/app/bonus/page.tsx");

@@ -22,6 +22,9 @@ import { deleteDoc, doc, getDoc } from "firebase/firestore";
 import { clearAppCaches, loadCachedStaff, saveCachedStaff } from "./cache";
 import { getDb, getFirebaseAuth, isFirebaseConfigured } from "./firebase";
 import { confirmPhoneOtp, resetPhoneRecaptcha, sendPhoneOtp } from "./phone-auth";
+import { migrateAllBonusCloseSideDocs } from "./bonus-close-migrate";
+import { migrateAllLegacyEmployeePay } from "./employees";
+import { migrateAllLegacyStockCosts } from "./stock";
 import {
   ensureOwnerBootstrap,
   getStaffByPhone,
@@ -30,13 +33,35 @@ import {
 } from "./staff";
 import type { StaffMember } from "./types";
 import { normalizeEmail, staffAccountLabel } from "./utils";
+import {
+  buildPreviewStaff,
+  loadPermPreview,
+  normalizePreviewInput,
+  savePermPreview,
+  type PermPreviewStartInput,
+  type PermPreviewState,
+} from "./perm-preview";
+import { withResolvedPermissions } from "./permissions";
+import {
+  ensurePermissionLevelSeeds,
+  subscribePermissionLevels,
+} from "./permission-levels";
+import type { PermissionLevel } from "./types";
 
 type AuthStatus = "loading" | "signedOut" | "denied" | "ready" | "unconfigured";
 
 type AuthContextValue = {
   status: AuthStatus;
   user: User | null;
+  /** สิทธิ์/บทบาทที่ใช้โชว์เมนู — อาจเป็นพรีวิว · permissions ถูก resolve แล้ว */
   staff: StaffMember | null;
+  /** บัญชีจริงที่ล็อกอิน (ไม่ถูกพรีวิวทับ) · permissions resolve แล้ว */
+  realStaff: StaffMember | null;
+  /** แคตตาล็อกลำดับสิทธิ์ — ใช้พรีวิว/resolve */
+  permissionLevels: PermissionLevel[];
+  /** true เมื่อเจ้าของกำลังดูมุมมองตามสิทธิ์พนักงาน */
+  isPermPreview: boolean;
+  permPreview: PermPreviewState | null;
   actorId: string;
   error: string | null;
   signIn: () => Promise<void>;
@@ -44,6 +69,8 @@ type AuthContextValue = {
   confirmPhoneLoginOtp: (code: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshStaff: () => Promise<void>;
+  startPermPreview: (input: PermPreviewStartInput) => void;
+  stopPermPreview: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -175,6 +202,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
   const [user, setUser] = useState<User | null>(null);
   const [staff, setStaff] = useState<StaffMember | null>(null);
+  const [permissionLevels, setPermissionLevels] = useState<PermissionLevel[]>([]);
+  const [permPreview, setPermPreview] = useState<PermPreviewState | null>(() => loadPermPreview());
   const [error, setError] = useState<string | null>(null);
   const [phoneConfirmation, setPhoneConfirmation] = useState<ConfirmationResult | null>(null);
 
@@ -184,6 +213,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStaff(member);
     setStatus(member ? "ready" : "denied");
   }, [user]);
+
+  // แคตตาล็อกลำดับสิทธิ์ — resolve/can/พรีวิวใช้ชุดเดียวกัน
+  // เจ้าของ: ซ่อม seed ระบบ (พนักงานร้านไม่มีบช./คลัง) + sync คนที่ผูก
+  useEffect(() => {
+    if (!isFirebaseConfigured()) return;
+    if (status !== "ready" || !staff) {
+      setPermissionLevels([]);
+      return;
+    }
+    let cancelled = false;
+    if (staff.role === "owner") {
+      void ensurePermissionLevelSeeds()
+        .then((levels) => {
+          if (!cancelled && levels.length) setPermissionLevels(levels);
+        })
+        .catch(() => undefined);
+    }
+    const unsub = subscribePermissionLevels(
+      (levels) => {
+        if (!cancelled) setPermissionLevels(levels);
+      },
+      () => undefined,
+    );
+    return () => {
+      cancelled = true;
+      unsub();
+    };
+  }, [status, staff?.id, staff?.role]);
+
+  const startPermPreview = useCallback(
+    (input: PermPreviewStartInput) => {
+      if (staff?.role !== "owner") return;
+      const next = normalizePreviewInput(input);
+      setPermPreview(next);
+      savePermPreview(next);
+    },
+    [staff?.role],
+  );
+
+  const stopPermPreview = useCallback(() => {
+    setPermPreview(null);
+    savePermPreview(null);
+  }, []);
 
   useEffect(() => {
     if (!isFirebaseConfigured()) {
@@ -236,6 +308,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setPhoneConfirmation(null);
         setUser(null);
         setStaff(null);
+        setPermPreview(null);
+        savePermPreview(null);
         setStatus("signedOut");
         return;
       }
@@ -258,6 +332,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (member) {
           saveCachedStaff(member);
           setStatus("ready");
+          // ปักเข้าหลังสุดทันทีตอนล็อกอินสำเร็จ (ไม่รอ heartbeat / visibility)
+          void import("./staff-presence")
+            .then(async ({ touchStaffPresence }) => {
+              if (await touchStaffPresence(member.id)) return;
+              // token/rules ยังไม่พร้อม — ลองใหม่สั้นๆ
+              for (const delay of [2_000, 8_000]) {
+                await new Promise((r) => setTimeout(r, delay));
+                if (await touchStaffPresence(member.id)) return;
+              }
+            })
+            .catch(() => undefined);
+          // ย้ายเงินเดือน/บัญชีออกจาก employees → employeePay (ครั้งแรกหลัง deploy)
+          if (member.role === "owner") {
+            void migrateAllLegacyEmployeePay().catch(() => undefined);
+            void migrateAllLegacyStockCosts().catch(() => undefined);
+            void migrateAllBonusCloseSideDocs().catch(() => undefined);
+          }
         } else {
           clearAppCaches();
           setStatus("denied");
@@ -368,16 +459,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearAppCaches();
     resetPhoneRecaptcha();
     setPhoneConfirmation(null);
+    setPermPreview(null);
+    savePermPreview(null);
     await firebaseSignOut(getFirebaseAuth());
   }, []);
 
-  const actorId = actorIdFromUser(user, staff);
+  const isPermPreview = !!(permPreview && staff?.role === "owner");
+  // บัญชีจริง + พรีวิว: permissions ต้องผ่าน resolveEffectivePermissions เสมอ
+  const realStaff = useMemo(
+    () => withResolvedPermissions(staff, permissionLevels),
+    [staff, permissionLevels],
+  );
+  const effectiveStaff = useMemo(() => {
+    if (isPermPreview && permPreview && staff) {
+      return withResolvedPermissions(
+        buildPreviewStaff(staff, permPreview),
+        permissionLevels,
+      );
+    }
+    return realStaff;
+  }, [isPermPreview, permPreview, staff, permissionLevels, realStaff]);
+  // เขียนข้อมูลยังเป็นบัญชีจริง — ห้ามใช้ effectiveStaff (พรีวิวสวม memberId คนอื่น)
+  const actorId = actorIdFromUser(user, realStaff);
 
   const value = useMemo(
     () => ({
       status,
       user,
-      staff,
+      staff: effectiveStaff,
+      realStaff,
+      permissionLevels,
+      isPermPreview,
+      permPreview: isPermPreview ? permPreview : null,
       actorId,
       error,
       signIn,
@@ -385,11 +498,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       confirmPhoneLoginOtp,
       signOut,
       refreshStaff,
+      startPermPreview,
+      stopPermPreview,
     }),
     [
       status,
       user,
-      staff,
+      effectiveStaff,
+      realStaff,
+      permissionLevels,
+      isPermPreview,
+      permPreview,
       actorId,
       error,
       signIn,
@@ -397,6 +516,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       confirmPhoneLoginOtp,
       signOut,
       refreshStaff,
+      startPermPreview,
+      stopPermPreview,
     ],
   );
 

@@ -53,6 +53,18 @@ public final class CaptureProjectionPrefs {
         .apply();
   }
 
+  /**
+   * Projection token died (process death / system revoke) while prefs still said granted.
+   * Reset to none so the next BO capture can re-prompt immediately (not 6h interval throttle).
+   */
+  public static void markProjectionDead(Context context) {
+    prefs(context)
+        .edit()
+        .putString(KEY_STATE, STATE_NONE)
+        .putBoolean(KEY_NAG_UNTIL_GRANT, false)
+        .apply();
+  }
+
   /** Call when APK update finishes — ask capture consent on next UI open. */
   public static void markPromptAfterUpdate(Context context) {
     prefs(context).edit().putBoolean(KEY_PROMPT_AFTER_UPDATE, true).apply();

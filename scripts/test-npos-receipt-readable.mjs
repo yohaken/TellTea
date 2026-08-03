@@ -9,13 +9,13 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 512/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 144/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+112/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.89"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 581/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 166/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+130/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.107"/);
 
 assert.ok(existsSync(join(root, "docs/npos-receipt-readable-checklist.md")));
-assert.match(read("docs/npos-receipt-readable-checklist.md"), /1\.14\.89/);
+assert.match(read("docs/npos-receipt-readable-checklist.md"), /1.14.107/);
 assert.match(read("docs/npos-receipt-readable-checklist.md"), /\?2|TIS-620|x2/);
 
 const java = read(
@@ -44,7 +44,7 @@ assert.match(sunmi, /BOLD_ON/); // ESC E → markers, not stripped
 const textForm = read("src/lib/pos-printer/receipt-text-form.ts");
 assert.match(textForm, /qtyCol/);
 assert.match(textForm, /\$\{qtyCol\} \$\{title\}/);
-assert.match(textForm, /- \$\{mod\.label\} x/);
+assert.match(textForm, /formatReceiptModifierText/);
 assert.match(textForm, / {4}\$\{label\}|` {4}\$\{label\}/);
 assert.match(textForm, /blank line between drinks/);
 assert.doesNotMatch(textForm, /×|•/);

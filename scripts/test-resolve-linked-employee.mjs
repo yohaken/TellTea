@@ -19,12 +19,13 @@ function isLinkedToStaff(emp, staff) {
 
 function resolveLinkedEmployee(employees, staff) {
   if (!staff || !employees.length) return null;
+  // link canonical ชนะ employeeId ที่ค้าง
+  const linked = employees.find((e) => isLinkedToStaff(e, staff));
+  if (linked) return linked;
   if (staff.employeeId) {
     const byId = employees.find((e) => e.id === staff.employeeId);
     if (byId) return byId;
   }
-  const linked = employees.find((e) => isLinkedToStaff(e, staff));
-  if (linked) return linked;
   const name = (staff.displayName || "").trim().toLowerCase();
   if (!name) return null;
   return employees.find((e) => e.active && e.name.trim().toLowerCase() === name) || null;
@@ -36,7 +37,11 @@ const roster = [
   { id: "c", name: "ซี", active: true },
 ];
 
-assert.equal(resolveLinkedEmployee(roster, { id: "s1", employeeId: "c" })?.id, "c");
+assert.equal(
+  resolveLinkedEmployee(roster, { id: "s1", employeeId: "c" })?.id,
+  "a",
+  "canonical link must win over stale employeeId",
+);
 assert.equal(resolveLinkedEmployee(roster, { id: "s1" })?.id, "a");
 assert.equal(
   resolveLinkedEmployee(roster, { id: "sx", email: "b@x.com" })?.id,

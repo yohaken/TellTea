@@ -9,6 +9,38 @@ export const EVIDENCE_PHOTO_PREFIX = "evp:";
 /** Soft target per evidence image (one Firestore doc = one photo, under 1 MiB). */
 export const EVIDENCE_PHOTO_SOFT_CHARS = 820_000;
 
+/**
+ * Folders allowed for any signed-in staff (must stay in sync with firestore.rules
+ * `evidencePhotoStaffFolder`). Owner-books is separate (owner / ownerBooks).
+ */
+export const EVIDENCE_PHOTO_STAFF_FOLDERS = [
+  "ledger-receipts",
+  "ot-photos",
+  "bill-notices",
+  "checklist",
+  "tasks",
+  "production",
+  "staff-id",
+  "bonus-deductions",
+  "payroll",
+  "cash-deposits",
+  "vat-input",
+] as const;
+
+export const EVIDENCE_PHOTO_OWNER_FOLDERS = [
+  "owner-books",
+  /** พรีวิวแคป VAT delivery — เจ้าของเท่านั้น */
+  "vat-ingest",
+] as const;
+
+export function isAllowedEvidencePhotoFolder(folder: string): boolean {
+  const f = String(folder || "").trim();
+  return (
+    (EVIDENCE_PHOTO_STAFF_FOLDERS as readonly string[]).includes(f) ||
+    (EVIDENCE_PHOTO_OWNER_FOLDERS as readonly string[]).includes(f)
+  );
+}
+
 export type EvidencePhotoDoc = {
   dataUrl: string;
   contentType: string;
@@ -85,6 +117,10 @@ export async function saveEvidencePhotoDoc(
   if (!auth.currentUser) {
     throw new Error("ยังไม่ได้เข้าสู่ระบบ — เข้าสู่ระบบก่อนแนบรูป");
   }
+  const folder = String(options.folder || "").trim();
+  if (!isAllowedEvidencePhotoFolder(folder)) {
+    throw new Error(`โฟลเดอร์รูปไม่ถูกต้อง (${folder || "ว่าง"}) — แจ้งเจ้าของระบบ`);
+  }
 
   const encode = options.encode || "receipt";
   options.onProgress?.(3, "กำลังอ่านเวลาถ่าย…");
@@ -111,7 +147,7 @@ export async function saveEvidencePhotoDoc(
           : file.type || "image/png"
         : file.type || "image/jpeg",
     fileName: (file.name || (encode === "logo" ? "logo.png" : "slip.jpg")).slice(0, 120),
-    folder: options.folder,
+    folder,
     slotKey: options.slotKey,
     createdBy: auth.currentUser.uid,
     createdAt: now,

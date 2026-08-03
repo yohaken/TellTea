@@ -132,13 +132,13 @@ export async function saveShiftClose(input: {
   };
 
   if (entry) {
-    await updateOtEntry(entry.id, fullPayload);
+    await updateOtEntry(entry.id, fullPayload, entry);
     return;
   }
 
   const existing = findExistingForSlot(allEntries, payload.date, payload.shift);
   if (existing) {
-    await updateOtEntry(existing.id, fullPayload);
+    await updateOtEntry(existing.id, fullPayload, existing);
   } else {
     await addOtEntry(fullPayload);
   }

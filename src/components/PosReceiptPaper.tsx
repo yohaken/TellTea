@@ -1,206 +1,88 @@
 "use client";
 
+import { useMemo } from "react";
 import { Printer, Trash2 } from "lucide-react";
 import type { PosLocalReceipt } from "@/lib/pos-local-receipts";
+import { localReceiptToPrintPayload } from "@/lib/pos-receipt-view";
 import {
-  receiptQtyEmphasized,
-  tallyLocalLineModifiers,
-} from "@/lib/pos-receipt-format";
+  buildUnifiedReceiptBody,
+  getKindProfile,
+  unifiedReceiptStyles,
+} from "@/lib/pos-printer";
 import {
-  localReceiptLines,
-  receiptDiscountBaht,
-  receiptSubtotal,
-} from "@/lib/pos-receipt-view";
-import { formatPlainNumber } from "@/lib/utils";
+  getLocalPosShopSettings,
+  type PosShopSettings,
+} from "@/lib/pos-settings";
+import { PosPrintDocFrame } from "@/components/PosPrintDocFrame";
 
-function formatReceiptDate(ts: number) {
-  return new Date(ts).toLocaleString("th-TH", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
+/**
+ * Back-office / history bill detail — same field order & labels as thermal
+ * (`buildUnifiedReceiptBody` / native ReceiptFormBuilder).
+ */
 export function PosReceiptPaper({
   receipt,
   compact = false,
+  shop,
   onPrint,
   onVoid,
   voidBusy,
 }: {
   receipt: PosLocalReceipt;
   compact?: boolean;
+  shop?: Pick<
+    PosShopSettings,
+    | "shopName"
+    | "shopNameTh"
+    | "shopAddress"
+    | "shopPhone"
+    | "taxId"
+    | "receiptStaffName"
+    | "receiptFooterNote"
+  >;
   onPrint?: () => void;
   onVoid?: () => void;
   voidBusy?: boolean;
 }) {
-  const lines = localReceiptLines(receipt);
-  const subtotal = receiptSubtotal(lines);
-  const discountBaht = receiptDiscountBaht(receipt);
   const voided = receipt.voided === true;
   const showActions = Boolean(onPrint || onVoid);
+  const shopSettings = shop ?? getLocalPosShopSettings();
+
+  const previewHtml = useMemo(() => {
+    const payload = localReceiptToPrintPayload(receipt, shopSettings);
+    const layout = getKindProfile(compact ? "mobile_58" : "builtin_80");
+    const body = buildUnifiedReceiptBody(payload, layout);
+    const css = unifiedReceiptStyles(layout, "auto");
+    const voidBanner = voided
+      ? `<div style="text-align:center;font-weight:800;color:#b42318;margin:0 0 8px;letter-spacing:0.04em;">ทำลายแล้ว</div>`
+      : "";
+    const pendingBanner = receipt.pending
+      ? `<div style="text-align:center;font-size:12px;color:#a15c00;margin:0 0 6px;">รอส่งข้อมูล</div>`
+      : "";
+    const voidReason =
+      voided && receipt.voidReason?.trim()
+        ? `<div style="font-size:12px;color:#444;margin-top:8px;border-top:1px dashed #aaa;padding-top:6px;">เหตุผลทำลาย: ${escapeHtml(
+            receipt.voidReason.trim(),
+          )}</div>`
+        : "";
+    return `<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"/><style>
+      ${css}
+      body{margin:0;background:#fff;}
+      .pos-receipt-preview-shell{padding:8px 4px 12px;}
+    </style></head><body><div class="pos-receipt-preview-shell">${voidBanner}${pendingBanner}${body}${voidReason}</div></body></html>`;
+  }, [compact, receipt, shopSettings, voided]);
 
   return (
     <div className={`pos-receipt-paper-wrap ${compact ? "pos-receipt-paper-wrap--compact" : ""}`}>
-      <article
-        className={`pos-receipt-paper ${voided ? "is-voided" : ""}`}
+      <div
+        className={`pos-receipt-paper pos-receipt-paper--print-parity ${voided ? "is-voided" : ""}`}
         aria-label={`ใบเสร็จ ${receipt.billNo}`}
       >
-        <div className="pos-receipt-paper-zigzag" aria-hidden />
-
-        {!compact ? (
-          <header className="pos-receipt-paper-head">
-            <p className="pos-receipt-paper-total-label">ยอดขาย</p>
-            <p className="pos-receipt-paper-total">฿{formatPlainNumber(receipt.total)}</p>
-            {voided ? <span className="pos-receipt-paper-void-badge">ทำลายแล้ว</span> : null}
-          </header>
-        ) : null}
-
-        <section className="pos-receipt-paper-section">
-          <h3>{compact ? `บิล #${receipt.billNo}` : "ข้อมูลใบเสร็จ"}</h3>
-          <dl className="pos-receipt-paper-meta">
-            {!compact ? (
-              <div>
-                <dt>เลขบิล</dt>
-                <dd>#{receipt.billNo}</dd>
-              </div>
-            ) : null}
-            <div>
-              <dt>ชำระโดย</dt>
-              <dd>
-                {receipt.paymentMethod === "cash"
-                  ? "เงินสด"
-                  : receipt.paymentMethod === "transfer"
-                    ? "โอนเงิน"
-                    : "PromptPay"}
-              </dd>
-            </div>
-            <div>
-              <dt>วันที่</dt>
-              <dd>{formatReceiptDate(receipt.createdAt)}</dd>
-            </div>
-            {receipt.staffName?.trim() ? (
-              <div>
-                <dt>พนักงาน</dt>
-                <dd>{receipt.staffName.trim()}</dd>
-              </div>
-            ) : null}
-            {receipt.customerName?.trim() ? (
-              <div>
-                <dt>ลูกค้า</dt>
-                <dd>{receipt.customerName.trim()}</dd>
-              </div>
-            ) : null}
-            {receipt.customerPhone?.trim() ? (
-              <div>
-                <dt>เบอร์</dt>
-                <dd>{receipt.customerPhone.trim()}</dd>
-              </div>
-            ) : null}
-            {receipt.paymentMethod === "cash" && receipt.cashReceived != null ? (
-              <>
-                <div>
-                  <dt>รับเงิน</dt>
-                  <dd>฿{formatPlainNumber(receipt.cashReceived)}</dd>
-                </div>
-                <div>
-                  <dt>ทอน</dt>
-                  <dd>฿{formatPlainNumber(receipt.change ?? 0)}</dd>
-                </div>
-              </>
-            ) : null}
-            {receipt.pending ? (
-              <div>
-                <dt>สถานะ</dt>
-                <dd className="pos-receipt-paper-pending">รอส่งข้อมูล</dd>
-              </div>
-            ) : null}
-            {voided && receipt.voidReason ? (
-              <div>
-                <dt>เหตุผลทำลาย</dt>
-                <dd>{receipt.voidReason}</dd>
-              </div>
-            ) : null}
-          </dl>
-        </section>
-
-        <section className="pos-receipt-paper-section">
-          <h3>รายการอาหาร</h3>
-          <ul className="pos-receipt-paper-items">
-            {lines.map((line, idx) => {
-              const mods = tallyLocalLineModifiers(line);
-              const lineTotal = line.unitPrice * line.qty;
-              const emphasizeQty = receiptQtyEmphasized(line.qty);
-              return (
-                <li key={`${receipt.id}-${idx}`} className="pos-receipt-paper-item">
-                  <div className="pos-receipt-paper-item-head">
-                    <span
-                      className={
-                        emphasizeQty
-                          ? "pos-receipt-paper-item-qty-badge is-hot"
-                          : "pos-receipt-paper-item-qty-badge"
-                      }
-                    >
-                      {Math.max(1, line.qty)}
-                    </span>
-                    <div className="pos-receipt-paper-item-main">
-                      <span className="pos-receipt-paper-item-name">{line.name}</span>
-                      <span className="pos-receipt-paper-item-price">
-                        {formatPlainNumber(lineTotal)}
-                      </span>
-                    </div>
-                  </div>
-                  {mods.map((mod) => (
-                    <p key={`${idx}-${mod.label}`} className="pos-receipt-paper-mod">
-                      - {mod.label}{" "}
-                      <span
-                        className={
-                          mod.count >= 2
-                            ? "pos-receipt-paper-mod-qty is-hot"
-                            : "pos-receipt-paper-mod-qty"
-                        }
-                      >
-                        x{Math.max(1, mod.count)}
-                      </span>
-                    </p>
-                  ))}
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-
-        <section className="pos-receipt-paper-section pos-receipt-paper-totals">
-          <div className="pos-receipt-paper-total-row">
-            <span>ราคาอาหารรวม</span>
-            <span>{formatPlainNumber(subtotal)}</span>
-          </div>
-          {discountBaht > 0 ? (
-            <div className="pos-receipt-paper-total-row pos-receipt-paper-total-row--discount">
-              <span>ส่วนลด</span>
-              <span>-{formatPlainNumber(discountBaht)}</span>
-            </div>
-          ) : null}
-          {(receipt.serviceChargeBaht || 0) > 0 ? (
-            <div className="pos-receipt-paper-total-row">
-              <span>ค่าบริการ</span>
-              <span>{formatPlainNumber(receipt.serviceChargeBaht || 0)}</span>
-            </div>
-          ) : null}
-          {(receipt.vatBaht || 0) > 0 ? (
-            <div className="pos-receipt-paper-total-row">
-              <span>VAT</span>
-              <span>{formatPlainNumber(receipt.vatBaht || 0)}</span>
-            </div>
-          ) : null}
-          <div className="pos-receipt-paper-total-row pos-receipt-paper-total-row--grand">
-            <span>ยอดสุทธิ</span>
-            <strong>{formatPlainNumber(receipt.total)}</strong>
-          </div>
-        </section>
-      </article>
+        <PosPrintDocFrame
+          html={previewHtml}
+          title={`ใบเสร็จ ${receipt.billNo}`}
+          tall={!compact}
+        />
+      </div>
 
       {showActions ? (
         <div className="pos-receipt-paper-actions">
@@ -230,4 +112,12 @@ export function PosReceiptPaper({
       ) : null}
     </div>
   );
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }

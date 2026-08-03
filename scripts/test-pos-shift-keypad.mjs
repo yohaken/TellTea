@@ -30,7 +30,7 @@ assert.match(templateSrc, /Snapshot ระหว่างรอบการข�
 assert.match(templateSrc, /รายงานยอดการขาย/);
 assert.match(templateSrc, /ไม่ใช่การปิดรอบ/);
 assert.match(templateSrc, /ยอดขายตามหมวดหมู่/);
-assert.match(templateSrc, /รายการขายแยกตามบิล/);
+assert.match(templateSrc, /สรุปบิล (สถิติ)/);
 assert.match(templateSrc, /openShiftReportPrint/);
 
 const reportSrc = readFileSync(join(root, "src/lib/pos-shift-report.ts"), "utf8");

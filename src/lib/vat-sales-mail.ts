@@ -30,6 +30,12 @@ import {
 } from "./vat-sales";
 import { parsePlatformEmail, type ParsedPlatformReport } from "./vat-sales-parse";
 import { appendVatSalesAudit } from "./vat-sales-audit";
+import {
+  isNoiseMail,
+  isTaxInvoiceMail,
+  matchMailChannel,
+} from "./vat-mail-channel";
+import { inferMailStudyTags, mergeStudyTags } from "./vat-mail-study";
 
 export type { MailChannelRule, VatMailRules };
 export { DEFAULT_MAIL_RULES, mapMailRules };
@@ -65,8 +71,13 @@ export type PlatformEmailReport = {
   /** พาธใน Firebase Storage (vat-mail-pdfs/…) */
   pdfStoragePaths: string[];
   pdfError: string;
+  /** ไฟล์ที่อัปขึ้น Google Drive (TellTea-VAT/แอพ/เดือน) */
+  driveFiles: VatMailDriveFile[];
+  driveSyncedAt: number;
   syncedAt: number;
   parserVersion: string;
+  /** แท็กศึกษาบนเว็บ — จูนร่วม AI · ยังไม่เข้างบ */
+  studyTags: string[];
   parsed: {
     reportDate: string;
     reportKind: "daily" | "weekly" | "monthly";
@@ -81,6 +92,38 @@ export type PlatformEmailReport = {
   } | null;
 };
 
+export type { MailStudyFileKind } from "./vat-mail-study";
+export {
+  inferMailStudyHints,
+  MAIL_STUDY_TAG_PRESETS,
+} from "./vat-mail-study";
+
+export type VatMailDriveFile = {
+  fileId: string;
+  name: string;
+  mimeType: string;
+  webViewLink: string;
+  folderId: string;
+  folderPath: string;
+  channel: DeliveryChannel | string;
+  monthKey: string;
+  bytes: number;
+  uploadedAt: number;
+  sourceReportId: string;
+  sourceMessageId: string;
+};
+
+export type VatMailDriveStatus = {
+  hasDriveScope: boolean;
+  rootFolderId: string;
+  rootFolderName: string;
+  rootWebViewLink: string;
+  lastDriveSyncAt: number;
+  lastDriveSyncUploaded: number;
+  lastDriveSyncError: string;
+  lastDriveSyncScanned: number;
+};
+
 export type VatMailStatus = {
   hasConfig: boolean;
   connected: boolean;
@@ -90,7 +133,32 @@ export type VatMailStatus = {
   lastSyncAt: number;
   lastSyncError: string;
   lastSyncAdded: number;
+  scope?: string;
+  hasDriveScope?: boolean;
+  drive?: VatMailDriveStatus;
 };
+
+function mapDriveFile(raw: unknown): VatMailDriveFile | null {
+  if (!raw || typeof raw !== "object") return null;
+  const d = raw as Record<string, unknown>;
+  const fileId = String(d.fileId || "").trim();
+  const name = String(d.name || "").trim();
+  if (!fileId || !name) return null;
+  return {
+    fileId,
+    name,
+    mimeType: String(d.mimeType || ""),
+    webViewLink: String(d.webViewLink || ""),
+    folderId: String(d.folderId || ""),
+    folderPath: String(d.folderPath || ""),
+    channel: String(d.channel || ""),
+    monthKey: String(d.monthKey || ""),
+    bytes: Number(d.bytes) || 0,
+    uploadedAt: Number(d.uploadedAt) || 0,
+    sourceReportId: String(d.sourceReportId || ""),
+    sourceMessageId: String(d.sourceMessageId || ""),
+  };
+}
 
 export function channelReportLabel(channel: string): string {
   if (channel === "shopee" || channel === "grab" || channel === "lineman") {
@@ -160,8 +228,18 @@ function mapReport(id: string, data: Record<string, unknown>): PlatformEmailRepo
       ? data.pdfStoragePaths.map(String)
       : [],
     pdfError: String(data.pdfError || ""),
+    driveFiles: Array.isArray(data.driveFiles)
+      ? data.driveFiles
+          .map(mapDriveFile)
+          .filter((f): f is VatMailDriveFile => Boolean(f))
+          .slice(0, 20)
+      : [],
+    driveSyncedAt: Number(data.driveSyncedAt) || 0,
     syncedAt: Number(data.syncedAt) || 0,
     parserVersion: String(data.parserVersion || ""),
+    studyTags: Array.isArray(data.studyTags)
+      ? data.studyTags.map((t) => String(t).trim()).filter(Boolean).slice(0, 20)
+      : [],
     parsed: parsedRaw
       ? {
           reportDate: String(parsedRaw.reportDate || ""),
@@ -226,11 +304,13 @@ export async function fetchVatMailPdfUrl(
   return url;
 }
 
-export async function syncVatMail(lookbackDays = 31): Promise<{
+export async function syncVatMail(lookbackDays = 120): Promise<{
   scanned: number;
   added: number;
   skipped: number;
   pdfEnriched?: number;
+  reclassified?: number;
+  noiseTagged?: number;
   lookbackDays: number;
 }> {
   const fn = httpsCallable<
@@ -240,11 +320,146 @@ export async function syncVatMail(lookbackDays = 31): Promise<{
       added: number;
       skipped: number;
       pdfEnriched?: number;
+      reclassified?: number;
+      noiseTagged?: number;
       lookbackDays: number;
     }
   >(getFirebaseFunctions(), "vatMailSync");
   const res = await fn({ lookbackDays });
   return res.data;
+}
+
+/** คัดแยกเดือน/ชนิดรายงานจากเนื้อเมล — heuristic + Gemini เมื่อไม่ชัวร์ */
+export async function classifyVatMailPeriods(opts?: {
+  monthKey?: string;
+  limit?: number;
+  force?: boolean;
+}): Promise<{
+  scanned: number;
+  updated: number;
+  aiCalled: number;
+  heuristicOnly: number;
+  samples: Array<Record<string, unknown>>;
+}> {
+  const fn = httpsCallable<
+    { monthKey?: string; limit?: number; force?: boolean },
+    {
+      scanned: number;
+      updated: number;
+      aiCalled: number;
+      heuristicOnly: number;
+      samples?: Array<Record<string, unknown>>;
+    }
+  >(getFirebaseFunctions(), "vatMailAiClassifyPeriod");
+  const res = await fn({
+    ...(opts?.monthKey ? { monthKey: opts.monthKey } : {}),
+    ...(opts?.limit != null ? { limit: opts.limit } : {}),
+    ...(opts?.force ? { force: true } : {}),
+  });
+  return {
+    scanned: Number(res.data?.scanned) || 0,
+    updated: Number(res.data?.updated) || 0,
+    aiCalled: Number(res.data?.aiCalled) || 0,
+    heuristicOnly: Number(res.data?.heuristicOnly) || 0,
+    samples: Array.isArray(res.data?.samples) ? res.data.samples : [],
+  };
+}
+
+/**
+ * ซิงก์แนบเมล → Google Drive กองรวมต่อแอพ
+ * TellTea-VAT/{grab|lineman|shopee}/ — ยังไม่แยกเดือนบน Drive
+ */
+export async function syncVatMailDrive(opts?: {
+  monthKey?: string;
+  /** true = กรองเมลตามเดือน (ไม่แนะนำช่วงนี้) */
+  filterByMonth?: boolean;
+}): Promise<{
+  uploaded: number;
+  skipped: number;
+  scanned: number;
+  rootCreated: boolean;
+  rootFolderId: string;
+  rootWebViewLink: string;
+  monthKey: string;
+  pileMode?: boolean;
+  errors: string[];
+  drive?: VatMailDriveStatus;
+}> {
+  const fn = httpsCallable<
+    { monthKey?: string; filterByMonth?: boolean },
+    {
+      uploaded: number;
+      skipped: number;
+      scanned: number;
+      rootCreated: boolean;
+      rootFolderId: string;
+      rootWebViewLink: string;
+      monthKey: string;
+      pileMode?: boolean;
+      errors: string[];
+      drive?: VatMailDriveStatus;
+    }
+  >(getFirebaseFunctions(), "vatMailDriveSync");
+  const res = await fn({
+    ...(opts?.monthKey ? { monthKey: opts.monthKey } : {}),
+    ...(opts?.filterByMonth ? { filterByMonth: true } : {}),
+  });
+  return res.data;
+}
+
+/**
+ * รวม driveFiles จากแคตตาล็อก — กองรวมต่อแอพ (ไม่กรองเดือนบน Drive)
+ * monthKey ถ้าใส่ = ใช้ติ๊ก/เรียงเฉยๆ ไม่ซ่อนไฟล์เดือนอื่น
+ */
+export async function listMonthDriveFiles(monthKey?: string): Promise<{
+  byChannel: Record<DeliveryChannel, VatMailDriveFile[]>;
+  total: number;
+}> {
+  const empty = {
+    byChannel: {
+      grab: [] as VatMailDriveFile[],
+      lineman: [] as VatMailDriveFile[],
+      shopee: [] as VatMailDriveFile[],
+    },
+    total: 0,
+  };
+
+  const rows = await listPlatformEmailReports({ max: 400 });
+  const byChannel = empty.byChannel;
+  const seen = new Set<string>();
+  const key = String(monthKey || "").trim();
+
+  for (const row of rows) {
+    for (const f of row.driveFiles) {
+      const ch = f.channel || row.channel;
+      if (ch !== "grab" && ch !== "lineman" && ch !== "shopee") continue;
+      if (seen.has(f.fileId)) continue;
+      seen.add(f.fileId);
+      byChannel[ch].push(f);
+    }
+  }
+
+  for (const ch of DELIVERY_CHANNELS) {
+    byChannel[ch].sort((a, b) => {
+      if (/^\d{4}-\d{2}$/.test(key)) {
+        const am =
+          a.monthKey === key || String(a.folderPath || "").includes(`/${key}/`)
+            ? 1
+            : 0;
+        const bm =
+          b.monthKey === key || String(b.folderPath || "").includes(`/${key}/`)
+            ? 1
+            : 0;
+        if (am !== bm) return bm - am;
+      }
+      return (b.uploadedAt || 0) - (a.uploadedAt || 0);
+    });
+  }
+
+  return {
+    byChannel,
+    total: seen.size,
+  };
 }
 
 export async function listPlatformEmailReports(opts?: {
@@ -256,7 +471,7 @@ export async function listPlatformEmailReports(opts?: {
     query(
       collection(getDb(), PLATFORM_EMAIL_REPORTS_COL),
       orderBy("receivedAt", "desc"),
-      limit(Math.min(300, Math.max(opts?.max || 80, 80))),
+      limit(Math.min(500, Math.max(opts?.max || 120, 80))),
     ),
   );
   let rows = snap.docs.map((d) => mapReport(d.id, d.data() as Record<string, unknown>));
@@ -285,6 +500,113 @@ export async function setPlatformEmailIgnored(id: string, ignored: boolean): Pro
     parseStatus: ignored ? "ignored" : "pending",
     parseError: "",
   });
+}
+
+/** แท็กศึกษา — จูนร่วม AI · ไม่ผสานงบ */
+export async function setPlatformEmailStudyTags(
+  id: string,
+  tags: string[],
+): Promise<string[]> {
+  const next = [...new Set(tags.map((t) => String(t).trim()).filter(Boolean))].slice(
+    0,
+    20,
+  );
+  await updateDoc(doc(getDb(), PLATFORM_EMAIL_REPORTS_COL, id), {
+    studyTags: next,
+    studyTagsUpdatedAt: Date.now(),
+  });
+  return next;
+}
+
+export async function togglePlatformEmailStudyTag(
+  id: string,
+  current: string[],
+  tag: string,
+): Promise<string[]> {
+  const t = String(tag || "").trim();
+  if (!t) return current;
+  const has = current.includes(t);
+  const next = has ? current.filter((x) => x !== t) : [...current, t];
+  return setPlatformEmailStudyTags(id, next);
+}
+
+/** แก้ช่องทาง + แท็กศึกษา D2 (owner เขียน Firestore ตรง · ยังไม่เข้างบ) */
+export async function reclassifyPlatformEmailReports(opts?: {
+  max?: number;
+  actor?: string;
+  rules?: VatMailRules;
+}): Promise<{
+  scanned: number;
+  reclassified: number;
+  noiseTagged: number;
+  tagged: number;
+}> {
+  const rows = await listPlatformEmailReports({ max: opts?.max || 300 });
+  const rules = opts?.rules || DEFAULT_MAIL_RULES;
+  let reclassified = 0;
+  let noiseTagged = 0;
+  let tagged = 0;
+  for (const r of rows) {
+    const next = matchMailChannel(r.from, r.subject, rules);
+    const noise = isNoiseMail(r.from, r.subject) || isTaxInvoiceMail(r.subject);
+    const inferredTags = inferMailStudyTags(
+      {
+        from: r.from,
+        subject: r.subject,
+        snippet: r.snippet,
+        channel: next !== "unknown" ? next : r.channel,
+        reportKind: r.reportKind,
+        pdfFilenames: r.pdfFilenames,
+        studyTags: r.studyTags,
+      },
+      rules,
+    );
+    const { next: studyTags, changed: tagsChanged } = mergeStudyTags(
+      r.studyTags,
+      inferredTags,
+    );
+    const patch: Record<string, unknown> = {};
+    if (next !== "unknown" && next !== r.channel) {
+      patch.channel = next;
+    }
+    if (tagsChanged) {
+      patch.studyTags = studyTags;
+      patch.studyTagsUpdatedAt = Date.now();
+    }
+    if (!Object.keys(patch).length) continue;
+    patch.channelReclassifiedAt = Date.now();
+    patch.channelReclassifiedBy = opts?.actor || "owner";
+    await updateDoc(doc(getDb(), PLATFORM_EMAIL_REPORTS_COL, r.id), patch);
+    reclassified += 1;
+    if (patch.studyTags) tagged += 1;
+    if (noise && studyTags.includes("ข้าม")) noiseTagged += 1;
+  }
+  return { scanned: rows.length, reclassified, noiseTagged, tagged };
+}
+
+/** เวอร์ชันจูนศึกษา D2 — เปิดหน้าที่มาแล้วรันอัตโนมัติครั้งหนึ่ง */
+export const VAT_MAIL_STUDY_PASS = 2;
+export const VAT_MAIL_STUDY_PASS_DOC = "vatMailStudyPass";
+
+export async function loadVatMailStudyPass(): Promise<number> {
+  const snap = await getDoc(doc(getDb(), "meta", VAT_MAIL_STUDY_PASS_DOC));
+  if (!snap.exists()) return 0;
+  return Number(snap.data()?.pass) || 0;
+}
+
+export async function saveVatMailStudyPass(
+  pass: number,
+  actor: string,
+): Promise<void> {
+  await setDoc(
+    doc(getDb(), "meta", VAT_MAIL_STUDY_PASS_DOC),
+    {
+      pass,
+      updatedAt: Date.now(),
+      updatedBy: actor || "owner",
+    },
+    { merge: true },
+  );
 }
 
 export type VatMailOAuthConfigPublic = {

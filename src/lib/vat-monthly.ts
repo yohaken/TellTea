@@ -85,6 +85,38 @@ export function formatThaiMonthKey(monthKey: string): string {
   return `${THAI_MONTH_FULL[m]} ${y + 543}`;
 }
 
+/**
+ * เดือนที่กำลังปิดงบ — ต้นเดือน (วันที่ 1–15 เวลาไทย) เปิดเดือนก่อนหน้า
+ * ตัวอย่าง: 1 ส.ค. → กรกฎาคม · หลังวันที่ 15 → เดือนปัจจุบัน
+ */
+export function defaultVatCloseMonthKey(ms = Date.now()): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: VAT_PERIOD_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date(ms));
+  const get = (t: string) => parts.find((p) => p.type === t)?.value || "0";
+  const year = Number(get("year"));
+  const month = Number(get("month"));
+  const day = Number(get("day"));
+  const current = `${year}-${pad2(month)}`;
+  if (!Number.isFinite(day) || day > 15) return current;
+  const prev = addCalendarMonths(year, month, -1);
+  return `${prev.year}-${pad2(prev.month)}`;
+}
+
+/** อยู่ในช่วงปิดงบต้นเดือน (วันที่ 1–15) หรือไม่ */
+export function isVatCloseWindow(ms = Date.now()): boolean {
+  const day = Number(
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: VAT_PERIOD_TZ,
+      day: "2-digit",
+    }).format(new Date(ms)),
+  );
+  return Number.isFinite(day) && day >= 1 && day <= 15;
+}
+
 /** รายการเดือนไทยสำหรับตัวเลือก (ล่าสุดก่อน · นับย้อนหลัง) */
 export function listThaiMonthOptions(
   aroundKey?: string,
