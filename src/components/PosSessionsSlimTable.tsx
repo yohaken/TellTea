@@ -775,15 +775,19 @@ export function PosSessionsSlimTable({
                 aria-label="เลือกทั้งหมดที่แสดง"
               />
             </span>
-            <span role="columnheader">สถานะ</span>
+            <span role="columnheader" title="สถานะรอบ">
+              สถานะ
+            </span>
             <span role="columnheader">วันที่</span>
-            <span role="columnheader">เครื่อง</span>
-            <span role="columnheader" className="npos-slim-col-session">
-              รหัสรอบ
+            <span role="columnheader" title="รหัสเครื่อง">
+              เครื่อง
+            </span>
+            <span role="columnheader" className="npos-slim-col-session" title="รหัสรอบ">
+              รอบ
             </span>
             <span role="columnheader">เริ่ม</span>
             <span role="columnheader">ปิด</span>
-            <span role="columnheader" className="npos-slim-num">
+            <span role="columnheader" className="npos-slim-num" title="เวลารวม">
               รวม
             </span>
             <span role="columnheader" className="npos-slim-num">
@@ -798,12 +802,12 @@ export function PosSessionsSlimTable({
             <span role="columnheader" className="npos-slim-num">
               โอน
             </span>
-            <span role="columnheader" className="npos-slim-num">
+            <span role="columnheader" className="npos-slim-num npos-slim-col-pp">
               PP
             </span>
             <span
               role="columnheader"
-              className="npos-slim-num"
+              className="npos-slim-num npos-slim-col-counted"
               title="เงินสดที่นับในลิ้นชักตอนปิดกะ"
             >
               นับ
@@ -811,14 +815,16 @@ export function PosSessionsSlimTable({
             <span
               role="columnheader"
               className="npos-slim-num"
-              title="ยอดนำส่ง = นับ − ทอนค้างรอบถัดไป · สถานะส่งเงิน"
+              title="ยอดนำส่ง = นับ − ทอนค้างรอบถัดไป"
             >
               นำส่ง
             </span>
             <span role="columnheader" title="สถานะส่งเงินสดตามจริง">
-              ส่งเงิน
+              ส่ง
             </span>
-            <span role="columnheader">ปิดรอบ</span>
+            <span role="columnheader" title="ปิดรอบจากหลังร้าน">
+              ปิด
+            </span>
           </div>
 
           {filteredRows.map((row) => {
@@ -853,7 +859,7 @@ export function PosSessionsSlimTable({
                   </span>
                   <span
                     role="cell"
-                    className="npos-slim-code"
+                    className="npos-slim-code npos-slim-device"
                     title={
                       row.openedBy
                         ? `${row.deviceLabel} · ผู้เปิด ${row.openedBy} · ${row.session.deviceId}`
@@ -861,9 +867,6 @@ export function PosSessionsSlimTable({
                     }
                   >
                     {row.pairingCode}
-                    {row.openedBy ? (
-                      <span className="npos-slim-opener muted"> · {row.openedBy}</span>
-                    ) : null}
                   </span>
                   <span
                     role="cell"
@@ -895,12 +898,12 @@ export function PosSessionsSlimTable({
                   <span role="cell" className="npos-slim-num">
                     {moneyOrDash(row.transfer)}
                   </span>
-                  <span role="cell" className="npos-slim-num">
+                  <span role="cell" className="npos-slim-num npos-slim-col-pp">
                     {moneyOrDash(row.pp)}
                   </span>
                   <span
                     role="cell"
-                    className="npos-slim-num npos-slim-strong"
+                    className="npos-slim-num npos-slim-strong npos-slim-col-counted"
                     title={
                       row.open
                         ? "ยังไม่ปิดกะ"
@@ -962,9 +965,11 @@ export function PosSessionsSlimTable({
                   <div className="npos-slim-detail" role="row">
                     <span>
                       {row.isManual ? "รอบมือ · " : ""}
-                      {row.openedBy ? `ผู้เปิดกะ ${row.openedBy} · ` : ""}
-                      ทอนเริ่ม {moneyOrDash(row.opening)}
-                      {row.open ? ` · ระหว่างกะ · ยอดจากบิล realtime` : ""}
+                      รอบ {row.sessionCode}
+                      {row.openedBy ? ` · ผู้เปิด ${row.openedBy}` : ""}
+                      {` · ทอนเริ่ม ${moneyOrDash(row.opening)}`}
+                      {row.open ? " · ระหว่างกะ" : ""}
+                      {` · สด ${moneyOrDash(row.cash)} / โอน ${moneyOrDash(row.transfer)} / PP ${moneyOrDash(row.pp)}`}
                       {(row.cashOut != null && row.cashOut > 0) ||
                       (row.cashDrops != null && row.cashDrops > 0)
                         ? ` · ถอน ${moneyOrDash(row.cashOut)}${
@@ -987,7 +992,7 @@ export function PosSessionsSlimTable({
                         ? ` · นำส่ง ${moneyOrDash(row.remit)}`
                         : ""}
                       {!row.open && row.remitStatus
-                        ? ` · ส่งเงิน ${labelRemitStatus(row.remitStatus)}`
+                        ? ` · ส่ง ${labelRemitStatus(row.remitStatus)}`
                         : ""}
                       {!row.open && row.discount != null && row.discount > 0
                         ? ` · ส่วนลด ${moneyOrDash(row.discount)}`
@@ -1000,15 +1005,14 @@ export function PosSessionsSlimTable({
                         ? ` · บิล สด ${row.cashBills ?? 0} / โอน ${row.transferBills ?? 0} / PP ${row.ppBills ?? 0}`
                         : ""}
                       {row.note ? ` · ${row.note}` : ""}
-                      {row.open ? ` · เวลารวม ${row.durationLabel}` : ` · รวม ${row.durationLabel}`}
-                      {" · รายบิลด้านล่างกรองตามรอบนี้"}
+                      {` · รวม ${row.durationLabel}`}
                       {" · "}
                       <button
                         type="button"
                         className="npos-slim-text-btn"
                         onClick={() => onSelect(null)}
                       >
-                        แสดงทุกบิล
+                        ทุกบิล
                       </button>
                     </span>
                     {row.dropNotes.length > 0 ? (

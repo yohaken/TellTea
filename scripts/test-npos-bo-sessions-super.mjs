@@ -29,18 +29,21 @@ assert.match(lib, /limit\(/);
 
 const slim = read("src/components/PosSessionsSlimTable.tsx");
 assert.match(slim, /เครื่อง/);
-assert.match(slim, /รหัสรอบ/);
+assert.match(slim, /รหัสรอบ|npos-slim-col-session/);
 assert.match(slim, /วันที่/);
-assert.match(slim, /ปิดรอบ/);
+assert.match(slim, /ปิดรอบ|title="ปิดรอบจากหลังร้าน"/);
 assert.match(slim, /durationLabel|npos-slim-duration/);
 assert.match(slim, /formatPosSessionDuration|posSessionDurationMs/);
 assert.match(slim, /onForceClose/);
 assert.match(slim, /npos-slim-col-session/);
+assert.match(slim, /npos-slim-col-pp/);
+assert.match(slim, /npos-slim-col-counted/);
 assert.match(slim, /npos-slim-row--sessions-super/);
 assert.match(slim, /npos-slim-scroll--rows/);
 assert.match(slim, /closedAt/);
 assert.match(slim, /pairingCode|posPairingCodeFromId/);
 assert.doesNotMatch(slim, /shortPosSessionId/);
+assert.doesNotMatch(slim, /npos-slim-opener/);
 
 const libOpen = read("src/lib/pos-sales-report.ts");
 assert.match(libOpen, /sortSessionsByDateNewestFirst\(\[\.\.\.map\.values\(\)\]\)/);
@@ -74,8 +77,15 @@ assert.match(css, /npos-slim-scroll--rows/);
 assert.match(css, /npos-slim-row--sessions-super/);
 assert.match(css, /npos-slim-row--bills-super/);
 assert.match(css, /npos-slim-col-session/);
+assert.match(css, /npos-slim-col-pp/);
+assert.match(css, /npos-slim-col-counted/);
 assert.match(css, /npos-slim-code/);
 assert.match(css, /max-height:\s*min\(22rem/);
+assert.match(css, /max-width:\s*1200px/);
+assert.doesNotMatch(
+  css,
+  /\.npos-slim-row--sessions-super\s*\{[^}]*min-width:\s*63rem/s,
+);
 
 const flow = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/shift/BlindCloseFlow.java",
