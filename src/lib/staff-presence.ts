@@ -14,8 +14,10 @@ import type { StaffMember } from "./types";
 import { mapFirestoreError } from "./firestore-errors";
 import { normalizeEmail, normalizePhone, phoneDocId } from "./utils";
 
-/** วนปัก lastSeenAt ระหว่างใช้งาน (~2 นาที) — ตาราง staff เป็นแหล่งความจริง */
+/** วนปัก lastSeenAt ระหว่างเซสชันปกติ (~2 นาที) — ตาราง staff เป็นแหล่งความจริง */
 export const STAFF_PRESENCE_HEARTBEAT_MS = 2 * 60_000;
+/** ช่วงเปิดหน้าใหม่ — ปักถี่เพื่อให้เจ้าของเห็นทันที */
+export const STAFF_PRESENCE_WARMUP_MS = 30_000;
 /** รีเฟรชป้ายอายุบน dock ของเจ้าของ (คำนวณจาก lastSeenAt ในตาราง) */
 export const STAFF_PRESENCE_AGE_TICK_MS = 30_000;
 /** ออนไลน์สด (เขียว) — เห็นภายใน 5 นาทีหลัง heartbeat */
