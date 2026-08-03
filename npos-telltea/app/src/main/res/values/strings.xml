@@ -422,6 +422,7 @@
     <string name="blind_close_pending_msg">มี %1$d บิลยังไม่ขึ้นเซิร์ฟเวอร์ — ซิงก์ก่อนปิดกะ</string>
     <string name="blind_close_pending_retry">กำลังซิงก์ — ลองปิดกะอีกครั้งเมื่อครบ</string>
     <string name="blind_close_server_failed">ปิดรอบขึ้นเซิร์ฟเวอร์ไม่สำเร็จ — ตรวจเน็ตแล้วลองอีกครั้ง (ยังไม่ออกงาน)</string>
+    <string name="blind_close_sync_required">ยังปิดรอบไม่ได้ — ต้องต่อเน็ตและซิงก์บิล/ทำลายบิลให้ครบก่อน (ยังไม่ออกงาน)</string>
     <string name="shift_opened">เข้างานแล้ว</string>
     <string name="shift_closed">ออกงานแล้ว</string>
     <string name="sell_shell_title">กำลังขาย</string>

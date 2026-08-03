@@ -9,10 +9,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)[1]) >= 669);
-assert.ok(Number(read("src/lib/pos-version.ts").match(/POS_BUILD = (\d+)/)[1]) >= 175);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+132/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.109"/);
+assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)[1]) >= 673);
+assert.ok(Number(read("src/lib/pos-version.ts").match(/POS_BUILD = (\d+)/)[1]) >= 177);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+133/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.110"/);
 
 const boh = read("src/lib/pos-boh-print-docs.ts");
 assert.match(boh, /buildUnifiedReceiptBody/);

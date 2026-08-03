@@ -4,11 +4,7 @@
  */
 import { formatAppBuiltAt, APP_BUILT_AT } from "./version";
 
-<<<<<<< HEAD
-export const POS_BUILD = 176;
-=======
-export const POS_BUILD = 175;
->>>>>>> c76b29b7 (fix(npos): X-report item amounts and cash/BO parity)
+export const POS_BUILD = 177;
 
 export function posVersionLabel() {
   return `POS ${POS_BUILD} · ${formatAppBuiltAt(APP_BUILT_AT)}`;

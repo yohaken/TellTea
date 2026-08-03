@@ -337,8 +337,9 @@ public final class SaleSync {
     }
 
     /**
-     * Flush outbox + ensure session open on server, then close CF.
-     * Only clears local shift when server close succeeds — so BO always gets closedAt.
+     * Flush outbox + voids + ensure session on server, then close CF.
+     * Hard gate: cannot close while bills/voids still unsynced, or if server close fails.
+     * Local shift clears only after server accepts close.
      */
     public void flushThenCloseSession(
             Context context, BlindCloseReport report, CloseResult result) {
@@ -351,11 +352,32 @@ public final class SaleSync {
                         ensureOpenSessionSynced(app);
                         flushPendingBlocking(app);
                         ensureOpenSessionSynced(app);
-                        serverOk = postCloseSession(app, report);
-                        if (!serverOk) {
-                            ensureOpenSessionSynced(app);
+                        // Retry once if anything still queued (brief net blip).
+                        if (hasUnsyncedWork(app)) {
                             flushPendingBlocking(app);
+                            ensureOpenSessionSynced(app);
+                        }
+                        if (hasUnsyncedWork(app)) {
+                            OpsLogger.warn(
+                                    app,
+                                    "shift",
+                                    "ปิดรอบถูกบล็อก — ยังมีบิล/ทำลายค้างซิงก์",
+                                    unsyncedWorkSummary(app));
+                        } else {
                             serverOk = postCloseSession(app, report);
+                            if (!serverOk) {
+                                ensureOpenSessionSynced(app);
+                                flushPendingBlocking(app);
+                                if (!hasUnsyncedWork(app)) {
+                                    serverOk = postCloseSession(app, report);
+                                } else {
+                                    OpsLogger.warn(
+                                            app,
+                                            "shift",
+                                            "ปิดรอบถูกบล็อก — ยังมีบิล/ทำลายค้างซิงก์",
+                                            unsyncedWorkSummary(app));
+                                }
+                            }
                         }
                     } catch (Exception e) {
                         OpsLogger.warn(
@@ -390,6 +412,29 @@ public final class SaleSync {
                     }
                     if (result != null) result.onDone(serverOk);
                 });
+    }
+
+    /** True when sale outbox or void queue still has rows — Z-close must wait. */
+    public static boolean hasUnsyncedWork(Context context) {
+        if (context == null) return false;
+        Context app = context.getApplicationContext();
+        int[] box = outboxCounts(app);
+        return box[0] + box[1] > 0 || voidQueueCount(app) > 0;
+    }
+
+    public static int voidQueueCount(Context context) {
+        if (context == null) return 0;
+        try {
+            return readVoidQueue(context.getApplicationContext()).length();
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    public static String unsyncedWorkSummary(Context context) {
+        int[] box = outboxCounts(context);
+        int voids = voidQueueCount(context);
+        return "pending=" + box[0] + " failed=" + box[1] + " voids=" + voids;
     }
 
     private void flushPendingBlocking(Context app) {

@@ -40,7 +40,7 @@ assert.match(shiftSrc, /receipts: sessionReceipts/);
 assert.match(shiftSrc, /receipts: sales/);
 
 const versionSrc = readFileSync(join(root, "src/lib/pos-version.ts"), "utf8");
-assert.ok(Number(versionSrc.match(/POS_BUILD = (\d+)/)[1]) >= 175);
+assert.ok(Number(versionSrc.match(/POS_BUILD = (\d+)/)[1]) >= 177);
 
 // Pure aggregation mirror for numeric checks
 function round2(n) {
