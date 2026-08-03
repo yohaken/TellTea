@@ -206,6 +206,22 @@ service cloud.firestore {
         && request.resource.data.lastSeenAt is number;
     }
 
+    /**
+     * บัญชีตัวเอง: doc id = resolvedStaffId
+     * หรือ token email/phone ตรงฟิลด์บน doc (กันเคส id เป็นอีเมล แต่ล็อกอินด้วยเบอร์ที่ผูกไว้)
+     */
+    function isOwnStaffDoc(staffId) {
+      return signedIn() && (
+        staffId == resolvedStaffId()
+        || (hasEmail()
+            && resource.data.keys().hasAny(['email'])
+            && resource.data.email == authEmail())
+        || (hasPhone()
+            && resource.data.keys().hasAny(['phone'])
+            && resource.data.phone == authPhone())
+      );
+    }
+
     function employeeSelfLinkUpdate() {
       let before = resource.data;
       let after = request.resource.data;
@@ -482,8 +498,8 @@ service cloud.firestore {
             && request.resource.data.email == authEmail()
             && request.resource.data.role == 'owner');
       allow update: if (staffHubManage() && staffHubUpdateOk(staffId))
-        || (signedIn() && staffId == resolvedStaffId() && staffSelfProfileUpdate())
-        || (signedIn() && staffId == resolvedStaffId() && staffPresenceTouch());
+        || (isOwnStaffDoc(staffId) && staffSelfProfileUpdate())
+        || (isOwnStaffDoc(staffId) && staffPresenceTouch());
       allow delete: if isOwner() || isOwnerEmail()
         || (hasPerm('staffManage') && resource.data.role == 'staff');
     }

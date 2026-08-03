@@ -4,14 +4,18 @@ import { useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth";
 import { STAFF_PRESENCE_HEARTBEAT_MS, touchStaffPresence } from "@/lib/staff-presence";
 
+/** กันยิงถี่ตอนพิมพ์/สกอร์ล — ยังถี่พอให้เจ้าของเห็นเข้าหลังสุดตรงกับงานจริง */
+const ACTIVITY_TOUCH_MIN_MS = 45_000;
+
 /**
- * ปัก lastSeenAt ในตาราง staff ของบัญชีจริงตอนเข้าใช้ + วนขณะแท็บมองเห็น
- * ใช้ realStaff เสมอ — ห้ามใช้ staff จากพรีวิว (จะไปเขียน lastSeenAt คนอื่น / โดน rules ปฏิเสธ)
+ * ปัก lastSeenAt ของบัญชีจริงตอนเข้าใช้ + ตอนมี interaction + วนเป็นระยะ
+ * สำคัญ: อย่าพึ่งแค่ interval/visibility — พนักงานใส่สต็อกได้ทั้งที่ heartbeat เงียบ
  */
 export function StaffPresenceHeartbeat() {
   const { realStaff, status } = useAuth();
   const staffId = realStaff?.id || "";
   const retryTimers = useRef<number[]>([]);
+  const lastTouchAt = useRef(0);
 
   useEffect(() => {
     if (status !== "ready" || !staffId) return;
@@ -22,18 +26,25 @@ export function StaffPresenceHeartbeat() {
       retryTimers.current = [];
     };
 
-    const beat = () => {
+    const beat = (opts?: { force?: boolean; ignoreVisibility?: boolean }) => {
       if (cancelled) return;
-      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      if (
+        !opts?.ignoreVisibility &&
+        typeof document !== "undefined" &&
+        document.visibilityState === "hidden"
+      ) {
+        return;
+      }
+      const now = Date.now();
+      if (!opts?.force && now - lastTouchAt.current < 5_000) return;
+      lastTouchAt.current = now;
       void touchStaffPresence(staffId).then((ok) => {
         if (cancelled || ok) return;
-        // เขียนไม่ติด (token ยังไม่พร้อม / เน็ตสะดุด) — ลองใหม่เร็วๆ อย่ารอรอบ 2 นาที
         clearRetries();
-        for (const delay of [3_000, 12_000, 30_000]) {
+        for (const delay of [2_000, 8_000, 20_000]) {
           retryTimers.current.push(
             window.setTimeout(() => {
               if (cancelled) return;
-              if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
               void touchStaffPresence(staffId);
             }, delay),
           );
@@ -41,23 +52,47 @@ export function StaffPresenceHeartbeat() {
       });
     };
 
-    beat();
-    const timer = window.setInterval(beat, STAFF_PRESENCE_HEARTBEAT_MS);
+    // ครั้งแรกหลัง ready — ไม่สน visibility (มือถือบางเครื่องรายงาน hidden ผิดจังหวะ)
+    beat({ force: true, ignoreVisibility: true });
+    const timer = window.setInterval(() => beat({ force: true }), STAFF_PRESENCE_HEARTBEAT_MS);
 
     const onVis = () => {
-      if (document.visibilityState === "visible") beat();
+      if (document.visibilityState === "visible") beat({ force: true });
     };
+
+    let activityTimer: number | null = null;
+    const onActivity = () => {
+      if (activityTimer != null) return;
+      activityTimer = window.setTimeout(() => {
+        activityTimer = null;
+        beat({ ignoreVisibility: true });
+      }, ACTIVITY_TOUCH_MIN_MS);
+    };
+
     document.addEventListener("visibilitychange", onVis);
     window.addEventListener("focus", onVis);
     window.addEventListener("pageshow", onVis);
+    const activityEvents: Array<keyof WindowEventMap> = [
+      "pointerdown",
+      "keydown",
+      "touchstart",
+      "scroll",
+    ];
+    for (const ev of activityEvents) {
+      window.addEventListener(ev, onActivity, { passive: true });
+    }
 
     return () => {
       cancelled = true;
       clearRetries();
       window.clearInterval(timer);
+      if (activityTimer != null) window.clearTimeout(activityTimer);
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("focus", onVis);
       window.removeEventListener("pageshow", onVis);
+      for (const ev of activityEvents) {
+        window.removeEventListener(ev, onActivity);
+      }
     };
   }, [staffId, status]);
 

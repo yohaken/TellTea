@@ -216,3 +216,13 @@ export async function touchStaffPresence(staffId: string): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * ปัก lastSeenAt หลังบันทึกงานจริง (สต็อก/ผลิต/OT…) — ไม่รอ interval
+ * ใช้ staff doc id เท่านั้น (อีเมลหรือ p_…) ไม่ใช่เบอร์ E.164 จาก actorId โทรศัพท์
+ */
+export function touchStaffPresenceFromActor(staffId: string | null | undefined): void {
+  const id = String(staffId || "").trim();
+  if (!id || id.startsWith("+")) return;
+  void touchStaffPresence(id);
+}

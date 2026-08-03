@@ -494,6 +494,8 @@ export async function addOtEntry(input: OtEntryInput): Promise<string> {
     createdAt: now,
     updatedAt: now,
   });
+  const { touchStaffPresenceFromActor } = await import("./staff-presence");
+  touchStaffPresenceFromActor(input.createdBy);
   return ref.id;
 }
 

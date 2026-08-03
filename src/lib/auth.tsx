@@ -332,6 +332,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (member) {
           saveCachedStaff(member);
           setStatus("ready");
+          // ปักเข้าหลังสุดทันทีตอนล็อกอินสำเร็จ (ไม่รอ heartbeat / visibility)
+          void import("./staff-presence")
+            .then(({ touchStaffPresence }) => touchStaffPresence(member.id))
+            .catch(() => undefined);
           // ย้ายเงินเดือน/บัญชีออกจาก employees → employeePay (ครั้งแรกหลัง deploy)
           if (member.role === "owner") {
             void migrateAllLegacyEmployeePay().catch(() => undefined);

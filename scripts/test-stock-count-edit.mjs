@@ -20,6 +20,7 @@ const countLib = read("src/lib/stock-count.ts");
 assert.match(countLib, /updatedBy: input\.createdBy/);
 assert.match(countLib, /prev \? String\(prev\.createdBy/);
 assert.match(countLib, /prev \? Number\(prev\.submittedAt\)/);
+assert.match(countLib, /touchStaffPresenceFromActor/);
 
 const rules = read("firestore.rules");
 assert.match(rules, /match \/stockCountSessions\/\{sessionId\}/);
@@ -33,6 +34,6 @@ const types = read("src/lib/types.ts");
 assert.match(types, /updatedBy\?:/);
 
 const version = read("src/lib/version.ts");
-assert.match(version, /APP_BUILD = 678/);
+assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 679);
 
 console.log("OK test-stock-count-edit");
