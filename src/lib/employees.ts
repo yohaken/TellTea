@@ -86,20 +86,21 @@ function isLinkedToStaff(emp: Employee, staff: StaffMember): boolean {
 }
 
 /**
- * หาแถวพนักงานที่ผูกกับบัญชี staff — ใช้กรองคิวจ่าย/เงินเดือนมุมพนักงาน
- * ลำดับ: staff.employeeId → linkedStaffId/email/phone → ชื่อ/ชื่อเล่นตรง displayName
+ * หาแถวพนักงานที่ผูกกับบัญชี staff — ใช้กรองคิวจ่าย/โบนัส/ชง/ผลิต
+ * ลำดับ: ลิงก์ canonical (linkedStaffId/email/phone) → staff.employeeId → ชื่อ/ชื่อเล่น
+ * ให้ลิงก์ชนะ employeeId ที่ค้างผิด — กันเคสใส่ยอดชง/เบเกอรี่แล้วโบนัสฝั่งพนักงานไม่ขึ้น
  */
 export function resolveLinkedEmployee(
   employees: Employee[],
   staff: Pick<StaffMember, "id" | "email" | "phone" | "displayName" | "employeeId"> | null | undefined,
 ): Employee | null {
   if (!staff || !employees.length) return null;
+  const byLink = employees.find((e) => isLinkedToStaff(e, staff as StaffMember));
+  if (byLink) return byLink;
   if (staff.employeeId) {
     const byId = employees.find((e) => e.id === staff.employeeId);
     if (byId) return byId;
   }
-  const linked = employees.find((e) => isLinkedToStaff(e, staff as StaffMember));
-  if (linked) return linked;
   const name = (staff.displayName || "").trim().toLowerCase();
   if (!name) return null;
   return (

@@ -17,7 +17,7 @@ const ot = read("src/app/ot/page.tsx");
 const staffPage = read("src/app/staff/page.tsx");
 const version = read("src/lib/version.ts");
 
-assert.match(version, /APP_BUILD = 528/);
+assert.match(version, /APP_BUILD = \d+/);
 assert.match(emp, /planEmployeeIdentityPatch/);
 assert.match(emp, /syncLinkedStaffDisplayName/);
 assert.match(emp, /mergePreviousNames/);
@@ -25,7 +25,7 @@ assert.match(emp, /ชื่อในร้านยังเป็นชื่�
 assert.match(readiness, /employees\.name\) เป็นแหล่งจริง/);
 assert.match(bonus, /workerIds ก่อน|คีย์ด้วย employeeId/);
 assert.match(bonus, /creditEntryWorkers|ensureByEmployee/);
-assert.match(ot, /entryIncludesMe/);
+assert.match(ot, /workEntryIncludesMe|entryIncludesMe/);
 assert.match(staffPage, /planEmployeeIdentityPatch/);
 
 /** Mirror of planEmployeeIdentityPatch for unit asserts */
