@@ -11,12 +11,20 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 const require = createRequire(import.meta.url);
 
-assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD\s*=\s*(\d+)/)[1]) >= 687);
+assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD\s*=\s*(\d+)/)[1]) >= 688);
 
 const page = read("src/app/staff/page.tsx");
 assert.match(page, /StaffTeamMiniTable/);
+assert.match(page, /staff-hub-jump/);
+assert.match(page, /id="staff-team"/);
+assert.match(page, /id="staff-accounts"/);
+assert.match(page, /id="staff-levels"/);
+assert.match(page, /PermissionLevelsPanel/);
 assert.doesNotMatch(page, /StaffReadinessTable/);
 assert.doesNotMatch(page, /EmployeeRosterRow/);
+assert.doesNotMatch(page, /staff-hub-tabs/);
+assert.doesNotMatch(page, /HubTab/);
+assert.doesNotMatch(page, /tab === "team"/);
 assert.doesNotMatch(page, /staff-hub-panel-title">รายชื่อร้าน/);
 
 const mini = read("src/components/StaffTeamMiniTable.tsx");

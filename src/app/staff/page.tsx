@@ -57,8 +57,6 @@ import { listStaffPersonalMap } from "@/lib/staff-personal";
 import type { StaffReadinessRow } from "@/lib/staff-readiness";
 import type { StaffPersonalData } from "@/lib/types";
 
-type HubTab = "team" | "accounts" | "levels";
-
 export default function StaffPage() {
   return (
     <AuthGate>
@@ -93,7 +91,6 @@ function StaffView() {
   const { realStaff, refreshStaff, startPermPreview, permissionLevels } = useAuth();
   const router = useRouter();
   const focusAccountId = useAccountFocusParam();
-  const [tab, setTab] = useState<HubTab>(focusAccountId ? "accounts" : "team");
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [members, setMembers] = useState<StaffMember[]>([]);
   const [levels, setLevels] = useState<PermissionLevel[]>([]);
@@ -225,10 +222,11 @@ function StaffView() {
 
   useEffect(() => {
     if (!focusAccountId || loading) return;
-    setTab("accounts");
     if (members.some((m) => m.id === focusAccountId && m.role === "staff")) {
       setEditingStaffId(focusAccountId);
     }
+    const el = document.getElementById("staff-accounts");
+    el?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [focusAccountId, loading, members]);
 
   useEffect(() => {
@@ -474,7 +472,7 @@ function StaffView() {
         <section className="staff-hub-panel staff-preview-check">
           <h2 className="staff-hub-panel-title">เช็คมุมมองพนักงาน</h2>
           <p className="staff-hub-panel-hint">
-            กด «ดูแบบนี้» ที่ลำดับ หรือ «ดูแบบเขา» ที่บัญชี — แท็บจะเปลี่ยนตามสิทธิ์ · แถบส้มกดออกกลับเจ้าของ
+            กด «ดูแบบนี้» ที่ลำดับ หรือ «ดูแบบเขา» ที่บัญชี — เมนูจะเปลี่ยนตามสิทธิ์ · แถบส้มกดออกกลับเจ้าของ
           </p>
           <ol className="staff-preview-check-list">
             {PERM_PREVIEW_CHECKLIST.map((item) => (
@@ -484,23 +482,10 @@ function StaffView() {
         </section>
       ) : null}
 
-      <nav className="staff-hub-tabs" aria-label="ส่วนจัดการพนักงาน">
-        {(
-          [
-            ["team", "ทีม"],
-            ["accounts", "บัญชี"],
-            ["levels", "ลำดับสิทธิ์"],
-          ] as const
-        ).map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            className={`staff-hub-tab${tab === key ? " is-active" : ""}`}
-            onClick={() => setTab(key)}
-          >
-            {label}
-          </button>
-        ))}
+      <nav className="staff-hub-jump" aria-label="ข้ามไปส่วน">
+        <a href="#staff-team">ทีม</a>
+        <a href="#staff-accounts">บัญชี</a>
+        <a href="#staff-levels">ลำดับสิทธิ์</a>
       </nav>
 
       {error ? <p className="error-text staff-hub-msg">{error}</p> : null}
@@ -520,7 +505,7 @@ function StaffView() {
         onSave={saveReadinessEdit}
       />
 
-      {tab === "team" ? (
+      <div id="staff-team" className="staff-hub-anchor">
         <StaffTeamMiniTable
           members={members}
           employees={employees}
@@ -545,10 +530,9 @@ function StaffView() {
             );
           }}
         />
-      ) : null}
+      </div>
 
-      {tab === "accounts" ? (
-        <section className="staff-hub-panel">
+      <section id="staff-accounts" className="staff-hub-panel staff-hub-anchor">
           <div className="staff-hub-panel-head">
             <div>
               <h2 className="staff-hub-panel-title">บัญชีเข้าใช้</h2>
@@ -722,9 +706,8 @@ function StaffView() {
             })}
           </div>
         </section>
-      ) : null}
 
-      {tab === "levels" ? (
+      <div id="staff-levels" className="staff-hub-anchor">
         <PermissionLevelsPanel
           levels={levels}
           isOwner={!!isOwner}
@@ -736,7 +719,7 @@ function StaffView() {
           linkedCountByLevelId={linkedCountByLevelId}
           onPreviewLevel={isOwner ? beginPreviewFromLevel : undefined}
         />
-      ) : null}
+      </div>
     </div>
   );
 }
