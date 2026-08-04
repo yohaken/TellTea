@@ -1,6 +1,6 @@
 /**
  * หลักฐานการจ่ายค่าจ้างและเงินเดือน — เอกสารทางการขนาด A4
- * ดูในแอป · ดาวน์โหลดเป็นไฟล์ PDF (เรนเดอร์จากแบบมาตรฐาน)
+ * เปิดดูเป็น PDF ในแท็บใหม่ · ผู้ใช้บันทึก/ดาวน์โหลดเองจากตัวดูไฟล์ได้
  */
 import { escapeReceiptHtml } from "./pos-printer/receipt-template";
 import type { PosShopSettings } from "./pos-settings";
@@ -1193,17 +1193,31 @@ export function openMonthPaymentDoc(input: {
   return openPayrollPaymentDocPrint(html);
 }
 
+export async function viewMonthPaymentDoc(input: {
+  summary: PayrollMonthPaymentSummary;
+  shop: PayrollPaymentDocShop;
+  payee: PayrollPaymentDocPayee;
+  payer: PayrollPaymentDocPayer;
+  /** เปิดไว้ก่อน await เพื่อไม่โดนบล็อกป๊อปอัป */
+  targetWindow?: Window | null;
+}): Promise<boolean> {
+  const html = buildMonthPaymentDocHtml({ ...input, autoPrint: false });
+  return openPayrollPaymentDocPdf(
+    html,
+    monthPaymentDocFilename(input.summary, input.payee),
+    input.targetWindow,
+  );
+}
+
+/** @deprecated ใช้ viewMonthPaymentDoc */
 export async function downloadMonthPaymentDoc(input: {
   summary: PayrollMonthPaymentSummary;
   shop: PayrollPaymentDocShop;
   payee: PayrollPaymentDocPayee;
   payer: PayrollPaymentDocPayer;
+  targetWindow?: Window | null;
 }): Promise<boolean> {
-  const html = buildMonthPaymentDocHtml({ ...input, autoPrint: false });
-  return downloadPayrollPaymentDocPdf(
-    html,
-    monthPaymentDocFilename(input.summary, input.payee),
-  );
+  return viewMonthPaymentDoc(input);
 }
 
 export function openMonthPaymentDocsBundle(input: {
@@ -1218,22 +1232,36 @@ export function openMonthPaymentDocsBundle(input: {
   return openPayrollPaymentDocPrint(html);
 }
 
-export async function downloadMonthPaymentDocsBundle(input: {
+export async function viewMonthPaymentDocsBundle(input: {
   periodMonth: string;
   summaries: PayrollMonthPaymentSummary[];
   shop: PayrollPaymentDocShop;
   payer: PayrollPaymentDocPayer;
   payeeFor: (summary: PayrollMonthPaymentSummary) => PayrollPaymentDocPayee;
+  targetWindow?: Window | null;
 }): Promise<boolean> {
   if (!input.summaries.length) return false;
   const html = buildMonthPaymentDocsBundleHtml({
     ...input,
     autoPrint: false,
   });
-  return downloadPayrollPaymentDocPdf(
+  return openPayrollPaymentDocPdf(
     html,
     monthPaymentDocsBundleFilename(input.periodMonth),
+    input.targetWindow,
   );
+}
+
+/** @deprecated ใช้ viewMonthPaymentDocsBundle */
+export async function downloadMonthPaymentDocsBundle(input: {
+  periodMonth: string;
+  summaries: PayrollMonthPaymentSummary[];
+  shop: PayrollPaymentDocShop;
+  payer: PayrollPaymentDocPayer;
+  payeeFor: (summary: PayrollMonthPaymentSummary) => PayrollPaymentDocPayee;
+  targetWindow?: Window | null;
+}): Promise<boolean> {
+  return viewMonthPaymentDocsBundle(input);
 }
 
 /** @deprecated ใช้ listMonthPaymentSummaries */
@@ -1293,16 +1321,26 @@ async function waitPaymentDocReady(doc: Document): Promise<void> {
   });
 }
 
-/**
- * เรนเดอร์เอกสาร HTML มาตรฐานเป็นไฟล์ PDF A4 แล้วดาวน์โหลด
- * (ใช้โครงแบบเดียวกับหน้าพิมพ์ — ได้ .pdf จริง ไม่ใช่ .html)
- */
-export async function downloadPayrollPaymentDocPdf(
+/** เปิดแท็บว่างพร้อมข้อความรอ — เรียกตอนคลิกปุ่ม (sync) กันโดนบล็อกป๊อปอัป */
+export function openPaymentDocViewerShell(): Window | null {
+  if (typeof window === "undefined") return null;
+  const win = window.open("about:blank", "_blank");
+  if (!win) return null;
+  try {
+    win.document.open();
+    win.document.write(`<!doctype html><html lang="th"><head><meta charset="utf-8"/><title>หลักฐานจ่าย</title></head><body style="margin:0;font-family:Sarabun,Tahoma,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;color:#333;background:#f4f4f4"><p style="margin:0;font-size:1rem">กำลังเปิดเอกสาร…</p></body></html>`);
+    win.document.close();
+  } catch {
+    /* ignore */
+  }
+  return win;
+}
+
+async function buildPayrollPaymentDocPdfBlob(
   html: string,
-  filename: string,
-): Promise<boolean> {
+): Promise<Blob | null> {
   if (typeof document === "undefined" || typeof window === "undefined") {
-    return false;
+    return null;
   }
 
   const [{ jsPDF }, html2canvasMod] = await Promise.all([
@@ -1319,7 +1357,7 @@ export async function downloadPayrollPaymentDocPdf(
 
   try {
     const idoc = iframe.contentDocument;
-    if (!idoc) return false;
+    if (!idoc) return null;
 
     idoc.open();
     idoc.write(html);
@@ -1377,14 +1415,69 @@ export async function downloadPayrollPaymentDocPdf(
       pdf.addImage(img, "JPEG", x, 0, w, h, undefined, "FAST");
     }
 
-    pdf.save(pdfOutName(filename));
-    return true;
+    return pdf.output("blob");
   } catch (err) {
-    console.error("payroll payment PDF download failed", err);
-    return false;
+    console.error("payroll payment PDF build failed", err);
+    return null;
   } finally {
     iframe.remove();
   }
+}
+
+/**
+ * เรนเดอร์เอกสารมาตรฐานเป็น PDF A4 แล้วเปิดในแท็บใหม่ให้ดู
+ * ผู้ใช้กดบันทึก/ดาวน์โหลดเองจากตัวดู PDF ของเบราว์เซอร์ได้
+ */
+export async function openPayrollPaymentDocPdf(
+  html: string,
+  filename: string,
+  targetWindow?: Window | null,
+): Promise<boolean> {
+  if (typeof document === "undefined" || typeof window === "undefined") {
+    return false;
+  }
+
+  const win =
+    targetWindow && !targetWindow.closed
+      ? targetWindow
+      : openPaymentDocViewerShell();
+  if (!win) return false;
+
+  const blob = await buildPayrollPaymentDocPdfBlob(html);
+  if (!blob) {
+    try {
+      win.close();
+    } catch {
+      /* ignore */
+    }
+    return false;
+  }
+
+  const name = pdfOutName(filename);
+  const file = new File([blob], name, { type: "application/pdf" });
+  const url = URL.createObjectURL(file);
+  try {
+    win.location.href = url;
+  } catch {
+    try {
+      win.close();
+    } catch {
+      /* ignore */
+    }
+    URL.revokeObjectURL(url);
+    return false;
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 120_000);
+  return true;
+}
+
+/** @deprecated ใช้ openPayrollPaymentDocPdf */
+export async function downloadPayrollPaymentDocPdf(
+  html: string,
+  filename: string,
+  targetWindow?: Window | null,
+): Promise<boolean> {
+  return openPayrollPaymentDocPdf(html, filename, targetWindow);
 }
 
 export function printPayrollPaymentDoc(input: {
@@ -1397,15 +1490,28 @@ export function printPayrollPaymentDoc(input: {
   return openPayrollPaymentDocPrint(html);
 }
 
+export async function viewPayrollPaymentDoc(input: {
+  receipt: StaffTransferReceipt;
+  shop: PayrollPaymentDocShop;
+  payee: PayrollPaymentDocPayee;
+  payer?: PayrollPaymentDocPayer;
+  targetWindow?: Window | null;
+}): Promise<boolean> {
+  const html = buildPayrollPaymentDocHtml({ ...input, autoPrint: false });
+  return openPayrollPaymentDocPdf(
+    html,
+    payrollPaymentDocFilename(input.receipt),
+    input.targetWindow,
+  );
+}
+
+/** @deprecated ใช้ viewPayrollPaymentDoc */
 export async function downloadPayrollPaymentDoc(input: {
   receipt: StaffTransferReceipt;
   shop: PayrollPaymentDocShop;
   payee: PayrollPaymentDocPayee;
   payer?: PayrollPaymentDocPayer;
+  targetWindow?: Window | null;
 }): Promise<boolean> {
-  const html = buildPayrollPaymentDocHtml({ ...input, autoPrint: false });
-  return downloadPayrollPaymentDocPdf(
-    html,
-    payrollPaymentDocFilename(input.receipt),
-  );
+  return viewPayrollPaymentDoc(input);
 }

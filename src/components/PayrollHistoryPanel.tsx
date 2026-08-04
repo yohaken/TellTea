@@ -5,13 +5,14 @@ import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoC
 import type { Employee } from "@/lib/employees";
 import {
   buildMonthPaymentSummary,
-  downloadMonthPaymentDoc,
-  downloadMonthPaymentDocsBundle,
   formatPayrollPeriodLabel,
   legalNameForPaymentDoc,
   listMonthPaymentSummaries,
+  openPaymentDocViewerShell,
   payeeFromEmployee,
   shopFromPosSettings,
+  viewMonthPaymentDoc,
+  viewMonthPaymentDocsBundle,
   type PayrollMonthPaymentSummary,
   type PayrollPaymentDocPayee,
 } from "@/lib/payroll-payment-doc";
@@ -49,8 +50,8 @@ function fmt(n: number) {
 }
 
 /**
- * แท็บหลักฐานจ่าย — พนักงานดาวน์โหลดของตัวเองเท่านั้น (ปุ่มเดียว)
- * เจ้าของเลือกคนได้ + ดาวน์โหลดทั้งร้านเมื่อขยายเดือนที่ตรงงวด
+ * แท็บหลักฐานจ่าย — พนักงานเปิดดูเอกสารของตัวเองเท่านั้น (ปุ่มเดียว)
+ * เจ้าของเลือกคนได้ + เปิดทั้งร้านเมื่อขยายเดือนที่ตรงงวด
  */
 export function PayrollHistoryPanel({
   isOwner,
@@ -199,22 +200,28 @@ export function PayrollHistoryPanel({
   }
 
   async function exportOneMonth(summary: PayrollMonthPaymentSummary) {
+    const viewer = openPaymentDocViewerShell();
+    if (!viewer) {
+      onError?.("อนุญาตป๊อปอัปเพื่อดูเอกสาร");
+      return;
+    }
     setBundleBusy(true);
     try {
       const { shop, payer } = await loadShop();
       const payee = payeeForEmployee(summary.employeeId, summary.employeeName);
-      const ok = await downloadMonthPaymentDoc({
+      const ok = await viewMonthPaymentDoc({
         summary,
         shop,
         payee,
         payer,
+        targetWindow: viewer,
       });
       if (!ok) {
-        onError?.("ดาวน์โหลด PDF ไม่สำเร็จ");
+        onError?.("เปิดเอกสารไม่สำเร็จ");
         return;
       }
       onInfo?.(
-        `ดาวน์โหลด PDF ${legalNameForPaymentDoc(payee)} · ${formatPayrollPeriodLabel(summary.periodMonth)} แล้ว`,
+        `เปิดเอกสาร ${legalNameForPaymentDoc(payee)} · ${formatPayrollPeriodLabel(summary.periodMonth)} แล้ว — บันทึกจากตัวดูไฟล์ได้`,
       );
     } finally {
       setBundleBusy(false);
@@ -223,29 +230,35 @@ export function PayrollHistoryPanel({
 
   async function exportShopBundle() {
     if (!isOwner || !shopView) {
-      onError?.("ดาวน์โหลดทั้งร้านได้เฉพาะเจ้าของ");
+      onError?.("ดูทั้งร้านได้เฉพาะเจ้าของ");
       return;
     }
     if (!bundleMonth || !shopMonthSummaries.length) {
       onError?.("ยังไม่มีรายการที่จ่ายแล้วในงวดนี้");
       return;
     }
+    const viewer = openPaymentDocViewerShell();
+    if (!viewer) {
+      onError?.("อนุญาตป๊อปอัปเพื่อดูเอกสาร");
+      return;
+    }
     setBundleBusy(true);
     try {
       const { shop, payer } = await loadShop();
-      const ok = await downloadMonthPaymentDocsBundle({
+      const ok = await viewMonthPaymentDocsBundle({
         periodMonth: bundleMonth,
         summaries: shopMonthSummaries,
         shop,
         payer,
         payeeFor: (s) => payeeForEmployee(s.employeeId, s.employeeName),
+        targetWindow: viewer,
       });
       if (!ok) {
-        onError?.("ดาวน์โหลด PDF ไม่สำเร็จ");
+        onError?.("เปิดเอกสารไม่สำเร็จ");
         return;
       }
       onInfo?.(
-        `ดาวน์โหลด PDF ทั้งร้าน ${formatPayrollPeriodLabel(bundleMonth)} · ${shopMonthSummaries.length} คนแล้ว`,
+        `เปิดเอกสารทั้งร้าน ${formatPayrollPeriodLabel(bundleMonth)} · ${shopMonthSummaries.length} คนแล้ว`,
       );
     } finally {
       setBundleBusy(false);
@@ -287,7 +300,7 @@ export function PayrollHistoryPanel({
       ) : null}
 
       <p className="muted payroll-actions-hint">
-        แตะเดือนเพื่อขยาย → ดาวน์โหลดเอกสาร PDF (เงินเดือน · โบนัส · คืนเบิกถ้ามี · ยอดโอน)
+        แตะเดือนเพื่อขยาย → ดูเอกสาร (เงินเดือน · โบนัส · คืนเบิกถ้ามี · ยอดโอน) · บันทึก PDF จากตัวดูไฟล์ได้
       </p>
 
       {!employeeId ? (
@@ -524,7 +537,7 @@ function FragmentMonth({
                   disabled={bundleBusy || !monthSummary}
                   onClick={onDownload}
                 >
-                  ดาวน์โหลดเอกสาร
+                  ดูเอกสาร
                 </button>
                 {showShopBundle ? (
                   <button

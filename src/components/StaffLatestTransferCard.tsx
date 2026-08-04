@@ -146,7 +146,7 @@ export function StaffLatestTransferCard({
               className="primary-btn payroll-doc-dl-btn"
               onClick={() => setDocOpen(true)}
             >
-              ดาวน์โหลดเอกสาร
+              ดูเอกสาร
             </button>
           )}
           {onOpenBonusMonth ? (

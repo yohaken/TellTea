@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  downloadPayrollPaymentDoc,
   formatPayrollPaidAtLabel,
   formatPayrollPeriodLabel,
   legalNameForPaymentDoc,
+  openPaymentDocViewerShell,
   shopFromPosSettings,
+  viewPayrollPaymentDoc,
   type PayrollPaymentDocPayee,
   type PayrollPaymentDocShop,
 } from "@/lib/payroll-payment-doc";
@@ -32,7 +33,7 @@ function fmt(n: number) {
 }
 
 /**
- * ดูใบสรุปหลักฐานจ่ายในแอป · ดาวน์โหลดเป็นไฟล์ PDF มาตรฐาน A4
+ * ดูใบสรุปหลักฐานจ่ายในแอป · เปิดเอกสาร PDF มาตรฐาน A4 ในแท็บใหม่
  */
 export function PayrollPaymentDocModal({
   receipt,
@@ -112,15 +113,25 @@ export function PayrollPaymentDocModal({
 
   const recipient = legalNameForPaymentDoc(resolvedPayee);
 
-  async function onDownload() {
-    setActionMsg("กำลังสร้าง PDF…");
-    const ok = await downloadPayrollPaymentDoc({
+  async function onViewDoc() {
+    const viewer = openPaymentDocViewerShell();
+    if (!viewer) {
+      setActionMsg("อนุญาตป๊อปอัปเพื่อดูเอกสาร");
+      return;
+    }
+    setActionMsg("กำลังเปิดเอกสาร…");
+    const ok = await viewPayrollPaymentDoc({
       receipt,
       shop,
       payee: resolvedPayee,
       payer,
+      targetWindow: viewer,
     });
-    setActionMsg(ok ? "ดาวน์โหลด PDF แล้ว" : "ดาวน์โหลด PDF ไม่สำเร็จ");
+    setActionMsg(
+      ok
+        ? "เปิดเอกสารแล้ว — บันทึกจากตัวดูไฟล์ได้"
+        : "เปิดเอกสารไม่สำเร็จ",
+    );
   }
 
   return (
@@ -141,7 +152,7 @@ export function PayrollPaymentDocModal({
           หลักฐานการจ่ายค่าจ้าง
         </h2>
         <p className="muted" style={{ margin: "0 0 0.75rem", fontSize: "0.82rem" }}>
-          เอกสารมาตรฐาน A4 · กดดาวน์โหลดได้ไฟล์ PDF
+          เอกสารมาตรฐาน A4 · กดดูเอกสารแล้วบันทึก PDF จากตัวดูไฟล์ได้
           {shop.shopName ? ` · ${shop.shopName}` : ""}
         </p>
 
@@ -214,9 +225,9 @@ export function PayrollPaymentDocModal({
           <button
             type="button"
             className="primary-btn payroll-doc-dl-btn"
-            onClick={onDownload}
+            onClick={() => void onViewDoc()}
           >
-            ดาวน์โหลดเอกสาร
+            ดูเอกสาร
           </button>
           <button type="button" className="ghost-btn" onClick={onClose}>
             ปิด
