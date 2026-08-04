@@ -518,29 +518,39 @@ export function PayrollPayPanel({
             " · เปิดใบสรุปหลักฐานแล้ว",
         );
       } else {
+        const paidItem = payTarget.item;
+        const slipUrls = payTarget.slipUrls;
+        const note = payTarget.note;
         await markPayrollPaid({
-          id: payTarget.item.id,
+          id: paidItem.id,
           paidBy: actorId,
-          slipUrls: payTarget.slipUrls,
-          note: payTarget.note,
+          slipUrls,
+          note,
           prodEntries,
           otEntries,
         });
-        const receipt = buildReceiptFromJustPaid({
-          items: [payTarget.item],
-          slipUrls: payTarget.slipUrls,
-          note: payTarget.note,
-          paidAt,
-        });
         setPayTarget(null);
-        setPaymentDoc({
-          receipt,
-          employeeId: payTarget.item.employeeId,
-          employeeName: payTarget.item.employeeName,
-        });
-        onInfo?.(
-          `จ่ายแล้ว · ${payrollDescription(payTarget.item)} · เปิดใบสรุปหลักฐานแล้ว`,
-        );
+        // ร้านเน้นหลักฐานท้ายเดือน — กลางเดือนไม่เด้งใบสรุป (ยังเปิดจากแท็บหลักฐานจ่ายได้)
+        if (paidItem.kind !== "salary_mid") {
+          const receipt = buildReceiptFromJustPaid({
+            items: [paidItem],
+            slipUrls,
+            note,
+            paidAt,
+          });
+          setPaymentDoc({
+            receipt,
+            employeeId: paidItem.employeeId,
+            employeeName: paidItem.employeeName,
+          });
+          onInfo?.(
+            `จ่ายแล้ว · ${payrollDescription(paidItem)} · เปิดใบสรุปหลักฐานแล้ว`,
+          );
+        } else {
+          onInfo?.(
+            `จ่ายแล้ว · ${payrollDescription(paidItem)} · ดูใบสรุปได้ที่แท็บหลักฐานจ่าย`,
+          );
+        }
       }
     } catch (err) {
       onError((err as Error).message || "บันทึกจ่ายไม่สำเร็จ");
@@ -829,7 +839,7 @@ export function PayrollPayPanel({
           {shopView
             ? "ยังไม่มีรายการในมุมมองนี้ — กดสร้างรายการรอโอน"
             : filter === "pending"
-              ? "ไม่มีรายการรอโอนในเดือนนี้ — ดูรอบล่าสุดด้านบน หรือแท็บทั้งหมด / ประวัติ"
+              ? "ไม่มีรายการรอโอนในเดือนนี้ — ดูรอบล่าสุดด้านบน หรือแท็บทั้งหมด / หลักฐานจ่าย"
               : "ยังไม่มีรายการจ่ายของคุณในมุมมองนี้"}
         </p>
       ) : (

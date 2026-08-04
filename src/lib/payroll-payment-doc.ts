@@ -250,7 +250,7 @@ export function buildPayrollPaymentDocHtml(input: {
     .join("");
 
   const slipNote = receipt.slipUrls.length
-    ? `มีหลักฐานสลิปโอนในระบบ ${receipt.slipUrls.length} รูป (ดูได้ที่แท็บประวัติในแอป)`
+    ? `มีหลักฐานสลิปโอนในระบบ ${receipt.slipUrls.length} รูป (ดูได้ที่แท็บหลักฐานจ่ายในแอป)`
     : "ยังไม่มีสลิปโอนแนบในระบบ";
 
   const autoPrintScript = input.autoPrint

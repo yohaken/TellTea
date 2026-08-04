@@ -51,7 +51,11 @@ assert.match(cardUi, /ดูใบสรุปจ่าย/);
 assert.match(modalUi, /พิมพ์ \/ บันทึก PDF/);
 assert.match(modalUi, /formatPayrollPeriodLabel/);
 assert.match(modalUi, /ดาวน์โหลดไฟล์/);
-assert.match(versionSrc, /APP_BUILD = 704/);
+assert.match(versionSrc, /APP_BUILD = 705/);
+assert.match(payUi, /salary_mid/);
+assert.match(payUi, /แท็บหลักฐานจ่าย/);
+const pageSrc = readFileSync(join(root, "src/app/bonus/page.tsx"), "utf8");
+assert.match(pageSrc, /หลักฐานจ่าย/);
 
 function round2(n) {
   return Math.round(n * 100) / 100;

@@ -154,7 +154,7 @@ export function StaffLatestTransferCard({
               className="ghost-btn"
               onClick={() => onOpenHistory(receipt.periodMonth)}
             >
-              เปิดประวัติงวดนี้
+              เปิดหลักฐานงวดนี้
             </button>
           ) : null}
         </div>

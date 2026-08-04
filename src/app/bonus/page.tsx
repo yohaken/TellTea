@@ -666,7 +666,7 @@ function BonusView() {
           aria-selected={tab === "history"}
           onClick={() => setTab("history")}
         >
-          ประวัติ
+          หลักฐานจ่าย
         </button>
         <button
           type="button"
@@ -728,10 +728,10 @@ function BonusView() {
             className="ot-slim-input"
             value={month}
             onChange={(e) => setMonth(e.target.value)}
-            aria-label="เดือนอ้างอิงช่วงประวัติ"
+            aria-label="เดือนอ้างอิงช่วงหลักฐานจ่าย"
           />
           <span className="bonus-toolbar-meta muted">
-            โหลดย้อนหลัง ~14 เดือนจากเดือนที่เลือก · แยกตามงวดงาน
+            โหลดย้อนหลัง ~14 เดือนจากเดือนที่เลือก · ใบสรุปหลังโอน · แยกตามงวดงาน
             {isStaffPreview && previewEmployee
               ? ` · มุม ${previewEmployee.name}`
               : ""}

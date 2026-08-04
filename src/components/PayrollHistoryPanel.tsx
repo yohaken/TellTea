@@ -29,7 +29,7 @@ function fmt(n: number) {
 }
 
 /**
- * ตารางประวัติจ่ายรายเดือน — พนักงานดูของตัวเอง · เจ้าของเลือกคน
+ * แท็บหลักฐานจ่ายรายเดือน — พนักงานดูของตัวเอง · เจ้าของเลือกคน
  * รวมเงินเดือน + จ่ายแยก + โบนัส · กดดูสลิป / ใบสรุปหลักฐานจ่ายได้เมื่อจ่ายแล้ว
  */
 export function PayrollHistoryPanel({
@@ -91,7 +91,7 @@ export function PayrollHistoryPanel({
       <div className="payroll-summary-bar payroll-summary-bar--solo">
         <div>
           <span className="bonus-summary-label">
-            {shopView ? `ประวัติ · ${empName}` : "ประวัติของฉัน"}
+            {shopView ? `หลักฐานจ่าย · ${empName}` : "หลักฐานจ่ายของฉัน"}
           </span>
           <strong>฿{fmt(paidAll)}</strong>
           <span className="muted bonus-summary-pool-meta">
@@ -107,7 +107,7 @@ export function PayrollHistoryPanel({
           <select
             value={employeeId}
             onChange={(e) => onEmployeeIdChange(e.target.value)}
-            aria-label="เลือกพนักงานดูประวัติ"
+            aria-label="เลือกพนักงานดูหลักฐานจ่าย"
           >
             {roster.map((empOpt) => (
               <option key={empOpt.id} value={empOpt.id}>
@@ -126,7 +126,7 @@ export function PayrollHistoryPanel({
       {!employeeId ? (
         <p className="empty">ยังไม่ได้เชื่อมชื่อพนักงาน — ไปศูนย์พนักงานหรือโปรไฟล์</p>
       ) : !summaries.length ? (
-        <p className="empty">ยังไม่มีประวัติจ่ายในช่วงที่โหลด</p>
+        <p className="empty">ยังไม่มีหลักฐานจ่ายในช่วงที่โหลด</p>
       ) : (
         <div className="sheet-scroll payroll-sheet sheet-bleed">
           <table className="sheet-table payroll-table sheet-table--dense payroll-history-table">
