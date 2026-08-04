@@ -20,7 +20,7 @@ type Props = {
 
 /**
  * อัปโหลดโลโก้ร้าน (PNG โปร่งใสแนะนำ)
- * พรีวิวบนพื้นดำ · บันทึกที่ meta/brandLogo (แยกจากโปรไฟล์ข้อความ)
+ * พรีวิวเต็มไม่มีขอบดำ · บันทึกที่ meta/brandLogo (แยกจากโปรไฟล์ข้อความ)
  */
 export function BusinessLogoField({ value, onChange, onError, disabled }: Props) {
   const { actorId } = useAuth();
@@ -84,11 +84,11 @@ export function BusinessLogoField({ value, onChange, onError, disabled }: Props)
       <div className="business-logo-field-head">
         <span className="business-logo-field-label">โลโก้ร้าน</span>
         <span className="business-logo-field-hint">
-          PNG โปร่งใสแนะนำ · พรีวิวบนพื้นดำ · แทนโลโก้เดิมทันทีหลังอัปโหลด
+          PNG โปร่งใสแนะนำ · แสดงเต็มไม่มีขอบดำ · แทนโลโก้เดิมทันทีหลังอัปโหลด (รวมหน้าล็อกอิน)
         </span>
       </div>
 
-      <div className="business-logo-stage" aria-label="พรีวิวโลโก้บนพื้นดำ">
+      <div className="business-logo-stage" aria-label="พรีวิวโลโก้ร้าน">
         {previewSrc ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={previewSrc} alt="โลโก้ร้าน" className="business-logo-preview" />

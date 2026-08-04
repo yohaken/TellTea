@@ -84,26 +84,11 @@ textarea {
   height: 1.85rem;
 }
 
-/** พื้นดำรองรับโลโก้ PNG โปร่งใสจากโปรไฟล์กิจการ */
-.brand-logo-dark-pad {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  padding: 0.28rem 0.45rem;
-  border-radius: 0.55rem;
-  background: linear-gradient(160deg, #16191f 0%, #08090b 100%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.brand-logo-dark-pad-compact {
-  padding: 0.18rem 0.32rem;
-  border-radius: 0.42rem;
-}
-
+/** Custom brand logo — full mark, no dark frame */
 .brand-logo-custom {
   object-fit: contain;
   max-width: 7.5rem;
+  background: transparent;
 }
 
 .brand {
@@ -360,25 +345,16 @@ body.modal-open .main-panel {
 
 .hero-brand .brand-logo {
   display: block;
-  height: clamp(4.5rem, 22vw, 6.5rem);
+  height: clamp(5.5rem, 28vw, 8rem);
   width: auto;
+  max-width: min(86vw, 20rem);
   filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.22));
 }
 
-.hero-brand .brand-logo-dark-pad {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.65rem 0.9rem;
-  border-radius: 0.9rem;
-  background: linear-gradient(160deg, #16191f 0%, #08090b 100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.hero-brand .brand-logo-dark-pad .brand-logo {
-  height: clamp(4.5rem, 22vw, 6.5rem);
-  max-width: min(78vw, 18rem);
-  filter: none;
+.hero-brand .brand-logo-custom {
+  height: clamp(5.5rem, 28vw, 8rem);
+  max-width: min(86vw, 20rem);
+  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.18));
 }
 
 .hero-brand .brand {
@@ -11424,35 +11400,35 @@ body.modal-open .main-panel {
   color: rgba(28, 42, 31, 0.52);
 }
 
-/** พื้นดำสำหรับโลโก้ PNG โปร่งใส — เห็นขอบและเงาชัด */
+/** พรีวิวโลโก้เต็ม — พื้นอ่อน ไม่ใส่กรอบดำ */
 .business-logo-stage {
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 9.5rem;
-  padding: 1.35rem 1.1rem;
+  padding: 1.1rem;
   border-radius: 0.85rem;
   background:
-    radial-gradient(ellipse at 30% 20%, rgba(255, 255, 255, 0.05), transparent 55%),
-    linear-gradient(160deg, #14171c 0%, #0a0b0d 55%, #050607 100%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    radial-gradient(ellipse at 28% 18%, rgba(255, 255, 255, 0.72), transparent 55%),
+    linear-gradient(165deg, #f3eee4 0%, #e8e0d2 100%);
+  border: 1px solid rgba(28, 42, 31, 0.1);
 }
 
 .business-logo-preview {
   display: block;
-  max-width: min(100%, 16rem);
-  max-height: 7.2rem;
+  max-width: min(100%, 18rem);
+  max-height: 8.5rem;
   width: auto;
   height: auto;
   object-fit: contain;
+  background: transparent;
 }
 
 .business-logo-empty {
   margin: 0;
   font-size: 0.8rem;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.42);
+  color: rgba(28, 42, 31, 0.45);
   text-align: center;
   max-width: 14rem;
   line-height: 1.4;

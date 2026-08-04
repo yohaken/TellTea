@@ -52,17 +52,13 @@ export function AppBrand({
     <div className={cn("brand-wrap", compact && "brand-wrap-compact", className)}>
       {showLogo ? (
         useCustom ? (
-          <span
-            className={cn("brand-logo-dark-pad", compact && "brand-logo-dark-pad-compact")}
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={customLogoSrc}
+            alt=""
+            className={cn("brand-logo brand-logo-custom", compact && "brand-logo-compact")}
             aria-hidden
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={customLogoSrc}
-              alt=""
-              className={cn("brand-logo brand-logo-custom", compact && "brand-logo-compact")}
-            />
-          </span>
+          />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
           <img
