@@ -302,8 +302,6 @@ export function CashInLedgerPanel({
   const expected = sumCashDepositDays(workingDays);
   /** มัดรวมบิล → ยอดที่ควรโอนเข้าบัญชีหลังหักคชจ. (ไม่ต้องเบิกคชจ.) */
   const netBankTarget = suggestedNetBankTransfer(expected, workingFee);
-  const remainingToTransfer =
-    Math.round((netBankTarget - workingBank) * 100) / 100;
   const variance = cashDepositVariance(workingBank, expected, workingFee);
   const workingSessionIds = useMemo(() => {
     const ids = new Set<string>();
@@ -1168,88 +1166,81 @@ export function CashInLedgerPanel({
 
           {bundledBillCount >= 1 ? (
             <div
-              className="cash-in-summary-bar cash-in-remain"
+              className="cash-in-summary-bar cash-in-remain is-compact"
               aria-live="polite"
             >
               <div className="cash-in-summary-rows">
-                <div className="cash-in-summary-row">
-                  <span>ยอดรวม</span>
-                  <strong>฿{formatPlainNumber(expected)}</strong>
+                <div className="cash-in-summary-pair">
+                  <div className="cash-in-summary-row">
+                    <span>ยอดรวม</span>
+                    <strong title="โอนเงินตามยอดนี้">
+                      ฿{formatPlainNumber(expected)}
+                    </strong>
+                  </div>
+                  <div className="cash-in-summary-row is-fee">
+                    <span>คชจ.</span>
+                    {primaryTransfer && !readOnly ? (
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        inputMode="decimal"
+                        className="cash-in-cell-input is-num cash-in-summary-fee"
+                        placeholder="0"
+                        aria-label="คชจ.โอน"
+                        value={
+                          primaryTransfer.fee ? String(primaryTransfer.fee) : ""
+                        }
+                        onChange={(e) =>
+                          patchTransfer(primaryTransfer.id, {
+                            fee: Number(e.target.value) || 0,
+                          })
+                        }
+                      />
+                    ) : (
+                      <strong>฿{formatPlainNumber(workingFee)}</strong>
+                    )}
+                  </div>
                 </div>
-                <div className="cash-in-summary-row">
-                  <span>โอนเงินตามยอดนี้</span>
-                  <strong>฿{formatPlainNumber(expected)}</strong>
+                <div className="cash-in-summary-status">
+                  <span className="cash-in-summary-chip is-net">
+                    <span className="cash-in-summary-chip-label">ควรเข้า</span>
+                    <strong>฿{formatPlainNumber(netBankTarget)}</strong>
+                  </span>
+                  <span className="cash-in-summary-chip">
+                    <span className="cash-in-summary-chip-label">สลิป</span>
+                    <strong>฿{formatPlainNumber(workingBank)}</strong>
+                  </span>
+                  <span
+                    className={[
+                      "cash-in-summary-chip is-diff",
+                      variance < -0.005
+                        ? "is-short"
+                        : variance > 0.005
+                          ? "is-over"
+                          : "is-ok",
+                    ].join(" ")}
+                    title="ยอดสลิป − ควรเข้า (หลังหักคชจ.)"
+                  >
+                    <span className="cash-in-summary-chip-label">ส่วนต่าง</span>
+                    <strong>
+                      {Math.abs(variance) < 0.005
+                        ? "ตรง"
+                        : variance > 0
+                          ? `+${formatPlainNumber(variance)}`
+                          : formatPlainNumber(variance)}
+                    </strong>
+                  </span>
                 </div>
-                <div className="cash-in-summary-row is-fee">
-                  <span>คชจ.โอน</span>
-                  {primaryTransfer && !readOnly ? (
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      inputMode="decimal"
-                      className="cash-in-cell-input is-num cash-in-summary-fee"
-                      placeholder="0"
-                      value={
-                        primaryTransfer.fee ? String(primaryTransfer.fee) : ""
-                      }
-                      onChange={(e) =>
-                        patchTransfer(primaryTransfer.id, {
-                          fee: Number(e.target.value) || 0,
-                        })
-                      }
-                    />
-                  ) : (
-                    <strong>฿{formatPlainNumber(workingFee)}</strong>
-                  )}
-                </div>
-                <div className="cash-in-summary-row is-net">
-                  <span>ควรเข้าบัญชี</span>
-                  <strong className="is-ok">
-                    ฿{formatPlainNumber(netBankTarget)}
-                  </strong>
-                </div>
-                <div className="cash-in-summary-row">
-                  <span>ยอดสลิปโอน</span>
-                  <strong>฿{formatPlainNumber(workingBank)}</strong>
-                </div>
-                <div
-                  className={[
-                    "cash-in-summary-row is-diff",
-                    variance < -0.005
-                      ? "is-short"
-                      : variance > 0.005
-                        ? "is-over"
-                        : "is-ok",
-                  ].join(" ")}
-                >
-                  <span>ส่วนต่าง</span>
-                  <strong title="ยอดสลิป − ควรเข้า (หลังหักคชจ.)">
-                    {Math.abs(variance) < 0.005
-                      ? "ตรง"
-                      : variance > 0
-                        ? `+${formatPlainNumber(variance)}`
-                        : formatPlainNumber(variance)}
-                  </strong>
-                </div>
-                <p className="cash-in-remain-line cash-in-summary-formula">
-                  ควรโอน {formatPlainNumber(expected)} − คชจ.{" "}
-                  {formatPlainNumber(workingFee)} = ควรเข้า{" "}
-                  {formatPlainNumber(netBankTarget)}
-                  {Math.abs(remainingToTransfer) > 0.005
-                    ? remainingToTransfer > 0
-                      ? ` · ยังขาดใส่สลิป ${formatPlainNumber(remainingToTransfer)}`
-                      : ` · สลิปเกิน ${formatPlainNumber(-remainingToTransfer)}`
-                    : " · ตรง"}
-                </p>
               </div>
 
               <section className="cash-in-summary-slips" aria-label="สลิปโอนเงิน">
                 <header className="cash-in-summary-slips-head">
-                  <strong>สลิปโอนเงิน</strong>
+                  <strong>สลิปโอน</strong>
                   <span className="muted">
-                    หัวใจหลัก · แนบได้หลายใบ
-                    {bankSlipUrlCount ? ` · ${bankSlipUrlCount} รูป` : ""}
+                    {bankSlipUrlCount
+                      ? `${bankSlipUrlCount} รูป · หลายใบได้`
+                      : "แนบได้หลายใบ"}
                   </span>
                 </header>
                 <ul className="cash-in-summary-slip-list">
@@ -1297,7 +1288,7 @@ export function CashInLedgerPanel({
                       t.slipUrls.length < CASH_DEPOSIT_BANK_SLIP_MAX ? (
                         <button
                           type="button"
-                          className="ghost-btn cash-in-compact-btn"
+                          className="ghost-btn cash-in-action-btn"
                           disabled={busy}
                           onClick={() => openBankPhoto(t.id)}
                           title="เพิ่มรูป"
@@ -1308,7 +1299,7 @@ export function CashInLedgerPanel({
                       {!readOnly && t.slipUrls.length ? (
                         <button
                           type="button"
-                          className="ghost-btn cash-in-compact-btn"
+                          className="ghost-btn cash-in-action-btn"
                           disabled={busy || aiBusy}
                           onClick={() => void runAiBank(t.id, t.slipUrls, true)}
                           title="อ่านสลิป"
@@ -1319,7 +1310,7 @@ export function CashInLedgerPanel({
                       {!readOnly && workingTransfers.length > 1 ? (
                         <button
                           type="button"
-                          className="ghost-btn danger-text cash-in-compact-btn"
+                          className="ghost-btn danger-text cash-in-action-btn"
                           disabled={busy}
                           title="ลบสลิป"
                           onClick={() => removeBankTransfer(t.id)}
@@ -1330,25 +1321,7 @@ export function CashInLedgerPanel({
                     </li>
                   ))}
                 </ul>
-                {!readOnly &&
-                workingTransfers.length < CASH_DEPOSIT_BANK_TRANSFER_MAX ? (
-                  <button
-                    type="button"
-                    className="ghost-btn cash-in-compact-btn"
-                    disabled={busy}
-                    onClick={addBankTransfer}
-                  >
-                    +สลิปโอน
-                  </button>
-                ) : null}
               </section>
-
-              {aiHint ? (
-                <p className={aiBusy ? "muted cash-in-ai-hint" : "cash-in-ai-hint"}>
-                  {aiBusy ? "…" : ""}
-                  {aiHint}
-                </p>
-              ) : null}
 
               {coverage.issues.length ? (
                 <ul className="cash-in-issues">
@@ -1358,18 +1331,30 @@ export function CashInLedgerPanel({
                 </ul>
               ) : null}
 
-              <div className="cash-in-round-actions">
+              <div className="cash-in-round-actions" aria-label="จัดการมัดโอน">
+                {!readOnly &&
+                workingTransfers.length < CASH_DEPOSIT_BANK_TRANSFER_MAX ? (
+                  <button
+                    type="button"
+                    className="ghost-btn cash-in-action-btn"
+                    disabled={busy}
+                    title="เพิ่มสลิปโอน"
+                    onClick={addBankTransfer}
+                  >
+                    +สลิป
+                  </button>
+                ) : null}
                 <button
                   type="button"
-                  className="primary-btn action-in cash-in-compact-btn"
+                  className="primary-btn action-in cash-in-action-btn"
                   disabled={busy || !!coverage.issues.length || !bundledBillCount}
                   onClick={() => void saveWorking()}
                 >
-                  {busy ? "…" : "บันทึกโอน"}
+                  {busy ? "…" : "บันทึก"}
                 </button>
                 <button
                   type="button"
-                  className="ghost-btn cash-in-compact-btn"
+                  className="ghost-btn cash-in-action-btn"
                   disabled={busy}
                   onClick={clearAllTicks}
                   title="ล้างติ๊ก กลับคิวว่าง"
@@ -1379,12 +1364,25 @@ export function CashInLedgerPanel({
                 {selected && (isOwner || selected.createdBy === actorId) ? (
                   <button
                     type="button"
-                    className="ghost-btn danger-text cash-in-compact-btn"
+                    className="ghost-btn danger-text cash-in-action-btn"
                     disabled={busy}
                     onClick={() => void onDeleteRound()}
                   >
                     ลบ
                   </button>
+                ) : null}
+                {aiHint ? (
+                  <span
+                    className={
+                      aiBusy
+                        ? "muted cash-in-ai-hint is-inline"
+                        : "cash-in-ai-hint is-inline"
+                    }
+                    title={aiHint}
+                  >
+                    {aiBusy ? "…" : ""}
+                    {aiHint}
+                  </span>
                 ) : null}
               </div>
             </div>
