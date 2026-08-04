@@ -11,7 +11,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 const require = createRequire(import.meta.url);
 
-assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD\s*=\s*(\d+)/)[1]) >= 690);
+assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD\s*=\s*(\d+)/)[1]) >= 691);
 
 const page = read("src/app/staff/page.tsx");
 assert.match(page, /StaffTeamMiniTable/);
@@ -39,6 +39,7 @@ assert.match(mini, /formatPresenceAge/);
 assert.match(mini, /staff-team-mini-table/);
 assert.match(mini, /staff-mini-account-line/);
 assert.doesNotMatch(mini, /staff-mini-col-account/);
+assert.doesNotMatch(mini, /staff-mini-col-level/);
 assert.match(mini, /onDeleteAccount/);
 assert.match(mini, /onSaveMemberPerms/);
 

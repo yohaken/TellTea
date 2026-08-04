@@ -1097,12 +1097,27 @@ body.modal-open .main-panel {
   border-top: 1px solid rgba(28, 42, 31, 0.08);
 }
 
+.staff-create-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.staff-levels-embedded {
+  margin: 0;
+}
+
+.staff-levels-embedded-actions {
+  margin: 0 0 0.4rem;
+}
+
 .staff-owner-card {
-  margin-top: 0.65rem;
-  padding: 0.45rem 0.6rem;
-  border-radius: 0.55rem;
+  margin-top: 0.45rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.45rem;
   background: rgba(28, 42, 31, 0.04);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
 }
 
 .staff-mini-perm-editor {

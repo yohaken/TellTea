@@ -28,6 +28,8 @@ type Props = {
   onReload: () => Promise<void>;
   linkedCountByLevelId: Map<string, number>;
   onPreviewLevel?: (level: PermissionLevel) => void;
+  /** เมื่อฝังในส่วนพับของหน้า staff — ไม่ซ้ำหัวข้อนอก */
+  embedded?: boolean;
 };
 
 export function PermissionLevelsPanel({
@@ -40,6 +42,7 @@ export function PermissionLevelsPanel({
   onReload,
   linkedCountByLevelId,
   onPreviewLevel,
+  embedded = false,
 }: Props) {
   const sorted = useMemo(
     () => [...levels].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "th")),
@@ -164,18 +167,28 @@ export function PermissionLevelsPanel({
   const showForm = creating || !!editingId;
 
   return (
-    <section className="staff-hub-panel">
-      <div className="staff-hub-panel-head">
-        <div>
-          <h2 className="staff-hub-panel-title">ลำดับสิทธิ์</h2>
-          <p className="staff-hub-panel-hint">แม่แบบสิทธิ์ — ผูกตอนสร้างบัญชี · แก้รายคนได้</p>
+    <section className={embedded ? "staff-levels-embedded" : "staff-hub-panel"}>
+      {embedded ? (
+        !showForm ? (
+          <div className="staff-levels-embedded-actions">
+            <button type="button" className="primary-btn staff-btn-sm" disabled={busy} onClick={startCreate}>
+              + ลำดับ
+            </button>
+          </div>
+        ) : null
+      ) : (
+        <div className="staff-hub-panel-head">
+          <div>
+            <h2 className="staff-hub-panel-title">ลำดับสิทธิ์</h2>
+            <p className="staff-hub-panel-hint">แม่แบบสิทธิ์ — ผูกตอนสร้างบัญชี · แก้รายคนได้</p>
+          </div>
+          {!showForm ? (
+            <button type="button" className="primary-btn staff-btn-sm" disabled={busy} onClick={startCreate}>
+              + ลำดับ
+            </button>
+          ) : null}
         </div>
-        {!showForm ? (
-          <button type="button" className="primary-btn staff-btn-sm" disabled={busy} onClick={startCreate}>
-            + ลำดับ
-          </button>
-        ) : null}
-      </div>
+      )}
 
       {showForm ? (
         <form className="staff-compact-form" onSubmit={(e) => void onSave(e)}>

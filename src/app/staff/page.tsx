@@ -97,6 +97,8 @@ function StaffView() {
   const [loading, setLoading] = useState(true);
   const [editTarget, setEditTarget] = useState<StaffReadinessEditTarget>(null);
   const [showPreviewCheck, setShowPreviewCheck] = useState(false);
+  const [showCreateAccount, setShowCreateAccount] = useState(false);
+  const [showLevels, setShowLevels] = useState(false);
 
   const linkOptions = employeesForLink(employees);
   const staff = realStaff;
@@ -311,6 +313,7 @@ function StaffView() {
       const defLevel = findLevel(levels, def);
       setPerms(defLevel ? { ...defLevel.permissions } : { ...DEFAULT_STAFF_PERMISSIONS });
       setShowCustomPerms(false);
+      setShowCreateAccount(false);
       setSuccess(
         linkedName
           ? `สร้าง ${account} · เชื่อม "${linkedName}"`
@@ -529,90 +532,100 @@ function StaffView() {
       </div>
 
       <section id="staff-accounts" className="staff-hub-panel staff-hub-anchor">
-          <div className="staff-hub-panel-head">
+          <div className="staff-hub-panel-head staff-create-head">
             <div>
-              <h2 className="staff-hub-panel-title">สร้างบัญชี</h2>
-              <p className="staff-hub-panel-hint">
-                อีเมลหรือเบอร์ + ลำดับ + เชื่อมชื่อ · แก้/ลบบัญชีทำที่ตารางทีม ▾
-              </p>
+              <h2 className="staff-hub-panel-title">บัญชี</h2>
+              <p className="staff-hub-panel-hint">แก้/ลบที่ตารางทีม ▾</p>
             </div>
+            <button
+              type="button"
+              className="ghost-btn staff-btn-sm"
+              disabled={busy}
+              aria-expanded={showCreateAccount}
+              onClick={() => setShowCreateAccount((v) => !v)}
+            >
+              {showCreateAccount ? "ซ่อนฟอร์ม" : "+บัญชี"}
+            </button>
           </div>
-          <form className="staff-compact-form" onSubmit={(e) => void onSubmitAccount(e)}>
-            <div className="staff-compact-form-grid">
-              <div className="field">
-                <label htmlFor="email">อีเมล</label>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="staff@gmail.com"
-                />
+
+          {showCreateAccount ? (
+            <form className="staff-compact-form" onSubmit={(e) => void onSubmitAccount(e)}>
+              <div className="staff-compact-form-grid">
+                <div className="field">
+                  <label htmlFor="email">อีเมล</label>
+                  <input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="staff@gmail.com"
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="phone">เบอร์</label>
+                  <input
+                    id="phone"
+                    type="tel"
+                    inputMode="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="0812345678"
+                  />
+                </div>
               </div>
-              <div className="field">
-                <label htmlFor="phone">เบอร์</label>
-                <input
-                  id="phone"
-                  type="tel"
-                  inputMode="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="0812345678"
-                />
+              <div className="staff-compact-form-grid">
+                <div className="field">
+                  <label htmlFor="link-employee">ชื่อในร้าน</label>
+                  <select
+                    id="link-employee"
+                    value={linkEmployeeId}
+                    onChange={(e) => setLinkEmployeeId(e.target.value)}
+                  >
+                    <option value="">— ยังไม่เชื่อม —</option>
+                    {linkOptions.map((emp) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field">
+                  <label htmlFor="account-level">ลำดับสิทธิ์</label>
+                  <PermissionLevelSelect
+                    id="account-level"
+                    levels={levels}
+                    value={levelId}
+                    onChange={applyLevel}
+                    disabled={busy}
+                    hideElevated={!isOwner}
+                    allowEmpty
+                  />
+                </div>
               </div>
-            </div>
-            <div className="staff-compact-form-grid">
-              <div className="field">
-                <label htmlFor="link-employee">ชื่อในร้าน</label>
-                <select
-                  id="link-employee"
-                  value={linkEmployeeId}
-                  onChange={(e) => setLinkEmployeeId(e.target.value)}
+              <div className="staff-perm-toggle-row">
+                <button
+                  type="button"
+                  className="ghost-btn staff-btn-sm"
+                  disabled={busy}
+                  onClick={() => setShowCustomPerms((v) => !v)}
                 >
-                  <option value="">— ยังไม่เชื่อม —</option>
-                  {linkOptions.map((emp) => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.name}
-                    </option>
-                  ))}
-                </select>
+                  {showCustomPerms ? "ซ่อนติ๊ก" : "ติ๊กสิทธิ์"}
+                </button>
+                <button type="submit" className="primary-btn staff-btn-sm" disabled={busy}>
+                  {busy ? "..." : "สร้าง"}
+                </button>
               </div>
-              <div className="field">
-                <label htmlFor="account-level">ลำดับสิทธิ์</label>
-                <PermissionLevelSelect
-                  id="account-level"
-                  levels={levels}
-                  value={levelId}
-                  onChange={applyLevel}
+              {showCustomPerms ? (
+                <PermissionPicker
+                  value={perms}
+                  onChange={setPerms}
                   disabled={busy}
                   hideElevated={!isOwner}
-                  allowEmpty
+                  compact
                 />
-              </div>
-            </div>
-            <div className="staff-perm-toggle-row">
-              <button
-                type="button"
-                className="ghost-btn staff-btn-sm"
-                disabled={busy}
-                onClick={() => setShowCustomPerms((v) => !v)}
-              >
-                {showCustomPerms ? "ซ่อนติ๊กสิทธิ์" : "ปรับสิทธิ์รายข้อ"}
-              </button>
-              <button type="submit" className="primary-btn staff-btn-sm" disabled={busy}>
-                {busy ? "..." : "สร้างบัญชี"}
-              </button>
-            </div>
-            {showCustomPerms ? (
-              <PermissionPicker
-                value={perms}
-                onChange={setPerms}
-                disabled={busy}
-                hideElevated={!isOwner}
-                compact
-              />
-            ) : null}
-          </form>
+              ) : null}
+            </form>
+          ) : null}
 
           {(() => {
             const owner = members.find((m) => m.role === "owner");
@@ -627,19 +640,37 @@ function StaffView() {
           })()}
         </section>
 
-      <div id="staff-levels" className="staff-hub-anchor">
-        <PermissionLevelsPanel
-          levels={levels}
-          isOwner={!!isOwner}
-          busy={busy}
-          setBusy={setBusy}
-          onError={setError}
-          onSuccess={setSuccess}
-          onReload={() => reload().then(() => undefined)}
-          linkedCountByLevelId={linkedCountByLevelId}
-          onPreviewLevel={isOwner ? beginPreviewFromLevel : undefined}
-        />
-      </div>
+      <section id="staff-levels" className="staff-hub-panel staff-hub-anchor">
+        <div className="staff-hub-panel-head staff-create-head">
+          <div>
+            <h2 className="staff-hub-panel-title">ลำดับสิทธิ์</h2>
+            <p className="staff-hub-panel-hint">{levels.length} แม่แบบ</p>
+          </div>
+          <button
+            type="button"
+            className="ghost-btn staff-btn-sm"
+            disabled={busy}
+            aria-expanded={showLevels}
+            onClick={() => setShowLevels((v) => !v)}
+          >
+            {showLevels ? "ซ่อน" : "เปิด"}
+          </button>
+        </div>
+        {showLevels ? (
+          <PermissionLevelsPanel
+            levels={levels}
+            isOwner={!!isOwner}
+            busy={busy}
+            setBusy={setBusy}
+            onError={setError}
+            onSuccess={setSuccess}
+            onReload={() => reload().then(() => undefined)}
+            linkedCountByLevelId={linkedCountByLevelId}
+            onPreviewLevel={isOwner ? beginPreviewFromLevel : undefined}
+            embedded
+          />
+        ) : null}
+      </section>
     </div>
   );
 }

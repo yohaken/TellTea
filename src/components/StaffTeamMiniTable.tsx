@@ -500,7 +500,6 @@ export function StaffTeamMiniTable({
             <thead>
               <tr>
                 <th className="staff-mini-col-name">ชื่อ</th>
-                <th className="staff-mini-col-level">ลำดับ</th>
                 <th className="staff-mini-col-ready">พร้อม</th>
                 <th className="staff-mini-col-seen">ใช้</th>
                 <th className="staff-mini-col-pay">เงินเดือน</th>
@@ -510,7 +509,7 @@ export function StaffTeamMiniTable({
             <tbody>
               {rows.map((row) => {
                 const open = openId === row.id;
-                const colSpan = 6;
+                const colSpan = 5;
                 return (
                   <Fragment key={row.id}>
                     <tr
@@ -536,19 +535,6 @@ export function StaffTeamMiniTable({
                             <span className="staff-ready-tag is-roster">รอบัญชี</span>
                           ) : null}
                         </button>
-                      </td>
-                      <td className="staff-mini-col-level">
-                        <span
-                          className={`staff-chip${
-                            row.levelLabel === "—" ? " is-muted" : " is-soft"
-                          }`}
-                          title={
-                            row.levelCustomized ? "ผูกลำดับแต่ปรับสิทธิ์เอง" : row.levelLabel
-                          }
-                        >
-                          {row.levelLabel}
-                          {row.levelCustomized ? "*" : ""}
-                        </span>
                       </td>
                       <td className="staff-mini-col-ready">
                         <ReadyPill row={row} />
@@ -576,7 +562,10 @@ export function StaffTeamMiniTable({
                         <td colSpan={colSpan}>
                           <div className="staff-mini-detail">
                             <p className="staff-mini-account-line">
-                              <span className="muted">บัญชี</span>{" "}
+                              <span className="muted">ลำดับ</span>{" "}
+                              {row.levelLabel}
+                              {row.levelCustomized ? "*" : ""}
+                              <span className="muted"> · บัญชี</span>{" "}
                               {row.accountLabel !== "—" ? row.accountLabel : "—"}
                               {row.linkLabel ? (
                                 <span className="muted"> · {row.linkLabel}</span>
