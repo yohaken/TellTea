@@ -6,7 +6,6 @@ import {
   formatPayrollPaidAtLabel,
   formatPayrollPeriodLabel,
   legalNameForPaymentDoc,
-  printPayrollPaymentDoc,
   shopFromPosSettings,
   type PayrollPaymentDocPayee,
   type PayrollPaymentDocShop,
@@ -33,7 +32,7 @@ function fmt(n: number) {
 }
 
 /**
- * ดูใบสรุปหลักฐานจ่ายในแอป · พิมพ์/บันทึก PDF · ดาวน์โหลดไฟล์เก็บ
+ * ดูใบสรุปหลักฐานจ่ายในแอป · ดาวน์โหลดเอกสารมาตรฐาน (เปิดแล้วพิมพ์/บันทึก PDF ได้)
  */
 export function PayrollPaymentDocModal({
   receipt,
@@ -113,20 +112,6 @@ export function PayrollPaymentDocModal({
 
   const recipient = legalNameForPaymentDoc(resolvedPayee);
 
-  function onPrintPdf() {
-    const ok = printPayrollPaymentDoc({
-      receipt,
-      shop,
-      payee: resolvedPayee,
-      payer,
-    });
-    setActionMsg(
-      ok
-        ? "เปิดหน้าพิมพ์แล้ว — เลือกเครื่องพิมพ์หรือ「บันทึกเป็น PDF」ได้"
-        : "เปิดหน้าพิมพ์ไม่ได้ — อนุญาตป๊อปอัปแล้วลองใหม่",
-    );
-  }
-
   function onDownload() {
     const ok = downloadPayrollPaymentDoc({
       receipt,
@@ -156,12 +141,11 @@ export function PayrollPaymentDocModal({
           className="panel-title"
           style={{ fontSize: "1rem", marginBottom: "0.35rem" }}
         >
-          หลักฐานการจ่ายค่าจ้าง (A4)
+          หลักฐานการจ่ายค่าจ้าง
         </h2>
         <p className="muted" style={{ margin: "0 0 0.75rem", fontSize: "0.82rem" }}>
-          เอกสารทางการขนาด A4 · พิมพ์หรือบันทึก PDF ได้
+          เอกสารมาตรฐาน · ดาวน์โหลดแล้วเปิดพิมพ์/บันทึก PDF ได้
           {shop.shopName ? ` · ${shop.shopName}` : ""}
-          {shop.taxId ? ` · เลขผู้เสียภาษี ${shop.taxId}` : ""}
         </p>
 
         <div className="payroll-payment-doc-preview" aria-label="รายละเอียดใบสรุป">
@@ -230,10 +214,11 @@ export function PayrollPaymentDocModal({
         ) : null}
 
         <div className="module-form-actions" style={{ marginTop: "0.85rem" }}>
-          <button type="button" className="primary-btn" onClick={onPrintPdf}>
-            พิมพ์ A4 / บันทึก PDF
-          </button>
-          <button type="button" className="ghost-btn" onClick={onDownload}>
+          <button
+            type="button"
+            className="primary-btn payroll-doc-dl-btn"
+            onClick={onDownload}
+          >
             ดาวน์โหลดเอกสาร
           </button>
           <button type="button" className="ghost-btn" onClick={onClose}>

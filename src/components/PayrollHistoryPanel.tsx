@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
-import { PayrollPaymentDocModal } from "@/components/PayrollPaymentDocModal";
 import type { Employee } from "@/lib/employees";
 import {
   buildMonthPaymentSummary,
@@ -11,8 +10,6 @@ import {
   formatPayrollPeriodLabel,
   legalNameForPaymentDoc,
   listMonthPaymentSummaries,
-  openMonthPaymentDoc,
-  openMonthPaymentDocsBundle,
   payeeFromEmployee,
   shopFromPosSettings,
   type PayrollMonthPaymentSummary,
@@ -30,10 +27,6 @@ import {
   salaryHistoryMetaBits,
   shortPayrollKindLabel,
 } from "@/lib/payroll-history";
-import {
-  buildStaffTransferReceipts,
-  type StaffTransferReceipt,
-} from "@/lib/payroll-staff-receipt";
 import {
   getLocalPosShopSettings,
   getPosShopSettings,
@@ -56,8 +49,8 @@ function fmt(n: number) {
 }
 
 /**
- * แท็บหลักฐานจ่ายรายเดือน — พนักงานดูของตัวเอง · เจ้าของเลือกคน
- * ขยายเดือน → ดาวน์โหลดเอกสาร A4 (กลางเดือน + สิ้นเดือน + โบนัส + ยอดรวม)
+ * แท็บหลักฐานจ่าย — พนักงานดาวน์โหลดของตัวเองเท่านั้น (ปุ่มเดียว)
+ * เจ้าของเลือกคนได้ + ดาวน์โหลดทั้งร้านเมื่อขยายเดือนที่ตรงงวด
  */
 export function PayrollHistoryPanel({
   isOwner,
@@ -87,9 +80,6 @@ export function PayrollHistoryPanel({
     urls: string[];
     title: string;
   } | null>(null);
-  const [docReceipt, setDocReceipt] = useState<StaffTransferReceipt | null>(
-    null,
-  );
   const [bundleBusy, setBundleBusy] = useState(false);
   const [payerSettings, setPayerSettings] = useState<PayrollPaymentDocSettings>(
     DEFAULT_PAYROLL_PAYMENT_DOC_SETTINGS,
@@ -98,7 +88,7 @@ export function PayrollHistoryPanel({
     Map<string, StaffPersonalData>
   >(new Map());
 
-  useBodyScrollLock(!!preview || !!docReceipt);
+  useBodyScrollLock(!!preview);
 
   useEffect(() => {
     let alive = true;
@@ -118,9 +108,7 @@ export function PayrollHistoryPanel({
         }
         return;
       }
-      const employee =
-        employees.find((e) => e.id === employeeId) ||
-        employees.find((e) => e.linkedStaffId);
+      const employee = employees.find((e) => e.id === employeeId);
       const staffId = (employee?.linkedStaffId || "").trim();
       if (!staffId) return;
       try {
@@ -146,6 +134,7 @@ export function PayrollHistoryPanel({
     [employees],
   );
 
+  /** กันพลาด — ในแผงนี้ใช้เฉพาะรายการของ employeeId ที่ส่งมา */
   const mine = useMemo(
     () => filterEmployeePayrollItems(items, employeeId),
     [items, employeeId],
@@ -155,10 +144,7 @@ export function PayrollHistoryPanel({
   const emp =
     roster.find((e) => e.id === employeeId) ||
     employees.find((e) => e.id === employeeId);
-  const empName =
-    emp?.name ||
-    mine[0]?.employeeName ||
-    "—";
+  const empName = emp?.name || mine[0]?.employeeName || "—";
 
   const paidAll = summaries.reduce((s, m) => s + m.paidTotal, 0);
   const pendingAll = summaries.reduce((s, m) => s + m.pendingTotal, 0);
@@ -172,14 +158,15 @@ export function PayrollHistoryPanel({
     }
     return map;
   }, [employees]);
+
   const shopMonthSummaries = useMemo(
     () =>
-      shopView && bundleMonth
+      isOwner && shopView && bundleMonth
         ? listMonthPaymentSummaries(items, bundleMonth, {
             monthlySalaryByEmployeeId: salaryByEmployeeId,
           })
         : [],
-    [shopView, items, bundleMonth, salaryByEmployeeId],
+    [isOwner, shopView, items, bundleMonth, salaryByEmployeeId],
   );
 
   function payeeForEmployee(
@@ -211,37 +198,29 @@ export function PayrollHistoryPanel({
     return { shop, payer };
   }
 
-  async function exportOneMonth(
-    summary: PayrollMonthPaymentSummary,
-    mode: "print" | "download",
-  ) {
+  async function exportOneMonth(summary: PayrollMonthPaymentSummary) {
     setBundleBusy(true);
     try {
       const { shop, payer } = await loadShop();
       const payee = payeeForEmployee(summary.employeeId, summary.employeeName);
-      const ok =
-        mode === "print"
-          ? openMonthPaymentDoc({ summary, shop, payee, payer })
-          : downloadMonthPaymentDoc({ summary, shop, payee, payer });
+      const ok = downloadMonthPaymentDoc({ summary, shop, payee, payer });
       if (!ok) {
-        onError?.(
-          mode === "print"
-            ? "เปิดหน้าพิมพ์ไม่ได้ — อนุญาตป๊อปอัปแล้วลองใหม่"
-            : "ดาวน์โหลดไม่สำเร็จ",
-        );
+        onError?.("ดาวน์โหลดไม่สำเร็จ");
         return;
       }
       onInfo?.(
-        mode === "print"
-          ? `เปิดเอกสาร A4 ${legalNameForPaymentDoc(payee)} · ${formatPayrollPeriodLabel(summary.periodMonth)}`
-          : `ดาวน์โหลดเอกสาร A4 ${legalNameForPaymentDoc(payee)} · ${formatPayrollPeriodLabel(summary.periodMonth)} แล้ว`,
+        `ดาวน์โหลดเอกสาร ${legalNameForPaymentDoc(payee)} · ${formatPayrollPeriodLabel(summary.periodMonth)} แล้ว`,
       );
     } finally {
       setBundleBusy(false);
     }
   }
 
-  async function exportShopBundle(mode: "print" | "download") {
+  async function exportShopBundle() {
+    if (!isOwner || !shopView) {
+      onError?.("ดาวน์โหลดทั้งร้านได้เฉพาะเจ้าของ");
+      return;
+    }
     if (!bundleMonth || !shopMonthSummaries.length) {
       onError?.("ยังไม่มีรายการที่จ่ายแล้วในงวดนี้");
       return;
@@ -249,34 +228,19 @@ export function PayrollHistoryPanel({
     setBundleBusy(true);
     try {
       const { shop, payer } = await loadShop();
-      const ok =
-        mode === "print"
-          ? openMonthPaymentDocsBundle({
-              periodMonth: bundleMonth,
-              summaries: shopMonthSummaries,
-              shop,
-              payer,
-              payeeFor: (s) => payeeForEmployee(s.employeeId, s.employeeName),
-            })
-          : downloadMonthPaymentDocsBundle({
-              periodMonth: bundleMonth,
-              summaries: shopMonthSummaries,
-              shop,
-              payer,
-              payeeFor: (s) => payeeForEmployee(s.employeeId, s.employeeName),
-            });
+      const ok = downloadMonthPaymentDocsBundle({
+        periodMonth: bundleMonth,
+        summaries: shopMonthSummaries,
+        shop,
+        payer,
+        payeeFor: (s) => payeeForEmployee(s.employeeId, s.employeeName),
+      });
       if (!ok) {
-        onError?.(
-          mode === "print"
-            ? "เปิดหน้าพิมพ์ไม่ได้ — อนุญาตป๊อปอัปแล้วลองใหม่"
-            : "ดาวน์โหลดไม่สำเร็จ",
-        );
+        onError?.("ดาวน์โหลดไม่สำเร็จ");
         return;
       }
       onInfo?.(
-        mode === "print"
-          ? `เปิดชุดเอกสาร A4 ${formatPayrollPeriodLabel(bundleMonth)} · ${shopMonthSummaries.length} คน`
-          : `ดาวน์โหลดชุดเอกสาร A4 ${formatPayrollPeriodLabel(bundleMonth)} · ${shopMonthSummaries.length} คนแล้ว`,
+        `ดาวน์โหลดเอกสารทั้งร้าน ${formatPayrollPeriodLabel(bundleMonth)} · ${shopMonthSummaries.length} คนแล้ว`,
       );
     } finally {
       setBundleBusy(false);
@@ -288,7 +252,9 @@ export function PayrollHistoryPanel({
       <div className="payroll-summary-bar payroll-summary-bar--solo">
         <div>
           <span className="bonus-summary-label">
-            {shopView ? `หลักฐานจ่าย · ${empName}` : "หลักฐานจ่ายของฉัน"}
+            {isOwner && shopView
+              ? `หลักฐานจ่าย · ${empName}`
+              : "หลักฐานจ่ายของฉัน"}
           </span>
           <strong>฿{fmt(paidAll)}</strong>
           <span className="muted bonus-summary-pool-meta">
@@ -316,8 +282,7 @@ export function PayrollHistoryPanel({
       ) : null}
 
       <p className="muted payroll-actions-hint">
-        แตะเดือนเพื่อขยาย → ดาวน์โหลด/พิมพ์เอกสารทางการ A4 (ยอดก่อนคืนเบิก · คืนเบิก · ยอดโอน)
-        · คืนเบิก = ได้เงินไปก่อนแล้ว ไม่ใช่ลดเงินเดือน
+        แตะเดือนเพื่อขยาย → ดาวน์โหลดเอกสาร (เงินเดือน · โบนัส · คืนเบิกถ้ามี · ยอดโอน)
       </p>
 
       {!employeeId ? (
@@ -338,11 +303,9 @@ export function PayrollHistoryPanel({
             </thead>
             <tbody>
               {summaries.map((row) => {
-                const salaryPaid = row.salaryGrossPaid;
-                const salaryPending = row.salaryGrossPending;
                 const open = expandedMonth === row.periodMonth;
                 const monthSummary = buildMonthPaymentSummary(
-                  items,
+                  mine,
                   employeeId,
                   row.periodMonth,
                   {
@@ -360,8 +323,8 @@ export function PayrollHistoryPanel({
                       setExpandedMonth(open ? null : row.periodMonth)
                     }
                     periodMonth={row.periodMonth}
-                    salaryPaid={salaryPaid}
-                    salaryPending={salaryPending}
+                    salaryPaid={row.salaryGrossPaid}
+                    salaryPending={row.salaryGrossPending}
                     salaryMeta={salaryHistoryMetaBits(row)}
                     bonusPaid={row.bonusGrossPaid}
                     bonusPending={row.bonusGrossPending}
@@ -383,21 +346,20 @@ export function PayrollHistoryPanel({
                       )
                     }
                     shopBundleCount={shopMonthSummaries.length}
-                    onExportOne={(mode) => {
+                    onDownload={() => {
                       if (!monthSummary) {
                         onError?.("ยังไม่มีรายการจ่ายแล้วในเดือนนี้");
                         return;
                       }
-                      void exportOneMonth(monthSummary, mode);
+                      void exportOneMonth(monthSummary);
                     }}
-                    onExportShop={(mode) => void exportShopBundle(mode)}
+                    onDownloadShop={() => void exportShopBundle()}
                     onOpenSlips={(item) =>
                       setPreview({
                         urls: item.slipUrls,
                         title: `${shortPayrollKindLabel(item.kind)} · ${item.periodMonth}`,
                       })
                     }
-                    onOpenDoc={(receipt) => setDocReceipt(receipt)}
                   />
                 );
               })}
@@ -411,24 +373,6 @@ export function PayrollHistoryPanel({
           urls={preview.urls}
           title={preview.title}
           onClose={() => setPreview(null)}
-        />
-      ) : null}
-
-      {docReceipt ? (
-        <PayrollPaymentDocModal
-          receipt={docReceipt}
-          payee={payeeForEmployee(
-            docReceipt.lines[0]?.item.employeeId || employeeId,
-            empName,
-          )}
-          linkedStaffId={
-            employees.find(
-              (e) =>
-                e.id ===
-                (docReceipt.lines[0]?.item.employeeId || employeeId),
-            )?.linkedStaffId
-          }
-          onClose={() => setDocReceipt(null)}
         />
       ) : null}
     </div>
@@ -453,10 +397,9 @@ function FragmentMonth({
   bundleBusy,
   showShopBundle,
   shopBundleCount,
-  onExportOne,
-  onExportShop,
+  onDownload,
+  onDownloadShop,
   onOpenSlips,
-  onOpenDoc,
 }: {
   open: boolean;
   onToggle: () => void;
@@ -475,10 +418,9 @@ function FragmentMonth({
   bundleBusy: boolean;
   showShopBundle: boolean;
   shopBundleCount: number;
-  onExportOne: (mode: "print" | "download") => void;
-  onExportShop: (mode: "print" | "download") => void;
+  onDownload: () => void;
+  onDownloadShop: () => void;
   onOpenSlips: (item: PayrollItem) => void;
-  onOpenDoc: (receipt: StaffTransferReceipt) => void;
 }) {
   const statusLabel = paidComplete
     ? "ครบแล้ว"
@@ -489,9 +431,6 @@ function FragmentMonth({
         : "—";
 
   const seenCombined = new Set<string>();
-  const paidReceipts = open
-    ? buildStaffTransferReceipts(items.filter((i) => i.status === "paid"))
-    : [];
 
   return (
     <>
@@ -565,7 +504,9 @@ function FragmentMonth({
                     {monthSummary.advanceDeductTotal > 0
                       ? `คืนเบิก −฿${fmt(monthSummary.advanceDeductTotal)} · `
                       : ""}
-                    <strong>โอนเข้าบัญชี ฿{fmt(monthSummary.transferTotal)}</strong>
+                    <strong>
+                      โอนเข้าบัญชี ฿{fmt(monthSummary.transferTotal)}
+                    </strong>
                   </>
                 ) : (
                   "ยังไม่มีรายการจ่ายแล้วในเดือนนี้"
@@ -574,68 +515,22 @@ function FragmentMonth({
               <div className="payroll-history-docs-actions">
                 <button
                   type="button"
-                  className="primary-btn payroll-table-btn"
+                  className="primary-btn payroll-doc-dl-btn"
                   disabled={bundleBusy || !monthSummary}
-                  onClick={() => onExportOne("download")}
+                  onClick={onDownload}
                 >
-                  ดาวน์โหลดเอกสาร A4
-                </button>
-                <button
-                  type="button"
-                  className="ghost-btn payroll-table-btn"
-                  disabled={bundleBusy || !monthSummary}
-                  onClick={() => onExportOne("print")}
-                >
-                  พิมพ์ A4 / PDF
+                  ดาวน์โหลดเอกสาร
                 </button>
                 {showShopBundle ? (
-                  <>
-                    <button
-                      type="button"
-                      className="ghost-btn payroll-table-btn"
-                      disabled={bundleBusy}
-                      onClick={() => onExportShop("download")}
-                    >
-                      ดาวน์โหลดทั้งร้าน ({shopBundleCount})
-                    </button>
-                    <button
-                      type="button"
-                      className="ghost-btn payroll-table-btn"
-                      disabled={bundleBusy}
-                      onClick={() => onExportShop("print")}
-                    >
-                      พิมพ์ทั้งร้าน
-                    </button>
-                  </>
+                  <button
+                    type="button"
+                    className="ghost-btn payroll-doc-dl-btn"
+                    disabled={bundleBusy}
+                    onClick={onDownloadShop}
+                  >
+                    ทั้งร้าน ({shopBundleCount})
+                  </button>
                 ) : null}
-              </div>
-            </div>
-          </td>
-        </tr>
-      ) : null}
-      {open && paidReceipts.length ? (
-        <tr className="payroll-tr is-detail payroll-history-docs-row">
-          <td colSpan={5}>
-            <div className="payroll-history-docs" aria-label="รอบโอนย่อย">
-              <span className="muted payroll-history-docs-label">
-                รอบโอนในเดือน
-              </span>
-              <div className="payroll-history-docs-actions">
-                {paidReceipts.map((receipt) => {
-                  const label = receipt.combined
-                    ? `โอนรวม ฿${fmt(receipt.transferTotal)}`
-                    : `${shortPayrollKindLabel(receipt.lines[0]?.kind || "salary_mid")} ฿${fmt(receipt.transferTotal)}`;
-                  return (
-                    <button
-                      key={receipt.key}
-                      type="button"
-                      className="ghost-btn payroll-table-btn"
-                      onClick={() => onOpenDoc(receipt)}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
               </div>
             </div>
           </td>
@@ -643,9 +538,11 @@ function FragmentMonth({
       ) : null}
       {open
         ? items.map((item) => {
-            const dueLabel = kindUsesMonthEndAccount(item.kind)
-              ? formatDateShortBe(item.dueDate)
-              : formatDateShortBe(item.dueDate);
+            const dueLabel = formatDateShortBe(
+              kindUsesMonthEndAccount(item.kind)
+                ? item.dueDate
+                : item.dueDate,
+            );
             const hasSlips = item.slipUrls.length > 0;
             const cid = (item.combinedPayId || "").trim();
             let combinedBanner: string | null = null;
@@ -657,7 +554,10 @@ function FragmentMonth({
               }
             }
             return (
-              <tr key={item.id} className={`payroll-tr status-${item.status} is-detail`}>
+              <tr
+                key={item.id}
+                className={`payroll-tr status-${item.status} is-detail`}
+              >
                 <td className="payroll-col-kind" colSpan={2}>
                   {combinedBanner ? (
                     <div className="payroll-history-combined-banner">

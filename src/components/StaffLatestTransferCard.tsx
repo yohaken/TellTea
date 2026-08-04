@@ -132,29 +132,30 @@ export function StaffLatestTransferCard({
         ) : null}
 
         <div className="payroll-latest-transfer-actions">
-          <button
-            type="button"
-            className="primary-btn"
-            onClick={() => setDocOpen(true)}
-          >
-            ดูใบสรุปจ่าย
-          </button>
+          {onOpenHistory ? (
+            <button
+              type="button"
+              className="primary-btn payroll-doc-dl-btn"
+              onClick={() => onOpenHistory(receipt.periodMonth)}
+            >
+              หลักฐานจ่าย
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="primary-btn payroll-doc-dl-btn"
+              onClick={() => setDocOpen(true)}
+            >
+              ดาวน์โหลดเอกสาร
+            </button>
+          )}
           {onOpenBonusMonth ? (
             <button
               type="button"
               className="ghost-btn"
               onClick={() => onOpenBonusMonth(receipt.periodMonth)}
             >
-              สรุปโบนัส + หลักฐานหัก
-            </button>
-          ) : null}
-          {onOpenHistory ? (
-            <button
-              type="button"
-              className="ghost-btn"
-              onClick={() => onOpenHistory(receipt.periodMonth)}
-            >
-              เปิดหลักฐานงวดนี้
+              สรุปโบนัส
             </button>
           ) : null}
         </div>

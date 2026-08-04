@@ -820,20 +820,28 @@ function BonusView() {
       {tab === "history" ? (
         <PayrollHistoryPanel
           isOwner={uiIsOwner}
-          shopView={showShopUi}
+          shopView={showShopUi && uiIsOwner}
           periodMonth={month}
           employeeId={
             isStaffPreview
               ? previewEmployeeId || ""
-              : showShopUi
+              : uiIsOwner && showShopUi
                 ? historyEmployeeId
                 : myEmployee?.id || historyEmployeeId
           }
           employees={employees}
           items={
-            showShopUi
+            /* หลักฐานจ่าย: เจ้าของดูทั้งร้านได้ · คนอื่นได้เฉพาะของตัวเองเสมอ
+               (อย่าใช้ visiblePayrollItems — คนจ่ายที่ไม่ใช่เจ้าของมี showShopUi=true) */
+            uiIsOwner && showShopUi
               ? payrollItems
-              : visiblePayrollItems
+              : (() => {
+                  const empId = isStaffPreview
+                    ? previewEmployeeId || ""
+                    : myEmployee?.id || "";
+                  if (!empId) return [];
+                  return payrollItems.filter((i) => i.employeeId === empId);
+                })()
           }
           historySinceLabel={(() => {
             const since = new Date(year, monthIdx - 13, 1);

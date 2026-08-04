@@ -470,31 +470,41 @@ function lineMetaBits(
 
 function paymentDocCss(multiPage: boolean): string {
   return `
-    @page { size: A4; margin: 14mm 12mm 14mm 14mm; }
+    @page { size: A4; margin: 0; }
     * { box-sizing: border-box; }
-    body {
+    html, body {
       margin: 0;
+      padding: 0;
+    }
+    body {
       font-family: "Sarabun", "TH Sarabun New", "Cordia New", "Tahoma", sans-serif;
       color: #111;
-      background: #fff;
+      background: #d0d0d0;
       font-size: 13.5px;
       line-height: 1.45;
       -webkit-font-smoothing: antialiased;
     }
+    /* แผ่นกระดาษ A4 จริง — ทั้งตอนเปิดไฟล์และตอนพิมพ์ */
     .sheet {
-      width: 100%;
-      max-width: 186mm;
-      margin: 0 auto;
-      padding: 2px 0 8px;
+      width: 210mm;
+      min-height: 297mm;
+      margin: 8mm auto;
+      padding: 14mm 12mm 14mm 14mm;
+      background: #fff;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.22);
+      position: relative;
+      overflow: hidden;
     }
     ${
       multiPage
         ? `.sheet + .sheet { page-break-before: always; break-before: page; }
     .bundle-cover {
-      max-width: 186mm;
-      margin: 0 auto 1rem;
-      padding: 0.25rem 0 0.75rem;
-      border-bottom: 1px solid #222;
+      width: 210mm;
+      min-height: auto;
+      margin: 8mm auto;
+      padding: 10mm 12mm;
+      background: #fff;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.22);
       text-align: center;
     }
     .bundle-cover .org { font-size: 1.2rem; font-weight: 700; margin: 0; }
@@ -655,12 +665,28 @@ function paymentDocCss(multiPage: boolean): string {
     }
     .foot div + div { margin-top: 1mm; }
     @media print {
-      body { margin: 0; background: #fff; }
-      .sheet { padding: 0; max-width: none; }
+      body { margin: 0; padding: 0; background: #fff; }
+      .sheet {
+        width: 210mm;
+        min-height: 297mm;
+        margin: 0;
+        padding: 14mm 12mm 14mm 14mm;
+        box-shadow: none;
+        page-break-after: always;
+        break-after: page;
+      }
       .bundle-cover { display: none; }
       a { color: inherit; text-decoration: none; }
     }
-    @media (max-width: 560px) {
+    @media screen and (max-width: 820px) {
+      body { background: #fff; }
+      .sheet {
+        width: 100%;
+        min-height: auto;
+        margin: 0;
+        box-shadow: none;
+        padding: 12px 14px 20px;
+      }
       .main { grid-template-columns: 1fr; }
       .signs { grid-template-columns: 1fr; gap: 4mm; }
       .emp { grid-template-columns: 1fr; }
@@ -859,7 +885,7 @@ function payslipBottomHtml(input: {
     </div>
   </div>
   <div class="foot">
-    <div>เอกสารภายในกิจการ ขนาด A4 · หลักฐานการจ่ายค่าจ้าง/เงินเดือน — ไม่ใช่หนังสือรับรองหักภาษี ณ ที่จ่าย (แบบ ๕๐ ทวิ) และไม่ใช่ใบเสร็จรับเงิน</div>
+    <div>เอกสารภายในกิจการ · หลักฐานการจ่ายค่าจ้าง/เงินเดือน — ไม่ใช่หนังสือรับรองหักภาษี ณ ที่จ่าย (แบบ ๕๐ ทวิ) และไม่ใช่ใบเสร็จรับเงิน</div>
     <div>${escapeReceiptHtml(input.footNote)}</div>
   </div>`;
 }
@@ -1147,7 +1173,7 @@ export function buildMonthPaymentDocsBundleHtml(input: {
   const cover = `<div class="bundle-cover">
     <p class="org">${escapeReceiptHtml(input.shop.shopName)}</p>
     <p class="title">ชุดหลักฐานการจ่ายค่าจ้างและเงินเดือน</p>
-    <p class="meta">งวด ${escapeReceiptHtml(periodFull)} · ทั้งหมด ${input.summaries.length} คน · พิมพ์/บันทึก PDF แบบ A4 ได้ทั้งชุด</p>
+    <p class="meta">งวด ${escapeReceiptHtml(periodFull)} · ทั้งหมด ${input.summaries.length} คน · พิมพ์/บันทึก PDF ได้ทั้งชุด</p>
   </div>`;
   return wrapPaymentDocHtml({
     title: `หลักฐานจ่ายทั้งร้าน · ${periodLabel}`,

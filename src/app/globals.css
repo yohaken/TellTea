@@ -6869,7 +6869,17 @@ body.modal-open .main-panel {
 .payroll-history-docs-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.35rem;
+}
+
+.payroll-doc-dl-btn {
+  width: auto !important;
+  min-width: 0 !important;
+  padding: 0.35rem 0.7rem !important;
+  font-size: 0.82rem !important;
+  line-height: 1.25 !important;
+  white-space: nowrap;
 }
 
 .payroll-history-bundle {
