@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   downloadPayrollPaymentDoc,
+  formatPayrollPaidAtLabel,
+  formatPayrollPeriodLabel,
   printPayrollPaymentDoc,
   shopFromPosSettings,
   type PayrollPaymentDocPayee,
@@ -16,7 +18,7 @@ import {
   getLocalPosShopSettings,
   getPosShopSettings,
 } from "@/lib/pos-settings";
-import { formatDateTimeShortBe, formatPlainNumber } from "@/lib/utils";
+import { formatPlainNumber } from "@/lib/utils";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
 function fmt(n: number) {
@@ -119,14 +121,14 @@ export function PayrollPaymentDocModal({
           <div className="payroll-payment-doc-row">
             <span className="muted">งวด</span>
             <span>
-              {receipt.periodMonth}
+              {formatPayrollPeriodLabel(receipt.periodMonth)}
               {receipt.combined ? " · โอนรวม" : ""}
             </span>
           </div>
           <div className="payroll-payment-doc-row">
             <span className="muted">วันโอน</span>
             <span>
-              {receipt.paidAt ? formatDateTimeShortBe(receipt.paidAt) : "—"}
+              {receipt.paidAt ? formatPayrollPaidAtLabel(receipt.paidAt) : "—"}
             </span>
           </div>
 

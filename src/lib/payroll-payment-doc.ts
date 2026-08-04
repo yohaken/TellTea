@@ -10,7 +10,10 @@ import {
   type StaffTransferReceipt,
 } from "./payroll-staff-receipt";
 import type { PayrollItem } from "./payroll";
-import { formatDateTimeShortBe, formatPlainNumber } from "./utils";
+import {
+  bangkokDatePartsBe,
+  formatPlainNumber,
+} from "./utils";
 
 export type PayrollPaymentDocShop = {
   shopName: string;
@@ -54,6 +57,50 @@ function round2(n: number) {
 
 function money(n: number) {
   return formatPlainNumber(round2(n));
+}
+
+const THAI_MONTHS_SHORT = [
+  "ม.ค.",
+  "ก.พ.",
+  "มี.ค.",
+  "เม.ย.",
+  "พ.ค.",
+  "มิ.ย.",
+  "ก.ค.",
+  "ส.ค.",
+  "ก.ย.",
+  "ต.ค.",
+  "พ.ย.",
+  "ธ.ค.",
+];
+
+/** งวด 2026-07 → ก.ค. 2569 */
+export function formatPayrollPeriodLabel(periodMonth: string): string {
+  const m = /^(\d{4})-(\d{2})$/.exec((periodMonth || "").trim());
+  if (!m) return periodMonth || "—";
+  const year = Number(m[1]);
+  const monthIdx = Number(m[2]) - 1;
+  if (!Number.isFinite(year) || monthIdx < 0 || monthIdx > 11) {
+    return periodMonth;
+  }
+  return `${THAI_MONTHS_SHORT[monthIdx]} ${year + 543}`;
+}
+
+/** วัน–เวลาโอนแบบเอกสาร: 31/7/2569 10:00 */
+export function formatPayrollPaidAtLabel(ms: number): string {
+  if (!ms) return "—";
+  const p = bangkokDatePartsBe(ms);
+  if (!p) return "—";
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Bangkok",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date(ms));
+  const get = (type: string) => parts.find((x) => x.type === type)?.value || "";
+  const hh = String(get("hour")).padStart(2, "0");
+  const mi = String(get("minute")).padStart(2, "0");
+  return `${p.day}/${p.month}/${p.yearBe} ${hh}:${mi} น.`;
 }
 
 export function shopFromPosSettings(
@@ -140,6 +187,33 @@ export function payrollPaymentDocFilename(receipt: StaffTransferReceipt): string
   return `ใบสรุปจ่าย_${month}_${name}_${stamp}.html`;
 }
 
+function lineMetaBits(
+  line: StaffTransferReceipt["lines"][number],
+  receiptNote: string,
+): string[] {
+  const meta: string[] = [];
+  if (line.grossAmount > 0 && round2(line.grossAmount) !== round2(line.amount)) {
+    meta.push(`ก่อนหักเบิก ฿${money(line.grossAmount)}`);
+  }
+  if (line.advanceDeduct > 0) {
+    meta.push(`หักเบิก ฿${money(line.advanceDeduct)}`);
+  }
+  // โบนัส: โชว์ยอดก่อนหักร้านเฉพาะเมื่อต่างจากยอดโอน (ไม่ซ้ำกับคอลัมน์ยอด)
+  if (
+    line.kind === "bonus" &&
+    line.bonusRemaining > 0 &&
+    round2(line.bonusRemaining) !== round2(line.amount) &&
+    round2(line.bonusRemaining) !== round2(line.grossAmount)
+  ) {
+    meta.push(`หลังหักร้าน ฿${money(line.bonusRemaining)}`);
+  }
+  const lineNote = (line.note || "").trim();
+  if (lineNote && lineNote !== receiptNote) {
+    meta.push(lineNote);
+  }
+  return meta;
+}
+
 export function buildPayrollPaymentDocHtml(input: {
   receipt: StaffTransferReceipt;
   shop: PayrollPaymentDocShop;
@@ -148,31 +222,19 @@ export function buildPayrollPaymentDocHtml(input: {
   autoPrint?: boolean;
 }): string {
   const { receipt, shop, payee } = input;
-  const title = `ใบสรุปการจ่าย · ${payee.employeeName} · ${receipt.periodMonth}`;
-  const paidLabel = receipt.paidAt
-    ? formatDateTimeShortBe(receipt.paidAt)
-    : "—";
-  const bankLine = [
+  const periodLabel = formatPayrollPeriodLabel(receipt.periodMonth);
+  const title = `ใบสรุปการจ่าย · ${payee.employeeName} · ${periodLabel}`;
+  const paidLabel = formatPayrollPaidAtLabel(receipt.paidAt);
+  const bankBits = [
     payee.payBank,
     payee.payAccountNo,
-    payee.payAccountName ? `(${payee.payAccountName})` : "",
-  ]
-    .filter(Boolean)
-    .join(" · ");
+    payee.payAccountName ? `ชื่อบัญชี ${payee.payAccountName}` : "",
+  ].filter(Boolean);
+  const receiptNote = (receipt.note || "").trim();
 
   const lineRows = receipt.lines
     .map((line) => {
-      const meta: string[] = [];
-      if (line.grossAmount > 0 && line.grossAmount !== line.amount) {
-        meta.push(`ก่อนหัก ฿${money(line.grossAmount)}`);
-      }
-      if (line.advanceDeduct > 0) {
-        meta.push(`หักเบิก ฿${money(line.advanceDeduct)}`);
-      }
-      if (line.kind === "bonus" && line.bonusRemaining > 0) {
-        meta.push(`โบนัสคงเหลือ ฿${money(line.bonusRemaining)}`);
-      }
-      if (line.note) meta.push(line.note);
+      const meta = lineMetaBits(line, receiptNote);
       return `<tr>
         <td>
           <div class="line-kind">${escapeReceiptHtml(shortTransferKindLabel(line.kind))}</div>
@@ -188,13 +250,13 @@ export function buildPayrollPaymentDocHtml(input: {
     .join("");
 
   const slipNote = receipt.slipUrls.length
-    ? `มีสลิปโอนแนบในระบบ ${receipt.slipUrls.length} รูป — ดูได้ที่แท็บประวัติ`
+    ? `มีหลักฐานสลิปโอนในระบบ ${receipt.slipUrls.length} รูป (ดูได้ที่แท็บประวัติในแอป)`
     : "ยังไม่มีสลิปโอนแนบในระบบ";
 
   const autoPrintScript = input.autoPrint
     ? `<script>
       window.addEventListener("load", function () {
-        setTimeout(function () { window.focus(); window.print(); }, 250);
+        setTimeout(function () { window.focus(); window.print(); }, 400);
       });
     </script>`
     : "";
@@ -205,142 +267,253 @@ export function buildPayrollPaymentDocHtml(input: {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${escapeReceiptHtml(title)}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet" />
   <style>
-    @page { size: A4; margin: 14mm; }
+    @page { size: A4; margin: 16mm; }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: "Sarabun", "Noto Sans Thai", "Tahoma", sans-serif;
-      color: #1a1a1a;
+      font-family: "Sarabun", "Leelawadee UI", "Cordia New", "Tahoma", sans-serif;
+      color: #111;
       background: #fff;
-      font-size: 14px;
-      line-height: 1.45;
+      font-size: 15px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
     }
     .sheet {
       max-width: 720px;
       margin: 0 auto;
-      padding: 20px 22px 28px;
+      padding: 8px 8px 20px;
     }
+    .head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1.25rem;
+      padding-bottom: 0.85rem;
+      border-bottom: 2px solid #1a1a1a;
+    }
+    .brand-block { min-width: 0; flex: 1; }
     .brand {
-      font-size: 1.55rem;
+      font-size: 1.65rem;
       font-weight: 700;
-      letter-spacing: 0.02em;
-      margin: 0 0 0.15rem;
+      letter-spacing: 0.01em;
+      margin: 0 0 0.1rem;
+      line-height: 1.2;
     }
-    .brand-th { font-size: 1.05rem; font-weight: 600; margin: 0 0 0.35rem; }
-    .doc-title {
-      margin: 1rem 0 0.35rem;
-      font-size: 1.15rem;
+    .brand-th {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin: 0 0 0.4rem;
+      color: #222;
+    }
+    .shop-meta {
+      color: #444;
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+    .doc-stamp {
+      text-align: right;
+      flex: 0 0 auto;
+      max-width: 42%;
+    }
+    .doc-stamp .label {
+      font-size: 0.78rem;
       font-weight: 700;
-      border-top: 2px solid #222;
-      padding-top: 0.75rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #555;
+      margin: 0 0 0.2rem;
     }
-    .muted { color: #555; }
-    .tiny { font-size: 0.85rem; }
-    .row {
-      display: flex;
-      justify-content: space-between;
-      gap: 1rem;
-      margin: 0.2rem 0;
-    }
-    .sec { font-weight: 700; margin: 0.9rem 0 0.35rem; }
-    table.pay {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 0.4rem 0 0.6rem;
-    }
-    table.pay th, table.pay td {
-      border-bottom: 1px solid #ddd;
-      padding: 0.45rem 0.2rem;
-      text-align: left;
-      vertical-align: top;
-    }
-    table.pay th { font-size: 0.85rem; color: #444; font-weight: 600; }
-    table.pay td.num, table.pay th.num { text-align: right; white-space: nowrap; }
-    .line-kind { font-weight: 600; }
-    .total {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      margin-top: 0.75rem;
-      padding-top: 0.55rem;
-      border-top: 2px solid #222;
-      font-size: 1.15rem;
+    .doc-stamp .name {
+      font-size: 1.2rem;
       font-weight: 700;
+      margin: 0;
+      line-height: 1.25;
     }
-    .foot {
-      margin-top: 1.25rem;
-      padding-top: 0.65rem;
-      border-top: 1px dashed #bbb;
+    .doc-stamp .sub {
+      margin: 0.25rem 0 0;
       font-size: 0.85rem;
       color: #555;
     }
     .badge {
       display: inline-block;
-      margin-left: 0.35rem;
-      padding: 0.1rem 0.4rem;
-      border: 1px solid #888;
-      border-radius: 4px;
+      margin-top: 0.35rem;
+      padding: 0.12rem 0.45rem;
+      border: 1px solid #666;
+      border-radius: 3px;
       font-size: 0.75rem;
-      font-weight: 600;
+      font-weight: 700;
+    }
+    .notice {
+      margin: 0.65rem 0 0;
+      font-size: 0.82rem;
+      color: #555;
+    }
+    .sec {
+      font-weight: 700;
+      margin: 1.05rem 0 0.4rem;
+      font-size: 0.95rem;
+      padding-bottom: 0.15rem;
+      border-bottom: 1px solid #ddd;
+    }
+    .muted { color: #555; }
+    .tiny { font-size: 0.86rem; }
+    .grid {
+      display: grid;
+      grid-template-columns: 8.5rem 1fr;
+      gap: 0.28rem 0.75rem;
+      margin: 0.35rem 0 0;
+    }
+    .grid .k { color: #555; }
+    .grid .v { font-weight: 600; word-break: break-word; }
+    .grid .v.normal { font-weight: 400; }
+    table.pay {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.35rem 0 0.4rem;
+    }
+    table.pay th, table.pay td {
+      border-bottom: 1px solid #ddd;
+      padding: 0.5rem 0.15rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    table.pay th {
+      font-size: 0.82rem;
+      color: #444;
+      font-weight: 700;
+    }
+    table.pay td.num, table.pay th.num {
+      text-align: right;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+    .line-kind { font-weight: 700; }
+    .subtotal {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      margin: 0.25rem 0;
+      font-size: 0.92rem;
+      color: #444;
+    }
+    .total {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-top: 0.55rem;
+      padding: 0.55rem 0 0.15rem;
+      border-top: 2px solid #1a1a1a;
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+    .signs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin-top: 2.25rem;
+    }
+    .sign {
+      text-align: center;
+      font-size: 0.9rem;
+    }
+    .sign .line {
+      margin: 2.4rem 1rem 0.35rem;
+      border-bottom: 1px solid #333;
+      height: 0;
+    }
+    .sign .role { font-weight: 700; }
+    .sign .hint { color: #666; font-size: 0.8rem; margin-top: 0.15rem; }
+    .foot {
+      margin-top: 1.6rem;
+      padding-top: 0.7rem;
+      border-top: 1px dashed #bbb;
+      font-size: 0.8rem;
+      color: #666;
+      line-height: 1.4;
     }
     @media print {
       body { margin: 0; }
       .sheet { padding: 0; max-width: none; }
+      a { color: inherit; text-decoration: none; }
+    }
+    @media (max-width: 560px) {
+      .head { flex-direction: column; }
+      .doc-stamp { text-align: left; max-width: none; }
+      .signs { grid-template-columns: 1fr; gap: 1.5rem; }
+      .grid { grid-template-columns: 7rem 1fr; }
     }
   </style>
 </head>
 <body>
   <div class="sheet">
-    <h1 class="brand">${escapeReceiptHtml(shop.shopName)}</h1>
-    ${
-      shop.shopNameTh
-        ? `<p class="brand-th">${escapeReceiptHtml(shop.shopNameTh)}</p>`
-        : ""
-    }
-    ${
-      shop.shopAddress
-        ? `<div class="muted tiny">${escapeReceiptHtml(shop.shopAddress)}</div>`
-        : ""
-    }
-    ${
-      shop.shopPhone
-        ? `<div class="muted tiny">โทร ${escapeReceiptHtml(shop.shopPhone)}</div>`
-        : ""
-    }
-    ${
-      shop.taxId
-        ? `<div class="muted tiny">เลขผู้เสียภาษี ${escapeReceiptHtml(shop.taxId)}</div>`
-        : ""
-    }
+    <header class="head">
+      <div class="brand-block">
+        <h1 class="brand">${escapeReceiptHtml(shop.shopName)}</h1>
+        ${
+          shop.shopNameTh
+            ? `<p class="brand-th">${escapeReceiptHtml(shop.shopNameTh)}</p>`
+            : ""
+        }
+        <div class="shop-meta">
+          ${
+            shop.shopAddress
+              ? `<div>${escapeReceiptHtml(shop.shopAddress)}</div>`
+              : ""
+          }
+          ${
+            shop.shopPhone
+              ? `<div>โทร ${escapeReceiptHtml(shop.shopPhone)}</div>`
+              : ""
+          }
+          ${
+            shop.taxId
+              ? `<div>เลขประจำตัวผู้เสียภาษี ${escapeReceiptHtml(shop.taxId)}</div>`
+              : ""
+          }
+        </div>
+      </div>
+      <div class="doc-stamp">
+        <p class="label">เอกสารจ่าย</p>
+        <p class="name">ใบสรุปหลักฐานการจ่าย</p>
+        <p class="sub">งวด ${escapeReceiptHtml(periodLabel)}</p>
+        ${receipt.combined ? `<span class="badge">โอนรวมสิ้นเดือน + โบนัส</span>` : ""}
+      </div>
+    </header>
 
-    <h2 class="doc-title">
-      ใบสรุปหลักฐานการจ่าย
-      ${receipt.combined ? `<span class="badge">โอนรวม</span>` : ""}
-    </h2>
-    <div class="muted tiny">เอกสารภายในร้าน · เงินเดือน / โบนัส · ไม่ใช่ใบหักภาษี ณ ที่จ่าย</div>
+    <p class="notice">เอกสารภายในกิจการ สำหรับเก็บเป็นหลักฐานการจ่ายเงินเดือน/โบนัส — ไม่ใช่หนังสือรับรองหักภาษี ณ ที่จ่าย (50 ทวิ)</p>
 
     <div class="sec">ผู้รับเงิน</div>
-    <div class="row"><span>ชื่อพนักงาน</span><span><strong>${escapeReceiptHtml(payee.employeeName)}</strong></span></div>
-    ${
-      bankLine
-        ? `<div class="row"><span>บัญชีรับโอน</span><span>${escapeReceiptHtml(bankLine)}</span></div>`
-        : ""
-    }
+    <div class="grid">
+      <div class="k">ชื่อพนักงาน</div>
+      <div class="v">${escapeReceiptHtml(payee.employeeName)}</div>
+      ${
+        bankBits.length
+          ? `<div class="k">บัญชีรับโอน</div><div class="v normal">${escapeReceiptHtml(bankBits.join(" · "))}</div>`
+          : ""
+      }
+    </div>
 
     <div class="sec">รอบจ่าย</div>
-    <div class="row"><span>งวด</span><span>${escapeReceiptHtml(receipt.periodMonth)}</span></div>
-    <div class="row"><span>วัน–เวลาโอน</span><span>${escapeReceiptHtml(paidLabel)}</span></div>
-    ${
-      receipt.note
-        ? `<div class="row"><span>หมายเหตุ</span><span>${escapeReceiptHtml(receipt.note)}</span></div>`
-        : ""
-    }
+    <div class="grid">
+      <div class="k">งวด</div>
+      <div class="v">${escapeReceiptHtml(periodLabel)}</div>
+      <div class="k">วัน–เวลาโอน</div>
+      <div class="v">${escapeReceiptHtml(paidLabel)}</div>
+      ${
+        receiptNote
+          ? `<div class="k">หมายเหตุ</div><div class="v normal">${escapeReceiptHtml(receiptNote)}</div>`
+          : ""
+      }
+    </div>
 
-    <div class="sec">รายการ</div>
+    <div class="sec">รายการที่จ่าย</div>
     <table class="pay">
       <thead>
-        <tr><th>รายการ</th><th class="num">ยอดโอน</th></tr>
+        <tr><th>รายการ</th><th class="num">ยอดโอน (บาท)</th></tr>
       </thead>
       <tbody>
         ${lineRows}
@@ -348,17 +521,30 @@ export function buildPayrollPaymentDocHtml(input: {
     </table>
     ${
       receipt.advanceDeductTotal > 0
-        ? `<div class="row muted"><span>หักเบิกรวมในรอบนี้</span><span>฿${money(receipt.advanceDeductTotal)}</span></div>`
+        ? `<div class="subtotal"><span>หักเบิกรวมในรอบนี้</span><span>฿${money(receipt.advanceDeductTotal)}</span></div>`
         : ""
     }
     <div class="total">
-      <span>รวมยอดโอน</span>
+      <span>รวมยอดโอนเข้าบัญชี</span>
       <span>฿${money(receipt.transferTotal)}</span>
+    </div>
+
+    <div class="signs" aria-hidden="true">
+      <div class="sign">
+        <div class="line"></div>
+        <div class="role">ผู้จ่าย / ร้าน</div>
+        <div class="hint">ลงชื่อ · วันเดือนปี</div>
+      </div>
+      <div class="sign">
+        <div class="line"></div>
+        <div class="role">ผู้รับเงิน</div>
+        <div class="hint">${escapeReceiptHtml(payee.employeeName)}</div>
+      </div>
     </div>
 
     <div class="foot">
       <div>${escapeReceiptHtml(slipNote)}</div>
-      <div style="margin-top:0.35rem">ออกจากระบบจ่าย TellTea · อ้างอิงรอบ ${escapeReceiptHtml(receipt.key)}</div>
+      <div>ออกจากระบบจ่าย TellTea · อ้างอิง ${escapeReceiptHtml(receipt.key)}</div>
     </div>
   </div>
   ${autoPrintScript}
