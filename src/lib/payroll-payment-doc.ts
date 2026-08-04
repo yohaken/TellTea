@@ -77,22 +77,38 @@ export type PayrollMonthPaymentSummary = {
   employeeId: string;
   employeeName: string;
   periodMonth: string;
-  /** เงินเดือนเต็มต่อเดือน (จาก snapshot) */
+  /** เงินเดือนเต็มต่อเดือน (จาก snapshot) — อ้างอิง ไม่ใช่ยอดโอน */
   salaryFull: number;
+  /** ยอดโอนสุทธิหลังคืนเบิก */
   midAmount: number;
   midAdvance: number;
+  /** ยอดก่อนหักคืนเบิก */
+  midGross: number;
   endAmount: number;
   endAdvance: number;
+  endGross: number;
   specialAmount: number;
   specialAdvance: number;
+  specialGross: number;
   bonusAmount: number;
   bonusAdvance: number;
+  bonusGross: number;
+  /** รวมก่อนหักคืนเบิก */
+  grossTotal: number;
+  /** รวมยอดโอนเข้าบัญชี (= grossTotal - advanceDeductTotal) */
   transferTotal: number;
+  /** รวมคืนเบิกล่วงหน้า (ได้เงินไปก่อนแล้ว — ไม่ใช่ลดเงินเดือน) */
   advanceDeductTotal: number;
   paidAt: number;
   slipUrls: string[];
   items: PayrollItem[];
 };
+
+function itemGross(row: Pick<PayrollItem, "grossAmount" | "amount" | "advanceDeduct">) {
+  const g = round2(Number(row.grossAmount) || 0);
+  if (g > 0) return g;
+  return round2((Number(row.amount) || 0) + (Number(row.advanceDeduct) || 0));
+}
 
 function uniqUrls(urls: string[]): string[] {
   const out: string[] = [];
@@ -123,12 +139,16 @@ export function buildMonthPaymentSummary(
   let salaryFull = 0;
   let midAmount = 0;
   let midAdvance = 0;
+  let midGross = 0;
   let endAmount = 0;
   let endAdvance = 0;
+  let endGross = 0;
   let specialAmount = 0;
   let specialAdvance = 0;
+  let specialGross = 0;
   let bonusAmount = 0;
   let bonusAdvance = 0;
+  let bonusGross = 0;
   for (const row of paid) {
     if (row.kind === "salary_mid" || row.kind === "salary_month_end") {
       salaryFull = Math.max(salaryFull, round2(row.salaryBase || 0));
@@ -136,15 +156,19 @@ export function buildMonthPaymentSummary(
     if (row.kind === "salary_mid") {
       midAmount = round2(midAmount + row.amount);
       midAdvance = round2(midAdvance + row.advanceDeduct);
+      midGross = round2(midGross + itemGross(row));
     } else if (row.kind === "salary_month_end") {
       endAmount = round2(endAmount + row.amount);
       endAdvance = round2(endAdvance + row.advanceDeduct);
+      endGross = round2(endGross + itemGross(row));
     } else if (row.kind === "salary_special") {
       specialAmount = round2(specialAmount + row.amount);
       specialAdvance = round2(specialAdvance + row.advanceDeduct);
+      specialGross = round2(specialGross + itemGross(row));
     } else if (row.kind === "bonus") {
       bonusAmount = round2(bonusAmount + row.amount);
       bonusAdvance = round2(bonusAdvance + row.advanceDeduct);
+      bonusGross = round2(bonusGross + itemGross(row));
     }
   }
   if (!(salaryFull > 0)) {
@@ -157,6 +181,7 @@ export function buildMonthPaymentSummary(
   const advanceDeductTotal = round2(
     midAdvance + endAdvance + specialAdvance + bonusAdvance,
   );
+  const grossTotal = round2(midGross + endGross + specialGross + bonusGross);
   return {
     employeeId: empId,
     employeeName: paid[0]?.employeeName || "—",
@@ -164,12 +189,17 @@ export function buildMonthPaymentSummary(
     salaryFull,
     midAmount,
     midAdvance,
+    midGross,
     endAmount,
     endAdvance,
+    endGross,
     specialAmount,
     specialAdvance,
+    specialGross,
     bonusAmount,
     bonusAdvance,
+    bonusGross,
+    grossTotal,
     transferTotal,
     advanceDeductTotal,
     paidAt: Math.max(...paid.map((i) => i.paidAt || i.updatedAt || 0)),
@@ -354,10 +384,10 @@ function lineMetaBits(
 ): string[] {
   const meta: string[] = [];
   if (line.grossAmount > 0 && round2(line.grossAmount) !== round2(line.amount)) {
-    meta.push(`ก่อนหักเบิก ฿${money(line.grossAmount)}`);
+    meta.push(`ก่อนหัก ฿${money(line.grossAmount)}`);
   }
   if (line.advanceDeduct > 0) {
-    meta.push(`หักเบิก ฿${money(line.advanceDeduct)}`);
+    meta.push(`คืนเบิก ฿${money(line.advanceDeduct)} (ได้ไปก่อนแล้ว)`);
   }
   // โบนัส: โชว์ยอดก่อนหักร้านเฉพาะเมื่อต่างจากยอดโอน (ไม่ซ้ำกับคอลัมน์ยอด)
   if (
@@ -587,62 +617,28 @@ function buildMonthPaymentDocSheetHtml(input: {
   ].filter(Boolean);
 
   const rows: string[] = [];
-  if (summary.salaryFull > 0) {
+  if (summary.midGross > 0 || summary.midAdvance > 0) {
     rows.push(`<tr>
-      <td><div class="line-kind">เงินเดือนเต็ม (ต่อเดือน)</div></td>
-      <td class="num">฿${money(summary.salaryFull)}</td>
+      <td><div class="line-kind">กลางเดือน</div></td>
+      <td class="num">฿${money(summary.midGross)}</td>
     </tr>`);
   }
-  if (summary.midAmount > 0 || summary.midAdvance > 0) {
+  if (summary.endGross > 0 || summary.endAdvance > 0) {
     rows.push(`<tr>
-      <td>
-        <div class="line-kind">กลางเดือน</div>
-        ${
-          summary.midAdvance > 0
-            ? `<div class="muted tiny">หักเบิก ฿${money(summary.midAdvance)}</div>`
-            : ""
-        }
-      </td>
-      <td class="num">฿${money(summary.midAmount)}</td>
+      <td><div class="line-kind">สิ้นเดือน / เต็มเดือน</div></td>
+      <td class="num">฿${money(summary.endGross)}</td>
     </tr>`);
   }
-  if (summary.endAmount > 0 || summary.endAdvance > 0) {
+  if (summary.specialGross > 0 || summary.specialAdvance > 0) {
     rows.push(`<tr>
-      <td>
-        <div class="line-kind">สิ้นเดือน / เต็มเดือน</div>
-        ${
-          summary.endAdvance > 0
-            ? `<div class="muted tiny">หักเบิก ฿${money(summary.endAdvance)}</div>`
-            : ""
-        }
-      </td>
-      <td class="num">฿${money(summary.endAmount)}</td>
+      <td><div class="line-kind">จ่ายแยก</div></td>
+      <td class="num">฿${money(summary.specialGross)}</td>
     </tr>`);
   }
-  if (summary.specialAmount > 0 || summary.specialAdvance > 0) {
+  if (summary.bonusGross > 0 || summary.bonusAdvance > 0) {
     rows.push(`<tr>
-      <td>
-        <div class="line-kind">จ่ายแยก</div>
-        ${
-          summary.specialAdvance > 0
-            ? `<div class="muted tiny">หักเบิก ฿${money(summary.specialAdvance)}</div>`
-            : ""
-        }
-      </td>
-      <td class="num">฿${money(summary.specialAmount)}</td>
-    </tr>`);
-  }
-  if (summary.bonusAmount > 0 || summary.bonusAdvance > 0) {
-    rows.push(`<tr>
-      <td>
-        <div class="line-kind">โบนัส</div>
-        ${
-          summary.bonusAdvance > 0
-            ? `<div class="muted tiny">หักเบิก ฿${money(summary.bonusAdvance)}</div>`
-            : ""
-        }
-      </td>
-      <td class="num">฿${money(summary.bonusAmount)}</td>
+      <td><div class="line-kind">โบนัส</div></td>
+      <td class="num">฿${money(summary.bonusGross)}</td>
     </tr>`);
   }
 
@@ -724,21 +720,34 @@ function buildMonthPaymentDocSheetHtml(input: {
     </div>
 
     <div class="sec">รายการและยอดรวม</div>
+    ${
+      summary.salaryFull > 0
+        ? `<div class="grid" style="margin-bottom:0.35rem">
+      <div class="k">เงินเดือนเต็ม (อ้างอิง)</div>
+      <div class="v">฿${money(summary.salaryFull)}</div>
+    </div>`
+        : ""
+    }
     <table class="pay">
       <thead>
-        <tr><th>รายการ</th><th class="num">ยอด (บาท)</th></tr>
+        <tr><th>รายการที่ถึงกำหนด (ก่อนคืนเบิก)</th><th class="num">ยอด (บาท)</th></tr>
       </thead>
       <tbody>
         ${rows.join("")}
       </tbody>
     </table>
     ${
+      summary.grossTotal > 0
+        ? `<div class="subtotal"><span>รวมก่อนหักคืนเบิก</span><span>฿${money(summary.grossTotal)}</span></div>`
+        : ""
+    }
+    ${
       summary.advanceDeductTotal > 0
-        ? `<div class="subtotal"><span>หักเบิกรวมทั้งเดือน</span><span>฿${money(summary.advanceDeductTotal)}</span></div>`
+        ? `<div class="subtotal"><span>หักคืนเบิกล่วงหน้า <span class="muted tiny">(ได้เงินไปก่อนแล้ว — ไม่ใช่ลดเงินเดือน)</span></span><span>−฿${money(summary.advanceDeductTotal)}</span></div>`
         : ""
     }
     <div class="total">
-      <span>รวมยอดโอนทั้งหมด</span>
+      <span>รวมยอดโอนเข้าบัญชี</span>
       <span>฿${money(summary.transferTotal)}</span>
     </div>
 
@@ -898,7 +907,7 @@ function buildPaymentDocSheetHtml(input: {
     </table>
     ${
       receipt.advanceDeductTotal > 0
-        ? `<div class="subtotal"><span>หักเบิกรวมในรอบนี้</span><span>฿${money(receipt.advanceDeductTotal)}</span></div>`
+        ? `<div class="subtotal"><span>หักคืนเบิกล่วงหน้า <span class="muted tiny">(ได้ไปก่อนแล้ว)</span></span><span>−฿${money(receipt.advanceDeductTotal)}</span></div>`
         : ""
     }
     <div class="total">

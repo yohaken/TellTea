@@ -56,7 +56,10 @@ assert.match(docSrc, /listMonthPaymentSummaries/);
 assert.match(docSrc, /buildMonthPaymentDocHtml/);
 assert.match(docSrc, /buildMonthPaymentDocsBundleHtml/);
 assert.match(docSrc, /เงินเดือนเต็ม/);
-assert.match(docSrc, /รวมยอดโอนทั้งหมด/);
+assert.match(docSrc, /หักคืนเบิกล่วงหน้า/);
+assert.match(docSrc, /ไม่ใช่ลดเงินเดือน/);
+assert.match(docSrc, /รวมยอดโอนเข้าบัญชี/);
+assert.match(docSrc, /midGross/);
 assert.match(docSrc, /legalFullName/);
 assert.match(settingsSrc, /พีระพงษ์ โยหาเคน/);
 assert.match(settingsSrc, /payrollPaymentDoc/);
@@ -77,7 +80,7 @@ assert.match(modalUi, /พิมพ์ \/ บันทึก PDF/);
 assert.match(modalUi, /formatPayrollPeriodLabel/);
 assert.match(modalUi, /ดาวน์โหลดไฟล์/);
 assert.match(modalUi, /getStaffPersonal/);
-assert.match(versionSrc, /APP_BUILD = 708/);
+assert.match(versionSrc, /APP_BUILD = 709/);
 assert.match(payUi, /salary_mid/);
 assert.match(payUi, /แท็บหลักฐานจ่าย/);
 assert.match(rulesSrc, /payrollPaymentDoc/);
@@ -143,32 +146,56 @@ function buildMonthPaymentSummary(items, employeeId, periodMonth, opts) {
   if (!paid.length) return null;
   let salaryFull = 0;
   let midAmount = 0;
+  let midGross = 0;
+  let midAdvance = 0;
   let endAmount = 0;
+  let endGross = 0;
+  let endAdvance = 0;
   let bonusAmount = 0;
+  let bonusGross = 0;
+  let bonusAdvance = 0;
   for (const row of paid) {
     if (row.kind === "salary_mid" || row.kind === "salary_month_end") {
       salaryFull = Math.max(salaryFull, round2(row.salaryBase || 0));
     }
-    if (row.kind === "salary_mid") midAmount = round2(midAmount + row.amount);
-    else if (row.kind === "salary_month_end") {
+    const gross = round2(
+      Number(row.grossAmount) > 0
+        ? row.grossAmount
+        : row.amount + (row.advanceDeduct || 0),
+    );
+    if (row.kind === "salary_mid") {
+      midAmount = round2(midAmount + row.amount);
+      midGross = round2(midGross + gross);
+      midAdvance = round2(midAdvance + (row.advanceDeduct || 0));
+    } else if (row.kind === "salary_month_end") {
       endAmount = round2(endAmount + row.amount);
+      endGross = round2(endGross + gross);
+      endAdvance = round2(endAdvance + (row.advanceDeduct || 0));
     } else if (row.kind === "bonus") {
       bonusAmount = round2(bonusAmount + row.amount);
+      bonusGross = round2(bonusGross + gross);
+      bonusAdvance = round2(bonusAdvance + (row.advanceDeduct || 0));
     }
   }
   if (!(salaryFull > 0)) {
     const hint = round2(Number(opts?.monthlySalaryHint) || 0);
     if (hint > 0) salaryFull = hint;
   }
+  const advanceDeductTotal = round2(midAdvance + endAdvance + bonusAdvance);
   return {
     employeeId,
     employeeName: paid[0].employeeName,
     periodMonth,
     salaryFull,
     midAmount,
+    midGross,
     endAmount,
+    endGross,
     bonusAmount,
+    bonusGross,
+    advanceDeductTotal,
     transferTotal: round2(midAmount + endAmount + bonusAmount),
+    grossTotal: round2(midGross + endGross + bonusGross),
   };
 }
 
@@ -176,43 +203,49 @@ const monthItems = [
   {
     id: "m1",
     employeeId: "e1",
-    employeeName: "น้องเอ",
+    employeeName: "แป๋ม",
     periodMonth: "2026-07",
     kind: "salary_mid",
     status: "paid",
     amount: 5000,
+    grossAmount: 5000,
     salaryBase: 10000,
     advanceDeduct: 0,
   },
   {
     id: "e1end",
     employeeId: "e1",
-    employeeName: "น้องเอ",
+    employeeName: "แป๋ม",
     periodMonth: "2026-07",
     kind: "salary_month_end",
     status: "paid",
-    amount: 5000,
+    amount: 2000,
+    grossAmount: 5000,
     salaryBase: 10000,
-    advanceDeduct: 0,
+    advanceDeduct: 3000,
   },
   {
     id: "b1",
     employeeId: "e1",
-    employeeName: "น้องเอ",
+    employeeName: "แป๋ม",
     periodMonth: "2026-07",
     kind: "bonus",
     status: "paid",
     amount: 1200,
+    grossAmount: 1200,
     salaryBase: 0,
     advanceDeduct: 0,
   },
 ];
 const monthSummary = buildMonthPaymentSummary(monthItems, "e1", "2026-07");
 assert.equal(monthSummary.salaryFull, 10000);
-assert.equal(monthSummary.midAmount, 5000);
-assert.equal(monthSummary.endAmount, 5000);
-assert.equal(monthSummary.bonusAmount, 1200);
-assert.equal(monthSummary.transferTotal, 11200);
+assert.equal(monthSummary.midGross, 5000);
+assert.equal(monthSummary.endGross, 5000);
+assert.equal(monthSummary.endAmount, 2000);
+assert.equal(monthSummary.advanceDeductTotal, 3000);
+assert.equal(monthSummary.bonusGross, 1200);
+assert.equal(monthSummary.grossTotal, 11200);
+assert.equal(monthSummary.transferTotal, 8200);
 
 const hintOnly = buildMonthPaymentSummary(
   monthItems.map((r) => ({ ...r, salaryBase: 0 })),
@@ -263,9 +296,11 @@ function buildReceiptFromJustPaid(input) {
 function lineMetaBits(line, receiptNote) {
   const meta = [];
   if (line.grossAmount > 0 && round2(line.grossAmount) !== round2(line.amount)) {
-    meta.push(`ก่อนหักเบิก ฿${money(line.grossAmount)}`);
+    meta.push(`ก่อนหัก ฿${money(line.grossAmount)}`);
   }
-  if (line.advanceDeduct > 0) meta.push(`หักเบิก ฿${money(line.advanceDeduct)}`);
+  if (line.advanceDeduct > 0) {
+    meta.push(`คืนเบิก ฿${money(line.advanceDeduct)} (ได้ไปก่อนแล้ว)`);
+  }
   if (
     line.kind === "bonus" &&
     line.bonusRemaining > 0 &&
@@ -325,7 +360,7 @@ assert.ok(!bonusMeta.some((x) => x.includes("โบนัสคงเหลื�
 
 const salaryMeta = lineMetaBits(receipt.lines[0], receipt.note);
 assert.ok(salaryMeta.some((x) => x.includes("ก่อนหัก")));
-assert.ok(salaryMeta.some((x) => x.includes("หักเบิก")));
+assert.ok(salaryMeta.some((x) => x.includes("คืนเบิก")));
 
 function buildSampleHtml() {
   const periodLabel = formatPayrollPeriodLabel("2026-07");
@@ -400,16 +435,18 @@ function buildSampleHtml() {
       <div class="k">ตำแหน่ง / อื่นๆ</div><div class="v">เจ้าของกิจการ</div>
     </div>
     <div class="sec">รายการและยอดรวม</div>
+    <div class="grid"><div class="k">เงินเดือนเต็ม (อ้างอิง)</div><div class="v">฿10000</div></div>
     <table class="pay">
-      <thead><tr><th>รายการ</th><th class="num">ยอด (บาท)</th></tr></thead>
+      <thead><tr><th>รายการที่ถึงกำหนด (ก่อนคืนเบิก)</th><th class="num">ยอด (บาท)</th></tr></thead>
       <tbody>
-        <tr><td><div class="line-kind">เงินเดือนเต็ม (ต่อเดือน)</div></td><td class="num">฿10000</td></tr>
         <tr><td><div class="line-kind">กลางเดือน</div></td><td class="num">฿5000</td></tr>
         <tr><td><div class="line-kind">สิ้นเดือน / เต็มเดือน</div></td><td class="num">฿5000</td></tr>
         <tr><td><div class="line-kind">โบนัส</div></td><td class="num">฿1200</td></tr>
       </tbody>
     </table>
-    <div class="total"><span>รวมยอดโอนทั้งหมด</span><span>฿11200</span></div>
+    <div class="subtotal"><span>รวมก่อนหักคืนเบิก</span><span>฿11200</span></div>
+    <div class="subtotal"><span>หักคืนเบิกล่วงหน้า (ได้เงินไปก่อนแล้ว — ไม่ใช่ลดเงินเดือน)</span><span>−฿3000</span></div>
+    <div class="total"><span>รวมยอดโอนเข้าบัญชี</span><span>฿8200</span></div>
     <div class="signs">
       <div class="sign"><div class="line"></div><div><strong>ผู้จ่าย</strong></div><div class="muted tiny">${payerName}</div></div>
       <div class="sign"><div class="line"></div><div><strong>ผู้รับเงิน</strong></div><div class="muted tiny">${recipient}</div></div>
@@ -433,10 +470,13 @@ assert.match(html, /สิ้นเดือน/);
 assert.match(html, /โบนัส/);
 assert.match(html, /เงินเดือนเต็ม/);
 assert.match(html, /11200/);
+assert.match(html, /8200/);
+assert.match(html, /หักคืนเบิกล่วงหน้า/);
+assert.match(html, /ไม่ใช่ลดเงินเดือน/);
 assert.match(html, /Sarabun/);
 assert.match(html, /พีระพงษ์ โยหาเคน/);
 assert.match(html, /ชื่อจริง–นามสกุล/);
-assert.match(html, /รวมยอดโอนทั้งหมด/);
+assert.match(html, /รวมยอดโอนเข้าบัญชี/);
 
 const outDir = join(root, "tmp");
 mkdirSync(outDir, { recursive: true });

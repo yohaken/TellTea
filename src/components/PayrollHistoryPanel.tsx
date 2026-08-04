@@ -316,8 +316,8 @@ export function PayrollHistoryPanel({
       ) : null}
 
       <p className="muted payroll-actions-hint">
-        แตะเดือนเพื่อขยายสถานะ → ดาวน์โหลดใบสรุป (เงินเดือนเต็ม · กลางเดือน · สิ้นเดือน · โบนัส ·
-        รวมทั้งหมด)
+        แตะเดือนเพื่อขยายสถานะ → ดาวน์โหลดใบสรุป (ยอดก่อนคืนเบิก · คืนเบิกถ้ามี · ยอดโอนเข้าบัญชี)
+        · คืนเบิก = ได้เงินไปก่อนแล้ว ไม่ใช่ลดเงินเดือน
       </p>
 
       {!employeeId ? (
@@ -332,18 +332,14 @@ export function PayrollHistoryPanel({
                 <th className="payroll-col-kind">เดือน</th>
                 <th className="payroll-col-amt col-out">เงินเดือน</th>
                 <th className="payroll-col-amt col-out">โบนัส</th>
-                <th className="payroll-col-amt col-out">รวมจ่าย</th>
+                <th className="payroll-col-amt col-out">รวมโอน</th>
                 <th className="payroll-col-status">สถานะ</th>
               </tr>
             </thead>
             <tbody>
               {summaries.map((row) => {
-                const salaryPaid =
-                  row.salaryMidPaid + row.salaryEndPaid + row.specialPaid;
-                const salaryPending =
-                  row.salaryMidPending +
-                  row.salaryEndPending +
-                  row.specialPending;
+                const salaryPaid = row.salaryGrossPaid;
+                const salaryPending = row.salaryGrossPending;
                 const open = expandedMonth === row.periodMonth;
                 const monthSummary = buildMonthPaymentSummary(
                   items,
@@ -367,8 +363,8 @@ export function PayrollHistoryPanel({
                     salaryPaid={salaryPaid}
                     salaryPending={salaryPending}
                     salaryMeta={salaryHistoryMetaBits(row)}
-                    bonusPaid={row.bonusPaid}
-                    bonusPending={row.bonusPending}
+                    bonusPaid={row.bonusGrossPaid}
+                    bonusPending={row.bonusGrossPending}
                     paidTotal={row.paidTotal}
                     pendingTotal={row.pendingTotal}
                     paidComplete={row.paidComplete}
@@ -554,18 +550,22 @@ function FragmentMonth({
               <div className="payroll-history-expand-totals muted">
                 {monthSummary ? (
                   <>
-                    เงินเดือนเต็ม ฿{fmt(monthSummary.salaryFull)}
-                    {monthSummary.midAmount > 0
-                      ? ` · กลางเดือน ฿${fmt(monthSummary.midAmount)}`
+                    {monthSummary.salaryFull > 0
+                      ? `เงินเดือนเต็ม ฿${fmt(monthSummary.salaryFull)} · `
                       : ""}
-                    {monthSummary.endAmount > 0
-                      ? ` · สิ้นเดือน ฿${fmt(monthSummary.endAmount)}`
+                    {monthSummary.midGross > 0
+                      ? `กลาง ฿${fmt(monthSummary.midGross)} · `
                       : ""}
-                    {monthSummary.bonusAmount > 0
-                      ? ` · โบนัส ฿${fmt(monthSummary.bonusAmount)}`
+                    {monthSummary.endGross > 0
+                      ? `สิ้น ฿${fmt(monthSummary.endGross)} · `
                       : ""}
-                    {" · "}
-                    <strong>รวมโอน ฿{fmt(monthSummary.transferTotal)}</strong>
+                    {monthSummary.bonusGross > 0
+                      ? `โบนัส ฿${fmt(monthSummary.bonusGross)} · `
+                      : ""}
+                    {monthSummary.advanceDeductTotal > 0
+                      ? `คืนเบิก −฿${fmt(monthSummary.advanceDeductTotal)} · `
+                      : ""}
+                    <strong>โอนเข้าบัญชี ฿{fmt(monthSummary.transferTotal)}</strong>
                   </>
                 ) : (
                   "ยังไม่มีรายการจ่ายแล้วในเดือนนี้"
@@ -668,7 +668,7 @@ function FragmentMonth({
                   <div className="muted payroll-cell-meta">
                     โอน {dueLabel}
                     {item.advanceDeduct > 0
-                      ? ` · หักเบิก ฿${fmt(item.advanceDeduct)}`
+                      ? ` · คืนเบิก ฿${fmt(item.advanceDeduct)} (ได้ไปก่อนแล้ว)`
                       : ""}
                     {cid ? " · โอนรวม" : ""}
                     {item.note ? ` · ${item.note}` : ""}

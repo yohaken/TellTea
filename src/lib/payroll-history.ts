@@ -9,6 +9,7 @@ import {
 
 export type PayrollMonthSummary = {
   periodMonth: string;
+  /** ยอดโอนสุทธิ */
   salaryMidPaid: number;
   salaryMidPending: number;
   salaryEndPaid: number;
@@ -17,6 +18,15 @@ export type PayrollMonthSummary = {
   specialPending: number;
   bonusPaid: number;
   bonusPending: number;
+  /** ยอดก่อนหักคืนเบิก (เงินเดือนที่ถึงกำหนด) */
+  salaryGrossPaid: number;
+  salaryGrossPending: number;
+  bonusGrossPaid: number;
+  bonusGrossPending: number;
+  /** รวมคืนเบิกในเดือน */
+  advanceDeductPaid: number;
+  advanceDeductPending: number;
+  /** รวมยอดโอนเข้าบัญชี */
   paidTotal: number;
   pendingTotal: number;
   /** มีรายการรอโอนในเดือนนี้ */
@@ -25,6 +35,12 @@ export type PayrollMonthSummary = {
   paidComplete: boolean;
   items: PayrollItem[];
 };
+
+function itemGross(row: Pick<PayrollItem, "grossAmount" | "amount" | "advanceDeduct">) {
+  const g = round2(Number(row.grossAmount) || 0);
+  if (g > 0) return g;
+  return round2((Number(row.amount) || 0) + (Number(row.advanceDeduct) || 0));
+}
 
 function round2(n: number) {
   return Math.round(n * 100) / 100;
@@ -72,23 +88,51 @@ export function buildPayrollMonthSummaries(
     let specialPending = 0;
     let bonusPaid = 0;
     let bonusPending = 0;
+    let salaryGrossPaid = 0;
+    let salaryGrossPending = 0;
+    let bonusGrossPaid = 0;
+    let bonusGrossPending = 0;
+    let advanceDeductPaid = 0;
+    let advanceDeductPending = 0;
     let paidTotal = 0;
     let pendingTotal = 0;
 
     for (const row of rows) {
       const amt = round2(row.amount);
+      const gross = itemGross(row);
+      const adv = round2(row.advanceDeduct || 0);
       if (row.status === "paid") {
         paidTotal += amt;
-        if (row.kind === "salary_mid") salaryMidPaid += amt;
-        else if (row.kind === "salary_month_end") salaryEndPaid += amt;
-        else if (row.kind === "salary_special") specialPaid += amt;
-        else if (row.kind === "bonus") bonusPaid += amt;
+        advanceDeductPaid += adv;
+        if (row.kind === "salary_mid") {
+          salaryMidPaid += amt;
+          salaryGrossPaid += gross;
+        } else if (row.kind === "salary_month_end") {
+          salaryEndPaid += amt;
+          salaryGrossPaid += gross;
+        } else if (row.kind === "salary_special") {
+          specialPaid += amt;
+          salaryGrossPaid += gross;
+        } else if (row.kind === "bonus") {
+          bonusPaid += amt;
+          bonusGrossPaid += gross;
+        }
       } else if (row.status === "pending") {
         pendingTotal += amt;
-        if (row.kind === "salary_mid") salaryMidPending += amt;
-        else if (row.kind === "salary_month_end") salaryEndPending += amt;
-        else if (row.kind === "salary_special") specialPending += amt;
-        else if (row.kind === "bonus") bonusPending += amt;
+        advanceDeductPending += adv;
+        if (row.kind === "salary_mid") {
+          salaryMidPending += amt;
+          salaryGrossPending += gross;
+        } else if (row.kind === "salary_month_end") {
+          salaryEndPending += amt;
+          salaryGrossPending += gross;
+        } else if (row.kind === "salary_special") {
+          specialPending += amt;
+          salaryGrossPending += gross;
+        } else if (row.kind === "bonus") {
+          bonusPending += amt;
+          bonusGrossPending += gross;
+        }
       }
     }
 
@@ -105,6 +149,12 @@ export function buildPayrollMonthSummaries(
       specialPending: round2(specialPending),
       bonusPaid: round2(bonusPaid),
       bonusPending: round2(bonusPending),
+      salaryGrossPaid: round2(salaryGrossPaid),
+      salaryGrossPending: round2(salaryGrossPending),
+      bonusGrossPaid: round2(bonusGrossPaid),
+      bonusGrossPending: round2(bonusGrossPending),
+      advanceDeductPaid: round2(advanceDeductPaid),
+      advanceDeductPending: round2(advanceDeductPending),
       paidTotal,
       pendingTotal,
       hasPending,
@@ -126,15 +176,33 @@ export function isPayrollSalaryKind(kind: PayrollKind) {
   return isSalaryKind(kind);
 }
 
-/** meta ใต้คอลัมน์เงินเดือนในตารางประวัติ — แยกกลาง/สิ้น/แยก */
+/** meta ใต้คอลัมน์เงินเดือนในตารางประวัติ — แยกกลาง/สิ้น/แยก + คืนเบิก */
 export function salaryHistoryMetaBits(row: PayrollMonthSummary): string[] {
   const bits: string[] = [];
-  const mid = row.salaryMidPaid + row.salaryMidPending;
-  const end = row.salaryEndPaid + row.salaryEndPending;
-  const special = row.specialPaid + row.specialPending;
-  if (mid > 0) bits.push(`กลาง ฿${formatAmt(mid)}`);
-  if (end > 0) bits.push(`สิ้น ฿${formatAmt(end)}`);
-  if (special > 0) bits.push(`แยก ฿${formatAmt(special)}`);
+  const midGross = row.items
+    .filter((i) => i.kind === "salary_mid" && i.status !== "void")
+    .reduce((s, i) => s + itemGross(i), 0);
+  const endGross = row.items
+    .filter((i) => i.kind === "salary_month_end" && i.status !== "void")
+    .reduce((s, i) => s + itemGross(i), 0);
+  const specialGross = row.items
+    .filter((i) => i.kind === "salary_special" && i.status !== "void")
+    .reduce((s, i) => s + itemGross(i), 0);
+  if (midGross > 0) bits.push(`กลาง ฿${formatAmt(round2(midGross))}`);
+  if (endGross > 0) bits.push(`สิ้น ฿${formatAmt(round2(endGross))}`);
+  if (specialGross > 0) bits.push(`แยก ฿${formatAmt(round2(specialGross))}`);
+  const salaryAdv = round2(
+    row.items
+      .filter(
+        (i) =>
+          i.status !== "void" &&
+          (i.kind === "salary_mid" ||
+            i.kind === "salary_month_end" ||
+            i.kind === "salary_special"),
+      )
+      .reduce((s, i) => s + (i.advanceDeduct || 0), 0),
+  );
+  if (salaryAdv > 0) bits.push(`คืนเบิก ฿${formatAmt(salaryAdv)}`);
   return bits;
 }
 

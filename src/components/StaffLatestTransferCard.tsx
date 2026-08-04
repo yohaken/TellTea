@@ -107,7 +107,7 @@ export function StaffLatestTransferCard({
               <span>
                 ฿{fmt(line.amount)}
                 {line.advanceDeduct > 0
-                  ? ` · หักเบิก ฿${fmt(line.advanceDeduct)}`
+                  ? ` · คืนเบิก ฿${fmt(line.advanceDeduct)} (ได้ไปก่อนแล้ว)`
                   : ""}
               </span>
             </li>
