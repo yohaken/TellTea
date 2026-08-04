@@ -89,9 +89,9 @@ assert.match(staffPage, /permissionLevelId/);
 assert.match(staffPage, /beginPreviewFromLevel/);
 assert.match(staffPage, /ดูแบบเขา/);
 
-const readiness = read("src/components/StaffReadinessTable.tsx");
-assert.match(readiness, /staffLevelBadgeLabel/);
-assert.match(readiness, /staff-ready-col-level/);
+const teamMini = read("src/components/StaffTeamMiniTable.tsx");
+assert.match(teamMini, /staff-mini-col-level/);
+assert.match(read("src/lib/staff-team.ts"), /staffLevelBadgeLabel/);
 
 const ledger = read("src/app/ledger/page.tsx");
 assert.match(ledger, /can\(staff, "ledger"\)/);

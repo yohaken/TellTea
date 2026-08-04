@@ -1520,6 +1520,252 @@ body.modal-open .main-panel {
   color: var(--tea-leaf);
 }
 
+.staff-ready-tag.is-inactive {
+  color: rgba(28, 42, 31, 0.55);
+}
+
+/* Unified team mini table (roster + readiness) */
+.staff-team-mini-section {
+  margin-bottom: 0.75rem;
+}
+
+.staff-team-mini-head {
+  margin-bottom: 0.35rem;
+}
+
+.staff-team-mini-wrap {
+  margin-top: 0.45rem;
+}
+
+.staff-team-mini-table {
+  font-size: 0.8rem;
+}
+
+.staff-mini-col-name {
+  min-width: 5.5rem;
+  text-align: left;
+}
+
+.staff-mini-col-level {
+  width: 4.2rem;
+  max-width: 5rem;
+}
+
+.staff-mini-col-level .staff-chip {
+  font-size: 0.68rem;
+  padding: 0.1rem 0.28rem;
+}
+
+.staff-mini-col-account {
+  max-width: 7.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.72rem;
+}
+
+.staff-mini-col-ready {
+  width: 3.6rem;
+  text-align: center;
+}
+
+.staff-mini-col-seen {
+  width: 2.8rem;
+  text-align: center;
+}
+
+.staff-mini-col-pay {
+  width: 3.2rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.72rem;
+}
+
+.staff-mini-col-more {
+  width: 2rem;
+  text-align: center;
+}
+
+.staff-mini-name-btn {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.25rem;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.staff-mini-name-btn .staff-ready-tag {
+  display: inline;
+  margin: 0;
+  font-size: 0.65rem;
+}
+
+.staff-mini-ready {
+  display: inline-block;
+  min-width: 2.2rem;
+  padding: 0.08rem 0.28rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.2;
+  background: rgba(28, 42, 31, 0.08);
+  color: #1c2a1f;
+}
+
+.staff-mini-ready.is-complete {
+  background: rgba(47, 107, 58, 0.14);
+  color: var(--tea-leaf, #2f6b3a);
+}
+
+.staff-mini-ready.is-partial {
+  background: rgba(201, 133, 45, 0.14);
+  color: #8a5a12;
+}
+
+.staff-mini-ready.is-blocked,
+.staff-mini-ready.is-none {
+  background: rgba(160, 50, 50, 0.1);
+  color: var(--danger, #a03232);
+}
+
+.staff-mini-ready.is-awaiting {
+  background: rgba(201, 133, 45, 0.12);
+  color: #8a5a12;
+}
+
+.staff-mini-ready.is-inactive {
+  background: rgba(28, 42, 31, 0.06);
+  color: rgba(28, 42, 31, 0.5);
+}
+
+.staff-mini-seen {
+  display: inline-block;
+  min-width: 1.3rem;
+  padding: 0.06rem 0.24rem;
+  border-radius: 999px;
+  background: rgba(28, 42, 31, 0.1);
+  color: #1c2a1f;
+  font-weight: 700;
+  font-size: 0.68rem;
+  line-height: 1.2;
+}
+
+.staff-mini-seen.is-online {
+  background: rgba(47, 107, 58, 0.16);
+  color: var(--tea-leaf, #2f6b3a);
+}
+
+.staff-mini-seen.is-empty {
+  background: transparent;
+  font-weight: 500;
+  opacity: 0.55;
+}
+
+.staff-mini-row.is-inactive td {
+  opacity: 0.72;
+}
+
+.staff-mini-row.is-complete {
+  background: rgba(127, 183, 126, 0.08);
+}
+
+.staff-mini-row.is-open {
+  background: rgba(28, 42, 31, 0.04);
+}
+
+.staff-mini-more-btn {
+  min-width: 1.6rem;
+  padding-inline: 0.25rem;
+}
+
+.staff-mini-detail-row td {
+  padding: 0.35rem 0.5rem 0.65rem;
+  background: rgba(28, 42, 31, 0.03);
+  border-bottom: 1px solid rgba(28, 42, 31, 0.08);
+}
+
+.staff-mini-detail {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.staff-mini-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+}
+
+.staff-mini-check {
+  padding: 0.08rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(28, 42, 31, 0.06);
+}
+
+.staff-mini-check.is-ok {
+  color: var(--tea-leaf, #2f6b3a);
+  font-weight: 650;
+}
+
+.staff-mini-check.is-miss {
+  color: rgba(28, 42, 31, 0.45);
+}
+
+.staff-mini-link {
+  margin: 0;
+  font-size: 0.75rem;
+}
+
+.staff-mini-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.staff-mini-edit {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.staff-mini-edit .field {
+  margin: 0;
+}
+
+.staff-mini-edit .field span {
+  display: block;
+  font-size: 0.72rem;
+  color: rgba(28, 42, 31, 0.55);
+  margin-bottom: 0.12rem;
+}
+
+.staff-mini-edit-actions {
+  grid-column: 1 / -1;
+}
+
+.staff-mini-orphan-hint {
+  margin: 0;
+  font-size: 0.75rem;
+}
+
+@media (max-width: 520px) {
+  .staff-mini-col-account {
+    max-width: 4.5rem;
+  }
+
+  .staff-mini-edit {
+    grid-template-columns: 1fr;
+  }
+}
+
 .success-text {
   margin: 0 0 0.75rem;
   padding: 0.55rem 0.75rem;

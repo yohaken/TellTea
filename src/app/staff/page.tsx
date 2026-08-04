@@ -10,12 +10,9 @@ import { useAuth } from "@/lib/auth";
 import {
   addEmployee,
   deleteEmployee,
-  employeeLinkLabel,
   employeesForLink,
   listEmployeesWithPay,
   migrateAllLegacyEmployeePay,
-  planEmployeeIdentityPatch,
-  updateEmployee,
   type Employee,
 } from "@/lib/employees";
 import {
@@ -49,9 +46,9 @@ import {
 import { staffHomeHref } from "@/lib/nav-menu";
 import { formatPhoneDisplay, staffAccountLabel } from "@/lib/utils";
 import { mapFirestoreError } from "@/lib/firestore-errors";
-import { Eye, Trash2 } from "lucide-react";
+import { Eye } from "lucide-react";
 import { StaffPersonalInfoButton } from "@/components/StaffPersonalInfoModal";
-import { StaffReadinessTable } from "@/components/StaffReadinessTable";
+import { StaffTeamMiniTable } from "@/components/StaffTeamMiniTable";
 import {
   StaffReadinessEditModal,
   type StaffReadinessEditTarget,
@@ -81,10 +78,6 @@ export default function StaffPage() {
 function useAccountFocusParam() {
   const searchParams = useSearchParams();
   return searchParams.get("account")?.trim() || "";
-}
-
-function rosterLinkLabel(emp: Employee): string {
-  return employeeLinkLabel(emp);
 }
 
 function memberLinkLabel(member: StaffMember, employees: Employee[]): string {
@@ -528,68 +521,30 @@ function StaffView() {
       />
 
       {tab === "team" ? (
-        <>
-          <StaffReadinessTable
-            members={members}
-            employees={employees}
-            levels={levels}
-            personalByStaffId={personalMap}
-            ownerView={isOwner}
-            busy={busy}
-            onEditRow={openReadinessEdit}
-          />
-
-          <section className="staff-hub-panel">
-            <div className="staff-hub-panel-head">
-              <div>
-                <h2 className="staff-hub-panel-title">รายชื่อร้าน</h2>
-                <p className="staff-hub-panel-hint">ใช้ตอนผลิต / ชง / เชื่อมบัญชี</p>
-              </div>
-            </div>
-            <form className="staff-compact-form staff-inline-add" onSubmit={(e) => void onAddEmployee(e)}>
-              <input
-                value={empName}
-                onChange={(e) => setEmpName(e.target.value)}
-                placeholder="ชื่อ"
-                required
-                aria-label="ชื่อ"
-              />
-              <input
-                value={empNickname}
-                onChange={(e) => setEmpNickname(e.target.value)}
-                placeholder="ชื่อเล่น"
-                maxLength={12}
-                aria-label="ชื่อเล่น"
-              />
-              <button type="submit" className="primary-btn staff-btn-sm" disabled={busy}>
-                เพิ่ม
-              </button>
-            </form>
-            <div className="list-card staff-compact-list">
-              {employees.length === 0 ? (
-                <p className="muted staff-empty">ยังไม่มีรายชื่อ</p>
-              ) : (
-                employees.map((emp) => (
-                  <EmployeeRosterRow
-                    key={emp.id}
-                    emp={emp}
-                    busy={busy}
-                    onError={setError}
-                    onReload={() => reload().then(() => undefined)}
-                    onPatchLocal={(id, patch) => {
-                      setEmployees((prev) =>
-                        prev
-                          .map((row) => (row.id === id ? { ...row, ...patch } : row))
-                          .sort((a, b) => a.name.localeCompare(b.name, "th")),
-                      );
-                    }}
-                    onDelete={() => void onDeleteEmployee(emp)}
-                  />
-                ))
-              )}
-            </div>
-          </section>
-        </>
+        <StaffTeamMiniTable
+          members={members}
+          employees={employees}
+          levels={levels}
+          personalByStaffId={personalMap}
+          ownerView={isOwner}
+          busy={busy}
+          empName={empName}
+          empNickname={empNickname}
+          onEmpNameChange={setEmpName}
+          onEmpNicknameChange={setEmpNickname}
+          onAddEmployee={(e) => void onAddEmployee(e)}
+          onEditAccount={openReadinessEdit}
+          onDeleteEmployee={(emp) => void onDeleteEmployee(emp)}
+          onError={setError}
+          onReload={() => reload().then(() => undefined)}
+          onPatchEmployeeLocal={(id, patch) => {
+            setEmployees((prev) =>
+              prev
+                .map((row) => (row.id === id ? { ...row, ...patch } : row))
+                .sort((a, b) => a.name.localeCompare(b.name, "th")),
+            );
+          }}
+        />
       ) : null}
 
       {tab === "accounts" ? (
@@ -782,236 +737,6 @@ function StaffView() {
           onPreviewLevel={isOwner ? beginPreviewFromLevel : undefined}
         />
       ) : null}
-    </div>
-  );
-}
-
-function EmployeeRosterRow({
-  emp,
-  busy,
-  onError,
-  onReload,
-  onPatchLocal,
-  onDelete,
-}: {
-  emp: Employee;
-  busy: boolean;
-  onError: (msg: string) => void;
-  onReload: () => Promise<void>;
-  onPatchLocal: (id: string, patch: Partial<Employee>) => void;
-  onDelete: () => void;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [name, setName] = useState(emp.name);
-  const [nickname, setNickname] = useState(emp.nickname || "");
-  const [monthlySalary, setMonthlySalary] = useState(
-    emp.monthlySalary != null && emp.monthlySalary > 0 ? String(emp.monthlySalary) : "",
-  );
-  const [payBank, setPayBank] = useState(emp.payBank || "");
-  const [payAccountNo, setPayAccountNo] = useState(emp.payAccountNo || "");
-  const [payAccountName, setPayAccountName] = useState(emp.payAccountName || "");
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (!editing) {
-      setName(emp.name);
-      setNickname(emp.nickname || "");
-      setMonthlySalary(
-        emp.monthlySalary != null && emp.monthlySalary > 0 ? String(emp.monthlySalary) : "",
-      );
-      setPayBank(emp.payBank || "");
-      setPayAccountNo(emp.payAccountNo || "");
-      setPayAccountName(emp.payAccountName || "");
-    }
-  }, [
-    emp.name,
-    emp.nickname,
-    emp.monthlySalary,
-    emp.payBank,
-    emp.payAccountNo,
-    emp.payAccountName,
-    editing,
-  ]);
-
-  async function saveEdit() {
-    const nextName = name.trim();
-    if (!nextName) {
-      onError("ใส่ชื่อพนักงาน");
-      return;
-    }
-    const salaryRaw = monthlySalary.trim();
-    const salaryNum = salaryRaw === "" ? 0 : Number(salaryRaw);
-    if (salaryRaw !== "" && (!Number.isFinite(salaryNum) || salaryNum < 0)) {
-      onError("เงินเดือนไม่ถูกต้อง");
-      return;
-    }
-    setSaving(true);
-    onError("");
-    const nextNick = nickname.trim();
-    const identity = planEmployeeIdentityPatch(emp, {
-      name: nextName,
-      nickname: nextNick,
-    });
-    const saveName = identity.name ?? nextName;
-    const saveNick = identity.nickname ?? nextNick;
-    try {
-      await updateEmployee(emp.id, {
-        name: saveName,
-        nickname: saveNick,
-        monthlySalary: salaryNum,
-        payBank: payBank.trim(),
-        payAccountNo: payAccountNo.trim(),
-        payAccountName: payAccountName.trim(),
-      });
-      onPatchLocal(emp.id, {
-        name: saveName,
-        nickname: saveNick || undefined,
-        monthlySalary: salaryNum > 0 ? salaryNum : undefined,
-        payBank: payBank.trim() || undefined,
-        payAccountNo: payAccountNo.trim() || undefined,
-        payAccountName: payAccountName.trim() || undefined,
-        updatedAt: Date.now(),
-      });
-      setEditing(false);
-      await onReload();
-    } catch (err) {
-      onError((err as Error).message || "อัปเดตไม่สำเร็จ");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div className="employee-roster-row">
-      <div className="employee-roster-main">
-        {editing ? (
-          <div className="employee-roster-edit">
-            <label className="field">
-              <span>ชื่อ</span>
-              <input
-                value={name}
-                disabled={saving || busy}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="ชื่อในร้าน"
-              />
-            </label>
-            <label className="field">
-              <span>ชื่อเล่น</span>
-              <input
-                value={nickname}
-                disabled={saving || busy}
-                onChange={(e) => setNickname(e.target.value)}
-                placeholder="สั้นๆ"
-                maxLength={12}
-              />
-            </label>
-            <label className="field">
-              <span>เงินเดือน</span>
-              <input
-                type="number"
-                min={0}
-                step={100}
-                inputMode="decimal"
-                value={monthlySalary}
-                disabled={saving || busy}
-                onChange={(e) => setMonthlySalary(e.target.value)}
-                placeholder="15000"
-              />
-            </label>
-            <label className="field">
-              <span>ธนาคาร</span>
-              <input
-                value={payBank}
-                disabled={saving || busy}
-                onChange={(e) => setPayBank(e.target.value)}
-              />
-            </label>
-            <label className="field">
-              <span>เลขบัญชี</span>
-              <input
-                value={payAccountNo}
-                disabled={saving || busy}
-                onChange={(e) => setPayAccountNo(e.target.value)}
-              />
-            </label>
-            <label className="field">
-              <span>ชื่อบัญชี</span>
-              <input
-                value={payAccountName}
-                disabled={saving || busy}
-                onChange={(e) => setPayAccountName(e.target.value)}
-              />
-            </label>
-          </div>
-        ) : (
-          <>
-            <strong>
-              {emp.name}
-              {emp.nickname ? (
-                <span className="employee-roster-nick"> · {emp.nickname}</span>
-              ) : null}
-            </strong>
-            <div className="muted employee-roster-meta">
-              {emp.active ? "ใช้" : "ปิด"} · {rosterLinkLabel(emp)}
-              {emp.monthlySalary && emp.monthlySalary > 0
-                ? ` · ฿${emp.monthlySalary.toLocaleString("th-TH")}`
-                : ""}
-            </div>
-          </>
-        )}
-      </div>
-      <div className="employee-roster-actions">
-        {editing ? (
-          <>
-            <button
-              type="button"
-              className="primary-btn staff-btn-sm"
-              disabled={saving || busy}
-              onClick={() => void saveEdit()}
-            >
-              {saving ? "..." : "บันทึก"}
-            </button>
-            <button
-              type="button"
-              className="ghost-btn staff-btn-sm"
-              disabled={saving || busy}
-              onClick={() => setEditing(false)}
-            >
-              ยกเลิก
-            </button>
-          </>
-        ) : (
-          <button
-            type="button"
-            className="ghost-btn staff-btn-sm"
-            disabled={busy}
-            onClick={() => setEditing(true)}
-          >
-            แก้
-          </button>
-        )}
-        <button
-          type="button"
-          className="ghost-btn staff-btn-sm"
-          disabled={busy || editing}
-          onClick={() =>
-            void updateEmployee(emp.id, { active: !emp.active })
-              .then(onReload)
-              .catch((err) => onError(err.message || "อัปเดตไม่สำเร็จ"))
-          }
-        >
-          {emp.active ? "ปิด" : "เปิด"}
-        </button>
-        <button
-          type="button"
-          className="ghost-btn icon-btn staff-btn-sm"
-          aria-label={`ลบ ${emp.name}`}
-          disabled={busy || editing}
-          onClick={onDelete}
-        >
-          <Trash2 size={13} />
-        </button>
-      </div>
     </div>
   );
 }
