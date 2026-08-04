@@ -175,7 +175,17 @@ function takeTicketFromUrl(): string | null {
 
 async function idTokenFromTicket(ticket: string): Promise<string> {
   const ref = doc(getDb(), "loginTickets", ticket);
-  const snap = await getDoc(ref);
+  let snap;
+  try {
+    snap = await getDoc(ref);
+  } catch (err) {
+    const code = (err as { code?: string })?.code || "";
+    // ตั๋วหมดอายุ/ถูกลบ — rules เก่าเคยตอบ permission-denied จนข้อความหลอกว่าสิทธิ์พนักงาน
+    if (code === "permission-denied") {
+      throw new Error("ลิงก์ล็อกอินหมดอายุหรือใช้แล้ว — กดเข้าสู่ระบบอีกครั้ง");
+    }
+    throw err;
+  }
   if (!snap.exists()) {
     throw new Error("ลิงก์ล็อกอินหมดอายุ — กดเข้าสู่ระบบอีกครั้ง");
   }

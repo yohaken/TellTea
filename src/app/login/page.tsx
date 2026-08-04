@@ -120,9 +120,16 @@ export default function LoginPage() {
             บัญชีนี้ยังไม่อยู่ในรายชื่อพนักงาน ให้เจ้าของเพิ่มอีเมลหรือเบอร์โทรก่อน
           </p>
         ) : null}
+        {status === "loading" ? (
+          <p className="muted" style={{ marginBottom: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>
+            กำลังยืนยันสิทธิ์จาก Google — ถ้าค้างนาน ให้รีเฟรชแล้วกดเข้าสู่ระบบอีกครั้ง
+          </p>
+        ) : null}
 
         <p className="muted" style={{ marginBottom: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>
           เลือกวิธีที่สะดวก — อีเมลต้องเป็น Google ที่เจ้าของเพิ่มไว้แล้ว · เบอร์โทรยืนยันด้วย OTP
+          <br />
+          เปิดใน Chrome หรือ Safari (อย่าเปิดจาก LINE) · ถ้าเด้้อกลับมาหน้านี้ ให้กดเข้าสู่ระบบซ้ำได้
         </p>
 
         <div className="login-mode-tabs" role="tablist" aria-label="วิธีเข้าสู่ระบบ">

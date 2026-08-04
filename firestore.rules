@@ -1224,7 +1224,10 @@ service cloud.firestore {
         && request.resource.data.exp is number
         && request.resource.data.exp > request.time.toMillis()
         && request.resource.data.exp < request.time.toMillis() + 300000;
-      allow get: if resource.data.exp > request.time.toMillis();
+      // resource == null → ให้ client แยก “ไม่มีตั๋ว” จาก permission-denied
+      // (ตั๋วหมดอายุ/ใช้แล้วเคยทำให้หน้า login ค้างข้อความสิทธิ์พนักงานผิดๆ)
+      allow get: if resource == null
+        || resource.data.exp > request.time.toMillis();
       allow delete: if true;
       allow list, update: if false;
     }
