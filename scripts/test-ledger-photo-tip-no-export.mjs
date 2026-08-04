@@ -27,5 +27,7 @@ assert.match(css, /\.ledger-photo-tip\.is-in-form/);
 assert.match(more, /href: "\/export\/"/);
 assert.match(more, /perm: "exportData"/);
 assert.match(more, /ส่งออกข้อมูล/);
+assert.match(more, /more-section-panel|MoreSection/);
+assert.match(more, /เครื่องมือ/);
 
 console.log("OK test-ledger-photo-tip-no-export");

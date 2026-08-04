@@ -66,6 +66,21 @@ function MoreCardBody({
   );
 }
 
+function MoreSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="more-section" aria-label={title}>
+      <h2 className="more-section-title">{title}</h2>
+      <div className="more-section-panel">{children}</div>
+    </section>
+  );
+}
+
 export default function MorePage() {
   return (
     <AuthGate>
@@ -135,92 +150,109 @@ function MoreView() {
   const personalIncomplete = needsPersonalProfileSetup(staff);
   const hasExtras = hasAnyExtraPermission(staff);
 
+  const profileCard =
+    !isPermPreview && profileIncomplete ? (
+      <Link
+        href="/profile/"
+        className="more-card"
+        style={{ borderColor: "rgba(196, 90, 26, 0.35)" }}
+      >
+        <UserCircle size={18} aria-hidden />
+        <MoreCardBody
+          title="ตั้งโปรไฟล์พนักงาน"
+          desc={
+            personalIncomplete
+              ? "ชื่อ-นามสกุล + รูปบัตร ปชช."
+              : "เลือกชื่อในร้าน — ยังไม่ได้ตั้ง"
+          }
+        />
+      </Link>
+    ) : !isPermPreview && !profileIncomplete && staff?.role === "staff" ? (
+      <Link href="/profile/" className="more-card">
+        <UserCircle size={18} aria-hidden />
+        <MoreCardBody
+          title="โปรไฟล์"
+          desc={personalProfileLabel(staff) || staff.displayName || "ดู/แก้ไขโปรไฟล์"}
+        />
+      </Link>
+    ) : isPermPreview ? (
+      <div className="more-card" style={{ opacity: 0.85, cursor: "default" }}>
+        <UserCircle size={18} aria-hidden />
+        <MoreCardBody title="โปรไฟล์ (พรีวิว)" desc="ดูอย่างเดียว" />
+      </div>
+    ) : null;
+
+  const shopCards = (
+    <>
+      {profileCard}
+      <Link href="/utility/" className="more-card">
+        <Sparkles size={18} aria-hidden />
+        <MoreCardBody
+          title="ยูทิลิตี้"
+          desc={isOwner ? "ข้อเสนอจากพนักงาน" : "ข้อเสนอ · งาน"}
+        />
+      </Link>
+      {isOwner ? (
+        <Link href="/menu/" className="more-card">
+          <UtensilsCrossed size={18} aria-hidden />
+          <MoreCardBody title="เมนู" desc="สร้าง · ลบ · ปรับแต่งเมนู → POS" />
+        </Link>
+      ) : null}
+      {isOwner ? (
+        <Link href="/pos-sales/" className="more-card">
+          <Receipt size={18} aria-hidden />
+          <MoreCardBody title="POS" desc="ยอดขาย + จัดการ" />
+        </Link>
+      ) : null}
+      {isOwner ? (
+        <Link href="/business-notes/" className="more-card">
+          <StickyNote size={18} aria-hidden />
+          <MoreCardBody title="โนตกิจการ" desc="จดโนต · เซฟทันที" />
+        </Link>
+      ) : null}
+      {isOwner ? (
+        <Link href="/settings/" className="more-card">
+          <Settings size={18} aria-hidden />
+          <MoreCardBody title="ตั้งค่าโมดูล" desc="AI · เมนูหลัก · อัปเดตแอป" />
+        </Link>
+      ) : null}
+    </>
+  );
+
   return (
     <div className="more-page">
       <h1 className="panel-title">อื่นๆ</h1>
-      <div className="more-grid">
-        {!isPermPreview && profileIncomplete ? (
-          <Link
-            href="/profile/"
-            className="more-card"
-            style={{ borderColor: "rgba(196, 90, 26, 0.35)" }}
-          >
-            <UserCircle size={18} aria-hidden />
-            <MoreCardBody
-              title="ตั้งโปรไฟล์พนักงาน"
-              desc={
-                personalIncomplete
-                  ? "ชื่อ-นามสกุล + รูปบัตร ปชช."
-                  : "เลือกชื่อในร้าน — ยังไม่ได้ตั้ง"
-              }
-            />
-          </Link>
-        ) : null}
-        {!isPermPreview && !profileIncomplete && staff?.role === "staff" ? (
-          <Link href="/profile/" className="more-card">
-            <UserCircle size={18} aria-hidden />
-            <MoreCardBody
-              title="โปรไฟล์"
-              desc={personalProfileLabel(staff) || staff.displayName || "ดู/แก้ไขโปรไฟล์"}
-            />
-          </Link>
-        ) : null}
-        {isPermPreview ? (
-          <div className="more-card" style={{ opacity: 0.85, cursor: "default" }}>
-            <UserCircle size={18} aria-hidden />
-            <MoreCardBody title="โปรไฟล์ (พรีวิว)" desc="ดูอย่างเดียว" />
-          </div>
-        ) : null}
-        <Link href="/utility/" className="more-card">
-          <Sparkles size={18} aria-hidden />
-          <MoreCardBody
-            title="ยูทิลิตี้"
-            desc={isOwner ? "ข้อเสนอจากพนักงาน" : "ข้อเสนอ · งาน"}
-          />
-        </Link>
-        {isOwner ? (
-          <Link href="/menu/" className="more-card">
-            <UtensilsCrossed size={18} aria-hidden />
-            <MoreCardBody title="เมนู" desc="สร้าง · ลบ · ปรับแต่งเมนู → POS" />
-          </Link>
-        ) : null}
-        {isOwner ? (
-          <Link href="/pos-sales/" className="more-card">
-            <Receipt size={18} aria-hidden />
-            <MoreCardBody title="POS" desc="ยอดขาย + จัดการ" />
-          </Link>
-        ) : null}
-        {isOwner ? (
-          <Link href="/business-notes/" className="more-card">
-            <StickyNote size={18} aria-hidden />
-            <MoreCardBody title="โนตกิจการ" desc="จดโนต · เซฟทันที" />
-          </Link>
-        ) : null}
-        {isOwner ? (
-          <Link href="/settings/" className="more-card">
-            <Settings size={18} aria-hidden />
-            <MoreCardBody title="ตั้งค่าโมดูล" desc="AI · เมนูหลัก · อัปเดตแอป" />
-          </Link>
-        ) : null}
-        {moreModules.map(({ href, label, description, key }) => {
-          const Icon = MODULE_ICONS[key];
-          return (
-            <Link key={key} href={href} className="more-card">
+
+      <MoreSection title="ร้าน">{shopCards}</MoreSection>
+
+      {moreModules.length ? (
+        <MoreSection title="โมดูล">
+          {moreModules.map(({ href, label, description, key }) => {
+            const Icon = MODULE_ICONS[key];
+            return (
+              <Link key={key} href={href} className="more-card">
+                <Icon size={18} aria-hidden />
+                <MoreCardBody title={label} desc={description} />
+              </Link>
+            );
+          })}
+        </MoreSection>
+      ) : null}
+
+      {extraTools.length ? (
+        <MoreSection title="เครื่องมือ">
+          {extraTools.map(({ href, title, desc, icon: Icon }) => (
+            <Link key={href} href={href} className="more-card">
               <Icon size={18} aria-hidden />
-              <MoreCardBody title={label} desc={description} />
+              <MoreCardBody title={title} desc={desc} />
             </Link>
-          );
-        })}
-        {extraTools.map(({ href, title, desc, icon: Icon }) => (
-          <Link key={href} href={href} className="more-card">
-            <Icon size={18} aria-hidden />
-            <MoreCardBody title={title} desc={desc} />
-          </Link>
-        ))}
-        {!hasExtras && moreModules.length === 0 && !isOwner && !profileIncomplete ? (
-          <p className="empty">ไม่มีรายการเพิ่มเติม</p>
-        ) : null}
-      </div>
+          ))}
+        </MoreSection>
+      ) : null}
+
+      {!hasExtras && moreModules.length === 0 && !isOwner && !profileIncomplete ? (
+        <p className="empty">ไม่มีรายการเพิ่มเติม</p>
+      ) : null}
     </div>
   );
 }
