@@ -18,12 +18,20 @@ const doc = read("docs/npos-remit-rounds-phases.md");
 
 const buildMatch = version.match(/APP_BUILD\s*=\s*(\d+)/);
 assert.ok(buildMatch);
-assert.ok(Number(buildMatch[1]) >= 693, `APP_BUILD >= 693, got ${buildMatch[1]}`);
+assert.ok(Number(buildMatch[1]) >= 696, `APP_BUILD >= 696, got ${buildMatch[1]}`);
 assert.match(panel, /cash-in-bill-shift-name/);
 assert.match(panel, /cash-in-bill-line/);
+assert.match(panel, /formatCashInDayHm/);
+assert.match(panel, /formatCashInDurationHm/);
+assert.match(panel, /posSessionDurationMs/);
+assert.match(panel, /เงินสดรอนำเข้า/);
+assert.match(panel, /cash-in-pending-title/);
+assert.match(panel, /cash-in-bill-shift-duration/);
 assert.match(css, /\.cash-in-bill-line\b/);
 assert.match(css, /\.cash-in-bill-shift-part\.is-open/);
 assert.match(css, /\.cash-in-bill-shift-part\.is-close/);
+assert.match(css, /\.cash-in-pending-title\b/);
+assert.match(css, /\.cash-in-bill-shift-duration\b/);
 
 assert.match(panel, /function toggleSessionTick/);
 assert.match(panel, /function clearAllTicks/);
@@ -50,7 +58,7 @@ assert.match(panel, /ล้าง/);
 assert.match(panel, /บันทึกโอน/);
 assert.match(panel, /bundledBillCount >= 1/);
 assert.match(panel, /linkedOutsideWorking/);
-assert.match(panel, /รอโอน/);
+assert.match(panel, /เงินสดรอนำเข้า/);
 assert.doesNotMatch(panel, /attachPosPrintForSession/);
 assert.doesNotMatch(panel, /cash-in-bill-attach/);
 assert.doesNotMatch(panel, /setSessionActualCash/);
@@ -69,6 +77,6 @@ assert.match(css, /\.cash-in-summary-row\.is-diff\b/);
 assert.match(css, /\.cash-in-bill-card\b/);
 assert.match(css, /\.cash-in-bill-check\b/);
 assert.match(css, /\.cash-in-bill-shift\b/);
-assert.match(doc, /R2\.15|การ์ดรอโอนมีกะ/);
+assert.match(doc, /R2\.16|วันที่ \+ ระยะกะ/);
 
 console.log("OK test-cash-in-tick-summary");

@@ -22819,12 +22819,24 @@ a.ghost-btn {
   align-items: center;
   justify-content: space-between;
   gap: 0.25rem 0.5rem;
-  margin-bottom: 0.3rem;
+  margin-bottom: 0.35rem;
   font-size: 0.76rem;
 }
 
-.cash-in-pending-head strong {
-  font-size: 0.8rem;
+.cash-in-pending-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.08rem;
+  min-width: 0;
+}
+
+.cash-in-pending-title {
+  display: block;
+  font-size: 0.98rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #8a4b12;
+  line-height: 1.15;
 }
 
 .cash-in-pending-sum {
@@ -22986,6 +22998,12 @@ a.ghost-btn {
 .cash-in-bill-shift-part.is-close .cash-in-bill-shift-name {
   color: #8a4b12;
   font-weight: 750;
+}
+
+.cash-in-bill-shift-duration {
+  flex-shrink: 0;
+  color: #3d4a55;
+  font-weight: 700;
 }
 
 .cash-in-bill-use {

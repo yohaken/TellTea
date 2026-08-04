@@ -61,7 +61,7 @@ import {
   sessionRemitAmount,
   sumSessionRemits,
 } from "@/lib/pos-session-remit";
-import { posSessionCode } from "@/lib/pos-sales-report";
+import { posSessionCode, posSessionDurationMs } from "@/lib/pos-sales-report";
 import type { PosSession } from "@/lib/types";
 import {
   formatPlainNumber,
@@ -108,7 +108,27 @@ function formatCashInHm(ts: number): string {
   return new Date(ts).toLocaleTimeString("th-TH", {
     hour: "2-digit",
     minute: "2-digit",
+    hour12: false,
   });
+}
+
+/** Day + time for open/close on pending cards — e.g. 4/8 00:14 */
+function formatCashInDayHm(ts: number): string {
+  if (!ts) return "—";
+  const d = new Date(ts);
+  const day = `${d.getDate()}/${d.getMonth() + 1}`;
+  return `${day} ${formatCashInHm(ts)}`;
+}
+
+/** Shift length as hours + minutes — e.g. 7 ชม. 45 นาที */
+function formatCashInDurationHm(ms: number): string {
+  if (!Number.isFinite(ms) || ms <= 0) return "—";
+  const totalMin = Math.max(0, Math.floor(ms / 60_000));
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h <= 0) return `${m} นาที`;
+  if (m <= 0) return `${h} ชม.`;
+  return `${h} ชม. ${m} นาที`;
 }
 
 type DraftRound = {
@@ -992,13 +1012,12 @@ export function CashInLedgerPanel({
           {pendingDepositSessions.length ? (
             <section
               className="cash-in-pending-rounds"
-              aria-label="บิลรอโอน"
+              aria-label="เงินสดรอนำเข้า"
             >
               <header className="cash-in-pending-head">
-                <div>
-                  <strong>รอโอน</strong>
+                <div className="cash-in-pending-title-block">
+                  <strong className="cash-in-pending-title">เงินสดรอนำเข้า</strong>
                   <span className="muted cash-in-pending-sum">
-                    {" "}
                     {pendingDepositSessions.length} · ฿
                     {formatPlainNumber(pendingDepositSum)}
                     {bundledBillCount ? (
@@ -1039,8 +1058,11 @@ export function CashInLedgerPanel({
                   const handoff = deriveRemitStatus(s);
                   const opener = (s.openedByName || "").trim();
                   const closer = (s.closedByName || "").trim();
-                  const openHm = formatCashInHm(s.openedAt || 0);
-                  const closeHm = formatCashInHm(s.closedAt || 0);
+                  const openDayHm = formatCashInDayHm(s.openedAt || 0);
+                  const closeDayHm = formatCashInDayHm(s.closedAt || 0);
+                  const durationLabel = formatCashInDurationHm(
+                    posSessionDurationMs(s),
+                  );
                   const billNo = posSessionCode(s.id);
                   const ticked = workingSessionIds.has(s.id);
                   const statusShort =
@@ -1050,11 +1072,11 @@ export function CashInLedgerPanel({
                         ? "ไม่ตรง"
                         : "";
                   const titleOpen = opener
-                    ? `เปิด ${openHm} ${opener}`
-                    : `เปิด ${openHm}`;
+                    ? `เปิด ${openDayHm} ${opener}`
+                    : `เปิด ${openDayHm}`;
                   const titleClose = closer
-                    ? `ปิด ${closeHm} ${closer}`
-                    : `ปิด ${closeHm}`;
+                    ? `ปิด ${closeDayHm} ${closer}`
+                    : `ปิด ${closeDayHm}`;
                   return (
                     <li key={s.id}>
                       <button
@@ -1069,7 +1091,7 @@ export function CashInLedgerPanel({
                         title={
                           ticked
                             ? `ยกเลิกติ๊ก ${billNo}`
-                            : `ติ๊กบิล ${billNo} · ${titleOpen} · ${titleClose}`
+                            : `ติ๊กบิล ${billNo} · ${titleOpen} · ${titleClose} · ${durationLabel}`
                         }
                         aria-pressed={ticked}
                         onClick={() => toggleSessionTick(s)}
@@ -1101,7 +1123,7 @@ export function CashInLedgerPanel({
                           <span className="cash-in-bill-shift">
                             <span className="cash-in-bill-shift-part is-open">
                               <span className="cash-in-bill-shift-label">เปิด</span>
-                              <span className="cash-in-bill-shift-time">{openHm}</span>
+                              <span className="cash-in-bill-shift-time">{openDayHm}</span>
                               {opener ? (
                                 <span className="cash-in-bill-shift-name">{opener}</span>
                               ) : null}
@@ -1109,10 +1131,17 @@ export function CashInLedgerPanel({
                             <span aria-hidden>·</span>
                             <span className="cash-in-bill-shift-part is-close">
                               <span className="cash-in-bill-shift-label">ปิด</span>
-                              <span className="cash-in-bill-shift-time">{closeHm}</span>
+                              <span className="cash-in-bill-shift-time">{closeDayHm}</span>
                               {closer ? (
                                 <span className="cash-in-bill-shift-name">{closer}</span>
                               ) : null}
+                            </span>
+                            <span aria-hidden>·</span>
+                            <span
+                              className="cash-in-bill-shift-duration"
+                              title={`รวมกะ ${durationLabel}`}
+                            >
+                              {durationLabel}
                             </span>
                           </span>
                         </span>
