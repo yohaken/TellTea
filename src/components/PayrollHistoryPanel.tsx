@@ -57,7 +57,7 @@ function fmt(n: number) {
 
 /**
  * แท็บหลักฐานจ่ายรายเดือน — พนักงานดูของตัวเอง · เจ้าของเลือกคน
- * ขยายเดือน → ดาวน์โหลดใบสรุป (กลางเดือน + สิ้นเดือน + โบนัส + ยอดรวม)
+ * ขยายเดือน → ดาวน์โหลดเอกสาร A4 (กลางเดือน + สิ้นเดือน + โบนัส + ยอดรวม)
  */
 export function PayrollHistoryPanel({
   isOwner,
@@ -233,8 +233,8 @@ export function PayrollHistoryPanel({
       }
       onInfo?.(
         mode === "print"
-          ? `เปิดใบสรุป ${legalFullName(payee)} · ${formatPayrollPeriodLabel(summary.periodMonth)}`
-          : `ดาวน์โหลดใบสรุป ${legalFullName(payee)} · ${formatPayrollPeriodLabel(summary.periodMonth)} แล้ว`,
+          ? `เปิดเอกสาร A4 ${legalFullName(payee)} · ${formatPayrollPeriodLabel(summary.periodMonth)}`
+          : `ดาวน์โหลดเอกสาร A4 ${legalFullName(payee)} · ${formatPayrollPeriodLabel(summary.periodMonth)} แล้ว`,
       );
     } finally {
       setBundleBusy(false);
@@ -275,8 +275,8 @@ export function PayrollHistoryPanel({
       }
       onInfo?.(
         mode === "print"
-          ? `เปิดชุดใบสรุป ${formatPayrollPeriodLabel(bundleMonth)} · ${shopMonthSummaries.length} คน`
-          : `ดาวน์โหลดชุดใบสรุป ${formatPayrollPeriodLabel(bundleMonth)} · ${shopMonthSummaries.length} คนแล้ว`,
+          ? `เปิดชุดเอกสาร A4 ${formatPayrollPeriodLabel(bundleMonth)} · ${shopMonthSummaries.length} คน`
+          : `ดาวน์โหลดชุดเอกสาร A4 ${formatPayrollPeriodLabel(bundleMonth)} · ${shopMonthSummaries.length} คนแล้ว`,
       );
     } finally {
       setBundleBusy(false);
@@ -316,7 +316,7 @@ export function PayrollHistoryPanel({
       ) : null}
 
       <p className="muted payroll-actions-hint">
-        แตะเดือนเพื่อขยายสถานะ → ดาวน์โหลดใบสรุป (ยอดก่อนคืนเบิก · คืนเบิกถ้ามี · ยอดโอนเข้าบัญชี)
+        แตะเดือนเพื่อขยาย → ดาวน์โหลด/พิมพ์เอกสารทางการ A4 (ยอดก่อนคืนเบิก · คืนเบิก · ยอดโอน)
         · คืนเบิก = ได้เงินไปก่อนแล้ว ไม่ใช่ลดเงินเดือน
       </p>
 
@@ -578,7 +578,7 @@ function FragmentMonth({
                   disabled={bundleBusy || !monthSummary}
                   onClick={() => onExportOne("download")}
                 >
-                  ดาวน์โหลดใบสรุป
+                  ดาวน์โหลดเอกสาร A4
                 </button>
                 <button
                   type="button"
@@ -586,7 +586,7 @@ function FragmentMonth({
                   disabled={bundleBusy || !monthSummary}
                   onClick={() => onExportOne("print")}
                 >
-                  พิมพ์ / PDF
+                  พิมพ์ A4 / PDF
                 </button>
                 {showShopBundle ? (
                   <>

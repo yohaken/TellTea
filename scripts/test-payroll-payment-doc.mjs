@@ -46,21 +46,25 @@ assert.match(docSrc, /shopFromPosSettings/);
 assert.match(docSrc, /formatPayrollPeriodLabel/);
 assert.match(docSrc, /formatPayrollPaidAtLabel/);
 assert.match(docSrc, /fonts\.googleapis\.com.*Sarabun/);
-assert.match(docSrc, /Leelawadee UI/);
-assert.match(docSrc, /ใบสรุปหลักฐานการจ่าย/);
-assert.match(docSrc, /ไม่ใช่หนังสือรับรองหักภาษี ณ ที่จ่าย/);
+assert.match(docSrc, /TH Sarabun New/);
+assert.match(docSrc, /หลักฐานการจ่ายค่าจ้างและเงินเดือน/);
+assert.match(docSrc, /@page \{ size: A4/);
+assert.match(docSrc, /แบบ ๕๐ ทวิ/);
 assert.match(docSrc, /ชื่อจริง–นามสกุล/);
 assert.match(docSrc, /ผู้รับเงิน/);
+assert.match(docSrc, /หนังสือฉบับนี้ขอรับรองว่า/);
+assert.match(docSrc, /จำนวนเงินสุทธิ \(ตัวอักษร\)/);
+assert.match(docSrc, /thaiBahtText/);
 assert.match(docSrc, /buildMonthPaymentSummary/);
 assert.match(docSrc, /listMonthPaymentSummaries/);
 assert.match(docSrc, /buildMonthPaymentDocHtml/);
 assert.match(docSrc, /buildMonthPaymentDocsBundleHtml/);
-assert.match(docSrc, /เงินเดือนเต็ม/);
-assert.match(docSrc, /หักคืนเบิกล่วงหน้า/);
-assert.match(docSrc, /ไม่ใช่ลดเงินเดือน/);
-assert.match(docSrc, /รวมยอดโอนเข้าบัญชี/);
+assert.match(docSrc, /อัตราเงินเดือนเต็ม/);
+assert.match(docSrc, /หักคืนเบิกล่วงหน้า|คืนเบิกล่วงหน้า/);
+assert.match(docSrc, /จำนวนเงินสุทธิที่โอนเข้าบัญชี/);
 assert.match(docSrc, /midGross/);
 assert.match(docSrc, /legalFullName/);
+assert.match(docSrc, /formalLetterheadHtml/);
 assert.match(settingsSrc, /พีระพงษ์ โยหาเคน/);
 assert.match(settingsSrc, /payrollPaymentDoc/);
 assert.match(settingsUi, /เอกสารหลักฐานจ่าย/);
@@ -70,17 +74,17 @@ assert.match(payUi, /buildReceiptFromJustPaid/);
 assert.match(payUi, /PayrollPaymentDocModal/);
 assert.match(payUi, /เปิดใบสรุปหลักฐานแล้ว/);
 assert.match(payUi, /linkedStaffId/);
-assert.match(histUi, /ดาวน์โหลดใบสรุป/);
+assert.match(histUi, /ดาวน์โหลดเอกสาร A4/);
 assert.match(histUi, /buildMonthPaymentSummary/);
 assert.match(histUi, /เงินเดือนเต็ม/);
 assert.match(histUi, /listStaffPersonalMap/);
 assert.match(histUi, /getStaffPersonal/);
 assert.match(cardUi, /ดูใบสรุปจ่าย/);
-assert.match(modalUi, /พิมพ์ \/ บันทึก PDF/);
+assert.match(modalUi, /พิมพ์ A4 \/ บันทึก PDF/);
 assert.match(modalUi, /formatPayrollPeriodLabel/);
-assert.match(modalUi, /ดาวน์โหลดไฟล์/);
+assert.match(modalUi, /ดาวน์โหลดเอกสาร/);
 assert.match(modalUi, /getStaffPersonal/);
-assert.match(versionSrc, /APP_BUILD = 709/);
+assert.match(versionSrc, /APP_BUILD = 710/);
 assert.match(payUi, /salary_mid/);
 assert.match(payUi, /แท็บหลักฐานจ่าย/);
 assert.match(rulesSrc, /payrollPaymentDoc/);
@@ -363,98 +367,74 @@ assert.ok(salaryMeta.some((x) => x.includes("ก่อนหัก")));
 assert.ok(salaryMeta.some((x) => x.includes("คืนเบิก")));
 
 function buildSampleHtml() {
-  const periodLabel = formatPayrollPeriodLabel("2026-07");
   const recipient = "สมชาย ใจดี";
   const payerName = "พีระพงษ์ โยหาเคน";
   assert.equal(docSrc.includes("family=Sarabun"), true);
+  assert.match(docSrc, /@page \{ size: A4/);
 
   return `<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="utf-8" />
-  <title>ใบสรุปการจ่าย · ${recipient} · ${periodLabel}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <title>หลักฐานการจ่ายค่าจ้าง · ${recipient} · ก.ค. 2569</title>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet" />
   <style>
-    @page { size: A4; margin: 16mm; }
-    body { margin: 0; font-family: "Sarabun", "Leelawadee UI", "Tahoma", sans-serif; color: #111; font-size: 15px; line-height: 1.5; }
-    .sheet { max-width: 720px; margin: 0 auto; padding: 24px; }
-    .head { display: flex; justify-content: space-between; gap: 1.25rem; padding-bottom: 0.85rem; border-bottom: 2px solid #1a1a1a; }
-    .brand { font-size: 1.65rem; font-weight: 700; margin: 0; }
-    .brand-th { font-size: 1.05rem; font-weight: 600; margin: 0.1rem 0 0.4rem; }
-    .shop-meta { color: #444; font-size: 0.9rem; }
-    .doc-stamp { text-align: right; }
-    .doc-stamp .label { font-size: 0.78rem; font-weight: 700; color: #555; margin: 0; }
-    .doc-stamp .name { font-size: 1.2rem; font-weight: 700; margin: 0.2rem 0; }
-    .badge { display: inline-block; padding: 0.12rem 0.45rem; border: 1px solid #666; border-radius: 3px; font-size: 0.75rem; font-weight: 700; }
-    .notice { margin: 0.65rem 0 0; font-size: 0.82rem; color: #555; }
-    .sec { font-weight: 700; margin: 1.05rem 0 0.4rem; border-bottom: 1px solid #ddd; padding-bottom: 0.15rem; }
-    .grid { display: grid; grid-template-columns: 8.5rem 1fr; gap: 0.28rem 0.75rem; }
-    .k { color: #555; } .v { font-weight: 600; }
-    table.pay { width: 100%; border-collapse: collapse; margin-top: 0.35rem; }
-    table.pay th, table.pay td { border-bottom: 1px solid #ddd; padding: 0.5rem 0.15rem; text-align: left; }
-    table.pay th { font-size: 0.82rem; color: #444; }
-    table.pay .num { text-align: right; }
-    .line-kind { font-weight: 700; }
-    .muted { color: #555; } .tiny { font-size: 0.86rem; }
-    .total { display: flex; justify-content: space-between; margin-top: 0.55rem; padding-top: 0.55rem; border-top: 2px solid #1a1a1a; font-size: 1.2rem; font-weight: 700; }
-    .signs { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2.25rem; text-align: center; }
-    .sign .line { margin: 2.4rem 1rem 0.35rem; border-bottom: 1px solid #333; }
-    .foot { margin-top: 1.6rem; padding-top: 0.7rem; border-top: 1px dashed #bbb; font-size: 0.8rem; color: #666; }
+    @page { size: A4; margin: 18mm 16mm 18mm 18mm; }
+    body { margin: 0; font-family: "Sarabun", "TH Sarabun New", "Cordia New", sans-serif; color: #111; font-size: 16px; line-height: 1.55; }
+    .sheet { max-width: 190mm; margin: 0 auto; padding: 12px; }
+    .letterhead { text-align: center; }
+    .org-name { font-size: 1.55rem; font-weight: 700; margin: 0; }
+    .org-name-th { font-size: 1.15rem; font-weight: 600; margin: 0.1rem 0 0.35rem; }
+    .rule { border-top: 2.2px solid #111; border-bottom: 0.7px solid #111; height: 4px; margin: 0.65rem 0 0.85rem; }
+    .doc-title { text-align: center; font-size: 1.35rem; font-weight: 700; text-decoration: underline; }
+    .body-text { text-indent: 2.5rem; text-align: justify; }
+    table.info, table.items, table.sum { width: 100%; border-collapse: collapse; margin: 0.4rem 0; }
+    table.info th, table.info td, table.items th, table.items td, table.sum td { border: 1px solid #222; padding: 0.4rem 0.5rem; }
+    table.info th, table.items thead th { background: #f3f3f3; }
+    .num { text-align: right; }
+    .words { border: 1px solid #222; padding: 0.55rem 0.65rem; margin: 0.5rem 0; }
+    .signs { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 1.75rem; text-align: center; }
+    .sign .blank { margin: 2.1rem 1.1rem 0.35rem; border-bottom: 1px solid #222; }
+    .foot { margin-top: 1.5rem; border-top: 1px solid #999; font-size: 0.82rem; color: #444; }
   </style>
 </head>
 <body>
   <div class="sheet">
-    <header class="head">
-      <div>
-        <h1 class="brand">TELL TEA</h1>
-        <p class="brand-th">เทล ที</p>
-        <div class="shop-meta">
-          <div>ถ.พรรณนาชัย ต.หมากแข้ง อ.เมืองอุดรธานี จ.อุดรธานี</div>
-          <div>โทร 0884818817</div>
-        </div>
-      </div>
-      <div class="doc-stamp">
-        <p class="label">เอกสารจ่าย</p>
-        <p class="name">ใบสรุปหลักฐานการจ่าย</p>
-        <p>งวด ${periodLabel}</p>
-        <span class="badge">กลางเดือน + สิ้นเดือน + โบนัส</span>
-      </div>
+    <header class="letterhead">
+      <h1 class="org-name">TELL TEA</h1>
+      <div class="org-name-th">เทล ที</div>
+      <p>ถ.พรรณนาชัย ต.หมากแข้ง อ.เมืองอุดรธานี จ.อุดรธานี<br/>โทรศัพท์ 0884818817</p>
     </header>
-    <p class="notice">เอกสารภายในกิจการ สำหรับเก็บเป็นหลักฐานการจ่ายเงินเดือน/โบนัส — ไม่ใช่หนังสือรับรองหักภาษี ณ ที่จ่าย (50 ทวิ)</p>
-    <div class="sec">ผู้รับเงิน</div>
-    <div class="grid">
-      <div class="k">ชื่อจริง–นามสกุล</div><div class="v">${recipient}</div>
-      <div class="k">ชื่อในร้าน</div><div class="v">น้องเอ</div>
-      <div class="k">บัญชีรับโอน</div><div class="v">กสิกรไทย · 123-4-56789-0</div>
-    </div>
-    <div class="sec">ผู้จ่าย</div>
-    <div class="grid">
-      <div class="k">ชื่อผู้จ่าย</div><div class="v">${payerName}</div>
-      <div class="k">ตำแหน่ง / อื่นๆ</div><div class="v">เจ้าของกิจการ</div>
-    </div>
-    <div class="sec">รายการและยอดรวม</div>
-    <div class="grid"><div class="k">เงินเดือนเต็ม (อ้างอิง)</div><div class="v">฿10000</div></div>
-    <table class="pay">
-      <thead><tr><th>รายการที่ถึงกำหนด (ก่อนคืนเบิก)</th><th class="num">ยอด (บาท)</th></tr></thead>
+    <hr class="rule" />
+    <h2 class="doc-title">หลักฐานการจ่ายค่าจ้างและเงินเดือน</h2>
+    <p class="body-text">หนังสือฉบับนี้ขอรับรองว่า เทล ที / TELL TEA ได้จ่ายค่าจ้าง เงินเดือน และ/หรือค่าตอบแทน ให้แก่ <strong>${recipient}</strong> สำหรับงวด กรกฎาคม พ.ศ. 2569 ตามรายการด้านล่าง</p>
+    <div class="sec">๑. คู่กรณีและข้อมูลการจ่าย</div>
+    <table class="info">
+      <tr><th>ผู้รับเงิน (ชื่อจริง–นามสกุล)</th><td>${recipient}</td></tr>
+      <tr><th>ผู้จ่ายเงิน</th><td>${payerName} · เจ้าของกิจการ</td></tr>
+      <tr><th>อัตราเงินเดือนเต็ม (อ้างอิง)</th><td>10000 บาท</td></tr>
+    </table>
+    <div class="sec">๒. รายการที่ถึงกำหนดและยอดสุทธิ</div>
+    <table class="items">
+      <thead><tr><th>ลำดับ</th><th>รายการ</th><th class="num">จำนวนเงิน (บาท)</th></tr></thead>
       <tbody>
-        <tr><td><div class="line-kind">กลางเดือน</div></td><td class="num">฿5000</td></tr>
-        <tr><td><div class="line-kind">สิ้นเดือน / เต็มเดือน</div></td><td class="num">฿5000</td></tr>
-        <tr><td><div class="line-kind">โบนัส</div></td><td class="num">฿1200</td></tr>
+        <tr><td>1</td><td>ค่าจ้างรอบกลางเดือน</td><td class="num">5000</td></tr>
+        <tr><td>2</td><td>ค่าจ้างรอบสิ้นเดือน</td><td class="num">5000</td></tr>
+        <tr><td>3</td><td>เงินโบนัส / ค่าตอบแทนอื่น</td><td class="num">1200</td></tr>
       </tbody>
     </table>
-    <div class="subtotal"><span>รวมก่อนหักคืนเบิก</span><span>฿11200</span></div>
-    <div class="subtotal"><span>หักคืนเบิกล่วงหน้า (ได้เงินไปก่อนแล้ว — ไม่ใช่ลดเงินเดือน)</span><span>−฿3000</span></div>
-    <div class="total"><span>รวมยอดโอนเข้าบัญชี</span><span>฿8200</span></div>
+    <table class="sum">
+      <tr><td>รวมก่อนหักคืนเบิก</td><td class="num">11200</td></tr>
+      <tr><td>หัก คืนเบิกล่วงหน้า</td><td class="num">(3000)</td></tr>
+      <tr><td><strong>จำนวนเงินสุทธิที่โอนเข้าบัญชี</strong></td><td class="num"><strong>8200</strong></td></tr>
+    </table>
+    <div class="words"><strong>จำนวนเงินสุทธิ (ตัวอักษร)</strong> แปดพันสองร้อยบาทถ้วน</div>
+    <div class="sec">๓. การรับรอง</div>
     <div class="signs">
-      <div class="sign"><div class="line"></div><div><strong>ผู้จ่าย</strong></div><div class="muted tiny">${payerName}</div></div>
-      <div class="sign"><div class="line"></div><div><strong>ผู้รับเงิน</strong></div><div class="muted tiny">${recipient}</div></div>
+      <div class="sign"><div class="blank"></div><div>(${payerName})</div><div>ผู้จ่ายเงิน</div></div>
+      <div class="sign"><div class="blank"></div><div>(${recipient})</div><div>ผู้รับเงิน</div></div>
     </div>
-    <div class="foot">
-      <div>มีหลักฐานสลิปโอนในระบบ 1 รูป (ดูได้ที่แท็บหลักฐานจ่ายในแอป)</div>
-      <div>ออกจากระบบจ่าย TellTea · e1 · 2026-07</div>
-    </div>
+    <div class="foot">หมายเหตุ: ไม่ใช่หนังสือรับรองการหักภาษี ณ ที่จ่าย (แบบ ๕๐ ทวิ) และไม่ใช่ใบเสร็จรับเงิน</div>
   </div>
 </body>
 </html>`;
@@ -463,20 +443,22 @@ function buildSampleHtml() {
 const html = buildSampleHtml();
 assert.match(html, /TELL TEA/);
 assert.match(html, /เทล ที/);
-assert.match(html, /ก\.ค\. 2569/);
+assert.match(html, /หลักฐานการจ่ายค่าจ้างและเงินเดือน/);
 assert.match(html, /สมชาย ใจดี/);
-assert.match(html, /กลางเดือน/);
-assert.match(html, /สิ้นเดือน/);
+assert.match(html, /ค่าจ้างรอบกลางเดือน/);
+assert.match(html, /ค่าจ้างรอบสิ้นเดือน/);
 assert.match(html, /โบนัส/);
-assert.match(html, /เงินเดือนเต็ม/);
+assert.match(html, /อัตราเงินเดือนเต็ม/);
 assert.match(html, /11200/);
 assert.match(html, /8200/);
-assert.match(html, /หักคืนเบิกล่วงหน้า/);
-assert.match(html, /ไม่ใช่ลดเงินเดือน/);
+assert.match(html, /คืนเบิกล่วงหน้า/);
+assert.match(html, /แปดพันสองร้อยบาทถ้วน/);
 assert.match(html, /Sarabun/);
+assert.match(html, /@page \{ size: A4/);
 assert.match(html, /พีระพงษ์ โยหาเคน/);
 assert.match(html, /ชื่อจริง–นามสกุล/);
-assert.match(html, /รวมยอดโอนเข้าบัญชี/);
+assert.match(html, /จำนวนเงินสุทธิที่โอนเข้าบัญชี/);
+assert.match(html, /แบบ ๕๐ ทวิ/);
 
 const outDir = join(root, "tmp");
 mkdirSync(outDir, { recursive: true });
