@@ -14,13 +14,24 @@ import { planEmployeeIdentityPatch, updateEmployee } from "@/lib/employees";
 import type { PermissionLevel, StaffMember, StaffPersonalData } from "@/lib/types";
 import type { StaffReadinessRow } from "@/lib/staff-readiness";
 import { StaffPersonalInfoButton } from "@/components/StaffPersonalInfoModal";
+import { PermissionPicker } from "@/components/PermissionPicker";
+import { PermissionLevelSelect } from "@/components/PermissionLevelSelect";
+import {
+  findLevel,
+  permissionsMatchLevel,
+} from "@/lib/permission-levels";
+import {
+  normalizePermissions,
+  type StaffPermissions,
+} from "@/lib/permissions";
+import { staffAccountLabel } from "@/lib/utils";
 import {
   STAFF_PRESENCE_AGE_TICK_MS,
   STAFF_PRESENCE_ONLINE_MS,
   formatPresenceAge,
   formatPresenceLastLogin,
 } from "@/lib/staff-presence";
-import { Trash2 } from "lucide-react";
+import { Eye, Trash2 } from "lucide-react";
 
 function accountActionLabel(row: StaffTeamRow): string {
   const r = row.readiness;
@@ -105,6 +116,92 @@ function CheckDots({ row }: { row: StaffTeamRow }) {
           {it.ok ? "✓" : "—"}
         </span>
       ))}
+    </div>
+  );
+}
+
+function MemberPermEditor({
+  initial,
+  initialLevelId,
+  levels,
+  busy,
+  hideElevated = false,
+  onSave,
+}: {
+  initial: StaffPermissions;
+  initialLevelId: string;
+  levels: PermissionLevel[];
+  busy: boolean;
+  hideElevated?: boolean;
+  onSave: (next: StaffPermissions, levelId: string, customized: boolean) => void;
+}) {
+  const [levelId, setLevelId] = useState(initialLevelId);
+  const [perms, setPerms] = useState(initial);
+  const [showCustom, setShowCustom] = useState(
+    !initialLevelId ||
+      (() => {
+        const level = findLevel(levels, initialLevelId);
+        return !level || !permissionsMatchLevel(initial, level);
+      })(),
+  );
+
+  function applyLevel(nextId: string) {
+    setLevelId(nextId);
+    const level = findLevel(levels, nextId);
+    if (level) {
+      setPerms({ ...level.permissions });
+      setShowCustom(false);
+    } else {
+      setShowCustom(true);
+    }
+  }
+
+  return (
+    <div className="permission-editor staff-mini-perm-editor">
+      <div className="field" style={{ marginBottom: "0.4rem" }}>
+        <label htmlFor={`mini-member-level-${initialLevelId || "x"}`}>ลำดับสิทธิ์</label>
+        <PermissionLevelSelect
+          id={`mini-member-level-${initialLevelId || "x"}`}
+          levels={levels}
+          value={levelId}
+          onChange={applyLevel}
+          disabled={busy}
+          hideElevated={hideElevated}
+          allowEmpty
+        />
+      </div>
+      <div className="staff-perm-toggle-row">
+        <button
+          type="button"
+          className="ghost-btn staff-btn-sm"
+          disabled={busy}
+          onClick={() => setShowCustom((v) => !v)}
+        >
+          {showCustom ? "ซ่อนติ๊ก" : "ปรับรายข้อ"}
+        </button>
+        <button
+          type="button"
+          className="primary-btn staff-btn-sm"
+          disabled={busy}
+          onClick={() => {
+            const level = findLevel(levels, levelId);
+            const customized =
+              !level || showCustom || !permissionsMatchLevel(perms, level);
+            onSave(perms, levelId, customized);
+          }}
+        >
+          บันทึกสิทธิ์
+        </button>
+      </div>
+      {showCustom ? (
+        <PermissionPicker
+          value={perms}
+          onChange={setPerms}
+          disabled={busy}
+          hideElevated={hideElevated}
+          compact
+        />
+      ) : null}
     </div>
   );
 }
@@ -284,6 +381,12 @@ export function StaffTeamMiniTable({
   onAddEmployee,
   onEditAccount,
   onDeleteEmployee,
+  onDeleteAccount,
+  onPreviewMember,
+  onSaveMemberPerms,
+  selfStaffId = "",
+  focusStaffId = "",
+  hideElevated = false,
   onError,
   onReload,
   onPatchEmployeeLocal,
@@ -301,6 +404,18 @@ export function StaffTeamMiniTable({
   onAddEmployee: (e: FormEvent) => void;
   onEditAccount: (row: StaffReadinessRow) => void;
   onDeleteEmployee: (emp: Employee) => void;
+  onDeleteAccount: (member: StaffMember) => void;
+  onPreviewMember?: (member: StaffMember) => void;
+  onSaveMemberPerms: (
+    member: StaffMember,
+    next: StaffPermissions,
+    levelId: string,
+    customized: boolean,
+  ) => void;
+  selfStaffId?: string;
+  /** Deep-link: open this staff row + permission editor */
+  focusStaffId?: string;
+  hideElevated?: boolean;
   onError: (msg: string) => void;
   onReload: () => Promise<void>;
   onPatchEmployeeLocal: (id: string, patch: Partial<Employee>) => void;
@@ -309,6 +424,7 @@ export function StaffTeamMiniTable({
   const summary = summarizeStaffTeam(rows);
   const [now, setNow] = useState(() => Date.now());
   const [openId, setOpenId] = useState<string | null>(null);
+  const [editingPermsId, setEditingPermsId] = useState<string | null>(null);
 
   useEffect(() => {
     const tick = () => setNow(Date.now());
@@ -317,8 +433,25 @@ export function StaffTeamMiniTable({
     return () => window.clearInterval(id);
   }, []);
 
+  useEffect(() => {
+    if (!focusStaffId) return;
+    const byEmp = employees.find(
+      (e) => e.linkedStaffId === focusStaffId || members.some(
+        (m) => m.id === focusStaffId && m.employeeId === e.id,
+      ),
+    );
+    setOpenId(byEmp ? `emp-${byEmp.id}` : `staff-${focusStaffId}`);
+    setEditingPermsId(focusStaffId);
+  }, [focusStaffId, employees, members]);
+
   function toggle(id: string) {
-    setOpenId((prev) => (prev === id ? null : id));
+    setOpenId((prev) => {
+      if (prev === id) {
+        setEditingPermsId(null);
+        return null;
+      }
+      return id;
+    });
   }
 
   function openAccount(row: StaffTeamRow) {
@@ -464,8 +597,46 @@ export function StaffTeamMiniTable({
                               >
                                 {accountActionLabel(row)}
                               </button>
+                              {row.member && row.member.role === "staff" ? (
+                                <button
+                                  type="button"
+                                  className="ghost-btn staff-btn-sm"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    setEditingPermsId((prev) =>
+                                      prev === row.member!.id ? null : row.member!.id,
+                                    )
+                                  }
+                                >
+                                  {editingPermsId === row.member.id ? "ปิดสิทธิ์" : "สิทธิ์"}
+                                </button>
+                              ) : null}
+                              {ownerView && row.member && row.member.role === "staff" && onPreviewMember ? (
+                                <button
+                                  type="button"
+                                  className="ghost-btn staff-btn-sm"
+                                  disabled={busy}
+                                  title="ดูเมนูตามสิทธิ์บัญชีนี้"
+                                  onClick={() => onPreviewMember(row.member!)}
+                                >
+                                  <Eye size={13} aria-hidden /> ดูแบบเขา
+                                </button>
+                              ) : null}
                               {ownerView && row.member && row.member.role === "staff" ? (
                                 <StaffPersonalInfoButton member={row.member} />
+                              ) : null}
+                              {row.member &&
+                              row.member.role === "staff" &&
+                              row.member.id !== selfStaffId ? (
+                                <button
+                                  type="button"
+                                  className="ghost-btn staff-btn-sm is-danger"
+                                  disabled={busy}
+                                  title={`ลบบัญชี ${staffAccountLabel(row.member)}`}
+                                  onClick={() => onDeleteAccount(row.member!)}
+                                >
+                                  ลบบัญชี
+                                </button>
                               ) : null}
                               {row.employee ? (
                                 <>
@@ -488,7 +659,7 @@ export function StaffTeamMiniTable({
                                   <button
                                     type="button"
                                     className="ghost-btn icon-btn staff-btn-sm"
-                                    aria-label={`ลบ ${row.name}`}
+                                    aria-label={`ลบชื่อ ${row.name}`}
                                     disabled={busy}
                                     onClick={() => onDeleteEmployee(row.employee!)}
                                   >
@@ -497,6 +668,29 @@ export function StaffTeamMiniTable({
                                 </>
                               ) : null}
                             </div>
+                            {row.member &&
+                            row.member.role === "staff" &&
+                            editingPermsId === row.member.id ? (
+                              <MemberPermEditor
+                                key={row.member.id}
+                                initial={normalizePermissions(
+                                  row.member.permissions,
+                                  row.member.role,
+                                )}
+                                initialLevelId={row.member.permissionLevelId || ""}
+                                levels={levels}
+                                busy={busy}
+                                hideElevated={hideElevated}
+                                onSave={(next, nextLevelId, customized) =>
+                                  onSaveMemberPerms(
+                                    row.member!,
+                                    next,
+                                    nextLevelId,
+                                    customized,
+                                  )
+                                }
+                              />
+                            ) : null}
                             {row.employee ? (
                               <EmployeeEditPanel
                                 emp={row.employee}
@@ -523,8 +717,7 @@ export function StaffTeamMiniTable({
       )}
 
       <p className="muted staff-readiness-legend">
-        แถวกระชับ · เปิด▾ เพื่อแก้ชื่อ/เงิน · สร้างบัญชี · บัตร · เปิด-ปิด ·
-        ใช้ = กำลังใช้ ≤5น
+        เปิด▾ = บัญชี/สิทธิ์/ชื่อ/เงิน · ลบบัญชี ≠ ลบชื่อ · ใช้ = ≤5น
         {!ownerView ? " · บัตรเห็นได้เฉพาะเจ้าของ" : ""}
       </p>
     </section>

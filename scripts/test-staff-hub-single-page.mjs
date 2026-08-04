@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD\s*=\s*(\d+)/)[1]) >= 688);
+assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD\s*=\s*(\d+)/)[1]) >= 689);
 
 const page = read("src/app/staff/page.tsx");
 assert.match(page, /staff-hub-jump/);
@@ -17,9 +17,14 @@ assert.match(page, /href="#staff-team"/);
 assert.match(page, /href="#staff-accounts"/);
 assert.match(page, /href="#staff-levels"/);
 assert.match(page, /StaffTeamMiniTable/);
-assert.match(page, /บัญชีเข้าใช้/);
+assert.match(page, /สร้างบัญชี/);
 assert.match(page, /PermissionLevelsPanel/);
 assert.match(page, /scrollIntoView/);
+assert.match(page, /onDeleteAccount/);
+assert.match(page, /onPreviewMember/);
+assert.match(page, /onSaveMemberPerms/);
+assert.doesNotMatch(page, /staff-account-row/);
+assert.doesNotMatch(page, /function MemberPermEditor/);
 // Must not gate sections behind tab state
 assert.doesNotMatch(page, /type HubTab/);
 assert.doesNotMatch(page, /staff-hub-tabs/);

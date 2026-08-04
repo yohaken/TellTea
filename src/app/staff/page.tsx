@@ -27,7 +27,6 @@ import {
   DEFAULT_STAFF_PERMISSIONS,
   can,
   clampPermissionsForNonOwner,
-  normalizePermissions,
   type StaffPermissions,
 } from "@/lib/permissions";
 import {
@@ -36,7 +35,6 @@ import {
   findLevel,
   isOwnerSystemLevel,
   permissionsMatchLevel,
-  staffLevelBadgeLabel,
 } from "@/lib/permission-levels";
 import {
   PERM_PREVIEW_CHECKLIST,
@@ -44,10 +42,8 @@ import {
   previewFromMember,
 } from "@/lib/perm-preview";
 import { staffHomeHref } from "@/lib/nav-menu";
-import { formatPhoneDisplay, staffAccountLabel } from "@/lib/utils";
+import { staffAccountLabel } from "@/lib/utils";
 import { mapFirestoreError } from "@/lib/firestore-errors";
-import { Eye } from "lucide-react";
-import { StaffPersonalInfoButton } from "@/components/StaffPersonalInfoModal";
 import { StaffTeamMiniTable } from "@/components/StaffTeamMiniTable";
 import {
   StaffReadinessEditModal,
@@ -76,15 +72,6 @@ export default function StaffPage() {
 function useAccountFocusParam() {
   const searchParams = useSearchParams();
   return searchParams.get("account")?.trim() || "";
-}
-
-function memberLinkLabel(member: StaffMember, employees: Employee[]): string {
-  const emp = member.employeeId
-    ? employees.find((e) => e.id === member.employeeId)
-    : employees.find((e) => e.linkedStaffId === member.id);
-  if (emp) return `→ ${emp.name}`;
-  if (member.profileComplete && member.displayName) return `→ ${member.displayName}`;
-  return "ยังไม่เชื่อม";
 }
 
 function StaffView() {
@@ -222,10 +209,9 @@ function StaffView() {
 
   useEffect(() => {
     if (!focusAccountId || loading) return;
-    if (members.some((m) => m.id === focusAccountId && m.role === "staff")) {
-      setEditingStaffId(focusAccountId);
-    }
-    const el = document.getElementById("staff-accounts");
+    if (!members.some((m) => m.id === focusAccountId && m.role === "staff")) return;
+    setEditingStaffId(focusAccountId);
+    const el = document.getElementById("staff-team");
     el?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [focusAccountId, loading, members]);
 
@@ -484,7 +470,7 @@ function StaffView() {
 
       <nav className="staff-hub-jump" aria-label="ข้ามไปส่วน">
         <a href="#staff-team">ทีม</a>
-        <a href="#staff-accounts">บัญชี</a>
+        <a href="#staff-accounts">สร้างบัญชี</a>
         <a href="#staff-levels">ลำดับสิทธิ์</a>
       </nav>
 
@@ -520,6 +506,22 @@ function StaffView() {
           onAddEmployee={(e) => void onAddEmployee(e)}
           onEditAccount={openReadinessEdit}
           onDeleteEmployee={(emp) => void onDeleteEmployee(emp)}
+          onDeleteAccount={(member) => {
+            if (!window.confirm(`ลบบัญชี ${staffAccountLabel(member)}?`)) return;
+            setBusy(true);
+            void removeStaffById(member.id)
+              .then(reload)
+              .then(refreshStaff)
+              .catch((err) => setError(err.message || "ลบไม่สำเร็จ"))
+              .finally(() => setBusy(false));
+          }}
+          onPreviewMember={isOwner ? beginPreviewFromMember : undefined}
+          onSaveMemberPerms={(member, next, nextLevelId, customized) =>
+            void saveMemberPerms(member, next, nextLevelId, customized)
+          }
+          selfStaffId={staff?.id || ""}
+          focusStaffId={editingStaffId || ""}
+          hideElevated={!isOwner}
           onError={setError}
           onReload={() => reload().then(() => undefined)}
           onPatchEmployeeLocal={(id, patch) => {
@@ -535,8 +537,10 @@ function StaffView() {
       <section id="staff-accounts" className="staff-hub-panel staff-hub-anchor">
           <div className="staff-hub-panel-head">
             <div>
-              <h2 className="staff-hub-panel-title">บัญชีเข้าใช้</h2>
-              <p className="staff-hub-panel-hint">อีเมลหรือเบอร์ + ลำดับสิทธิ์ + เชื่อมชื่อ</p>
+              <h2 className="staff-hub-panel-title">สร้างบัญชี</h2>
+              <p className="staff-hub-panel-hint">
+                อีเมลหรือเบอร์ + ลำดับ + เชื่อมชื่อ · แก้/ลบบัญชีทำที่ตารางทีม ▾
+              </p>
             </div>
           </div>
           <form className="staff-compact-form" onSubmit={(e) => void onSubmitAccount(e)}>
@@ -602,7 +606,7 @@ function StaffView() {
                 {showCustomPerms ? "ซ่อนติ๊กสิทธิ์" : "ปรับสิทธิ์รายข้อ"}
               </button>
               <button type="submit" className="primary-btn staff-btn-sm" disabled={busy}>
-                {busy ? "..." : "บันทึกบัญชี"}
+                {busy ? "..." : "สร้างบัญชี"}
               </button>
             </div>
             {showCustomPerms ? (
@@ -616,95 +620,17 @@ function StaffView() {
             ) : null}
           </form>
 
-          <div className="list-card staff-compact-list" style={{ marginTop: "0.75rem" }}>
-            {members.map((member) => {
-              const isSelf = member.id === staff!.id;
-              const editing = editingStaffId === member.id;
-              const memberPerms = normalizePermissions(member.permissions, member.role);
-              const levelLabel = staffLevelBadgeLabel(member, levels);
-              return (
-                <div key={member.id} className="staff-account-row">
-                  <div className="staff-account-main">
-                    <div className="staff-level-name-row">
-                      <strong>{staffAccountLabel(member)}</strong>
-                      <span className="staff-chip is-soft">{levelLabel}</span>
-                      {member.permissionsCustomized ? (
-                        <span className="staff-chip is-muted">ปรับเอง</span>
-                      ) : null}
-                    </div>
-                    <div className="muted staff-level-meta">
-                      {member.role === "owner" ? "เจ้าของ" : "พนักงาน"}
-                      {member.email && member.phone
-                        ? ` · ${formatPhoneDisplay(member.phone)}`
-                        : ""}
-                      {member.role === "staff"
-                        ? ` · ${memberLinkLabel(member, employees)}`
-                        : member.displayName
-                          ? ` · ${member.displayName}`
-                          : ""}
-                    </div>
-                  </div>
-                  <div className="staff-level-actions">
-                    {isOwner && member.role === "staff" ? (
-                      <button
-                        type="button"
-                        className="ghost-btn staff-btn-sm"
-                        disabled={busy}
-                        title="ดูเมนูตามสิทธิ์บัญชีนี้"
-                        onClick={() => beginPreviewFromMember(member)}
-                      >
-                        <Eye size={13} aria-hidden /> ดูแบบเขา
-                      </button>
-                    ) : null}
-                    {isOwner && member.role === "staff" ? (
-                      <StaffPersonalInfoButton member={member} />
-                    ) : null}
-                    {member.role === "staff" ? (
-                      <button
-                        type="button"
-                        className="ghost-btn staff-btn-sm"
-                        onClick={() => setEditingStaffId(editing ? null : member.id)}
-                      >
-                        {editing ? "ปิด" : "สิทธิ์"}
-                      </button>
-                    ) : null}
-                    {!isSelf ? (
-                      <button
-                        type="button"
-                        className="ghost-btn staff-btn-sm is-danger"
-                        disabled={busy}
-                        onClick={() => {
-                          if (!window.confirm(`ลบ ${staffAccountLabel(member)}?`)) return;
-                          setBusy(true);
-                          void removeStaffById(member.id)
-                            .then(reload)
-                            .then(refreshStaff)
-                            .catch((err) => setError(err.message || "ลบไม่สำเร็จ"))
-                            .finally(() => setBusy(false));
-                        }}
-                      >
-                        ลบ
-                      </button>
-                    ) : (
-                      <span className="muted">คุณ</span>
-                    )}
-                  </div>
-                  {editing ? (
-                    <MemberPermEditor
-                      initial={memberPerms}
-                      initialLevelId={member.permissionLevelId || ""}
-                      levels={levels}
-                      busy={busy}
-                      hideElevated={!isOwner}
-                      onSave={(next, nextLevelId, customized) =>
-                        void saveMemberPerms(member, next, nextLevelId, customized)
-                      }
-                    />
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
+          {(() => {
+            const owner = members.find((m) => m.role === "owner");
+            if (!owner) return null;
+            return (
+              <div className="staff-owner-card muted">
+                <strong>{staffAccountLabel(owner)}</strong>
+                <span> · เจ้าของ</span>
+                {owner.id === staff?.id ? <span> · คุณ</span> : null}
+              </div>
+            );
+          })()}
         </section>
 
       <div id="staff-levels" className="staff-hub-anchor">
@@ -724,88 +650,3 @@ function StaffView() {
   );
 }
 
-function MemberPermEditor({
-  initial,
-  initialLevelId,
-  levels,
-  busy,
-  hideElevated = false,
-  onSave,
-}: {
-  initial: StaffPermissions;
-  initialLevelId: string;
-  levels: PermissionLevel[];
-  busy: boolean;
-  hideElevated?: boolean;
-  onSave: (next: StaffPermissions, levelId: string, customized: boolean) => void;
-}) {
-  const [levelId, setLevelId] = useState(initialLevelId);
-  const [perms, setPerms] = useState(initial);
-  const [showCustom, setShowCustom] = useState(
-    !initialLevelId ||
-      (() => {
-        const level = findLevel(levels, initialLevelId);
-        return !level || !permissionsMatchLevel(initial, level);
-      })(),
-  );
-
-  function applyLevel(nextId: string) {
-    setLevelId(nextId);
-    const level = findLevel(levels, nextId);
-    if (level) {
-      setPerms({ ...level.permissions });
-      setShowCustom(false);
-    } else {
-      setShowCustom(true);
-    }
-  }
-
-  return (
-    <div className="permission-editor">
-      <div className="field" style={{ marginBottom: "0.4rem" }}>
-        <label htmlFor={`member-level-${initialLevelId || "x"}`}>ลำดับสิทธิ์</label>
-        <PermissionLevelSelect
-          id={`member-level-${initialLevelId || "x"}`}
-          levels={levels}
-          value={levelId}
-          onChange={applyLevel}
-          disabled={busy}
-          hideElevated={hideElevated}
-          allowEmpty
-        />
-      </div>
-      <div className="staff-perm-toggle-row">
-        <button
-          type="button"
-          className="ghost-btn staff-btn-sm"
-          disabled={busy}
-          onClick={() => setShowCustom((v) => !v)}
-        >
-          {showCustom ? "ซ่อนติ๊ก" : "ปรับรายข้อ"}
-        </button>
-        <button
-          type="button"
-          className="primary-btn staff-btn-sm"
-          disabled={busy}
-          onClick={() => {
-            const level = findLevel(levels, levelId);
-            const customized =
-              !level || showCustom || !permissionsMatchLevel(perms, level);
-            onSave(perms, levelId, customized);
-          }}
-        >
-          บันทึก
-        </button>
-      </div>
-      {showCustom ? (
-        <PermissionPicker
-          value={perms}
-          onChange={setPerms}
-          disabled={busy}
-          hideElevated={hideElevated}
-          compact
-        />
-      ) : null}
-    </div>
-  );
-}

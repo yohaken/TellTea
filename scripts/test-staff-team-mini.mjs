@@ -11,7 +11,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 const require = createRequire(import.meta.url);
 
-assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD\s*=\s*(\d+)/)[1]) >= 688);
+assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD\s*=\s*(\d+)/)[1]) >= 689);
 
 const page = read("src/app/staff/page.tsx");
 assert.match(page, /StaffTeamMiniTable/);
@@ -31,10 +31,15 @@ const mini = read("src/components/StaffTeamMiniTable.tsx");
 assert.match(mini, /buildStaffTeamRows/);
 assert.match(mini, /สร้างบัญชี/);
 assert.match(mini, /ปิดชื่อ/);
+assert.match(mini, /ลบบัญชี/);
+assert.match(mini, /ดูแบบเขา/);
+assert.match(mini, /MemberPermEditor/);
 assert.match(mini, /EmployeeEditPanel/);
 assert.match(mini, /StaffPersonalInfoButton/);
 assert.match(mini, /formatPresenceAge/);
 assert.match(mini, /staff-team-mini-table/);
+assert.match(mini, /onDeleteAccount/);
+assert.match(mini, /onSaveMemberPerms/);
 
 const lib = read("src/lib/staff-team.ts");
 assert.match(lib, /export function buildStaffTeamRows/);

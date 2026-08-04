@@ -1120,6 +1120,22 @@ body.modal-open .main-panel {
   margin-top: 0.35rem;
 }
 
+.staff-owner-card {
+  margin-top: 0.65rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.55rem;
+  background: rgba(28, 42, 31, 0.04);
+  font-size: 0.78rem;
+}
+
+.staff-mini-perm-editor {
+  margin-top: 0.15rem;
+  padding: 0.45rem;
+  border-radius: 0.55rem;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(28, 42, 31, 0.08);
+}
+
 .staff-hub-msg {
   margin: 0 0 0.55rem;
   font-size: 0.82rem;
