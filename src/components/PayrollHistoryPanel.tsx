@@ -9,7 +9,7 @@ import {
   downloadMonthPaymentDoc,
   downloadMonthPaymentDocsBundle,
   formatPayrollPeriodLabel,
-  legalFullName,
+  legalNameForPaymentDoc,
   listMonthPaymentSummaries,
   openMonthPaymentDoc,
   openMonthPaymentDocsBundle,
@@ -233,8 +233,8 @@ export function PayrollHistoryPanel({
       }
       onInfo?.(
         mode === "print"
-          ? `เปิดเอกสาร A4 ${legalFullName(payee)} · ${formatPayrollPeriodLabel(summary.periodMonth)}`
-          : `ดาวน์โหลดเอกสาร A4 ${legalFullName(payee)} · ${formatPayrollPeriodLabel(summary.periodMonth)} แล้ว`,
+          ? `เปิดเอกสาร A4 ${legalNameForPaymentDoc(payee)} · ${formatPayrollPeriodLabel(summary.periodMonth)}`
+          : `ดาวน์โหลดเอกสาร A4 ${legalNameForPaymentDoc(payee)} · ${formatPayrollPeriodLabel(summary.periodMonth)} แล้ว`,
       );
     } finally {
       setBundleBusy(false);

@@ -5,7 +5,7 @@ import {
   downloadPayrollPaymentDoc,
   formatPayrollPaidAtLabel,
   formatPayrollPeriodLabel,
-  legalFullName,
+  legalNameForPaymentDoc,
   printPayrollPaymentDoc,
   shopFromPosSettings,
   type PayrollPaymentDocPayee,
@@ -111,7 +111,7 @@ export function PayrollPaymentDocModal({
     [resolvedPayee],
   );
 
-  const recipient = legalFullName(resolvedPayee);
+  const recipient = legalNameForPaymentDoc(resolvedPayee);
 
   function onPrintPdf() {
     const ok = printPayrollPaymentDoc({
