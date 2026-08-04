@@ -66,13 +66,13 @@ const NAV_MODULE_PERMS: Record<NavModuleKey, PermissionKey | "signedIn"> = {
 };
 
 export const NAV_MODULE_DESCRIPTIONS: Record<NavModuleKey, string> = {
-  ledger: "บัญชีเข้า–ออกรายวัน",
-  production: "บันทึกผลิต / โบนัสเบเกอรี่",
+  ledger: "เข้า–ออกรายวัน",
+  production: "ผลิต / โบนัสเบเกอรี่",
   otBonus: "โบนัสชง / OT",
-  bonus: "จ่ายเงินเดือน / โบนัส",
+  bonus: "เงินเดือน / โบนัส",
   checklist: "SmartCheck SOP",
   stock: "คลังวัตถุดิบ",
-  assignTasks: "งานมอบหมายประจำสัปดาห์",
+  assignTasks: "งานมอบหมายสัปดาห์",
 };
 
 /** ค่าเริ่มต้น — 5 โมดูลหลักบนแถบล่าง โบนัสไปหน้า อื่นๆ */
