@@ -150,17 +150,17 @@ export function PayrollPaymentDocModal({
         className="modal-card module-form-card payroll-payment-doc-modal"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
-        aria-label="ใบสรุปหลักฐานการจ่าย"
+        aria-label="หลักฐานการจ่ายค่าจ้างและเงินเดือน"
       >
         <h2
           className="panel-title"
           style={{ fontSize: "1rem", marginBottom: "0.35rem" }}
         >
-          ใบสรุปหลักฐานการจ่าย
+          หลักฐานการจ่ายค่าจ้าง (A4)
         </h2>
         <p className="muted" style={{ margin: "0 0 0.75rem", fontSize: "0.82rem" }}>
-          {shop.shopName}
-          {shop.shopNameTh ? ` · ${shop.shopNameTh}` : ""}
+          เอกสารทางการขนาด A4 · พิมพ์หรือบันทึก PDF ได้
+          {shop.shopName ? ` · ${shop.shopName}` : ""}
           {shop.taxId ? ` · เลขผู้เสียภาษี ${shop.taxId}` : ""}
         </p>
 
@@ -231,10 +231,10 @@ export function PayrollPaymentDocModal({
 
         <div className="module-form-actions" style={{ marginTop: "0.85rem" }}>
           <button type="button" className="primary-btn" onClick={onPrintPdf}>
-            พิมพ์ / บันทึก PDF
+            พิมพ์ A4 / บันทึก PDF
           </button>
           <button type="button" className="ghost-btn" onClick={onDownload}>
-            ดาวน์โหลดไฟล์
+            ดาวน์โหลดเอกสาร
           </button>
           <button type="button" className="ghost-btn" onClick={onClose}>
             ปิด

@@ -1,6 +1,6 @@
 /**
- * ใบสรุปหลักฐานการจ่ายเงินเดือน/โบนัส — ออกอัตโนมัติหลังโอน
- * ดูในแอป · พิมพ์ · บันทึก PDF (ผ่านกล่องพิมพ์เบราว์เซอร์) · ดาวน์โหลด HTML เก็บไว้
+ * หลักฐานการจ่ายค่าจ้างและเงินเดือน — เอกสารทางการขนาด A4
+ * ดูในแอป · พิมพ์ / บันทึก PDF · ดาวน์โหลด HTML เก็บไว้
  */
 import { escapeReceiptHtml } from "./pos-printer/receipt-template";
 import type { PosShopSettings } from "./pos-settings";
@@ -10,6 +10,7 @@ import {
   type StaffTransferReceipt,
 } from "./payroll-staff-receipt";
 import type { PayrollItem } from "./payroll";
+import { thaiBahtText } from "./thai-baht-text";
 import {
   bangkokDatePartsBe,
   formatPlainNumber,
@@ -265,6 +266,21 @@ const THAI_MONTHS_SHORT = [
   "ธ.ค.",
 ];
 
+const THAI_MONTHS_FULL = [
+  "มกราคม",
+  "กุมภาพันธ์",
+  "มีนาคม",
+  "เมษายน",
+  "พฤษภาคม",
+  "มิถุนายน",
+  "กรกฎาคม",
+  "สิงหาคม",
+  "กันยายน",
+  "ตุลาคม",
+  "พฤศจิกายน",
+  "ธันวาคม",
+];
+
 /** งวด 2026-07 → ก.ค. 2569 */
 export function formatPayrollPeriodLabel(periodMonth: string): string {
   const m = /^(\d{4})-(\d{2})$/.exec((periodMonth || "").trim());
@@ -275,6 +291,18 @@ export function formatPayrollPeriodLabel(periodMonth: string): string {
     return periodMonth;
   }
   return `${THAI_MONTHS_SHORT[monthIdx]} ${year + 543}`;
+}
+
+/** งวดเต็ม: กรกฎาคม พ.ศ. 2569 */
+export function formatPayrollPeriodLabelFull(periodMonth: string): string {
+  const m = /^(\d{4})-(\d{2})$/.exec((periodMonth || "").trim());
+  if (!m) return periodMonth || "—";
+  const year = Number(m[1]);
+  const monthIdx = Number(m[2]) - 1;
+  if (!Number.isFinite(year) || monthIdx < 0 || monthIdx > 11) {
+    return periodMonth;
+  }
+  return `${THAI_MONTHS_FULL[monthIdx]} พ.ศ. ${year + 543}`;
 }
 
 /** วัน–เวลาโอนแบบเอกสาร: 31/7/2569 10:00 */
@@ -292,6 +320,32 @@ export function formatPayrollPaidAtLabel(ms: number): string {
   const hh = String(get("hour")).padStart(2, "0");
   const mi = String(get("minute")).padStart(2, "0");
   return `${p.day}/${p.month}/${p.yearBe} ${hh}:${mi} น.`;
+}
+
+/** วันที่แบบหนังสือ: วันที่ 31 กรกฎาคม พ.ศ. 2569 */
+export function formatPayrollFormalDate(ms: number): string {
+  if (!ms) return "—";
+  const p = bangkokDatePartsBe(ms);
+  if (!p) return "—";
+  const monthName = THAI_MONTHS_FULL[p.month - 1] || "";
+  return `วันที่ ${p.day} ${monthName} พ.ศ. ${p.yearBe}`;
+}
+
+export function payrollPaymentDocNo(input: {
+  periodMonth: string;
+  employeeId: string;
+  paidAt: number;
+}): string {
+  const month = (input.periodMonth || "").replace(/-/g, "");
+  const emp = (input.employeeId || "")
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .slice(-4)
+    .toUpperCase() || "XX";
+  const p = input.paidAt ? bangkokDatePartsBe(input.paidAt) : null;
+  const d = p
+    ? `${p.yearBe}${String(p.month).padStart(2, "0")}${String(p.day).padStart(2, "0")}`
+    : "00000000";
+  return `PAY-${month || "000000"}-${emp}-${d}`;
 }
 
 export function shopFromPosSettings(
@@ -375,7 +429,7 @@ export function payrollPaymentDocFilename(receipt: StaffTransferReceipt): string
   const stamp = receipt.paidAt
     ? new Date(receipt.paidAt).toISOString().slice(0, 10)
     : "paid";
-  return `ใบสรุปจ่าย_${month}_${name}_${stamp}.html`;
+  return `หลักฐานจ่าย_${month}_${name}_${stamp}.html`;
 }
 
 function lineMetaBits(
@@ -407,197 +461,264 @@ function lineMetaBits(
 
 function paymentDocCss(multiPage: boolean): string {
   return `
-    @page { size: A4; margin: 16mm; }
+    @page { size: A4; margin: 18mm 16mm 18mm 18mm; }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: "Sarabun", "Leelawadee UI", "Cordia New", "Tahoma", sans-serif;
+      font-family: "Sarabun", "TH Sarabun New", "Cordia New", "Angsana New", "Tahoma", sans-serif;
       color: #111;
       background: #fff;
-      font-size: 15px;
-      line-height: 1.5;
+      font-size: 16px;
+      line-height: 1.55;
       -webkit-font-smoothing: antialiased;
     }
     .sheet {
-      max-width: 720px;
+      width: 100%;
+      max-width: 190mm;
       margin: 0 auto;
-      padding: 8px 8px 20px;
+      padding: 6px 4px 12px;
     }
     ${
       multiPage
-        ? `.sheet + .sheet { page-break-before: always; break-before: page; margin-top: 2rem; padding-top: 1rem; border-top: 1px dashed #ccc; }
-    @media print {
-      .sheet + .sheet { margin-top: 0; padding-top: 0; border-top: 0; }
-    }`
+        ? `.sheet + .sheet { page-break-before: always; break-before: page; }
+    .bundle-cover {
+      max-width: 190mm;
+      margin: 0 auto 1.25rem;
+      padding: 0.25rem 0 0.85rem;
+      border-bottom: 1px solid #222;
+      text-align: center;
+    }
+    .bundle-cover .org { font-size: 1.25rem; font-weight: 700; margin: 0; }
+    .bundle-cover .title { font-size: 1.05rem; font-weight: 700; margin: 0.4rem 0 0; }
+    .bundle-cover .meta { margin: 0.25rem 0 0; font-size: 0.92rem; color: #333; }`
         : ""
     }
-    .head {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 1.25rem;
-      padding-bottom: 0.85rem;
-      border-bottom: 2px solid #1a1a1a;
-    }
-    .brand-block { min-width: 0; flex: 1; }
-    .brand {
-      font-size: 1.65rem;
-      font-weight: 700;
-      letter-spacing: 0.01em;
-      margin: 0 0 0.1rem;
-      line-height: 1.2;
-    }
-    .brand-th {
-      font-size: 1.05rem;
-      font-weight: 600;
-      margin: 0 0 0.4rem;
-      color: #222;
-    }
-    .shop-meta {
-      color: #444;
-      font-size: 0.9rem;
-      line-height: 1.4;
-    }
-    .doc-stamp {
-      text-align: right;
-      flex: 0 0 auto;
-      max-width: 42%;
-    }
-    .doc-stamp .label {
-      font-size: 0.78rem;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: #555;
-      margin: 0 0 0.2rem;
-    }
-    .doc-stamp .name {
-      font-size: 1.2rem;
+    .letterhead { text-align: center; margin: 0 0 0.35rem; }
+    .org-name {
+      font-size: 1.55rem;
       font-weight: 700;
       margin: 0;
+      letter-spacing: 0.02em;
       line-height: 1.25;
     }
-    .doc-stamp .sub {
-      margin: 0.25rem 0 0;
-      font-size: 0.85rem;
-      color: #555;
+    .org-name-th {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 0.1rem 0 0.35rem;
     }
-    .badge {
-      display: inline-block;
-      margin-top: 0.35rem;
-      padding: 0.12rem 0.45rem;
-      border: 1px solid #666;
-      border-radius: 3px;
-      font-size: 0.75rem;
+    .org-meta {
+      font-size: 0.92rem;
+      color: #222;
+      line-height: 1.45;
+      margin: 0;
+    }
+    .rule {
+      border: 0;
+      border-top: 2.2px solid #111;
+      border-bottom: 0.7px solid #111;
+      height: 4px;
+      margin: 0.65rem 0 0.85rem;
+    }
+    .doc-title {
+      text-align: center;
+      font-size: 1.35rem;
       font-weight: 700;
+      margin: 0;
+      letter-spacing: 0.02em;
+      text-decoration: underline;
+      text-underline-offset: 0.18em;
     }
-    .notice {
-      margin: 0.65rem 0 0;
-      font-size: 0.82rem;
-      color: #555;
+    .doc-subtitle {
+      text-align: center;
+      font-size: 0.95rem;
+      margin: 0.3rem 0 0.85rem;
+      color: #222;
+    }
+    .doc-ref {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0 0 0.85rem;
+      font-size: 0.95rem;
+    }
+    .doc-ref td { padding: 0.15rem 0.25rem; vertical-align: top; }
+    .doc-ref .lbl { width: 3.8rem; color: #333; white-space: nowrap; }
+    .doc-ref .val { font-weight: 600; }
+    .doc-ref .right { text-align: right; }
+    .body-text {
+      margin: 0 0 0.9rem;
+      text-align: justify;
+      text-indent: 2.5rem;
+      font-size: 1rem;
+      line-height: 1.65;
     }
     .sec {
       font-weight: 700;
-      margin: 1.05rem 0 0.4rem;
-      font-size: 0.95rem;
-      padding-bottom: 0.15rem;
-      border-bottom: 1px solid #ddd;
+      margin: 1rem 0 0.4rem;
+      font-size: 1rem;
     }
-    .muted { color: #555; }
-    .tiny { font-size: 0.86rem; }
-    .grid {
-      display: grid;
-      grid-template-columns: 8.5rem 1fr;
-      gap: 0.28rem 0.75rem;
-      margin: 0.35rem 0 0;
-    }
-    .grid .k { color: #555; }
-    .grid .v { font-weight: 600; word-break: break-word; }
-    .grid .v.normal { font-weight: 400; }
-    table.pay {
+    .muted { color: #444; }
+    .tiny { font-size: 0.88rem; }
+    table.info, table.items {
       width: 100%;
       border-collapse: collapse;
-      margin: 0.35rem 0 0.4rem;
+      margin: 0.2rem 0 0.55rem;
+      font-size: 0.96rem;
     }
-    table.pay th, table.pay td {
-      border-bottom: 1px solid #ddd;
-      padding: 0.5rem 0.15rem;
-      text-align: left;
+    table.info th, table.info td,
+    table.items th, table.items td {
+      border: 1px solid #222;
+      padding: 0.4rem 0.5rem;
       vertical-align: top;
+      text-align: left;
     }
-    table.pay th {
-      font-size: 0.82rem;
-      color: #444;
+    table.info th {
+      width: 28%;
+      background: #f3f3f3;
+      font-weight: 600;
+    }
+    table.items thead th {
+      background: #f3f3f3;
       font-weight: 700;
+      text-align: center;
     }
-    table.pay td.num, table.pay th.num {
+    table.items td.no { width: 3rem; text-align: center; }
+    table.items td.num, table.items th.num {
       text-align: right;
       white-space: nowrap;
       font-variant-numeric: tabular-nums;
+      width: 7.5rem;
     }
-    .line-kind { font-weight: 700; }
-    .subtotal {
-      display: flex;
-      justify-content: space-between;
-      gap: 1rem;
-      margin: 0.25rem 0;
-      font-size: 0.92rem;
+    table.items td.desc .sub {
+      display: block;
+      margin-top: 0.15rem;
+      font-size: 0.86rem;
       color: #444;
     }
-    .total {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      margin-top: 0.55rem;
-      padding: 0.55rem 0 0.15rem;
-      border-top: 2px solid #1a1a1a;
-      font-size: 1.2rem;
+    table.sum {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.15rem 0 0.55rem;
+      font-size: 0.96rem;
+    }
+    table.sum td {
+      border: 1px solid #222;
+      padding: 0.4rem 0.5rem;
+    }
+    table.sum td.lbl { font-weight: 600; }
+    table.sum td.num {
+      text-align: right;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      width: 7.5rem;
+    }
+    table.sum tr.grand td {
       font-weight: 700;
+      font-size: 1.05rem;
+      background: #f7f7f7;
+    }
+    .words {
+      margin: 0.35rem 0 0.85rem;
+      padding: 0.55rem 0.65rem;
+      border: 1px solid #222;
+      font-size: 0.98rem;
+      line-height: 1.5;
+    }
+    .words .k { font-weight: 700; }
+    .cert {
+      margin: 0.25rem 0 0.5rem;
+      text-align: justify;
+      text-indent: 2.5rem;
+      font-size: 0.98rem;
+      line-height: 1.65;
     }
     .signs {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 2rem;
-      margin-top: 2.25rem;
+      gap: 2.5rem;
+      margin-top: 1.75rem;
     }
     .sign {
       text-align: center;
-      font-size: 0.9rem;
+      font-size: 0.95rem;
     }
-    .sign .line {
-      margin: 2.4rem 1rem 0.35rem;
-      border-bottom: 1px solid #333;
+    .sign .cap { font-weight: 700; margin-bottom: 0.35rem; }
+    .sign .blank {
+      margin: 2.1rem 1.1rem 0.35rem;
+      border-bottom: 1px solid #222;
       height: 0;
     }
-    .sign .role { font-weight: 700; }
-    .sign .hint { color: #666; font-size: 0.8rem; margin-top: 0.15rem; }
+    .sign .name { margin-top: 0.2rem; font-weight: 600; }
+    .sign .role { color: #333; font-size: 0.9rem; margin-top: 0.1rem; }
+    .sign .date-line { margin-top: 0.85rem; color: #333; font-size: 0.9rem; }
     .foot {
-      margin-top: 1.6rem;
-      padding-top: 0.7rem;
-      border-top: 1px dashed #bbb;
-      font-size: 0.8rem;
-      color: #666;
-      line-height: 1.4;
-    }
-    .bundle-cover {
-      max-width: 720px;
-      margin: 0 auto 1.5rem;
-      padding: 0.5rem 0.5rem 1rem;
-      border-bottom: 2px solid #1a1a1a;
+      margin-top: 1.5rem;
+      padding-top: 0.65rem;
+      border-top: 1px solid #999;
+      font-size: 0.82rem;
+      color: #444;
+      line-height: 1.45;
     }
     @media print {
-      body { margin: 0; }
+      body { margin: 0; background: #fff; }
       .sheet { padding: 0; max-width: none; }
       .bundle-cover { display: none; }
       a { color: inherit; text-decoration: none; }
     }
     @media (max-width: 560px) {
-      .head { flex-direction: column; }
-      .doc-stamp { text-align: left; max-width: none; }
-      .signs { grid-template-columns: 1fr; gap: 1.5rem; }
-      .grid { grid-template-columns: 7rem 1fr; }
+      body { font-size: 15px; }
+      .signs { grid-template-columns: 1fr; gap: 1.75rem; }
+      table.info th { width: 34%; }
     }
   `;
+}
+
+function formalLetterheadHtml(shop: PayrollPaymentDocShop): string {
+  const metaBits = [
+    shop.shopAddress,
+    shop.shopPhone ? `โทรศัพท์ ${shop.shopPhone}` : "",
+    shop.taxId ? `เลขประจำตัวผู้เสียภาษี ${shop.taxId}` : "",
+  ].filter(Boolean);
+  return `<header class="letterhead">
+    <h1 class="org-name">${escapeReceiptHtml(shop.shopName)}</h1>
+    ${
+      shop.shopNameTh
+        ? `<div class="org-name-th">${escapeReceiptHtml(shop.shopNameTh)}</div>`
+        : ""
+    }
+    ${
+      metaBits.length
+        ? `<p class="org-meta">${metaBits.map((b) => escapeReceiptHtml(b)).join("<br/>")}</p>`
+        : ""
+    }
+  </header>
+  <hr class="rule" />`;
+}
+
+function formalSignsHtml(input: {
+  payer: PayrollPaymentDocPayer;
+  recipient: string;
+  formalDate: string;
+}): string {
+  return `<div class="signs">
+    <div class="sign">
+      <div class="cap">ผู้จ่ายเงิน</div>
+      <div class="blank"></div>
+      <div class="name">(${escapeReceiptHtml(input.payer.payerName)})</div>
+      ${
+        input.payer.payerTitle
+          ? `<div class="role">${escapeReceiptHtml(input.payer.payerTitle)}</div>`
+          : ""
+      }
+      <div class="date-line">${escapeReceiptHtml(input.formalDate)}</div>
+    </div>
+    <div class="sign">
+      <div class="cap">ผู้รับเงิน</div>
+      <div class="blank"></div>
+      <div class="name">(${escapeReceiptHtml(input.recipient)})</div>
+      <div class="role">พนักงาน / ผู้รับค่าจ้าง</div>
+      <div class="date-line">วันที่ ...... / ...... / ..........</div>
+    </div>
+  </div>`;
 }
 
 function buildMonthPaymentDocSheetHtml(input: {
@@ -607,171 +728,181 @@ function buildMonthPaymentDocSheetHtml(input: {
   payer: PayrollPaymentDocPayer;
 }): string {
   const { summary, shop, payee, payer } = input;
-  const periodLabel = formatPayrollPeriodLabel(summary.periodMonth);
+  const periodFull = formatPayrollPeriodLabelFull(summary.periodMonth);
   const paidLabel = formatPayrollPaidAtLabel(summary.paidAt);
+  const formalDate = formatPayrollFormalDate(summary.paidAt || Date.now());
   const recipient = legalFullName(payee);
+  const docNo = payrollPaymentDocNo({
+    periodMonth: summary.periodMonth,
+    employeeId: summary.employeeId,
+    paidAt: summary.paidAt,
+  });
   const bankBits = [
     payee.payBank,
     payee.payAccountNo,
     payee.payAccountName ? `ชื่อบัญชี ${payee.payAccountName}` : "",
   ].filter(Boolean);
 
-  const rows: string[] = [];
+  const itemLines: { label: string; amount: number; sub?: string }[] = [];
   if (summary.midGross > 0 || summary.midAdvance > 0) {
-    rows.push(`<tr>
-      <td><div class="line-kind">กลางเดือน</div></td>
-      <td class="num">฿${money(summary.midGross)}</td>
-    </tr>`);
+    itemLines.push({
+      label: "ค่าจ้างรอบกลางเดือน",
+      amount: summary.midGross,
+      sub:
+        summary.midAdvance > 0
+          ? `หักคืนเบิกล่วงหน้าในรายการนี้ ${money(summary.midAdvance)} บาท`
+          : undefined,
+    });
   }
   if (summary.endGross > 0 || summary.endAdvance > 0) {
-    rows.push(`<tr>
-      <td><div class="line-kind">สิ้นเดือน / เต็มเดือน</div></td>
-      <td class="num">฿${money(summary.endGross)}</td>
-    </tr>`);
+    itemLines.push({
+      label: "ค่าจ้างรอบสิ้นเดือน",
+      amount: summary.endGross,
+      sub:
+        summary.endAdvance > 0
+          ? `หักคืนเบิกล่วงหน้าในรายการนี้ ${money(summary.endAdvance)} บาท`
+          : undefined,
+    });
   }
   if (summary.specialGross > 0 || summary.specialAdvance > 0) {
-    rows.push(`<tr>
-      <td><div class="line-kind">จ่ายแยก</div></td>
-      <td class="num">฿${money(summary.specialGross)}</td>
-    </tr>`);
+    itemLines.push({
+      label: "ค่าจ้างจ่ายแยก",
+      amount: summary.specialGross,
+      sub:
+        summary.specialAdvance > 0
+          ? `หักคืนเบิกล่วงหน้าในรายการนี้ ${money(summary.specialAdvance)} บาท`
+          : undefined,
+    });
   }
   if (summary.bonusGross > 0 || summary.bonusAdvance > 0) {
-    rows.push(`<tr>
-      <td><div class="line-kind">โบนัส</div></td>
-      <td class="num">฿${money(summary.bonusGross)}</td>
-    </tr>`);
+    itemLines.push({
+      label: "เงินโบนัส / ค่าตอบแทนอื่น",
+      amount: summary.bonusGross,
+      sub:
+        summary.bonusAdvance > 0
+          ? `หักคืนเบิกล่วงหน้าในรายการนี้ ${money(summary.bonusAdvance)} บาท`
+          : undefined,
+    });
   }
 
+  const rows = itemLines
+    .map(
+      (line, idx) => `<tr>
+      <td class="no">${idx + 1}</td>
+      <td class="desc">${escapeReceiptHtml(line.label)}${
+        line.sub
+          ? `<span class="sub">${escapeReceiptHtml(line.sub)}</span>`
+          : ""
+      }</td>
+      <td class="num">${money(line.amount)}</td>
+    </tr>`,
+    )
+    .join("");
+
+  const shopLine = [shop.shopNameTh, shop.shopName].filter(Boolean).join(" / ");
   const slipNote = summary.slipUrls.length
-    ? `มีหลักฐานสลิปโอนในระบบ ${summary.slipUrls.length} รูป (ดูได้ที่แท็บหลักฐานจ่ายในแอป)`
-    : "ยังไม่มีสลิปโอนแนบในระบบ";
+    ? `มีหลักฐานการโอนเงินแนบในระบบจำนวน ${summary.slipUrls.length} รายการ`
+    : "ยังไม่มีการแนบหลักฐานสลิปโอนในระบบ";
 
   return `<div class="sheet">
-    <header class="head">
-      <div class="brand-block">
-        <h1 class="brand">${escapeReceiptHtml(shop.shopName)}</h1>
-        ${
-          shop.shopNameTh
-            ? `<p class="brand-th">${escapeReceiptHtml(shop.shopNameTh)}</p>`
-            : ""
-        }
-        <div class="shop-meta">
-          ${
-            shop.shopAddress
-              ? `<div>${escapeReceiptHtml(shop.shopAddress)}</div>`
-              : ""
-          }
-          ${
-            shop.shopPhone
-              ? `<div>โทร ${escapeReceiptHtml(shop.shopPhone)}</div>`
-              : ""
-          }
-          ${
-            shop.taxId
-              ? `<div>เลขประจำตัวผู้เสียภาษี ${escapeReceiptHtml(shop.taxId)}</div>`
-              : ""
-          }
-        </div>
-      </div>
-      <div class="doc-stamp">
-        <p class="label">เอกสารจ่าย</p>
-        <p class="name">ใบสรุปหลักฐานการจ่าย</p>
-        <p class="sub">งวด ${escapeReceiptHtml(periodLabel)}</p>
-        <span class="badge">กลางเดือน + สิ้นเดือน + โบนัส</span>
-      </div>
-    </header>
+    ${formalLetterheadHtml(shop)}
+    <h2 class="doc-title">หลักฐานการจ่ายค่าจ้างและเงินเดือน</h2>
+    <p class="doc-subtitle">เอกสารภายในกิจการ · ขนาดกระดาษ A4</p>
+    <table class="doc-ref">
+      <tr>
+        <td class="lbl">เลขที่</td>
+        <td class="val">${escapeReceiptHtml(docNo)}</td>
+        <td class="right muted">${escapeReceiptHtml(formalDate)}</td>
+      </tr>
+      <tr>
+        <td class="lbl">งวด</td>
+        <td class="val" colspan="2">${escapeReceiptHtml(periodFull)}</td>
+      </tr>
+    </table>
+    <p class="body-text">
+      หนังสือฉบับนี้ขอรับรองว่า ${escapeReceiptHtml(shopLine || shop.shopName)}
+      ได้จ่ายค่าจ้าง เงินเดือน และ/หรือค่าตอบแทน ให้แก่
+      <strong>${escapeReceiptHtml(recipient)}</strong>
+      สำหรับงวด ${escapeReceiptHtml(periodFull)}
+      ตามรายการด้านล่าง โดยโอนเข้าบัญชีธนาคารตามที่ระบุ
+      และจำนวนเงินสุทธิที่โอนเข้าบัญชีคือยอดหลังหักคืนเบิกล่วงหน้า (ถ้ามี)
+      ซึ่งเป็นการชำระหนี้เงินเบิกที่ได้จ่ายให้ล่วงหน้าแล้ว มิใช่การลดอัตราค่าจ้าง
+    </p>
 
-    <p class="notice">เอกสารภายในกิจการ สำหรับเก็บเป็นหลักฐานการจ่ายเงินเดือน/โบนัส — ไม่ใช่หนังสือรับรองหักภาษี ณ ที่จ่าย (50 ทวิ)</p>
-
-    <div class="sec">ผู้รับเงิน</div>
-    <div class="grid">
-      <div class="k">ชื่อจริง–นามสกุล</div>
-      <div class="v">${escapeReceiptHtml(recipient)}</div>
+    <div class="sec">๑. คู่กรณีและข้อมูลการจ่าย</div>
+    <table class="info">
+      <tr><th>ผู้รับเงิน (ชื่อจริง–นามสกุล)</th><td>${escapeReceiptHtml(recipient)}</td></tr>
       ${
         payee.employeeName &&
         legalFullName(payee) !== payee.employeeName.trim()
-          ? `<div class="k">ชื่อในร้าน</div><div class="v normal">${escapeReceiptHtml(payee.employeeName)}</div>`
+          ? `<tr><th>ชื่อที่ใช้ในกิจการ</th><td>${escapeReceiptHtml(payee.employeeName)}</td></tr>`
           : ""
       }
       ${
         bankBits.length
-          ? `<div class="k">บัญชีรับโอน</div><div class="v normal">${escapeReceiptHtml(bankBits.join(" · "))}</div>`
+          ? `<tr><th>บัญชีรับโอน</th><td>${escapeReceiptHtml(bankBits.join(" · "))}</td></tr>`
           : ""
       }
-    </div>
-
-    <div class="sec">ผู้จ่าย</div>
-    <div class="grid">
-      <div class="k">ชื่อผู้จ่าย</div>
-      <div class="v">${escapeReceiptHtml(payer.payerName)}</div>
-      ${
+      <tr><th>ผู้จ่ายเงิน</th><td>${escapeReceiptHtml(payer.payerName)}${
         payer.payerTitle
-          ? `<div class="k">ตำแหน่ง / อื่นๆ</div><div class="v normal">${escapeReceiptHtml(payer.payerTitle)}</div>`
+          ? ` · ${escapeReceiptHtml(payer.payerTitle)}`
+          : ""
+      }</td></tr>
+      ${
+        summary.salaryFull > 0
+          ? `<tr><th>อัตราเงินเดือนเต็ม (อ้างอิง)</th><td>${money(summary.salaryFull)} บาท</td></tr>`
           : ""
       }
-    </div>
+      <tr><th>วัน–เวลาโอนล่าสุด</th><td>${escapeReceiptHtml(paidLabel)}</td></tr>
+    </table>
 
-    <div class="sec">รอบจ่าย</div>
-    <div class="grid">
-      <div class="k">งวด</div>
-      <div class="v">${escapeReceiptHtml(periodLabel)}</div>
-      <div class="k">วัน–เวลาโอนล่าสุด</div>
-      <div class="v">${escapeReceiptHtml(paidLabel)}</div>
-    </div>
-
-    <div class="sec">รายการและยอดรวม</div>
-    ${
-      summary.salaryFull > 0
-        ? `<div class="grid" style="margin-bottom:0.35rem">
-      <div class="k">เงินเดือนเต็ม (อ้างอิง)</div>
-      <div class="v">฿${money(summary.salaryFull)}</div>
-    </div>`
-        : ""
-    }
-    <table class="pay">
+    <div class="sec">๒. รายการที่ถึงกำหนดและยอดสุทธิ</div>
+    <table class="items">
       <thead>
-        <tr><th>รายการที่ถึงกำหนด (ก่อนคืนเบิก)</th><th class="num">ยอด (บาท)</th></tr>
+        <tr>
+          <th style="width:3rem">ลำดับ</th>
+          <th>รายการ</th>
+          <th class="num">จำนวนเงิน (บาท)</th>
+        </tr>
       </thead>
       <tbody>
-        ${rows.join("")}
+        ${rows}
       </tbody>
     </table>
-    ${
-      summary.grossTotal > 0
-        ? `<div class="subtotal"><span>รวมก่อนหักคืนเบิก</span><span>฿${money(summary.grossTotal)}</span></div>`
-        : ""
-    }
-    ${
-      summary.advanceDeductTotal > 0
-        ? `<div class="subtotal"><span>หักคืนเบิกล่วงหน้า <span class="muted tiny">(ได้เงินไปก่อนแล้ว — ไม่ใช่ลดเงินเดือน)</span></span><span>−฿${money(summary.advanceDeductTotal)}</span></div>`
-        : ""
-    }
-    <div class="total">
-      <span>รวมยอดโอนเข้าบัญชี</span>
-      <span>฿${money(summary.transferTotal)}</span>
+    <table class="sum">
+      <tr>
+        <td class="lbl">รวมก่อนหักคืนเบิก</td>
+        <td class="num">${money(summary.grossTotal)}</td>
+      </tr>
+      ${
+        summary.advanceDeductTotal > 0
+          ? `<tr>
+        <td class="lbl">หัก คืนเบิกล่วงหน้า <span class="muted tiny">(ได้จ่ายให้แล้วมาก่อน)</span></td>
+        <td class="num">(${money(summary.advanceDeductTotal)})</td>
+      </tr>`
+          : ""
+      }
+      <tr class="grand">
+        <td class="lbl">จำนวนเงินสุทธิที่โอนเข้าบัญชี</td>
+        <td class="num">${money(summary.transferTotal)}</td>
+      </tr>
+    </table>
+    <div class="words">
+      <span class="k">จำนวนเงินสุทธิ (ตัวอักษร)</span>
+      ${escapeReceiptHtml(thaiBahtText(summary.transferTotal))}
     </div>
 
-    <div class="signs">
-      <div class="sign">
-        <div class="line"></div>
-        <div class="role">ผู้จ่าย</div>
-        <div class="hint">${escapeReceiptHtml(payer.payerName)}</div>
-        ${
-          payer.payerTitle
-            ? `<div class="hint">${escapeReceiptHtml(payer.payerTitle)}</div>`
-            : ""
-        }
-      </div>
-      <div class="sign">
-        <div class="line"></div>
-        <div class="role">ผู้รับเงิน</div>
-        <div class="hint">${escapeReceiptHtml(recipient)}</div>
-      </div>
-    </div>
+    <div class="sec">๓. การรับรอง</div>
+    <p class="cert">
+      ข้าพเจ้าในฐานะผู้จ่ายเงินขอรับรองว่าข้อความและจำนวนเงินข้างต้นถูกต้อง
+      และได้จ่ายให้แก่ผู้รับเงินจริงตามรายการนี้แล้ว
+      ผู้รับเงินลงลายมือชื่อรับรองการได้รับเงินด้านล่าง
+    </p>
+    ${formalSignsHtml({ payer, recipient, formalDate })}
 
     <div class="foot">
-      <div>${escapeReceiptHtml(slipNote)}</div>
-      <div>ออกจากระบบจ่าย TellTea · ${escapeReceiptHtml(summary.employeeId)} · ${escapeReceiptHtml(summary.periodMonth)}</div>
+      <div>หมายเหตุ: เอกสารนี้เป็นหลักฐานการจ่ายค่าจ้าง/เงินเดือนภายในกิจการ — ไม่ใช่หนังสือรับรองการหักภาษี ณ ที่จ่าย (แบบ ๕๐ ทวิ) และไม่ใช่ใบเสร็จรับเงิน</div>
+      <div>${escapeReceiptHtml(slipNote)} · อ้างอิง ${escapeReceiptHtml(summary.employeeId)} / ${escapeReceiptHtml(summary.periodMonth)}</div>
     </div>
   </div>`;
 }
@@ -787,155 +918,151 @@ function buildPaymentDocSheetHtml(input: {
     payerName: "พีระพงษ์ โยหาเคน",
     payerTitle: "เจ้าของกิจการ",
   };
-  const periodLabel = formatPayrollPeriodLabel(receipt.periodMonth);
+  const periodFull = formatPayrollPeriodLabelFull(receipt.periodMonth);
   const paidLabel = formatPayrollPaidAtLabel(receipt.paidAt);
+  const formalDate = formatPayrollFormalDate(receipt.paidAt || Date.now());
   const recipient = legalFullName(payee);
+  const empId = receipt.lines[0]?.item.employeeId || "";
+  const docNo = payrollPaymentDocNo({
+    periodMonth: receipt.periodMonth,
+    employeeId: empId,
+    paidAt: receipt.paidAt,
+  });
   const bankBits = [
     payee.payBank,
     payee.payAccountNo,
     payee.payAccountName ? `ชื่อบัญชี ${payee.payAccountName}` : "",
   ].filter(Boolean);
   const receiptNote = (receipt.note || "").trim();
+  const shopLine = [shop.shopNameTh, shop.shopName].filter(Boolean).join(" / ");
 
-  const lineRows = receipt.lines
-    .map((line) => {
+  const grossLines = receipt.lines.map((line) => {
+    const gross =
+      line.grossAmount > 0
+        ? round2(line.grossAmount)
+        : round2(line.amount + line.advanceDeduct);
+    return { line, gross };
+  });
+  const grossTotal = round2(grossLines.reduce((s, x) => s + x.gross, 0));
+
+  const lineRows = grossLines
+    .map(({ line, gross }, idx) => {
       const meta = lineMetaBits(line, receiptNote);
       return `<tr>
-        <td>
-          <div class="line-kind">${escapeReceiptHtml(shortTransferKindLabel(line.kind))}</div>
-          ${
-            meta.length
-              ? `<div class="muted tiny">${escapeReceiptHtml(meta.join(" · "))}</div>`
-              : ""
-          }
-        </td>
-        <td class="num">฿${money(line.amount)}</td>
+        <td class="no">${idx + 1}</td>
+        <td class="desc">${escapeReceiptHtml(shortTransferKindLabel(line.kind))}${
+          meta.length
+            ? `<span class="sub">${escapeReceiptHtml(meta.join(" · "))}</span>`
+            : ""
+        }</td>
+        <td class="num">${money(gross)}</td>
       </tr>`;
     })
     .join("");
 
   const slipNote = receipt.slipUrls.length
-    ? `มีหลักฐานสลิปโอนในระบบ ${receipt.slipUrls.length} รูป (ดูได้ที่แท็บหลักฐานจ่ายในแอป)`
-    : "ยังไม่มีสลิปโอนแนบในระบบ";
+    ? `มีหลักฐานการโอนเงินแนบในระบบจำนวน ${receipt.slipUrls.length} รายการ`
+    : "ยังไม่มีการแนบหลักฐานสลิปโอนในระบบ";
 
   return `<div class="sheet">
-    <header class="head">
-      <div class="brand-block">
-        <h1 class="brand">${escapeReceiptHtml(shop.shopName)}</h1>
-        ${
-          shop.shopNameTh
-            ? `<p class="brand-th">${escapeReceiptHtml(shop.shopNameTh)}</p>`
-            : ""
-        }
-        <div class="shop-meta">
-          ${
-            shop.shopAddress
-              ? `<div>${escapeReceiptHtml(shop.shopAddress)}</div>`
-              : ""
-          }
-          ${
-            shop.shopPhone
-              ? `<div>โทร ${escapeReceiptHtml(shop.shopPhone)}</div>`
-              : ""
-          }
-          ${
-            shop.taxId
-              ? `<div>เลขประจำตัวผู้เสียภาษี ${escapeReceiptHtml(shop.taxId)}</div>`
-              : ""
-          }
-        </div>
-      </div>
-      <div class="doc-stamp">
-        <p class="label">เอกสารจ่าย</p>
-        <p class="name">ใบสรุปหลักฐานการจ่าย</p>
-        <p class="sub">งวด ${escapeReceiptHtml(periodLabel)}</p>
-        ${receipt.combined ? `<span class="badge">โอนรวมสิ้นเดือน + โบนัส</span>` : ""}
-      </div>
-    </header>
+    ${formalLetterheadHtml(shop)}
+    <h2 class="doc-title">หลักฐานการจ่ายค่าจ้างและเงินเดือน</h2>
+    <p class="doc-subtitle">เอกสารภายในกิจการ · ขนาดกระดาษ A4${
+      receipt.combined ? " · โอนรวมสิ้นเดือนและโบนัส" : ""
+    }</p>
+    <table class="doc-ref">
+      <tr>
+        <td class="lbl">เลขที่</td>
+        <td class="val">${escapeReceiptHtml(docNo)}</td>
+        <td class="right muted">${escapeReceiptHtml(formalDate)}</td>
+      </tr>
+      <tr>
+        <td class="lbl">งวด</td>
+        <td class="val" colspan="2">${escapeReceiptHtml(periodFull)}</td>
+      </tr>
+    </table>
+    <p class="body-text">
+      หนังสือฉบับนี้ขอรับรองว่า ${escapeReceiptHtml(shopLine || shop.shopName)}
+      ได้จ่ายค่าจ้าง เงินเดือน และ/หรือค่าตอบแทน ให้แก่
+      <strong>${escapeReceiptHtml(recipient)}</strong>
+      สำหรับงวด ${escapeReceiptHtml(periodFull)}
+      ตามรายการด้านล่าง โดยโอนเข้าบัญชีธนาคารตามที่ระบุแล้ว
+      ${
+        receiptNote
+          ? ` หมายเหตุการจ่าย: ${escapeReceiptHtml(receiptNote)}`
+          : ""
+      }
+    </p>
 
-    <p class="notice">เอกสารภายในกิจการ สำหรับเก็บเป็นหลักฐานการจ่ายเงินเดือน/โบนัส — ไม่ใช่หนังสือรับรองหักภาษี ณ ที่จ่าย (50 ทวิ)</p>
-
-    <div class="sec">ผู้รับเงิน</div>
-    <div class="grid">
-      <div class="k">ชื่อจริง–นามสกุล</div>
-      <div class="v">${escapeReceiptHtml(recipient)}</div>
+    <div class="sec">๑. คู่กรณีและข้อมูลการจ่าย</div>
+    <table class="info">
+      <tr><th>ผู้รับเงิน (ชื่อจริง–นามสกุล)</th><td>${escapeReceiptHtml(recipient)}</td></tr>
       ${
         payee.employeeName &&
         legalFullName(payee) !== payee.employeeName.trim()
-          ? `<div class="k">ชื่อในร้าน</div><div class="v normal">${escapeReceiptHtml(payee.employeeName)}</div>`
+          ? `<tr><th>ชื่อที่ใช้ในกิจการ</th><td>${escapeReceiptHtml(payee.employeeName)}</td></tr>`
           : ""
       }
       ${
         bankBits.length
-          ? `<div class="k">บัญชีรับโอน</div><div class="v normal">${escapeReceiptHtml(bankBits.join(" · "))}</div>`
+          ? `<tr><th>บัญชีรับโอน</th><td>${escapeReceiptHtml(bankBits.join(" · "))}</td></tr>`
           : ""
       }
-    </div>
-
-    <div class="sec">ผู้จ่าย</div>
-    <div class="grid">
-      <div class="k">ชื่อผู้จ่าย</div>
-      <div class="v">${escapeReceiptHtml(payer.payerName)}</div>
-      ${
+      <tr><th>ผู้จ่ายเงิน</th><td>${escapeReceiptHtml(payer.payerName)}${
         payer.payerTitle
-          ? `<div class="k">ตำแหน่ง / อื่นๆ</div><div class="v normal">${escapeReceiptHtml(payer.payerTitle)}</div>`
+          ? ` · ${escapeReceiptHtml(payer.payerTitle)}`
           : ""
-      }
-    </div>
+      }</td></tr>
+      <tr><th>วัน–เวลาโอน</th><td>${escapeReceiptHtml(paidLabel)}</td></tr>
+    </table>
 
-    <div class="sec">รอบจ่าย</div>
-    <div class="grid">
-      <div class="k">งวด</div>
-      <div class="v">${escapeReceiptHtml(periodLabel)}</div>
-      <div class="k">วัน–เวลาโอน</div>
-      <div class="v">${escapeReceiptHtml(paidLabel)}</div>
-      ${
-        receiptNote
-          ? `<div class="k">หมายเหตุ</div><div class="v normal">${escapeReceiptHtml(receiptNote)}</div>`
-          : ""
-      }
-    </div>
-
-    <div class="sec">รายการที่จ่าย</div>
-    <table class="pay">
+    <div class="sec">๒. รายการที่จ่าย</div>
+    <table class="items">
       <thead>
-        <tr><th>รายการ</th><th class="num">ยอดโอน (บาท)</th></tr>
+        <tr>
+          <th style="width:3rem">ลำดับ</th>
+          <th>รายการ</th>
+          <th class="num">จำนวนเงิน (บาท)</th>
+        </tr>
       </thead>
       <tbody>
         ${lineRows}
       </tbody>
     </table>
-    ${
-      receipt.advanceDeductTotal > 0
-        ? `<div class="subtotal"><span>หักคืนเบิกล่วงหน้า <span class="muted tiny">(ได้ไปก่อนแล้ว)</span></span><span>−฿${money(receipt.advanceDeductTotal)}</span></div>`
-        : ""
-    }
-    <div class="total">
-      <span>รวมยอดโอนเข้าบัญชี</span>
-      <span>฿${money(receipt.transferTotal)}</span>
+    <table class="sum">
+      <tr>
+        <td class="lbl">รวมก่อนหักคืนเบิก</td>
+        <td class="num">${money(grossTotal)}</td>
+      </tr>
+      ${
+        receipt.advanceDeductTotal > 0
+          ? `<tr>
+        <td class="lbl">หัก คืนเบิกล่วงหน้า <span class="muted tiny">(ได้จ่ายให้แล้วมาก่อน)</span></td>
+        <td class="num">(${money(receipt.advanceDeductTotal)})</td>
+      </tr>`
+          : ""
+      }
+      <tr class="grand">
+        <td class="lbl">จำนวนเงินสุทธิที่โอนเข้าบัญชี</td>
+        <td class="num">${money(receipt.transferTotal)}</td>
+      </tr>
+    </table>
+    <div class="words">
+      <span class="k">จำนวนเงินสุทธิ (ตัวอักษร)</span>
+      ${escapeReceiptHtml(thaiBahtText(receipt.transferTotal))}
     </div>
 
-    <div class="signs">
-      <div class="sign">
-        <div class="line"></div>
-        <div class="role">ผู้จ่าย</div>
-        <div class="hint">${escapeReceiptHtml(payer.payerName)}</div>
-        ${
-          payer.payerTitle
-            ? `<div class="hint">${escapeReceiptHtml(payer.payerTitle)}</div>`
-            : ""
-        }
-      </div>
-      <div class="sign">
-        <div class="line"></div>
-        <div class="role">ผู้รับเงิน</div>
-        <div class="hint">${escapeReceiptHtml(recipient)}</div>
-      </div>
-    </div>
+    <div class="sec">๓. การรับรอง</div>
+    <p class="cert">
+      ข้าพเจ้าในฐานะผู้จ่ายเงินขอรับรองว่าข้อความและจำนวนเงินข้างต้นถูกต้อง
+      และได้จ่ายให้แก่ผู้รับเงินจริงตามรายการนี้แล้ว
+      ผู้รับเงินลงลายมือชื่อรับรองการได้รับเงินด้านล่าง
+    </p>
+    ${formalSignsHtml({ payer, recipient, formalDate })}
 
     <div class="foot">
-      <div>${escapeReceiptHtml(slipNote)}</div>
-      <div>ออกจากระบบจ่าย TellTea · อ้างอิง ${escapeReceiptHtml(receipt.key)}</div>
+      <div>หมายเหตุ: เอกสารนี้เป็นหลักฐานการจ่ายค่าจ้าง/เงินเดือนภายในกิจการ — ไม่ใช่หนังสือรับรองการหักภาษี ณ ที่จ่าย (แบบ ๕๐ ทวิ) และไม่ใช่ใบเสร็จรับเงิน</div>
+      <div>${escapeReceiptHtml(slipNote)} · อ้างอิง ${escapeReceiptHtml(receipt.key)}</div>
     </div>
   </div>`;
 }
@@ -980,7 +1107,7 @@ export function buildPayrollPaymentDocHtml(input: {
   autoPrint?: boolean;
 }): string {
   const periodLabel = formatPayrollPeriodLabel(input.receipt.periodMonth);
-  const title = `ใบสรุปการจ่าย · ${legalFullName(input.payee)} · ${periodLabel}`;
+  const title = `หลักฐานการจ่ายค่าจ้าง · ${legalFullName(input.payee)} · ${periodLabel}`;
   return wrapPaymentDocHtml({
     title,
     bodyInner: buildPaymentDocSheetHtml(input),
@@ -996,11 +1123,11 @@ export function monthPaymentDocFilename(
     (payee ? legalFullName(payee) : summary.employeeName)
       .replace(/\s+/g, "_")
       .replace(/[^\w\u0E00-\u0E7F_-]+/g, "") || "staff";
-  return `ใบสรุปจ่าย_${summary.periodMonth}_${name}.html`;
+  return `หลักฐานจ่าย_${summary.periodMonth}_${name}.html`;
 }
 
 export function monthPaymentDocsBundleFilename(periodMonth: string): string {
-  return `ใบสรุปจ่าย_${periodMonth || "month"}_ทั้งร้าน.html`;
+  return `หลักฐานจ่าย_${periodMonth || "month"}_ทั้งร้าน.html`;
 }
 
 export function buildMonthPaymentDocHtml(input: {
@@ -1011,7 +1138,7 @@ export function buildMonthPaymentDocHtml(input: {
   autoPrint?: boolean;
 }): string {
   const periodLabel = formatPayrollPeriodLabel(input.summary.periodMonth);
-  const title = `ใบสรุปการจ่าย · ${legalFullName(input.payee)} · ${periodLabel}`;
+  const title = `หลักฐานการจ่ายค่าจ้าง · ${legalFullName(input.payee)} · ${periodLabel}`;
   return wrapPaymentDocHtml({
     title,
     bodyInner: buildMonthPaymentDocSheetHtml(input),
@@ -1019,7 +1146,7 @@ export function buildMonthPaymentDocHtml(input: {
   });
 }
 
-/** รวมใบสรุปรายเดือนทุกคน (กลางเดือน + สิ้นเดือน + โบนัส) */
+/** รวมเอกสารรายเดือนทุกคน (กลางเดือน + สิ้นเดือน + โบนัส) · A4 หลายหน้า */
 export function buildMonthPaymentDocsBundleHtml(input: {
   periodMonth: string;
   summaries: PayrollMonthPaymentSummary[];
@@ -1029,6 +1156,7 @@ export function buildMonthPaymentDocsBundleHtml(input: {
   autoPrint?: boolean;
 }): string {
   const periodLabel = formatPayrollPeriodLabel(input.periodMonth);
+  const periodFull = formatPayrollPeriodLabelFull(input.periodMonth);
   const sheets = input.summaries
     .map((summary) =>
       buildMonthPaymentDocSheetHtml({
@@ -1040,12 +1168,12 @@ export function buildMonthPaymentDocsBundleHtml(input: {
     )
     .join("\n");
   const cover = `<div class="bundle-cover">
-    <h1 class="brand" style="font-size:1.35rem;margin:0">${escapeReceiptHtml(input.shop.shopName)}</h1>
-    <p style="margin:0.35rem 0 0;font-weight:700">ชุดใบสรุปหลักฐานจ่าย · ${escapeReceiptHtml(periodLabel)}</p>
-    <p class="muted tiny" style="margin:0.25rem 0 0">ทั้งหมด ${input.summaries.length} คน · รวมกลางเดือน · สิ้นเดือน · โบนัส · พิมพ์/บันทึก PDF ได้ทั้งชุด</p>
+    <p class="org">${escapeReceiptHtml(input.shop.shopName)}</p>
+    <p class="title">ชุดหลักฐานการจ่ายค่าจ้างและเงินเดือน</p>
+    <p class="meta">งวด ${escapeReceiptHtml(periodFull)} · ทั้งหมด ${input.summaries.length} คน · พิมพ์/บันทึก PDF แบบ A4 ได้ทั้งชุด</p>
   </div>`;
   return wrapPaymentDocHtml({
-    title: `ใบสรุปจ่ายทั้งร้าน · ${periodLabel}`,
+    title: `หลักฐานจ่ายทั้งร้าน · ${periodLabel}`,
     bodyInner: `${cover}\n${sheets}`,
     multiPage: true,
     autoPrint: input.autoPrint,
