@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   buildStaffReadinessRows,
   rowStatusLabel,
@@ -10,6 +11,12 @@ import type { Employee } from "@/lib/employees";
 import type { PermissionLevel, StaffMember, StaffPersonalData } from "@/lib/types";
 import { staffLevelBadgeLabel } from "@/lib/permission-levels";
 import { StaffPersonalInfoButton } from "@/components/StaffPersonalInfoModal";
+import {
+  STAFF_PRESENCE_AGE_TICK_MS,
+  STAFF_PRESENCE_ONLINE_MS,
+  formatPresenceAge,
+  formatPresenceLastLogin,
+} from "@/lib/staff-presence";
 
 function actionLabel(row: StaffReadinessRow): string {
   if (row.kind === "roster-only") return "สร้างบัญชี";
@@ -45,6 +52,28 @@ function StatusPill({ row }: { row: StaffReadinessRow }) {
   );
 }
 
+/** คอลัมน์เข้าใช้ล่าสุด — กำลังใช้ / อายุเช่น 5น */
+function LastSeenCell({ lastSeenAt, now }: { lastSeenAt?: number; now: number }) {
+  if (!lastSeenAt || lastSeenAt <= 0) {
+    return (
+      <td className="staff-ready-col-seen muted" title="ยังไม่เคยเข้าใช้หลังร้าน">
+        —
+      </td>
+    );
+  }
+  const online = now - lastSeenAt <= STAFF_PRESENCE_ONLINE_MS;
+  const age = formatPresenceAge(lastSeenAt, now);
+  const when = formatPresenceLastLogin(lastSeenAt, now);
+  return (
+    <td
+      className={`staff-ready-col-seen${online ? " is-online" : ""}`}
+      title={online ? `กำลังใช้งาน · ${when}` : `ใช้งานล่าสุด ${when}`}
+    >
+      <span className="staff-ready-seen">{online ? "ใช้" : age}</span>
+    </td>
+  );
+}
+
 export function StaffReadinessTable({
   members,
   employees,
@@ -65,6 +94,14 @@ export function StaffReadinessTable({
 }) {
   const rows = buildStaffReadinessRows(members, employees, personalByStaffId);
   const summary = summarizeStaffReadiness(rows);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const tick = () => setNow(Date.now());
+    tick();
+    const id = window.setInterval(tick, STAFF_PRESENCE_AGE_TICK_MS);
+    return () => window.clearInterval(id);
+  }, []);
 
   if (!rows.length) {
     return (
@@ -95,6 +132,7 @@ export function StaffReadinessTable({
               <th className="staff-ready-col-check-h">ตัว</th>
               <th className="staff-ready-col-check-h">PDPA</th>
               <th className="staff-ready-col-check-h">ร้าน</th>
+              <th className="staff-ready-col-seen-h">ใช้ล่าสุด</th>
               <th className="staff-ready-col-status">สรุป</th>
               {onEditRow ? <th className="staff-ready-col-action">จัดการ</th> : null}
             </tr>
@@ -151,6 +189,7 @@ export function StaffReadinessTable({
                   />
                   <CheckCell ok={row.checks.pdpa} title={row.checks.pdpa ? "ยินยอมแล้ว" : "ยังไม่ยินยอม PDPA"} />
                   <CheckCell ok={row.checks.roster} title={row.checks.roster ? "เชื่อมชื่อร้านแล้ว" : "ยังไม่เชื่อมชื่อร้าน"} />
+                  <LastSeenCell lastSeenAt={row.lastSeenAt} now={now} />
                   <td className="staff-ready-col-status">
                     <StatusPill row={row} />
                   </td>
@@ -179,7 +218,8 @@ export function StaffReadinessTable({
       </div>
 
       <p className="muted staff-readiness-legend">
-        ลำดับ = แม่แบบสิทธิ์ (* ปรับเอง) · เข้า/ตัว/PDPA/ร้าน = ความพร้อมบัญชี
+        ลำดับ = แม่แบบสิทธิ์ (* ปรับเอง) · เข้า/ตัว/PDPA/ร้าน = ความพร้อมบัญชี ·
+        ใช้ล่าสุด = เข้าหลังร้าน (ใช้ = กำลังใช้ ≤5น)
         {!ownerView ? " · บัตรเห็นได้เฉพาะเจ้าของ" : ""}
       </p>
     </section>

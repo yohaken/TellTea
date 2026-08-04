@@ -19,6 +19,8 @@ export type StaffReadinessRow = {
   employeeId?: string;
   rosterName: string;
   accountLabel: string;
+  /** เวลาเข้าใช้หลังร้านล่าสุด (ms) — ไม่มีบัญชี = undefined */
+  lastSeenAt?: number;
   checks: StaffReadinessChecks;
   missing: string[];
   status: "complete" | "partial" | "blocked" | "no-account" | "awaiting-account";
@@ -90,6 +92,10 @@ export function buildStaffReadinessRows(
     const emp = employees.find((e) => e.linkedStaffId === member.id || e.id === member.employeeId);
     if (emp) linkedEmpIds.add(emp.id);
 
+    const lastSeenAt =
+      typeof member.lastSeenAt === "number" && member.lastSeenAt > 0
+        ? member.lastSeenAt
+        : undefined;
     rows.push({
       id: member.id,
       kind: "staff",
@@ -97,6 +103,7 @@ export function buildStaffReadinessRows(
       employeeId: member.employeeId || emp?.id,
       rosterName: rosterNameForStaff(member, employees),
       accountLabel: staffAccountLabel(member),
+      lastSeenAt,
       checks,
       missing: buildMissing(checks),
       status: resolveStatus(checks, "staff"),
