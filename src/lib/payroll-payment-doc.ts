@@ -24,11 +24,29 @@ export type PayrollPaymentDocShop = {
 };
 
 export type PayrollPaymentDocPayee = {
+  /** ชื่อแสดงสำรอง (ชื่อในร้าน) */
   employeeName: string;
+  /** ชื่อจริงตามบัตร */
+  legalFirstName?: string;
+  /** นามสกุลตามบัตร */
+  legalLastName?: string;
   payBank?: string;
   payAccountNo?: string;
   payAccountName?: string;
 };
+
+export type PayrollPaymentDocPayer = {
+  payerName: string;
+  payerTitle: string;
+};
+
+export function legalFullName(payee: PayrollPaymentDocPayee): string {
+  const full = [payee.legalFirstName, payee.legalLastName]
+    .map((s) => (s || "").trim())
+    .filter(Boolean)
+    .join(" ");
+  return full || (payee.employeeName || "").trim() || "—";
+}
 
 export function payeeFromEmployee(
   emp:
@@ -41,14 +59,157 @@ export function payeeFromEmployee(
     | null
     | undefined,
   fallbackName?: string,
+  legal?: { legalFirstName?: string; legalLastName?: string } | null,
 ): PayrollPaymentDocPayee {
   return {
     employeeName:
       (emp?.name || "").trim() || (fallbackName || "").trim() || "—",
+    legalFirstName: (legal?.legalFirstName || "").trim() || undefined,
+    legalLastName: (legal?.legalLastName || "").trim() || undefined,
     payBank: (emp?.payBank || "").trim() || undefined,
     payAccountNo: (emp?.payAccountNo || "").trim() || undefined,
     payAccountName: (emp?.payAccountName || "").trim() || undefined,
   };
+}
+
+/** สรุปจ่ายทั้งเดือนต่อคน — กลางเดือน + สิ้นเดือน + โบนัส + รวม */
+export type PayrollMonthPaymentSummary = {
+  employeeId: string;
+  employeeName: string;
+  periodMonth: string;
+  /** เงินเดือนเต็มต่อเดือน (จาก snapshot) */
+  salaryFull: number;
+  midAmount: number;
+  midAdvance: number;
+  endAmount: number;
+  endAdvance: number;
+  specialAmount: number;
+  specialAdvance: number;
+  bonusAmount: number;
+  bonusAdvance: number;
+  transferTotal: number;
+  advanceDeductTotal: number;
+  paidAt: number;
+  slipUrls: string[];
+  items: PayrollItem[];
+};
+
+function uniqUrls(urls: string[]): string[] {
+  const out: string[] = [];
+  for (const u of urls) {
+    const t = (u || "").trim();
+    if (t && !out.includes(t)) out.push(t);
+  }
+  return out;
+}
+
+export function buildMonthPaymentSummary(
+  items: PayrollItem[],
+  employeeId: string,
+  periodMonth: string,
+  opts?: { monthlySalaryHint?: number },
+): PayrollMonthPaymentSummary | null {
+  const empId = (employeeId || "").trim();
+  const month = (periodMonth || "").trim();
+  if (!empId || !month) return null;
+  const paid = items.filter(
+    (i) =>
+      i.employeeId === empId &&
+      i.periodMonth === month &&
+      i.status === "paid",
+  );
+  if (!paid.length) return null;
+
+  let salaryFull = 0;
+  let midAmount = 0;
+  let midAdvance = 0;
+  let endAmount = 0;
+  let endAdvance = 0;
+  let specialAmount = 0;
+  let specialAdvance = 0;
+  let bonusAmount = 0;
+  let bonusAdvance = 0;
+  for (const row of paid) {
+    if (row.kind === "salary_mid" || row.kind === "salary_month_end") {
+      salaryFull = Math.max(salaryFull, round2(row.salaryBase || 0));
+    }
+    if (row.kind === "salary_mid") {
+      midAmount = round2(midAmount + row.amount);
+      midAdvance = round2(midAdvance + row.advanceDeduct);
+    } else if (row.kind === "salary_month_end") {
+      endAmount = round2(endAmount + row.amount);
+      endAdvance = round2(endAdvance + row.advanceDeduct);
+    } else if (row.kind === "salary_special") {
+      specialAmount = round2(specialAmount + row.amount);
+      specialAdvance = round2(specialAdvance + row.advanceDeduct);
+    } else if (row.kind === "bonus") {
+      bonusAmount = round2(bonusAmount + row.amount);
+      bonusAdvance = round2(bonusAdvance + row.advanceDeduct);
+    }
+  }
+  if (!(salaryFull > 0)) {
+    const hint = round2(Number(opts?.monthlySalaryHint) || 0);
+    if (hint > 0) salaryFull = hint;
+  }
+  const transferTotal = round2(
+    midAmount + endAmount + specialAmount + bonusAmount,
+  );
+  const advanceDeductTotal = round2(
+    midAdvance + endAdvance + specialAdvance + bonusAdvance,
+  );
+  return {
+    employeeId: empId,
+    employeeName: paid[0]?.employeeName || "—",
+    periodMonth: month,
+    salaryFull,
+    midAmount,
+    midAdvance,
+    endAmount,
+    endAdvance,
+    specialAmount,
+    specialAdvance,
+    bonusAmount,
+    bonusAdvance,
+    transferTotal,
+    advanceDeductTotal,
+    paidAt: Math.max(...paid.map((i) => i.paidAt || i.updatedAt || 0)),
+    slipUrls: uniqUrls(paid.flatMap((i) => i.slipUrls || [])),
+    items: [...paid].sort(
+      (a, b) => a.dueDate - b.dueDate || a.kind.localeCompare(b.kind),
+    ),
+  };
+}
+
+export function listMonthPaymentSummaries(
+  items: PayrollItem[],
+  periodMonth: string,
+  opts?: {
+    monthlySalaryByEmployeeId?: Record<string, number> | Map<string, number>;
+  },
+): PayrollMonthPaymentSummary[] {
+  const month = (periodMonth || "").trim();
+  if (!month) return [];
+  const ids = new Set(
+    items
+      .filter((i) => i.periodMonth === month && i.status === "paid")
+      .map((i) => i.employeeId),
+  );
+  const salaryMap = opts?.monthlySalaryByEmployeeId;
+  const salaryHint = (id: string) => {
+    if (!salaryMap) return undefined;
+    if (salaryMap instanceof Map) return salaryMap.get(id);
+    return salaryMap[id];
+  };
+  const out: PayrollMonthPaymentSummary[] = [];
+  for (const id of ids) {
+    const row = buildMonthPaymentSummary(items, id, month, {
+      monthlySalaryHint: salaryHint(id),
+    });
+    if (row) out.push(row);
+  }
+  return out.sort((a, b) =>
+    a.employeeName.localeCompare(b.employeeName, "th"),
+  );
 }
 
 function round2(n: number) {
@@ -409,14 +570,217 @@ function paymentDocCss(multiPage: boolean): string {
   `;
 }
 
+function buildMonthPaymentDocSheetHtml(input: {
+  summary: PayrollMonthPaymentSummary;
+  shop: PayrollPaymentDocShop;
+  payee: PayrollPaymentDocPayee;
+  payer: PayrollPaymentDocPayer;
+}): string {
+  const { summary, shop, payee, payer } = input;
+  const periodLabel = formatPayrollPeriodLabel(summary.periodMonth);
+  const paidLabel = formatPayrollPaidAtLabel(summary.paidAt);
+  const recipient = legalFullName(payee);
+  const bankBits = [
+    payee.payBank,
+    payee.payAccountNo,
+    payee.payAccountName ? `ชื่อบัญชี ${payee.payAccountName}` : "",
+  ].filter(Boolean);
+
+  const rows: string[] = [];
+  if (summary.salaryFull > 0) {
+    rows.push(`<tr>
+      <td><div class="line-kind">เงินเดือนเต็ม (ต่อเดือน)</div></td>
+      <td class="num">฿${money(summary.salaryFull)}</td>
+    </tr>`);
+  }
+  if (summary.midAmount > 0 || summary.midAdvance > 0) {
+    rows.push(`<tr>
+      <td>
+        <div class="line-kind">กลางเดือน</div>
+        ${
+          summary.midAdvance > 0
+            ? `<div class="muted tiny">หักเบิก ฿${money(summary.midAdvance)}</div>`
+            : ""
+        }
+      </td>
+      <td class="num">฿${money(summary.midAmount)}</td>
+    </tr>`);
+  }
+  if (summary.endAmount > 0 || summary.endAdvance > 0) {
+    rows.push(`<tr>
+      <td>
+        <div class="line-kind">สิ้นเดือน / เต็มเดือน</div>
+        ${
+          summary.endAdvance > 0
+            ? `<div class="muted tiny">หักเบิก ฿${money(summary.endAdvance)}</div>`
+            : ""
+        }
+      </td>
+      <td class="num">฿${money(summary.endAmount)}</td>
+    </tr>`);
+  }
+  if (summary.specialAmount > 0 || summary.specialAdvance > 0) {
+    rows.push(`<tr>
+      <td>
+        <div class="line-kind">จ่ายแยก</div>
+        ${
+          summary.specialAdvance > 0
+            ? `<div class="muted tiny">หักเบิก ฿${money(summary.specialAdvance)}</div>`
+            : ""
+        }
+      </td>
+      <td class="num">฿${money(summary.specialAmount)}</td>
+    </tr>`);
+  }
+  if (summary.bonusAmount > 0 || summary.bonusAdvance > 0) {
+    rows.push(`<tr>
+      <td>
+        <div class="line-kind">โบนัส</div>
+        ${
+          summary.bonusAdvance > 0
+            ? `<div class="muted tiny">หักเบิก ฿${money(summary.bonusAdvance)}</div>`
+            : ""
+        }
+      </td>
+      <td class="num">฿${money(summary.bonusAmount)}</td>
+    </tr>`);
+  }
+
+  const slipNote = summary.slipUrls.length
+    ? `มีหลักฐานสลิปโอนในระบบ ${summary.slipUrls.length} รูป (ดูได้ที่แท็บหลักฐานจ่ายในแอป)`
+    : "ยังไม่มีสลิปโอนแนบในระบบ";
+
+  return `<div class="sheet">
+    <header class="head">
+      <div class="brand-block">
+        <h1 class="brand">${escapeReceiptHtml(shop.shopName)}</h1>
+        ${
+          shop.shopNameTh
+            ? `<p class="brand-th">${escapeReceiptHtml(shop.shopNameTh)}</p>`
+            : ""
+        }
+        <div class="shop-meta">
+          ${
+            shop.shopAddress
+              ? `<div>${escapeReceiptHtml(shop.shopAddress)}</div>`
+              : ""
+          }
+          ${
+            shop.shopPhone
+              ? `<div>โทร ${escapeReceiptHtml(shop.shopPhone)}</div>`
+              : ""
+          }
+          ${
+            shop.taxId
+              ? `<div>เลขประจำตัวผู้เสียภาษี ${escapeReceiptHtml(shop.taxId)}</div>`
+              : ""
+          }
+        </div>
+      </div>
+      <div class="doc-stamp">
+        <p class="label">เอกสารจ่าย</p>
+        <p class="name">ใบสรุปหลักฐานการจ่าย</p>
+        <p class="sub">งวด ${escapeReceiptHtml(periodLabel)}</p>
+        <span class="badge">กลางเดือน + สิ้นเดือน + โบนัส</span>
+      </div>
+    </header>
+
+    <p class="notice">เอกสารภายในกิจการ สำหรับเก็บเป็นหลักฐานการจ่ายเงินเดือน/โบนัส — ไม่ใช่หนังสือรับรองหักภาษี ณ ที่จ่าย (50 ทวิ)</p>
+
+    <div class="sec">ผู้รับเงิน</div>
+    <div class="grid">
+      <div class="k">ชื่อจริง–นามสกุล</div>
+      <div class="v">${escapeReceiptHtml(recipient)}</div>
+      ${
+        payee.employeeName &&
+        legalFullName(payee) !== payee.employeeName.trim()
+          ? `<div class="k">ชื่อในร้าน</div><div class="v normal">${escapeReceiptHtml(payee.employeeName)}</div>`
+          : ""
+      }
+      ${
+        bankBits.length
+          ? `<div class="k">บัญชีรับโอน</div><div class="v normal">${escapeReceiptHtml(bankBits.join(" · "))}</div>`
+          : ""
+      }
+    </div>
+
+    <div class="sec">ผู้จ่าย</div>
+    <div class="grid">
+      <div class="k">ชื่อผู้จ่าย</div>
+      <div class="v">${escapeReceiptHtml(payer.payerName)}</div>
+      ${
+        payer.payerTitle
+          ? `<div class="k">ตำแหน่ง / อื่นๆ</div><div class="v normal">${escapeReceiptHtml(payer.payerTitle)}</div>`
+          : ""
+      }
+    </div>
+
+    <div class="sec">รอบจ่าย</div>
+    <div class="grid">
+      <div class="k">งวด</div>
+      <div class="v">${escapeReceiptHtml(periodLabel)}</div>
+      <div class="k">วัน–เวลาโอนล่าสุด</div>
+      <div class="v">${escapeReceiptHtml(paidLabel)}</div>
+    </div>
+
+    <div class="sec">รายการและยอดรวม</div>
+    <table class="pay">
+      <thead>
+        <tr><th>รายการ</th><th class="num">ยอด (บาท)</th></tr>
+      </thead>
+      <tbody>
+        ${rows.join("")}
+      </tbody>
+    </table>
+    ${
+      summary.advanceDeductTotal > 0
+        ? `<div class="subtotal"><span>หักเบิกรวมทั้งเดือน</span><span>฿${money(summary.advanceDeductTotal)}</span></div>`
+        : ""
+    }
+    <div class="total">
+      <span>รวมยอดโอนทั้งหมด</span>
+      <span>฿${money(summary.transferTotal)}</span>
+    </div>
+
+    <div class="signs">
+      <div class="sign">
+        <div class="line"></div>
+        <div class="role">ผู้จ่าย</div>
+        <div class="hint">${escapeReceiptHtml(payer.payerName)}</div>
+        ${
+          payer.payerTitle
+            ? `<div class="hint">${escapeReceiptHtml(payer.payerTitle)}</div>`
+            : ""
+        }
+      </div>
+      <div class="sign">
+        <div class="line"></div>
+        <div class="role">ผู้รับเงิน</div>
+        <div class="hint">${escapeReceiptHtml(recipient)}</div>
+      </div>
+    </div>
+
+    <div class="foot">
+      <div>${escapeReceiptHtml(slipNote)}</div>
+      <div>ออกจากระบบจ่าย TellTea · ${escapeReceiptHtml(summary.employeeId)} · ${escapeReceiptHtml(summary.periodMonth)}</div>
+    </div>
+  </div>`;
+}
+
 function buildPaymentDocSheetHtml(input: {
   receipt: StaffTransferReceipt;
   shop: PayrollPaymentDocShop;
   payee: PayrollPaymentDocPayee;
+  payer?: PayrollPaymentDocPayer;
 }): string {
   const { receipt, shop, payee } = input;
+  const payer = input.payer || {
+    payerName: "พีระพงษ์ โยหาเคน",
+    payerTitle: "เจ้าของกิจการ",
+  };
   const periodLabel = formatPayrollPeriodLabel(receipt.periodMonth);
   const paidLabel = formatPayrollPaidAtLabel(receipt.paidAt);
+  const recipient = legalFullName(payee);
   const bankBits = [
     payee.payBank,
     payee.payAccountNo,
@@ -484,11 +848,28 @@ function buildPaymentDocSheetHtml(input: {
 
     <div class="sec">ผู้รับเงิน</div>
     <div class="grid">
-      <div class="k">ชื่อพนักงาน</div>
-      <div class="v">${escapeReceiptHtml(payee.employeeName)}</div>
+      <div class="k">ชื่อจริง–นามสกุล</div>
+      <div class="v">${escapeReceiptHtml(recipient)}</div>
+      ${
+        payee.employeeName &&
+        legalFullName(payee) !== payee.employeeName.trim()
+          ? `<div class="k">ชื่อในร้าน</div><div class="v normal">${escapeReceiptHtml(payee.employeeName)}</div>`
+          : ""
+      }
       ${
         bankBits.length
           ? `<div class="k">บัญชีรับโอน</div><div class="v normal">${escapeReceiptHtml(bankBits.join(" · "))}</div>`
+          : ""
+      }
+    </div>
+
+    <div class="sec">ผู้จ่าย</div>
+    <div class="grid">
+      <div class="k">ชื่อผู้จ่าย</div>
+      <div class="v">${escapeReceiptHtml(payer.payerName)}</div>
+      ${
+        payer.payerTitle
+          ? `<div class="k">ตำแหน่ง / อื่นๆ</div><div class="v normal">${escapeReceiptHtml(payer.payerTitle)}</div>`
           : ""
       }
     </div>
@@ -525,16 +906,21 @@ function buildPaymentDocSheetHtml(input: {
       <span>฿${money(receipt.transferTotal)}</span>
     </div>
 
-    <div class="signs" aria-hidden="true">
+    <div class="signs">
       <div class="sign">
         <div class="line"></div>
-        <div class="role">ผู้จ่าย / ร้าน</div>
-        <div class="hint">ลงชื่อ · วันเดือนปี</div>
+        <div class="role">ผู้จ่าย</div>
+        <div class="hint">${escapeReceiptHtml(payer.payerName)}</div>
+        ${
+          payer.payerTitle
+            ? `<div class="hint">${escapeReceiptHtml(payer.payerTitle)}</div>`
+            : ""
+        }
       </div>
       <div class="sign">
         <div class="line"></div>
         <div class="role">ผู้รับเงิน</div>
-        <div class="hint">${escapeReceiptHtml(payee.employeeName)}</div>
+        <div class="hint">${escapeReceiptHtml(recipient)}</div>
       </div>
     </div>
 
@@ -580,11 +966,12 @@ export function buildPayrollPaymentDocHtml(input: {
   receipt: StaffTransferReceipt;
   shop: PayrollPaymentDocShop;
   payee: PayrollPaymentDocPayee;
+  payer?: PayrollPaymentDocPayer;
   /** ใส่สคริปต์สั่งพิมพ์อัตโนมัติเมื่อเปิดหน้าต่างพิมพ์ */
   autoPrint?: boolean;
 }): string {
   const periodLabel = formatPayrollPeriodLabel(input.receipt.periodMonth);
-  const title = `ใบสรุปการจ่าย · ${input.payee.employeeName} · ${periodLabel}`;
+  const title = `ใบสรุปการจ่าย · ${legalFullName(input.payee)} · ${periodLabel}`;
   return wrapPaymentDocHtml({
     title,
     bodyInner: buildPaymentDocSheetHtml(input),
@@ -592,14 +979,124 @@ export function buildPayrollPaymentDocHtml(input: {
   });
 }
 
-/** รอบโอนที่เป็นหลักฐานท้ายเดือน (สิ้นเดือน / โบนัส) — ไม่รวมกลางเดือนอย่างเดียว */
-export function isMonthEndPaymentReceipt(receipt: StaffTransferReceipt): boolean {
-  return receipt.lines.some(
-    (l) => l.kind === "salary_month_end" || l.kind === "bonus",
+export function monthPaymentDocFilename(
+  summary: PayrollMonthPaymentSummary,
+  payee?: PayrollPaymentDocPayee,
+): string {
+  const name =
+    (payee ? legalFullName(payee) : summary.employeeName)
+      .replace(/\s+/g, "_")
+      .replace(/[^\w\u0E00-\u0E7F_-]+/g, "") || "staff";
+  return `ใบสรุปจ่าย_${summary.periodMonth}_${name}.html`;
+}
+
+export function monthPaymentDocsBundleFilename(periodMonth: string): string {
+  return `ใบสรุปจ่าย_${periodMonth || "month"}_ทั้งร้าน.html`;
+}
+
+export function buildMonthPaymentDocHtml(input: {
+  summary: PayrollMonthPaymentSummary;
+  shop: PayrollPaymentDocShop;
+  payee: PayrollPaymentDocPayee;
+  payer: PayrollPaymentDocPayer;
+  autoPrint?: boolean;
+}): string {
+  const periodLabel = formatPayrollPeriodLabel(input.summary.periodMonth);
+  const title = `ใบสรุปการจ่าย · ${legalFullName(input.payee)} · ${periodLabel}`;
+  return wrapPaymentDocHtml({
+    title,
+    bodyInner: buildMonthPaymentDocSheetHtml(input),
+    autoPrint: input.autoPrint,
+  });
+}
+
+/** รวมใบสรุปรายเดือนทุกคน (กลางเดือน + สิ้นเดือน + โบนัส) */
+export function buildMonthPaymentDocsBundleHtml(input: {
+  periodMonth: string;
+  summaries: PayrollMonthPaymentSummary[];
+  shop: PayrollPaymentDocShop;
+  payer: PayrollPaymentDocPayer;
+  payeeFor: (summary: PayrollMonthPaymentSummary) => PayrollPaymentDocPayee;
+  autoPrint?: boolean;
+}): string {
+  const periodLabel = formatPayrollPeriodLabel(input.periodMonth);
+  const sheets = input.summaries
+    .map((summary) =>
+      buildMonthPaymentDocSheetHtml({
+        summary,
+        shop: input.shop,
+        payee: input.payeeFor(summary),
+        payer: input.payer,
+      }),
+    )
+    .join("\n");
+  const cover = `<div class="bundle-cover">
+    <h1 class="brand" style="font-size:1.35rem;margin:0">${escapeReceiptHtml(input.shop.shopName)}</h1>
+    <p style="margin:0.35rem 0 0;font-weight:700">ชุดใบสรุปหลักฐานจ่าย · ${escapeReceiptHtml(periodLabel)}</p>
+    <p class="muted tiny" style="margin:0.25rem 0 0">ทั้งหมด ${input.summaries.length} คน · รวมกลางเดือน · สิ้นเดือน · โบนัส · พิมพ์/บันทึก PDF ได้ทั้งชุด</p>
+  </div>`;
+  return wrapPaymentDocHtml({
+    title: `ใบสรุปจ่ายทั้งร้าน · ${periodLabel}`,
+    bodyInner: `${cover}\n${sheets}`,
+    multiPage: true,
+    autoPrint: input.autoPrint,
+  });
+}
+
+export function openMonthPaymentDoc(input: {
+  summary: PayrollMonthPaymentSummary;
+  shop: PayrollPaymentDocShop;
+  payee: PayrollPaymentDocPayee;
+  payer: PayrollPaymentDocPayer;
+}): boolean {
+  const html = buildMonthPaymentDocHtml({ ...input, autoPrint: true });
+  return openPayrollPaymentDocPrint(html);
+}
+
+export function downloadMonthPaymentDoc(input: {
+  summary: PayrollMonthPaymentSummary;
+  shop: PayrollPaymentDocShop;
+  payee: PayrollPaymentDocPayee;
+  payer: PayrollPaymentDocPayer;
+}): boolean {
+  const html = buildMonthPaymentDocHtml({ ...input, autoPrint: false });
+  return downloadPayrollPaymentDocHtml(
+    html,
+    monthPaymentDocFilename(input.summary, input.payee),
   );
 }
 
-/** ใบสรุปท้ายเดือนทั้งร้านสำหรับงวดหนึ่ง — จากรายการที่จ่ายแล้ว */
+export function openMonthPaymentDocsBundle(input: {
+  periodMonth: string;
+  summaries: PayrollMonthPaymentSummary[];
+  shop: PayrollPaymentDocShop;
+  payer: PayrollPaymentDocPayer;
+  payeeFor: (summary: PayrollMonthPaymentSummary) => PayrollPaymentDocPayee;
+}): boolean {
+  if (!input.summaries.length) return false;
+  const html = buildMonthPaymentDocsBundleHtml({ ...input, autoPrint: true });
+  return openPayrollPaymentDocPrint(html);
+}
+
+export function downloadMonthPaymentDocsBundle(input: {
+  periodMonth: string;
+  summaries: PayrollMonthPaymentSummary[];
+  shop: PayrollPaymentDocShop;
+  payer: PayrollPaymentDocPayer;
+  payeeFor: (summary: PayrollMonthPaymentSummary) => PayrollPaymentDocPayee;
+}): boolean {
+  if (!input.summaries.length) return false;
+  const html = buildMonthPaymentDocsBundleHtml({
+    ...input,
+    autoPrint: false,
+  });
+  return downloadPayrollPaymentDocHtml(
+    html,
+    monthPaymentDocsBundleFilename(input.periodMonth),
+  );
+}
+
+/** @deprecated ใช้ listMonthPaymentSummaries */
 export function listMonthEndPaymentReceipts(
   items: PayrollItem[],
   periodMonth: string,
@@ -609,76 +1106,7 @@ export function listMonthEndPaymentReceipts(
   const paid = items.filter(
     (i) => i.periodMonth === month && i.status === "paid",
   );
-  return buildStaffTransferReceipts(paid)
-    .filter(isMonthEndPaymentReceipt)
-    .sort((a, b) => {
-      const na = a.lines[0]?.item.employeeName || "";
-      const nb = b.lines[0]?.item.employeeName || "";
-      return na.localeCompare(nb, "th") || a.paidAt - b.paidAt;
-    });
-}
-
-export function monthEndPaymentDocsBundleFilename(periodMonth: string): string {
-  return `ใบสรุปจ่าย_ท้ายเดือน_${periodMonth || "month"}_ทั้งร้าน.html`;
-}
-
-/** รวมใบสรุปท้ายเดือนทุกคนเป็นไฟล์เดียว (ขึ้นหน้าใหม่ต่อคนตอนพิมพ์) */
-export function buildMonthEndPaymentDocsBundleHtml(input: {
-  periodMonth: string;
-  receipts: StaffTransferReceipt[];
-  shop: PayrollPaymentDocShop;
-  payeeFor: (receipt: StaffTransferReceipt) => PayrollPaymentDocPayee;
-  autoPrint?: boolean;
-}): string {
-  const periodLabel = formatPayrollPeriodLabel(input.periodMonth);
-  const sheets = input.receipts
-    .map((receipt) =>
-      buildPaymentDocSheetHtml({
-        receipt,
-        shop: input.shop,
-        payee: input.payeeFor(receipt),
-      }),
-    )
-    .join("\n");
-  const cover = `<div class="bundle-cover">
-    <h1 class="brand" style="font-size:1.35rem;margin:0">${escapeReceiptHtml(input.shop.shopName)}</h1>
-    <p style="margin:0.35rem 0 0;font-weight:700">ชุดใบสรุปหลักฐานจ่าย · ท้ายเดือน ${escapeReceiptHtml(periodLabel)}</p>
-    <p class="muted tiny" style="margin:0.25rem 0 0">ทั้งหมด ${input.receipts.length} ใบ · ไม่รวมงวดกลางเดือน · พิมพ์/บันทึก PDF ได้ทั้งชุด</p>
-  </div>`;
-  return wrapPaymentDocHtml({
-    title: `ใบสรุปท้ายเดือนทั้งร้าน · ${periodLabel}`,
-    bodyInner: `${cover}\n${sheets}`,
-    multiPage: true,
-    autoPrint: input.autoPrint,
-  });
-}
-
-export function openMonthEndPaymentDocsBundle(input: {
-  periodMonth: string;
-  receipts: StaffTransferReceipt[];
-  shop: PayrollPaymentDocShop;
-  payeeFor: (receipt: StaffTransferReceipt) => PayrollPaymentDocPayee;
-}): boolean {
-  if (!input.receipts.length) return false;
-  const html = buildMonthEndPaymentDocsBundleHtml({ ...input, autoPrint: true });
-  return openPayrollPaymentDocPrint(html);
-}
-
-export function downloadMonthEndPaymentDocsBundle(input: {
-  periodMonth: string;
-  receipts: StaffTransferReceipt[];
-  shop: PayrollPaymentDocShop;
-  payeeFor: (receipt: StaffTransferReceipt) => PayrollPaymentDocPayee;
-}): boolean {
-  if (!input.receipts.length) return false;
-  const html = buildMonthEndPaymentDocsBundleHtml({
-    ...input,
-    autoPrint: false,
-  });
-  return downloadPayrollPaymentDocHtml(
-    html,
-    monthEndPaymentDocsBundleFilename(input.periodMonth),
-  );
+  return buildStaffTransferReceipts(paid);
 }
 
 export function openPayrollPaymentDocPrint(html: string): boolean {
@@ -715,6 +1143,7 @@ export function printPayrollPaymentDoc(input: {
   receipt: StaffTransferReceipt;
   shop: PayrollPaymentDocShop;
   payee: PayrollPaymentDocPayee;
+  payer?: PayrollPaymentDocPayer;
 }): boolean {
   const html = buildPayrollPaymentDocHtml({ ...input, autoPrint: true });
   return openPayrollPaymentDocPrint(html);
@@ -724,6 +1153,7 @@ export function downloadPayrollPaymentDoc(input: {
   receipt: StaffTransferReceipt;
   shop: PayrollPaymentDocShop;
   payee: PayrollPaymentDocPayee;
+  payer?: PayrollPaymentDocPayer;
 }): boolean {
   const html = buildPayrollPaymentDocHtml({ ...input, autoPrint: false });
   return downloadPayrollPaymentDocHtml(

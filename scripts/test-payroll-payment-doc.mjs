@@ -11,12 +11,20 @@ const docSrc = readFileSync(
   join(root, "src/lib/payroll-payment-doc.ts"),
   "utf8",
 );
+const settingsSrc = readFileSync(
+  join(root, "src/lib/payroll-payment-doc-settings.ts"),
+  "utf8",
+);
 const payUi = readFileSync(
   join(root, "src/components/PayrollPayPanel.tsx"),
   "utf8",
 );
 const histUi = readFileSync(
   join(root, "src/components/PayrollHistoryPanel.tsx"),
+  "utf8",
+);
+const settingsUi = readFileSync(
+  join(root, "src/components/PayrollSettingsPanel.tsx"),
   "utf8",
 );
 const cardUi = readFileSync(
@@ -28,6 +36,7 @@ const modalUi = readFileSync(
   "utf8",
 );
 const versionSrc = readFileSync(join(root, "src/lib/version.ts"), "utf8");
+const rulesSrc = readFileSync(join(root, "firestore.rules"), "utf8");
 
 assert.match(docSrc, /buildPayrollPaymentDocHtml/);
 assert.match(docSrc, /buildReceiptFromJustPaid/);
@@ -40,27 +49,42 @@ assert.match(docSrc, /fonts\.googleapis\.com.*Sarabun/);
 assert.match(docSrc, /Leelawadee UI/);
 assert.match(docSrc, /ใบสรุปหลักฐานการจ่าย/);
 assert.match(docSrc, /ไม่ใช่หนังสือรับรองหักภาษี ณ ที่จ่าย/);
-assert.match(docSrc, /ผู้จ่าย \/ ร้าน/);
+assert.match(docSrc, /ชื่อจริง–นามสกุล/);
 assert.match(docSrc, /ผู้รับเงิน/);
+assert.match(docSrc, /buildMonthPaymentSummary/);
+assert.match(docSrc, /listMonthPaymentSummaries/);
+assert.match(docSrc, /buildMonthPaymentDocHtml/);
+assert.match(docSrc, /buildMonthPaymentDocsBundleHtml/);
+assert.match(docSrc, /เงินเดือนเต็ม/);
+assert.match(docSrc, /รวมยอดโอนทั้งหมด/);
+assert.match(docSrc, /legalFullName/);
+assert.match(settingsSrc, /พีระพงษ์ โยหาเคน/);
+assert.match(settingsSrc, /payrollPaymentDoc/);
+assert.match(settingsUi, /เอกสารหลักฐานจ่าย/);
+assert.match(settingsUi, /ชื่อผู้จ่าย/);
+assert.match(settingsUi, /ตำแหน่ง \/ อื่นๆ/);
 assert.match(payUi, /buildReceiptFromJustPaid/);
 assert.match(payUi, /PayrollPaymentDocModal/);
 assert.match(payUi, /เปิดใบสรุปหลักฐานแล้ว/);
-assert.match(histUi, /ใบสรุปหลักฐานจ่าย/);
-assert.match(histUi, /buildStaffTransferReceipts/);
+assert.match(payUi, /linkedStaffId/);
+assert.match(histUi, /ดาวน์โหลดใบสรุป/);
+assert.match(histUi, /buildMonthPaymentSummary/);
+assert.match(histUi, /เงินเดือนเต็ม/);
+assert.match(histUi, /listStaffPersonalMap/);
+assert.match(histUi, /getStaffPersonal/);
 assert.match(cardUi, /ดูใบสรุปจ่าย/);
 assert.match(modalUi, /พิมพ์ \/ บันทึก PDF/);
 assert.match(modalUi, /formatPayrollPeriodLabel/);
 assert.match(modalUi, /ดาวน์โหลดไฟล์/);
-assert.match(versionSrc, /APP_BUILD = 707/);
+assert.match(modalUi, /getStaffPersonal/);
+assert.match(versionSrc, /APP_BUILD = 708/);
 assert.match(payUi, /salary_mid/);
 assert.match(payUi, /แท็บหลักฐานจ่าย/);
-assert.match(docSrc, /listMonthEndPaymentReceipts/);
-assert.match(docSrc, /buildMonthEndPaymentDocsBundleHtml/);
-assert.match(docSrc, /isMonthEndPaymentReceipt/);
+assert.match(rulesSrc, /payrollPaymentDoc/);
 const pageSrc = readFileSync(join(root, "src/app/bonus/page.tsx"), "utf8");
 assert.match(pageSrc, /หลักฐานจ่าย/);
-assert.match(histUi, /พิมพ์ \/ PDF ทั้งร้าน/);
-assert.match(histUi, /ดาวน์โหลดไฟล์ชุด/);
+assert.match(histUi, /ดาวน์โหลดทั้งร้าน/);
+assert.match(histUi, /พิมพ์ทั้งร้าน/);
 
 function round2(n) {
   return Math.round(n * 100) / 100;
@@ -100,6 +124,112 @@ function formatPayrollPeriodLabel(periodMonth) {
 
 assert.equal(formatPayrollPeriodLabel("2026-07"), "ก.ค. 2569");
 assert.equal(formatPayrollPeriodLabel("2026-01"), "ม.ค. 2569");
+
+function legalFullName(payee) {
+  const full = [payee.legalFirstName, payee.legalLastName]
+    .map((s) => (s || "").trim())
+    .filter(Boolean)
+    .join(" ");
+  return full || (payee.employeeName || "").trim() || "—";
+}
+
+function buildMonthPaymentSummary(items, employeeId, periodMonth, opts) {
+  const paid = items.filter(
+    (i) =>
+      i.employeeId === employeeId &&
+      i.periodMonth === periodMonth &&
+      i.status === "paid",
+  );
+  if (!paid.length) return null;
+  let salaryFull = 0;
+  let midAmount = 0;
+  let endAmount = 0;
+  let bonusAmount = 0;
+  for (const row of paid) {
+    if (row.kind === "salary_mid" || row.kind === "salary_month_end") {
+      salaryFull = Math.max(salaryFull, round2(row.salaryBase || 0));
+    }
+    if (row.kind === "salary_mid") midAmount = round2(midAmount + row.amount);
+    else if (row.kind === "salary_month_end") {
+      endAmount = round2(endAmount + row.amount);
+    } else if (row.kind === "bonus") {
+      bonusAmount = round2(bonusAmount + row.amount);
+    }
+  }
+  if (!(salaryFull > 0)) {
+    const hint = round2(Number(opts?.monthlySalaryHint) || 0);
+    if (hint > 0) salaryFull = hint;
+  }
+  return {
+    employeeId,
+    employeeName: paid[0].employeeName,
+    periodMonth,
+    salaryFull,
+    midAmount,
+    endAmount,
+    bonusAmount,
+    transferTotal: round2(midAmount + endAmount + bonusAmount),
+  };
+}
+
+const monthItems = [
+  {
+    id: "m1",
+    employeeId: "e1",
+    employeeName: "น้องเอ",
+    periodMonth: "2026-07",
+    kind: "salary_mid",
+    status: "paid",
+    amount: 5000,
+    salaryBase: 10000,
+    advanceDeduct: 0,
+  },
+  {
+    id: "e1end",
+    employeeId: "e1",
+    employeeName: "น้องเอ",
+    periodMonth: "2026-07",
+    kind: "salary_month_end",
+    status: "paid",
+    amount: 5000,
+    salaryBase: 10000,
+    advanceDeduct: 0,
+  },
+  {
+    id: "b1",
+    employeeId: "e1",
+    employeeName: "น้องเอ",
+    periodMonth: "2026-07",
+    kind: "bonus",
+    status: "paid",
+    amount: 1200,
+    salaryBase: 0,
+    advanceDeduct: 0,
+  },
+];
+const monthSummary = buildMonthPaymentSummary(monthItems, "e1", "2026-07");
+assert.equal(monthSummary.salaryFull, 10000);
+assert.equal(monthSummary.midAmount, 5000);
+assert.equal(monthSummary.endAmount, 5000);
+assert.equal(monthSummary.bonusAmount, 1200);
+assert.equal(monthSummary.transferTotal, 11200);
+
+const hintOnly = buildMonthPaymentSummary(
+  monthItems.map((r) => ({ ...r, salaryBase: 0 })),
+  "e1",
+  "2026-07",
+  { monthlySalaryHint: 10000 },
+);
+assert.equal(hintOnly.salaryFull, 10000);
+
+assert.equal(
+  legalFullName({
+    employeeName: "น้องเอ",
+    legalFirstName: "สมชาย",
+    legalLastName: "ใจดี",
+  }),
+  "สมชาย ใจดี",
+);
 
 function buildReceiptFromJustPaid(input) {
   const paidAt = input.paidAt || Date.now();
@@ -190,7 +320,6 @@ assert.equal(receipt.combined, true);
 assert.equal(receipt.transferTotal, 6200);
 assert.equal(receipt.advanceDeductTotal, 500);
 
-// bonusRemaining == amount → ไม่ต้องโชว์ meta ซ้ำ
 const bonusMeta = lineMetaBits(receipt.lines[1], receipt.note);
 assert.ok(!bonusMeta.some((x) => x.includes("โบนัสคงเหลือ") || x.includes("หลังหักร้าน")));
 
@@ -198,29 +327,17 @@ const salaryMeta = lineMetaBits(receipt.lines[0], receipt.note);
 assert.ok(salaryMeta.some((x) => x.includes("ก่อนหัก")));
 assert.ok(salaryMeta.some((x) => x.includes("หักเบิก")));
 
-// Generate real HTML via dynamic import of compiled helpers — mirror builder for artifact
 function buildSampleHtml() {
-  const periodLabel = formatPayrollPeriodLabel(receipt.periodMonth);
-  const lineRows = receipt.lines
-    .map((line) => {
-      const meta = lineMetaBits(line, receipt.note);
-      return `<tr><td><div class="line-kind">${escapeReceiptHtml(shortTransferKindLabel(line.kind))}</div>${
-        meta.length
-          ? `<div class="muted tiny">${escapeReceiptHtml(meta.join(" · "))}</div>`
-          : ""
-      }</td><td class="num">฿${money(line.amount)}</td></tr>`;
-    })
-    .join("");
-  // Pull styles/structure checks from source by requiring key markers exist,
-  // and write a visual sample that matches the production template closely.
-  const srcHtmlMatch = docSrc.includes("family=Sarabun");
-  assert.equal(srcHtmlMatch, true);
+  const periodLabel = formatPayrollPeriodLabel("2026-07");
+  const recipient = "สมชาย ใจดี";
+  const payerName = "พีระพงษ์ โยหาเคน";
+  assert.equal(docSrc.includes("family=Sarabun"), true);
 
   return `<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="utf-8" />
-  <title>ใบสรุปการจ่าย · สมชาย ใจดี · ${periodLabel}</title>
+  <title>ใบสรุปการจ่าย · ${recipient} · ${periodLabel}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet" />
@@ -246,7 +363,6 @@ function buildSampleHtml() {
     table.pay .num { text-align: right; }
     .line-kind { font-weight: 700; }
     .muted { color: #555; } .tiny { font-size: 0.86rem; }
-    .subtotal { display: flex; justify-content: space-between; color: #444; font-size: 0.92rem; }
     .total { display: flex; justify-content: space-between; margin-top: 0.55rem; padding-top: 0.55rem; border-top: 2px solid #1a1a1a; font-size: 1.2rem; font-weight: 700; }
     .signs { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2.25rem; text-align: center; }
     .sign .line { margin: 2.4rem 1rem 0.35rem; border-bottom: 1px solid #333; }
@@ -262,42 +378,45 @@ function buildSampleHtml() {
         <div class="shop-meta">
           <div>ถ.พรรณนาชัย ต.หมากแข้ง อ.เมืองอุดรธานี จ.อุดรธานี</div>
           <div>โทร 0884818817</div>
-          <div>เลขประจำตัวผู้เสียภาษี 1234567890123</div>
         </div>
       </div>
       <div class="doc-stamp">
         <p class="label">เอกสารจ่าย</p>
         <p class="name">ใบสรุปหลักฐานการจ่าย</p>
         <p>งวด ${periodLabel}</p>
-        <span class="badge">โอนรวมสิ้นเดือน + โบนัส</span>
+        <span class="badge">กลางเดือน + สิ้นเดือน + โบนัส</span>
       </div>
     </header>
     <p class="notice">เอกสารภายในกิจการ สำหรับเก็บเป็นหลักฐานการจ่ายเงินเดือน/โบนัส — ไม่ใช่หนังสือรับรองหักภาษี ณ ที่จ่าย (50 ทวิ)</p>
     <div class="sec">ผู้รับเงิน</div>
     <div class="grid">
-      <div class="k">ชื่อพนักงาน</div><div class="v">สมชาย ใจดี</div>
-      <div class="k">บัญชีรับโอน</div><div class="v">กสิกรไทย · 123-4-56789-0 · ชื่อบัญชี สมชาย ใจดี</div>
+      <div class="k">ชื่อจริง–นามสกุล</div><div class="v">${recipient}</div>
+      <div class="k">ชื่อในร้าน</div><div class="v">น้องเอ</div>
+      <div class="k">บัญชีรับโอน</div><div class="v">กสิกรไทย · 123-4-56789-0</div>
     </div>
-    <div class="sec">รอบจ่าย</div>
+    <div class="sec">ผู้จ่าย</div>
     <div class="grid">
-      <div class="k">งวด</div><div class="v">${periodLabel}</div>
-      <div class="k">วัน–เวลาโอน</div><div class="v">31/7/2569 10:00 น.</div>
-      <div class="k">หมายเหตุ</div><div class="v">โอนรวมสิ้นเดือน</div>
+      <div class="k">ชื่อผู้จ่าย</div><div class="v">${payerName}</div>
+      <div class="k">ตำแหน่ง / อื่นๆ</div><div class="v">เจ้าของกิจการ</div>
     </div>
-    <div class="sec">รายการที่จ่าย</div>
+    <div class="sec">รายการและยอดรวม</div>
     <table class="pay">
-      <thead><tr><th>รายการ</th><th class="num">ยอดโอน (บาท)</th></tr></thead>
-      <tbody>${lineRows}</tbody>
+      <thead><tr><th>รายการ</th><th class="num">ยอด (บาท)</th></tr></thead>
+      <tbody>
+        <tr><td><div class="line-kind">เงินเดือนเต็ม (ต่อเดือน)</div></td><td class="num">฿10000</td></tr>
+        <tr><td><div class="line-kind">กลางเดือน</div></td><td class="num">฿5000</td></tr>
+        <tr><td><div class="line-kind">สิ้นเดือน / เต็มเดือน</div></td><td class="num">฿5000</td></tr>
+        <tr><td><div class="line-kind">โบนัส</div></td><td class="num">฿1200</td></tr>
+      </tbody>
     </table>
-    <div class="subtotal"><span>หักเบิกรวมในรอบนี้</span><span>฿500</span></div>
-    <div class="total"><span>รวมยอดโอนเข้าบัญชี</span><span>฿6200</span></div>
+    <div class="total"><span>รวมยอดโอนทั้งหมด</span><span>฿11200</span></div>
     <div class="signs">
-      <div class="sign"><div class="line"></div><div><strong>ผู้จ่าย / ร้าน</strong></div><div class="muted tiny">ลงชื่อ · วันเดือนปี</div></div>
-      <div class="sign"><div class="line"></div><div><strong>ผู้รับเงิน</strong></div><div class="muted tiny">สมชาย ใจดี</div></div>
+      <div class="sign"><div class="line"></div><div><strong>ผู้จ่าย</strong></div><div class="muted tiny">${payerName}</div></div>
+      <div class="sign"><div class="line"></div><div><strong>ผู้รับเงิน</strong></div><div class="muted tiny">${recipient}</div></div>
     </div>
     <div class="foot">
-      <div>มีหลักฐานสลิปโอนในระบบ 1 รูป (ดูได้ที่แท็บประวัติในแอป)</div>
-      <div>ออกจากระบบจ่าย TellTea · อ้างอิง c_e1_2026-07_1</div>
+      <div>มีหลักฐานสลิปโอนในระบบ 1 รูป (ดูได้ที่แท็บหลักฐานจ่ายในแอป)</div>
+      <div>ออกจากระบบจ่าย TellTea · e1 · 2026-07</div>
     </div>
   </div>
 </body>
@@ -309,16 +428,19 @@ assert.match(html, /TELL TEA/);
 assert.match(html, /เทล ที/);
 assert.match(html, /ก\.ค\. 2569/);
 assert.match(html, /สมชาย ใจดี/);
+assert.match(html, /กลางเดือน/);
 assert.match(html, /สิ้นเดือน/);
 assert.match(html, /โบนัส/);
-assert.match(html, /6200/);
+assert.match(html, /เงินเดือนเต็ม/);
+assert.match(html, /11200/);
 assert.match(html, /Sarabun/);
-assert.match(html, /ผู้จ่าย \/ ร้าน/);
-assert.doesNotMatch(html, /โบนัสคงเหลือ/);
+assert.match(html, /พีระพงษ์ โยหาเคน/);
+assert.match(html, /ชื่อจริง–นามสกุล/);
+assert.match(html, /รวมยอดโอนทั้งหมด/);
 
 const outDir = join(root, "tmp");
 mkdirSync(outDir, { recursive: true });
-const outPath = join(outDir, "payroll-payment-doc-sample.html");
+const outPath = join(root, "tmp", "payroll-payment-doc-sample.html");
 writeFileSync(outPath, html, "utf8");
 console.log("test-payroll-payment-doc: ok");
 console.log("sample:", outPath);

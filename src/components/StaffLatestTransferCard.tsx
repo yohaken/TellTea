@@ -182,6 +182,10 @@ export function StaffLatestTransferCard({
             employees?.find((e) => e.id === receipt.lines[0]?.item.employeeId),
             receipt.lines[0]?.item.employeeName,
           )}
+          linkedStaffId={
+            employees?.find((e) => e.id === receipt.lines[0]?.item.employeeId)
+              ?.linkedStaffId
+          }
           onClose={() => setDocOpen(false)}
         />
       ) : null}

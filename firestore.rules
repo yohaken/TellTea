@@ -1103,6 +1103,7 @@ service cloud.firestore {
         || (docId == 'vatAgentChatPresence' && (isOwner() || isOwnerEmail()))
         || (docId == 'vatMonthlySettings' && (isOwner() || isOwnerEmail()))
         || (docId == 'personalTaxSettings' && (isOwner() || isOwnerEmail()))
+        || (docId == 'payrollPaymentDoc' && (isOwner() || isOwnerEmail() || isStaff()))
         || (docId == 'vatMailOAuth' && isOwner())
         || (docId == 'vatMailOAuthLineman' && isOwner())
         || (docId == 'vatMailOAuthConfig' && isOwner())

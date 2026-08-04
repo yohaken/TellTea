@@ -6880,6 +6880,22 @@ body.modal-open .main-panel {
   background: rgba(45, 106, 79, 0.05);
 }
 
+.payroll-history-expand-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.2rem 0;
+}
+
+.payroll-history-expand-totals {
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.payroll-history-expand-totals strong {
+  color: rgba(45, 106, 79, 0.95);
+}
+
 .payroll-payment-doc-modal {
   max-width: min(28rem, 96vw);
 }

@@ -1143,6 +1143,9 @@ export function PayrollPayPanel({
             employees.find((e) => e.id === paymentDoc.employeeId),
             paymentDoc.employeeName,
           )}
+          linkedStaffId={
+            employees.find((e) => e.id === paymentDoc.employeeId)?.linkedStaffId
+          }
           onClose={() => setPaymentDoc(null)}
         />
       ) : null}
