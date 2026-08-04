@@ -316,8 +316,8 @@ export function PayrollHistoryPanel({
       ) : null}
 
       <p className="muted payroll-actions-hint">
-        แตะเดือนเพื่อขยายสถานะ → ดาวน์โหลดใบสรุป (เงินเดือนเต็ม · กลางเดือน · สิ้นเดือน · โบนัส ·
-        รวมทั้งหมด)
+        แตะเดือนเพื่อขยายสถานะ → ดาวน์โหลดใบสรุป (ยอดก่อนคืนเบิก · คืนเบิกถ้ามี · ยอดโอนเข้าบัญชี)
+        · คืนเบิก = ได้เงินไปก่อนแล้ว ไม่ใช่ลดเงินเดือน
       </p>
 
       {!employeeId ? (
@@ -517,7 +517,7 @@ function FragmentMonth({
             <div className="muted payroll-cell-meta">รอ ฿{fmt(salaryPending)}</div>
           ) : null}
         </td>
-                <td className="payroll-col-amt col-out">
+        <td className="payroll-col-amt col-out">
           ฿{fmt(bonusPaid)}
           {bonusPending > 0 ? (
             <div className="muted payroll-cell-meta">รอ ฿{fmt(bonusPending)}</div>
