@@ -203,13 +203,18 @@ export function PayrollHistoryPanel({
     try {
       const { shop, payer } = await loadShop();
       const payee = payeeForEmployee(summary.employeeId, summary.employeeName);
-      const ok = downloadMonthPaymentDoc({ summary, shop, payee, payer });
+      const ok = await downloadMonthPaymentDoc({
+        summary,
+        shop,
+        payee,
+        payer,
+      });
       if (!ok) {
-        onError?.("ดาวน์โหลดไม่สำเร็จ");
+        onError?.("ดาวน์โหลด PDF ไม่สำเร็จ");
         return;
       }
       onInfo?.(
-        `ดาวน์โหลดเอกสาร ${legalNameForPaymentDoc(payee)} · ${formatPayrollPeriodLabel(summary.periodMonth)} แล้ว`,
+        `ดาวน์โหลด PDF ${legalNameForPaymentDoc(payee)} · ${formatPayrollPeriodLabel(summary.periodMonth)} แล้ว`,
       );
     } finally {
       setBundleBusy(false);
@@ -228,7 +233,7 @@ export function PayrollHistoryPanel({
     setBundleBusy(true);
     try {
       const { shop, payer } = await loadShop();
-      const ok = downloadMonthPaymentDocsBundle({
+      const ok = await downloadMonthPaymentDocsBundle({
         periodMonth: bundleMonth,
         summaries: shopMonthSummaries,
         shop,
@@ -236,11 +241,11 @@ export function PayrollHistoryPanel({
         payeeFor: (s) => payeeForEmployee(s.employeeId, s.employeeName),
       });
       if (!ok) {
-        onError?.("ดาวน์โหลดไม่สำเร็จ");
+        onError?.("ดาวน์โหลด PDF ไม่สำเร็จ");
         return;
       }
       onInfo?.(
-        `ดาวน์โหลดเอกสารทั้งร้าน ${formatPayrollPeriodLabel(bundleMonth)} · ${shopMonthSummaries.length} คนแล้ว`,
+        `ดาวน์โหลด PDF ทั้งร้าน ${formatPayrollPeriodLabel(bundleMonth)} · ${shopMonthSummaries.length} คนแล้ว`,
       );
     } finally {
       setBundleBusy(false);
@@ -282,7 +287,7 @@ export function PayrollHistoryPanel({
       ) : null}
 
       <p className="muted payroll-actions-hint">
-        แตะเดือนเพื่อขยาย → ดาวน์โหลดเอกสาร (เงินเดือน · โบนัส · คืนเบิกถ้ามี · ยอดโอน)
+        แตะเดือนเพื่อขยาย → ดาวน์โหลดเอกสาร PDF (เงินเดือน · โบนัส · คืนเบิกถ้ามี · ยอดโอน)
       </p>
 
       {!employeeId ? (

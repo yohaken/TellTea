@@ -210,6 +210,8 @@
     "@capacitor/status-bar": "^7.0.6",
     "clsx": "^2.1.1",
     "firebase": "^12.16.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
     "lucide-react": "^1.24.0",
     "next": "15.5.20",
     "pdfjs-dist": "^4.10.38",

@@ -1,6 +1,6 @@
 /**
  * หลักฐานการจ่ายค่าจ้างและเงินเดือน — เอกสารทางการขนาด A4
- * ดูในแอป · พิมพ์ / บันทึก PDF · ดาวน์โหลด HTML เก็บไว้
+ * ดูในแอป · ดาวน์โหลดเป็นไฟล์ PDF (เรนเดอร์จากแบบมาตรฐาน)
  */
 import { escapeReceiptHtml } from "./pos-printer/receipt-template";
 import type { PosShopSettings } from "./pos-settings";
@@ -438,7 +438,7 @@ export function payrollPaymentDocFilename(receipt: StaffTransferReceipt): string
   const stamp = receipt.paidAt
     ? new Date(receipt.paidAt).toISOString().slice(0, 10)
     : "paid";
-  return `หลักฐานจ่าย_${month}_${name}_${stamp}.html`;
+  return `หลักฐานจ่าย_${month}_${name}_${stamp}.pdf`;
 }
 
 function lineMetaBits(
@@ -1126,11 +1126,11 @@ export function monthPaymentDocFilename(
     )
       .replace(/\s+/g, "_")
       .replace(/[^\w\u0E00-\u0E7F_-]+/g, "") || "staff";
-  return `หลักฐานจ่าย_${summary.periodMonth}_${name}.html`;
+  return `หลักฐานจ่าย_${summary.periodMonth}_${name}.pdf`;
 }
 
 export function monthPaymentDocsBundleFilename(periodMonth: string): string {
-  return `หลักฐานจ่าย_${periodMonth || "month"}_ทั้งร้าน.html`;
+  return `หลักฐานจ่าย_${periodMonth || "month"}_ทั้งร้าน.pdf`;
 }
 
 export function buildMonthPaymentDocHtml(input: {
@@ -1193,14 +1193,14 @@ export function openMonthPaymentDoc(input: {
   return openPayrollPaymentDocPrint(html);
 }
 
-export function downloadMonthPaymentDoc(input: {
+export async function downloadMonthPaymentDoc(input: {
   summary: PayrollMonthPaymentSummary;
   shop: PayrollPaymentDocShop;
   payee: PayrollPaymentDocPayee;
   payer: PayrollPaymentDocPayer;
-}): boolean {
+}): Promise<boolean> {
   const html = buildMonthPaymentDocHtml({ ...input, autoPrint: false });
-  return downloadPayrollPaymentDocHtml(
+  return downloadPayrollPaymentDocPdf(
     html,
     monthPaymentDocFilename(input.summary, input.payee),
   );
@@ -1218,19 +1218,19 @@ export function openMonthPaymentDocsBundle(input: {
   return openPayrollPaymentDocPrint(html);
 }
 
-export function downloadMonthPaymentDocsBundle(input: {
+export async function downloadMonthPaymentDocsBundle(input: {
   periodMonth: string;
   summaries: PayrollMonthPaymentSummary[];
   shop: PayrollPaymentDocShop;
   payer: PayrollPaymentDocPayer;
   payeeFor: (summary: PayrollMonthPaymentSummary) => PayrollPaymentDocPayee;
-}): boolean {
+}): Promise<boolean> {
   if (!input.summaries.length) return false;
   const html = buildMonthPaymentDocsBundleHtml({
     ...input,
     autoPrint: false,
   });
-  return downloadPayrollPaymentDocHtml(
+  return downloadPayrollPaymentDocPdf(
     html,
     monthPaymentDocsBundleFilename(input.periodMonth),
   );
@@ -1260,23 +1260,131 @@ export function openPayrollPaymentDocPrint(html: string): boolean {
   return true;
 }
 
-/** ดาวน์โหลดไฟล์ HTML พิมพ์ได้ — เก็บ/แชร์ได้ และเปิดแล้วพิมพ์เป็น PDF ได้ */
-export function downloadPayrollPaymentDocHtml(
+function pdfOutName(filename: string): string {
+  const base = (filename || "หลักฐานจ่าย").replace(/\.html$/i, "");
+  return /\.pdf$/i.test(base) ? base : `${base}.pdf`;
+}
+
+async function waitPaymentDocReady(doc: Document): Promise<void> {
+  const fonts = (
+    doc as Document & { fonts?: { ready?: Promise<unknown> } }
+  ).fonts;
+  if (fonts?.ready) {
+    try {
+      await fonts.ready;
+    } catch {
+      /* ignore */
+    }
+  }
+  const imgs = Array.from(doc.images || []);
+  await Promise.all(
+    imgs.map(
+      (img) =>
+        img.complete
+          ? Promise.resolve()
+          : new Promise<void>((resolve) => {
+              img.onload = () => resolve();
+              img.onerror = () => resolve();
+            }),
+    ),
+  );
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, 100);
+  });
+}
+
+/**
+ * เรนเดอร์เอกสาร HTML มาตรฐานเป็นไฟล์ PDF A4 แล้วดาวน์โหลด
+ * (ใช้โครงแบบเดียวกับหน้าพิมพ์ — ได้ .pdf จริง ไม่ใช่ .html)
+ */
+export async function downloadPayrollPaymentDocPdf(
   html: string,
   filename: string,
-): boolean {
-  if (typeof document === "undefined") return false;
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename.endsWith(".html") ? filename : `${filename}.html`;
-  a.rel = "noopener";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1500);
-  return true;
+): Promise<boolean> {
+  if (typeof document === "undefined" || typeof window === "undefined") {
+    return false;
+  }
+
+  const [{ jsPDF }, html2canvasMod] = await Promise.all([
+    import("jspdf"),
+    import("html2canvas"),
+  ]);
+  const html2canvas = html2canvasMod.default;
+
+  const iframe = document.createElement("iframe");
+  iframe.setAttribute("aria-hidden", "true");
+  iframe.style.cssText =
+    "position:fixed;left:-12000px;top:0;width:210mm;height:297mm;border:0;opacity:0;pointer-events:none;";
+  document.body.appendChild(iframe);
+
+  try {
+    const idoc = iframe.contentDocument;
+    if (!idoc) return false;
+
+    idoc.open();
+    idoc.write(html);
+    idoc.close();
+
+    const style = idoc.createElement("style");
+    style.textContent = `
+      html, body { background: #fff !important; }
+      .sheet, .bundle-cover {
+        margin: 0 !important;
+        box-shadow: none !important;
+      }
+    `;
+    idoc.head?.appendChild(style);
+
+    await waitPaymentDocReady(idoc);
+
+    const pages = Array.from(
+      idoc.querySelectorAll<HTMLElement>(".bundle-cover, .sheet"),
+    );
+    const targets = pages.length ? pages : [idoc.body];
+
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4",
+      compress: true,
+    });
+    const pageW = 210;
+    const pageH = 297;
+
+    for (let i = 0; i < targets.length; i++) {
+      const el = targets[i];
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: Math.max(el.scrollWidth, el.clientWidth),
+        windowHeight: Math.max(el.scrollHeight, el.clientHeight),
+      });
+      const img = canvas.toDataURL("image/jpeg", 0.93);
+      let w = pageW;
+      let h = (canvas.height * w) / canvas.width;
+      if (h > pageH) {
+        const s = pageH / h;
+        w *= s;
+        h = pageH;
+      }
+      if (i > 0) pdf.addPage();
+      const x = (pageW - w) / 2;
+      pdf.addImage(img, "JPEG", x, 0, w, h, undefined, "FAST");
+    }
+
+    pdf.save(pdfOutName(filename));
+    return true;
+  } catch (err) {
+    console.error("payroll payment PDF download failed", err);
+    return false;
+  } finally {
+    iframe.remove();
+  }
 }
 
 export function printPayrollPaymentDoc(input: {
@@ -1289,14 +1397,14 @@ export function printPayrollPaymentDoc(input: {
   return openPayrollPaymentDocPrint(html);
 }
 
-export function downloadPayrollPaymentDoc(input: {
+export async function downloadPayrollPaymentDoc(input: {
   receipt: StaffTransferReceipt;
   shop: PayrollPaymentDocShop;
   payee: PayrollPaymentDocPayee;
   payer?: PayrollPaymentDocPayer;
-}): boolean {
+}): Promise<boolean> {
   const html = buildPayrollPaymentDocHtml({ ...input, autoPrint: false });
-  return downloadPayrollPaymentDocHtml(
+  return downloadPayrollPaymentDocPdf(
     html,
     payrollPaymentDocFilename(input.receipt),
   );

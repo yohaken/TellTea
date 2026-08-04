@@ -32,7 +32,7 @@ function fmt(n: number) {
 }
 
 /**
- * ดูใบสรุปหลักฐานจ่ายในแอป · ดาวน์โหลดเอกสารมาตรฐาน (เปิดแล้วพิมพ์/บันทึก PDF ได้)
+ * ดูใบสรุปหลักฐานจ่ายในแอป · ดาวน์โหลดเป็นไฟล์ PDF มาตรฐาน A4
  */
 export function PayrollPaymentDocModal({
   receipt,
@@ -112,18 +112,15 @@ export function PayrollPaymentDocModal({
 
   const recipient = legalNameForPaymentDoc(resolvedPayee);
 
-  function onDownload() {
-    const ok = downloadPayrollPaymentDoc({
+  async function onDownload() {
+    setActionMsg("กำลังสร้าง PDF…");
+    const ok = await downloadPayrollPaymentDoc({
       receipt,
       shop,
       payee: resolvedPayee,
       payer,
     });
-    setActionMsg(
-      ok
-        ? "ดาวน์โหลดไฟล์แล้ว — เปิดไฟล์แล้วพิมพ์/บันทึก PDF ได้"
-        : "ดาวน์โหลดไม่สำเร็จ",
-    );
+    setActionMsg(ok ? "ดาวน์โหลด PDF แล้ว" : "ดาวน์โหลด PDF ไม่สำเร็จ");
   }
 
   return (
@@ -144,7 +141,7 @@ export function PayrollPaymentDocModal({
           หลักฐานการจ่ายค่าจ้าง
         </h2>
         <p className="muted" style={{ margin: "0 0 0.75rem", fontSize: "0.82rem" }}>
-          เอกสารมาตรฐาน · ดาวน์โหลดแล้วเปิดพิมพ์/บันทึก PDF ได้
+          เอกสารมาตรฐาน A4 · กดดาวน์โหลดได้ไฟล์ PDF
           {shop.shopName ? ` · ${shop.shopName}` : ""}
         </p>
 
