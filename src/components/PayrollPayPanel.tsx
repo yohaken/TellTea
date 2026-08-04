@@ -765,7 +765,14 @@ export function PayrollPayPanel({
                       const inCombined = isCombinedPairLine(item, pair);
                       const lineMeta: string[] = [];
                       if (item.advanceDeduct > 0) {
-                        lineMeta.push(`หักเบิก ฿${fmt(item.advanceDeduct)}`);
+                        const gross =
+                          item.grossAmount > 0
+                            ? item.grossAmount
+                            : item.amount + item.advanceDeduct;
+                        lineMeta.push(`ก่อนหัก ฿${fmt(gross)}`);
+                        lineMeta.push(
+                          `คืนเบิก ฿${fmt(item.advanceDeduct)} (ได้ไปก่อนแล้ว)`,
+                        );
                       }
                       if (kindUsesMonthEndAccount(item.kind)) {
                         lineMeta.push(
@@ -873,7 +880,14 @@ export function PayrollPayPanel({
                   metaBits.push(`บช.${formatDateShortBe(item.accountDate || item.dueDate)}`);
                 }
                 if (item.advanceDeduct > 0) {
-                  metaBits.push(`หักเบิก ฿${fmt(item.advanceDeduct)}`);
+                  const gross =
+                    item.grossAmount > 0
+                      ? item.grossAmount
+                      : item.amount + item.advanceDeduct;
+                  metaBits.push(`ก่อนหัก ฿${fmt(gross)}`);
+                  metaBits.push(
+                    `คืนเบิก ฿${fmt(item.advanceDeduct)} (ได้ไปก่อนแล้ว)`,
+                  );
                 }
                 if (item.combinedPayId) {
                   metaBits.push("โอนรวมสิ้นเดือน+โบนัส");
@@ -1020,12 +1034,22 @@ export function PayrollPayPanel({
                 })()}
                 <ul className="payroll-combined-breakdown">
                   <li>
-                    สิ้นเดือน ฿{fmt(payTarget.pair.salary.amount)}
+                    สิ้นเดือน โอน ฿{fmt(payTarget.pair.salary.amount)}
                     {payTarget.pair.salary.advanceDeduct > 0
-                      ? ` (หักเบิก ฿${fmt(payTarget.pair.salary.advanceDeduct)})`
+                      ? ` · ก่อนหัก ฿${fmt(
+                          payTarget.pair.salary.grossAmount > 0
+                            ? payTarget.pair.salary.grossAmount
+                            : payTarget.pair.salary.amount +
+                                payTarget.pair.salary.advanceDeduct,
+                        )} · คืนเบิก ฿${fmt(payTarget.pair.salary.advanceDeduct)}`
                       : ""}
                   </li>
-                  <li>โบนัส ฿{fmt(payTarget.pair.bonus.amount)}</li>
+                  <li>
+                    โบนัส โอน ฿{fmt(payTarget.pair.bonus.amount)}
+                    {payTarget.pair.bonus.advanceDeduct > 0
+                      ? ` · คืนเบิก ฿${fmt(payTarget.pair.bonus.advanceDeduct)}`
+                      : ""}
+                  </li>
                 </ul>
                 <p style={{ margin: "0.35rem 0 0" }}>
                   พนักงานยังเห็น 2 รายการแยกในคิวของตัวเอง
