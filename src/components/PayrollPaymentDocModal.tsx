@@ -5,11 +5,17 @@ import {
   downloadPayrollPaymentDoc,
   formatPayrollPaidAtLabel,
   formatPayrollPeriodLabel,
+  legalFullName,
   printPayrollPaymentDoc,
   shopFromPosSettings,
   type PayrollPaymentDocPayee,
   type PayrollPaymentDocShop,
 } from "@/lib/payroll-payment-doc";
+import {
+  DEFAULT_PAYROLL_PAYMENT_DOC_SETTINGS,
+  getPayrollPaymentDocSettings,
+  type PayrollPaymentDocSettings,
+} from "@/lib/payroll-payment-doc-settings";
 import {
   shortTransferKindLabel,
   type StaffTransferReceipt,
@@ -18,6 +24,7 @@ import {
   getLocalPosShopSettings,
   getPosShopSettings,
 } from "@/lib/pos-settings";
+import { getStaffPersonal } from "@/lib/staff-personal";
 import { formatPlainNumber } from "@/lib/utils";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
@@ -31,18 +38,29 @@ function fmt(n: number) {
 export function PayrollPaymentDocModal({
   receipt,
   payee,
+  linkedStaffId,
   onClose,
 }: {
   receipt: StaffTransferReceipt;
   payee: PayrollPaymentDocPayee;
+  /** โหลดชื่อจริง–นามสกุลจาก staffPersonal ถ้ายังไม่มีใน payee */
+  linkedStaffId?: string;
   onClose: () => void;
 }) {
   const [shop, setShop] = useState<PayrollPaymentDocShop>(() =>
     shopFromPosSettings(getLocalPosShopSettings()),
   );
+  const [payer, setPayer] = useState<PayrollPaymentDocSettings>(
+    DEFAULT_PAYROLL_PAYMENT_DOC_SETTINGS,
+  );
+  const [resolvedPayee, setResolvedPayee] = useState(payee);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
 
   useBodyScrollLock(true);
+
+  useEffect(() => {
+    setResolvedPayee(payee);
+  }, [payee]);
 
   useEffect(() => {
     let alive = true;
@@ -53,21 +71,55 @@ export function PayrollPaymentDocModal({
       .catch(() => {
         /* keep local */
       });
+    void getPayrollPaymentDocSettings()
+      .then((s) => {
+        if (alive) setPayer(s);
+      })
+      .catch(() => undefined);
     return () => {
       alive = false;
     };
   }, []);
 
+  useEffect(() => {
+    const sid = (linkedStaffId || "").trim();
+    if (!sid) return;
+    if (payee.legalFirstName && payee.legalLastName) return;
+    let alive = true;
+    void getStaffPersonal(sid)
+      .then((personal) => {
+        if (!alive || !personal) return;
+        setResolvedPayee((prev) => ({
+          ...prev,
+          legalFirstName:
+            prev.legalFirstName || (personal.legalFirstName || "").trim() || undefined,
+          legalLastName:
+            prev.legalLastName || (personal.legalLastName || "").trim() || undefined,
+        }));
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [linkedStaffId, payee.legalFirstName, payee.legalLastName]);
+
   const bankLine = useMemo(
     () =>
-      [payee.payBank, payee.payAccountNo, payee.payAccountName]
+      [resolvedPayee.payBank, resolvedPayee.payAccountNo, resolvedPayee.payAccountName]
         .filter(Boolean)
         .join(" · "),
-    [payee],
+    [resolvedPayee],
   );
 
+  const recipient = legalFullName(resolvedPayee);
+
   function onPrintPdf() {
-    const ok = printPayrollPaymentDoc({ receipt, shop, payee });
+    const ok = printPayrollPaymentDoc({
+      receipt,
+      shop,
+      payee: resolvedPayee,
+      payer,
+    });
     setActionMsg(
       ok
         ? "เปิดหน้าพิมพ์แล้ว — เลือกเครื่องพิมพ์หรือ「บันทึกเป็น PDF」ได้"
@@ -76,7 +128,12 @@ export function PayrollPaymentDocModal({
   }
 
   function onDownload() {
-    const ok = downloadPayrollPaymentDoc({ receipt, shop, payee });
+    const ok = downloadPayrollPaymentDoc({
+      receipt,
+      shop,
+      payee: resolvedPayee,
+      payer,
+    });
     setActionMsg(
       ok
         ? "ดาวน์โหลดไฟล์แล้ว — เปิดไฟล์แล้วพิมพ์/บันทึก PDF ได้"
@@ -110,7 +167,14 @@ export function PayrollPaymentDocModal({
         <div className="payroll-payment-doc-preview" aria-label="รายละเอียดใบสรุป">
           <div className="payroll-payment-doc-row">
             <span className="muted">ผู้รับ</span>
-            <strong>{payee.employeeName}</strong>
+            <strong>{recipient}</strong>
+          </div>
+          <div className="payroll-payment-doc-row">
+            <span className="muted">ผู้จ่าย</span>
+            <span>
+              {payer.payerName}
+              {payer.payerTitle ? ` · ${payer.payerTitle}` : ""}
+            </span>
           </div>
           {bankLine ? (
             <div className="payroll-payment-doc-row">

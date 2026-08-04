@@ -9,6 +9,11 @@ import {
   type PayrollSchedule,
   type PayrollSalarySplit,
 } from "@/lib/payroll";
+import {
+  DEFAULT_PAYROLL_PAYMENT_DOC_SETTINGS,
+  getPayrollPaymentDocSettings,
+  savePayrollPaymentDocSettings,
+} from "@/lib/payroll-payment-doc-settings";
 import { formatPlainNumber } from "@/lib/utils";
 
 function fmt(n: number) {
@@ -63,6 +68,28 @@ export function PayrollSettingsPanel({
   const [midPct, setMidPct] = useState(String(mid.percent));
   const [endPct, setEndPct] = useState(String(end.percent));
   const [busySchedule, setBusySchedule] = useState(false);
+  const [payerName, setPayerName] = useState(
+    DEFAULT_PAYROLL_PAYMENT_DOC_SETTINGS.payerName,
+  );
+  const [payerTitle, setPayerTitle] = useState(
+    DEFAULT_PAYROLL_PAYMENT_DOC_SETTINGS.payerTitle,
+  );
+  const [busyDocSettings, setBusyDocSettings] = useState(false);
+
+  useEffect(() => {
+    if (!isOwner) return;
+    let alive = true;
+    void getPayrollPaymentDocSettings()
+      .then((s) => {
+        if (!alive) return;
+        setPayerName(s.payerName);
+        setPayerTitle(s.payerTitle);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [isOwner]);
 
   const [drafts, setDrafts] = useState<Record<string, DraftSalary>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -263,8 +290,69 @@ export function PayrollSettingsPanel({
     );
   }
 
+  async function onSaveDocSettings() {
+    if (!isOwner) return;
+    setBusyDocSettings(true);
+    try {
+      const saved = await savePayrollPaymentDocSettings({
+        payerName,
+        payerTitle,
+      });
+      setPayerName(saved.payerName);
+      setPayerTitle(saved.payerTitle);
+      onInfo?.(
+        `บันทึกเอกสารจ่ายแล้ว · ผู้จ่าย ${saved.payerName}${saved.payerTitle ? ` (${saved.payerTitle})` : ""}`,
+      );
+    } catch (err) {
+      onError((err as Error).message || "บันทึกเอกสารจ่ายไม่สำเร็จ");
+    } finally {
+      setBusyDocSettings(false);
+    }
+  }
+
   return (
     <section className="payroll-settings">
+      <div className="payroll-settings-block">
+        <h2 className="payroll-settings-title">0) เอกสารหลักฐานจ่าย</h2>
+        <p className="muted payroll-settings-hint">
+          ชื่อผู้จ่ายบนใบสรุป · ผู้รับใช้ชื่อจริง–นามสกุลจากโปรไฟล์พนักงาน
+        </p>
+        <div className="payroll-round-cards">
+          <div className="payroll-round-card" style={{ gridColumn: "1 / -1" }}>
+            <label className="field">
+              <span>ชื่อผู้จ่าย</span>
+              <input
+                type="text"
+                value={payerName}
+                onChange={(e) => setPayerName(e.target.value)}
+                disabled={busyDocSettings}
+                placeholder="พีระพงษ์ โยหาเคน"
+              />
+            </label>
+            <label className="field">
+              <span>ตำแหน่ง / อื่นๆ</span>
+              <input
+                type="text"
+                value={payerTitle}
+                onChange={(e) => setPayerTitle(e.target.value)}
+                disabled={busyDocSettings}
+                placeholder="เจ้าของกิจการ"
+              />
+            </label>
+            <div className="payroll-latest-transfer-actions" style={{ marginTop: "0.5rem" }}>
+              <button
+                type="button"
+                className="primary-btn"
+                disabled={busyDocSettings}
+                onClick={() => void onSaveDocSettings()}
+              >
+                {busyDocSettings ? "กำลังบันทึก…" : "บันทึกเอกสารจ่าย"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="payroll-settings-block">
         <h2 className="payroll-settings-title">1) รอบจ่ายเงินเดือน</h2>
         <p className="muted payroll-settings-hint">
