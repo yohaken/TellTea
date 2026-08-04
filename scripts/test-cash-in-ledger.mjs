@@ -72,6 +72,8 @@ assert.doesNotMatch(
   /orderBy\("transferDate", "desc"\)[\s\S]*orderBy\("createdAt", "desc"\)/,
 );
 assert.match(rules, /match \/cashDeposits\/\{entryId\}/);
+assert.match(rules, /status in \['pending', 'matched'\]/);
+assert.match(rules, /hasPerm\('ledger'\)/);
 assert.match(rules, /days\.size\(\) <= 31/);
 assert.match(indexes, /"collectionGroup": "cashDeposits"/);
 assert.match(assertRules, /"cashDeposits"/);
