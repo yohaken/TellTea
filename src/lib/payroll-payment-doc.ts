@@ -214,63 +214,8 @@ function lineMetaBits(
   return meta;
 }
 
-export function buildPayrollPaymentDocHtml(input: {
-  receipt: StaffTransferReceipt;
-  shop: PayrollPaymentDocShop;
-  payee: PayrollPaymentDocPayee;
-  /** ใส่สคริปต์สั่งพิมพ์อัตโนมัติเมื่อเปิดหน้าต่างพิมพ์ */
-  autoPrint?: boolean;
-}): string {
-  const { receipt, shop, payee } = input;
-  const periodLabel = formatPayrollPeriodLabel(receipt.periodMonth);
-  const title = `ใบสรุปการจ่าย · ${payee.employeeName} · ${periodLabel}`;
-  const paidLabel = formatPayrollPaidAtLabel(receipt.paidAt);
-  const bankBits = [
-    payee.payBank,
-    payee.payAccountNo,
-    payee.payAccountName ? `ชื่อบัญชี ${payee.payAccountName}` : "",
-  ].filter(Boolean);
-  const receiptNote = (receipt.note || "").trim();
-
-  const lineRows = receipt.lines
-    .map((line) => {
-      const meta = lineMetaBits(line, receiptNote);
-      return `<tr>
-        <td>
-          <div class="line-kind">${escapeReceiptHtml(shortTransferKindLabel(line.kind))}</div>
-          ${
-            meta.length
-              ? `<div class="muted tiny">${escapeReceiptHtml(meta.join(" · "))}</div>`
-              : ""
-          }
-        </td>
-        <td class="num">฿${money(line.amount)}</td>
-      </tr>`;
-    })
-    .join("");
-
-  const slipNote = receipt.slipUrls.length
-    ? `มีหลักฐานสลิปโอนในระบบ ${receipt.slipUrls.length} รูป (ดูได้ที่แท็บหลักฐานจ่ายในแอป)`
-    : "ยังไม่มีสลิปโอนแนบในระบบ";
-
-  const autoPrintScript = input.autoPrint
-    ? `<script>
-      window.addEventListener("load", function () {
-        setTimeout(function () { window.focus(); window.print(); }, 400);
-      });
-    </script>`
-    : "";
-
-  return `<!DOCTYPE html>
-<html lang="th">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>${escapeReceiptHtml(title)}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet" />
-  <style>
+function paymentDocCss(multiPage: boolean): string {
+  return `
     @page { size: A4; margin: 16mm; }
     * { box-sizing: border-box; }
     body {
@@ -286,6 +231,14 @@ export function buildPayrollPaymentDocHtml(input: {
       max-width: 720px;
       margin: 0 auto;
       padding: 8px 8px 20px;
+    }
+    ${
+      multiPage
+        ? `.sheet + .sheet { page-break-before: always; break-before: page; margin-top: 2rem; padding-top: 1rem; border-top: 1px dashed #ccc; }
+    @media print {
+      .sheet + .sheet { margin-top: 0; padding-top: 0; border-top: 0; }
+    }`
+        : ""
     }
     .head {
       display: flex;
@@ -435,9 +388,16 @@ export function buildPayrollPaymentDocHtml(input: {
       color: #666;
       line-height: 1.4;
     }
+    .bundle-cover {
+      max-width: 720px;
+      margin: 0 auto 1.5rem;
+      padding: 0.5rem 0.5rem 1rem;
+      border-bottom: 2px solid #1a1a1a;
+    }
     @media print {
       body { margin: 0; }
       .sheet { padding: 0; max-width: none; }
+      .bundle-cover { display: none; }
       a { color: inherit; text-decoration: none; }
     }
     @media (max-width: 560px) {
@@ -446,10 +406,46 @@ export function buildPayrollPaymentDocHtml(input: {
       .signs { grid-template-columns: 1fr; gap: 1.5rem; }
       .grid { grid-template-columns: 7rem 1fr; }
     }
-  </style>
-</head>
-<body>
-  <div class="sheet">
+  `;
+}
+
+function buildPaymentDocSheetHtml(input: {
+  receipt: StaffTransferReceipt;
+  shop: PayrollPaymentDocShop;
+  payee: PayrollPaymentDocPayee;
+}): string {
+  const { receipt, shop, payee } = input;
+  const periodLabel = formatPayrollPeriodLabel(receipt.periodMonth);
+  const paidLabel = formatPayrollPaidAtLabel(receipt.paidAt);
+  const bankBits = [
+    payee.payBank,
+    payee.payAccountNo,
+    payee.payAccountName ? `ชื่อบัญชี ${payee.payAccountName}` : "",
+  ].filter(Boolean);
+  const receiptNote = (receipt.note || "").trim();
+
+  const lineRows = receipt.lines
+    .map((line) => {
+      const meta = lineMetaBits(line, receiptNote);
+      return `<tr>
+        <td>
+          <div class="line-kind">${escapeReceiptHtml(shortTransferKindLabel(line.kind))}</div>
+          ${
+            meta.length
+              ? `<div class="muted tiny">${escapeReceiptHtml(meta.join(" · "))}</div>`
+              : ""
+          }
+        </td>
+        <td class="num">฿${money(line.amount)}</td>
+      </tr>`;
+    })
+    .join("");
+
+  const slipNote = receipt.slipUrls.length
+    ? `มีหลักฐานสลิปโอนในระบบ ${receipt.slipUrls.length} รูป (ดูได้ที่แท็บหลักฐานจ่ายในแอป)`
+    : "ยังไม่มีสลิปโอนแนบในระบบ";
+
+  return `<div class="sheet">
     <header class="head">
       <div class="brand-block">
         <h1 class="brand">${escapeReceiptHtml(shop.shopName)}</h1>
@@ -546,10 +542,143 @@ export function buildPayrollPaymentDocHtml(input: {
       <div>${escapeReceiptHtml(slipNote)}</div>
       <div>ออกจากระบบจ่าย TellTea · อ้างอิง ${escapeReceiptHtml(receipt.key)}</div>
     </div>
-  </div>
+  </div>`;
+}
+
+function wrapPaymentDocHtml(input: {
+  title: string;
+  bodyInner: string;
+  multiPage?: boolean;
+  autoPrint?: boolean;
+}): string {
+  const autoPrintScript = input.autoPrint
+    ? `<script>
+      window.addEventListener("load", function () {
+        setTimeout(function () { window.focus(); window.print(); }, 400);
+      });
+    </script>`
+    : "";
+  return `<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${escapeReceiptHtml(input.title)}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>${paymentDocCss(Boolean(input.multiPage))}</style>
+</head>
+<body>
+  ${input.bodyInner}
   ${autoPrintScript}
 </body>
 </html>`;
+}
+
+export function buildPayrollPaymentDocHtml(input: {
+  receipt: StaffTransferReceipt;
+  shop: PayrollPaymentDocShop;
+  payee: PayrollPaymentDocPayee;
+  /** ใส่สคริปต์สั่งพิมพ์อัตโนมัติเมื่อเปิดหน้าต่างพิมพ์ */
+  autoPrint?: boolean;
+}): string {
+  const periodLabel = formatPayrollPeriodLabel(input.receipt.periodMonth);
+  const title = `ใบสรุปการจ่าย · ${input.payee.employeeName} · ${periodLabel}`;
+  return wrapPaymentDocHtml({
+    title,
+    bodyInner: buildPaymentDocSheetHtml(input),
+    autoPrint: input.autoPrint,
+  });
+}
+
+/** รอบโอนที่เป็นหลักฐานท้ายเดือน (สิ้นเดือน / โบนัส) — ไม่รวมกลางเดือนอย่างเดียว */
+export function isMonthEndPaymentReceipt(receipt: StaffTransferReceipt): boolean {
+  return receipt.lines.some(
+    (l) => l.kind === "salary_month_end" || l.kind === "bonus",
+  );
+}
+
+/** ใบสรุปท้ายเดือนทั้งร้านสำหรับงวดหนึ่ง — จากรายการที่จ่ายแล้ว */
+export function listMonthEndPaymentReceipts(
+  items: PayrollItem[],
+  periodMonth: string,
+): StaffTransferReceipt[] {
+  const month = (periodMonth || "").trim();
+  if (!month) return [];
+  const paid = items.filter(
+    (i) => i.periodMonth === month && i.status === "paid",
+  );
+  return buildStaffTransferReceipts(paid)
+    .filter(isMonthEndPaymentReceipt)
+    .sort((a, b) => {
+      const na = a.lines[0]?.item.employeeName || "";
+      const nb = b.lines[0]?.item.employeeName || "";
+      return na.localeCompare(nb, "th") || a.paidAt - b.paidAt;
+    });
+}
+
+export function monthEndPaymentDocsBundleFilename(periodMonth: string): string {
+  return `ใบสรุปจ่าย_ท้ายเดือน_${periodMonth || "month"}_ทั้งร้าน.html`;
+}
+
+/** รวมใบสรุปท้ายเดือนทุกคนเป็นไฟล์เดียว (ขึ้นหน้าใหม่ต่อคนตอนพิมพ์) */
+export function buildMonthEndPaymentDocsBundleHtml(input: {
+  periodMonth: string;
+  receipts: StaffTransferReceipt[];
+  shop: PayrollPaymentDocShop;
+  payeeFor: (receipt: StaffTransferReceipt) => PayrollPaymentDocPayee;
+  autoPrint?: boolean;
+}): string {
+  const periodLabel = formatPayrollPeriodLabel(input.periodMonth);
+  const sheets = input.receipts
+    .map((receipt) =>
+      buildPaymentDocSheetHtml({
+        receipt,
+        shop: input.shop,
+        payee: input.payeeFor(receipt),
+      }),
+    )
+    .join("\n");
+  const cover = `<div class="bundle-cover">
+    <h1 class="brand" style="font-size:1.35rem;margin:0">${escapeReceiptHtml(input.shop.shopName)}</h1>
+    <p style="margin:0.35rem 0 0;font-weight:700">ชุดใบสรุปหลักฐานจ่าย · ท้ายเดือน ${escapeReceiptHtml(periodLabel)}</p>
+    <p class="muted tiny" style="margin:0.25rem 0 0">ทั้งหมด ${input.receipts.length} ใบ · ไม่รวมงวดกลางเดือน · พิมพ์/บันทึก PDF ได้ทั้งชุด</p>
+  </div>`;
+  return wrapPaymentDocHtml({
+    title: `ใบสรุปท้ายเดือนทั้งร้าน · ${periodLabel}`,
+    bodyInner: `${cover}\n${sheets}`,
+    multiPage: true,
+    autoPrint: input.autoPrint,
+  });
+}
+
+export function openMonthEndPaymentDocsBundle(input: {
+  periodMonth: string;
+  receipts: StaffTransferReceipt[];
+  shop: PayrollPaymentDocShop;
+  payeeFor: (receipt: StaffTransferReceipt) => PayrollPaymentDocPayee;
+}): boolean {
+  if (!input.receipts.length) return false;
+  const html = buildMonthEndPaymentDocsBundleHtml({ ...input, autoPrint: true });
+  return openPayrollPaymentDocPrint(html);
+}
+
+export function downloadMonthEndPaymentDocsBundle(input: {
+  periodMonth: string;
+  receipts: StaffTransferReceipt[];
+  shop: PayrollPaymentDocShop;
+  payeeFor: (receipt: StaffTransferReceipt) => PayrollPaymentDocPayee;
+}): boolean {
+  if (!input.receipts.length) return false;
+  const html = buildMonthEndPaymentDocsBundleHtml({
+    ...input,
+    autoPrint: false,
+  });
+  return downloadPayrollPaymentDocHtml(
+    html,
+    monthEndPaymentDocsBundleFilename(input.periodMonth),
+  );
 }
 
 export function openPayrollPaymentDocPrint(html: string): boolean {

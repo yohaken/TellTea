@@ -4,7 +4,14 @@ import { useMemo, useState } from "react";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { PayrollPaymentDocModal } from "@/components/PayrollPaymentDocModal";
 import type { Employee } from "@/lib/employees";
-import { payeeFromEmployee } from "@/lib/payroll-payment-doc";
+import {
+  downloadMonthEndPaymentDocsBundle,
+  formatPayrollPeriodLabel,
+  listMonthEndPaymentReceipts,
+  openMonthEndPaymentDocsBundle,
+  payeeFromEmployee,
+  shopFromPosSettings,
+} from "@/lib/payroll-payment-doc";
 import {
   buildPayrollMonthSummaries,
   filterEmployeePayrollItems,
@@ -16,6 +23,10 @@ import {
   buildStaffTransferReceipts,
   type StaffTransferReceipt,
 } from "@/lib/payroll-staff-receipt";
+import {
+  getLocalPosShopSettings,
+  getPosShopSettings,
+} from "@/lib/pos-settings";
 import {
   PAYROLL_STATUS_LABELS,
   kindUsesMonthEndAccount,
@@ -38,17 +49,24 @@ export function PayrollHistoryPanel({
   employeeId,
   employees,
   items,
+  periodMonth,
   historySinceLabel,
   onEmployeeIdChange,
+  onInfo,
+  onError,
 }: {
   isOwner: boolean;
   shopView: boolean;
   employeeId: string;
   employees: Employee[];
   items: PayrollItem[];
+  /** เดือนที่เลือกในแถบเครื่องมือ — ใช้ปุ่มออกเอกสารท้ายเดือนทั้งร้าน */
+  periodMonth?: string;
   /** เช่น "โหลดย้อนหลังจาก 2025-06" */
   historySinceLabel?: string;
   onEmployeeIdChange?: (id: string) => void;
+  onInfo?: (msg: string) => void;
+  onError?: (msg: string) => void;
 }) {
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
   const [preview, setPreview] = useState<{
@@ -58,6 +76,7 @@ export function PayrollHistoryPanel({
   const [docReceipt, setDocReceipt] = useState<StaffTransferReceipt | null>(
     null,
   );
+  const [bundleBusy, setBundleBusy] = useState(false);
 
   useBodyScrollLock(!!preview || !!docReceipt);
 
@@ -85,6 +104,68 @@ export function PayrollHistoryPanel({
 
   const paidAll = summaries.reduce((s, m) => s + m.paidTotal, 0);
   const pendingAll = summaries.reduce((s, m) => s + m.pendingTotal, 0);
+
+  const bundleMonth = (periodMonth || "").trim();
+  const monthEndReceipts = useMemo(
+    () =>
+      shopView && bundleMonth
+        ? listMonthEndPaymentReceipts(items, bundleMonth)
+        : [],
+    [shopView, items, bundleMonth],
+  );
+
+  async function exportMonthEndBundle(mode: "print" | "download") {
+    if (!bundleMonth || !monthEndReceipts.length) {
+      onError?.("ยังไม่มีรายการท้ายเดือนที่จ่ายแล้วในงวดนี้");
+      return;
+    }
+    setBundleBusy(true);
+    try {
+      let shop = shopFromPosSettings(getLocalPosShopSettings());
+      try {
+        shop = shopFromPosSettings(await getPosShopSettings());
+      } catch {
+        /* local fallback */
+      }
+      const payeeFor = (receipt: StaffTransferReceipt) => {
+        const id = receipt.lines[0]?.item.employeeId || "";
+        const name = receipt.lines[0]?.item.employeeName || "";
+        return payeeFromEmployee(
+          employees.find((e) => e.id === id),
+          name,
+        );
+      };
+      const ok =
+        mode === "print"
+          ? openMonthEndPaymentDocsBundle({
+              periodMonth: bundleMonth,
+              receipts: monthEndReceipts,
+              shop,
+              payeeFor,
+            })
+          : downloadMonthEndPaymentDocsBundle({
+              periodMonth: bundleMonth,
+              receipts: monthEndReceipts,
+              shop,
+              payeeFor,
+            });
+      if (!ok) {
+        onError?.(
+          mode === "print"
+            ? "เปิดหน้าพิมพ์ไม่ได้ — อนุญาตป๊อปอัปแล้วลองใหม่"
+            : "ดาวน์โหลดไม่สำเร็จ",
+        );
+        return;
+      }
+      onInfo?.(
+        mode === "print"
+          ? `เปิดชุดใบสรุปท้ายเดือน ${formatPayrollPeriodLabel(bundleMonth)} · ${monthEndReceipts.length} ใบ — เลือก「บันทึกเป็น PDF」ได้`
+          : `ดาวน์โหลดชุดใบสรุปท้ายเดือน ${formatPayrollPeriodLabel(bundleMonth)} · ${monthEndReceipts.length} ใบแล้ว`,
+      );
+    } finally {
+      setBundleBusy(false);
+    }
+  }
 
   return (
     <div className="payroll-history-panel">
@@ -116,6 +197,36 @@ export function PayrollHistoryPanel({
             ))}
           </select>
         </label>
+      ) : null}
+
+      {isOwner && shopView && bundleMonth ? (
+        <div className="payroll-history-bundle" aria-label="ออกเอกสารท้ายเดือนทั้งร้าน">
+          <p className="muted payroll-actions-hint" style={{ marginBottom: "0.4rem" }}>
+            ออกเอกสารย้อนหลังท้ายเดือนทั้งร้าน · งวด{" "}
+            <strong>{formatPayrollPeriodLabel(bundleMonth)}</strong>
+            {monthEndReceipts.length
+              ? ` · พร้อม ${monthEndReceipts.length} ใบ (สิ้นเดือน/โบนัส ที่จ่ายแล้ว)`
+              : " · ยังไม่มีรายการท้ายเดือนที่จ่ายแล้วในงวดนี้"}
+          </p>
+          <div className="payroll-latest-transfer-actions">
+            <button
+              type="button"
+              className="primary-btn"
+              disabled={bundleBusy || !monthEndReceipts.length}
+              onClick={() => void exportMonthEndBundle("print")}
+            >
+              {bundleBusy ? "กำลังสร้าง…" : "พิมพ์ / PDF ทั้งร้าน"}
+            </button>
+            <button
+              type="button"
+              className="ghost-btn"
+              disabled={bundleBusy || !monthEndReceipts.length}
+              onClick={() => void exportMonthEndBundle("download")}
+            >
+              ดาวน์โหลดไฟล์ชุด
+            </button>
+          </div>
+        </div>
       ) : null}
 
       <p className="muted payroll-actions-hint">

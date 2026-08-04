@@ -821,6 +821,7 @@ function BonusView() {
         <PayrollHistoryPanel
           isOwner={uiIsOwner}
           shopView={showShopUi}
+          periodMonth={month}
           employeeId={
             isStaffPreview
               ? previewEmployeeId || ""
@@ -845,6 +846,11 @@ function BonusView() {
               ? setHistoryEmployeeId
               : undefined
           }
+          onError={setError}
+          onInfo={(msg) => {
+            setInfo(msg);
+            setError(null);
+          }}
         />
       ) : null}
 

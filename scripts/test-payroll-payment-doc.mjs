@@ -51,11 +51,16 @@ assert.match(cardUi, /ดูใบสรุปจ่าย/);
 assert.match(modalUi, /พิมพ์ \/ บันทึก PDF/);
 assert.match(modalUi, /formatPayrollPeriodLabel/);
 assert.match(modalUi, /ดาวน์โหลดไฟล์/);
-assert.match(versionSrc, /APP_BUILD = 705/);
+assert.match(versionSrc, /APP_BUILD = 707/);
 assert.match(payUi, /salary_mid/);
 assert.match(payUi, /แท็บหลักฐานจ่าย/);
+assert.match(docSrc, /listMonthEndPaymentReceipts/);
+assert.match(docSrc, /buildMonthEndPaymentDocsBundleHtml/);
+assert.match(docSrc, /isMonthEndPaymentReceipt/);
 const pageSrc = readFileSync(join(root, "src/app/bonus/page.tsx"), "utf8");
 assert.match(pageSrc, /หลักฐานจ่าย/);
+assert.match(histUi, /พิมพ์ \/ PDF ทั้งร้าน/);
+assert.match(histUi, /ดาวน์โหลดไฟล์ชุด/);
 
 function round2(n) {
   return Math.round(n * 100) / 100;

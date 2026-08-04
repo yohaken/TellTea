@@ -6872,6 +6872,14 @@ body.modal-open .main-panel {
   gap: 0.35rem;
 }
 
+.payroll-history-bundle {
+  margin: 0 0 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--tea-line);
+  border-radius: 0.75rem;
+  background: rgba(45, 106, 79, 0.05);
+}
+
 .payroll-payment-doc-modal {
   max-width: min(28rem, 96vw);
 }
