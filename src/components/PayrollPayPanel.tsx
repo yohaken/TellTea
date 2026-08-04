@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
+import { PayrollPaymentDocModal } from "@/components/PayrollPaymentDocModal";
 import {
   StaffLatestTransferCard,
   type StaffBonusExplain,
@@ -36,9 +37,14 @@ import {
   type PayrollSchedule,
 } from "@/lib/payroll";
 import {
+  buildReceiptFromJustPaid,
+  payeeFromEmployee,
+} from "@/lib/payroll-payment-doc";
+import {
   buildCombinedTransferClipboard,
   digitsOnlyAccount,
   plainTransferAmount,
+  type StaffTransferReceipt,
 } from "@/lib/payroll-staff-receipt";
 import type { ProdEntry } from "@/lib/production";
 import {
@@ -146,8 +152,15 @@ export function PayrollPayPanel({
     urls: string[];
     title: string;
   } | null>(null);
+  const [paymentDoc, setPaymentDoc] = useState<{
+    receipt: StaffTransferReceipt;
+    employeeId: string;
+    employeeName: string;
+  } | null>(null);
 
-  useBodyScrollLock(!!payTarget || specialOpen || advanceOpen || !!slipPreview);
+  useBodyScrollLock(
+    !!payTarget || specialOpen || advanceOpen || !!slipPreview || !!paymentDoc,
+  );
 
   const periodItems = useMemo(
     () => items.filter((i) => i.periodMonth === periodMonth),
@@ -475,6 +488,7 @@ export function PayrollPayPanel({
     if (!payTarget || !canPay) return;
     setBusy(true);
     try {
+      const paidAt = Date.now();
       if (payTarget.mode === "combined" && payTarget.pair) {
         const result = await markPayrollPaidCombined({
           salaryId: payTarget.pair.salary.id,
@@ -485,10 +499,23 @@ export function PayrollPayPanel({
           prodEntries,
           otEntries,
         });
+        const receipt = buildReceiptFromJustPaid({
+          items: [payTarget.pair.salary, payTarget.pair.bonus],
+          slipUrls: payTarget.slipUrls,
+          note: payTarget.note,
+          paidAt,
+          combinedPayId: result.combinedPayId,
+        });
         setPayTarget(null);
+        setPaymentDoc({
+          receipt,
+          employeeId: payTarget.pair.employeeId,
+          employeeName: payTarget.pair.employeeName,
+        });
         onInfo?.(
           `โอนรวมแล้ว · ${payTarget.pair.employeeName} · ฿${fmt(result.transferTotal)}` +
-            ` (สิ้นเดือน ฿${fmt(payTarget.pair.salary.amount)} + โบนัส ฿${fmt(payTarget.pair.bonus.amount)})`,
+            ` (สิ้นเดือน ฿${fmt(payTarget.pair.salary.amount)} + โบนัส ฿${fmt(payTarget.pair.bonus.amount)})` +
+            " · เปิดใบสรุปหลักฐานแล้ว",
         );
       } else {
         await markPayrollPaid({
@@ -499,8 +526,21 @@ export function PayrollPayPanel({
           prodEntries,
           otEntries,
         });
+        const receipt = buildReceiptFromJustPaid({
+          items: [payTarget.item],
+          slipUrls: payTarget.slipUrls,
+          note: payTarget.note,
+          paidAt,
+        });
         setPayTarget(null);
-        onInfo?.(`จ่ายแล้ว · ${payrollDescription(payTarget.item)}`);
+        setPaymentDoc({
+          receipt,
+          employeeId: payTarget.item.employeeId,
+          employeeName: payTarget.item.employeeName,
+        });
+        onInfo?.(
+          `จ่ายแล้ว · ${payrollDescription(payTarget.item)} · เปิดใบสรุปหลักฐานแล้ว`,
+        );
       }
     } catch (err) {
       onError((err as Error).message || "บันทึกจ่ายไม่สำเร็จ");
@@ -627,6 +667,7 @@ export function PayrollPayPanel({
         <StaffLatestTransferCard
           items={items}
           periodMonth={periodMonth}
+          employees={employees}
           bonusExplain={bonusExplain}
           onOpenBonusMonth={onOpenBonusMonth}
           onOpenHistory={onOpenHistory}
@@ -1082,6 +1123,17 @@ export function PayrollPayPanel({
           urls={slipPreview.urls}
           title={slipPreview.title}
           onClose={() => setSlipPreview(null)}
+        />
+      ) : null}
+
+      {paymentDoc ? (
+        <PayrollPaymentDocModal
+          receipt={paymentDoc.receipt}
+          payee={payeeFromEmployee(
+            employees.find((e) => e.id === paymentDoc.employeeId),
+            paymentDoc.employeeName,
+          )}
+          onClose={() => setPaymentDoc(null)}
         />
       ) : null}
 

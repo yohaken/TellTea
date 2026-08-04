@@ -6849,6 +6849,58 @@ body.modal-open .main-panel {
   margin-bottom: 0.15rem;
 }
 
+.payroll-history-docs-row td {
+  background: rgba(45, 106, 79, 0.04);
+}
+
+.payroll-history-docs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.55rem;
+  padding: 0.15rem 0;
+}
+
+.payroll-history-docs-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.payroll-history-docs-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.payroll-payment-doc-modal {
+  max-width: min(28rem, 96vw);
+}
+
+.payroll-payment-doc-preview {
+  border: 1px solid var(--tea-line);
+  border-radius: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.payroll-payment-doc-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.86rem;
+  margin: 0.2rem 0;
+}
+
+.payroll-payment-doc-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 0.55rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--tea-line);
+  font-size: 0.95rem;
+}
+
 .payroll-pay-groups {
   display: flex;
   flex-direction: column;

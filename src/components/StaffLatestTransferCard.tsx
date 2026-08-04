@@ -1,6 +1,9 @@
 "use client";
 
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
+import { PayrollPaymentDocModal } from "@/components/PayrollPaymentDocModal";
+import type { Employee } from "@/lib/employees";
+import { payeeFromEmployee } from "@/lib/payroll-payment-doc";
 import {
   findLatestStaffTransferReceipt,
   shortTransferKindLabel,
@@ -29,6 +32,7 @@ export type StaffBonusExplain = {
 export function StaffLatestTransferCard({
   items,
   periodMonth,
+  employees,
   bonusExplain,
   onOpenBonusMonth,
   onOpenHistory,
@@ -36,6 +40,7 @@ export function StaffLatestTransferCard({
   items: PayrollItem[];
   /** เดือนที่เลือกในแท็บ — ใช้จับคู่คำอธิบายหักโบนัส */
   periodMonth: string;
+  employees?: Employee[];
   bonusExplain?: StaffBonusExplain | null;
   onOpenBonusMonth?: (periodMonth: string) => void;
   onOpenHistory?: (periodMonth: string) => void;
@@ -44,7 +49,8 @@ export function StaffLatestTransferCard({
   const [preview, setPreview] = useState<{ urls: string[]; title: string } | null>(
     null,
   );
-  useBodyScrollLock(!!preview);
+  const [docOpen, setDocOpen] = useState(false);
+  useBodyScrollLock(!!preview || docOpen);
 
   if (!receipt) return null;
 
@@ -126,6 +132,13 @@ export function StaffLatestTransferCard({
         ) : null}
 
         <div className="payroll-latest-transfer-actions">
+          <button
+            type="button"
+            className="primary-btn"
+            onClick={() => setDocOpen(true)}
+          >
+            ดูใบสรุปจ่าย
+          </button>
           {onOpenBonusMonth ? (
             <button
               type="button"
@@ -147,7 +160,7 @@ export function StaffLatestTransferCard({
         </div>
 
         <p className="muted payroll-latest-transfer-foot">
-          ไม่แจ้งแชทตอนโอน — ดูยอดและสลิปที่นี่
+          ไม่แจ้งแชทตอนโอน — ดูยอด สลิป และใบสรุปที่นี่
           {pendingHere
             ? " · ยังมีรายการรอโอนในเดือนที่เลือกด้านล่าง"
             : " · แท็บรอโอนว่างเมื่อจ่ายครบแล้ว"}
@@ -159,6 +172,17 @@ export function StaffLatestTransferCard({
           urls={preview.urls}
           title={preview.title}
           onClose={() => setPreview(null)}
+        />
+      ) : null}
+
+      {docOpen ? (
+        <PayrollPaymentDocModal
+          receipt={receipt}
+          payee={payeeFromEmployee(
+            employees?.find((e) => e.id === receipt.lines[0]?.item.employeeId),
+            receipt.lines[0]?.item.employeeName,
+          )}
+          onClose={() => setDocOpen(false)}
         />
       ) : null}
     </>

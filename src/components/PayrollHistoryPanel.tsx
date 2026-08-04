@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
+import { PayrollPaymentDocModal } from "@/components/PayrollPaymentDocModal";
 import type { Employee } from "@/lib/employees";
+import { payeeFromEmployee } from "@/lib/payroll-payment-doc";
 import {
   buildPayrollMonthSummaries,
   filterEmployeePayrollItems,
@@ -10,6 +12,10 @@ import {
   salaryHistoryMetaBits,
   shortPayrollKindLabel,
 } from "@/lib/payroll-history";
+import {
+  buildStaffTransferReceipts,
+  type StaffTransferReceipt,
+} from "@/lib/payroll-staff-receipt";
 import {
   PAYROLL_STATUS_LABELS,
   kindUsesMonthEndAccount,
@@ -24,7 +30,7 @@ function fmt(n: number) {
 
 /**
  * ตารางประวัติจ่ายรายเดือน — พนักงานดูของตัวเอง · เจ้าของเลือกคน
- * รวมเงินเดือน + จ่ายแยก + โบนัส · กดดูสลิปได้เมื่อมี
+ * รวมเงินเดือน + จ่ายแยก + โบนัส · กดดูสลิป / ใบสรุปหลักฐานจ่ายได้เมื่อจ่ายแล้ว
  */
 export function PayrollHistoryPanel({
   isOwner,
@@ -49,8 +55,11 @@ export function PayrollHistoryPanel({
     urls: string[];
     title: string;
   } | null>(null);
+  const [docReceipt, setDocReceipt] = useState<StaffTransferReceipt | null>(
+    null,
+  );
 
-  useBodyScrollLock(!!preview);
+  useBodyScrollLock(!!preview || !!docReceipt);
 
   const roster = useMemo(
     () =>
@@ -66,8 +75,11 @@ export function PayrollHistoryPanel({
   );
   const summaries = useMemo(() => buildPayrollMonthSummaries(mine), [mine]);
 
+  const emp =
+    roster.find((e) => e.id === employeeId) ||
+    employees.find((e) => e.id === employeeId);
   const empName =
-    roster.find((e) => e.id === employeeId)?.name ||
+    emp?.name ||
     mine[0]?.employeeName ||
     "—";
 
@@ -97,9 +109,9 @@ export function PayrollHistoryPanel({
             onChange={(e) => onEmployeeIdChange(e.target.value)}
             aria-label="เลือกพนักงานดูประวัติ"
           >
-            {roster.map((emp) => (
-              <option key={emp.id} value={emp.id}>
-                {emp.name}
+            {roster.map((empOpt) => (
+              <option key={empOpt.id} value={empOpt.id}>
+                {empOpt.name}
               </option>
             ))}
           </select>
@@ -108,7 +120,7 @@ export function PayrollHistoryPanel({
 
       <p className="muted payroll-actions-hint">
         แยกตามงวดงาน (ไม่ใช่วันเงินเข้าบัญชี) · แต่ละเดือน: เงินเดือน · โบนัส · รวมจ่าย ·
-        แตะเดือนเพื่อดูรายการและสลิปโอน
+        แตะเดือนเพื่อดูรายการ สลิปโอน และใบสรุปหลักฐานจ่าย
       </p>
 
       {!employeeId ? (
@@ -160,6 +172,7 @@ export function PayrollHistoryPanel({
                         title: `${shortPayrollKindLabel(item.kind)} · ${item.periodMonth}`,
                       })
                     }
+                    onOpenDoc={(receipt) => setDocReceipt(receipt)}
                   />
                 );
               })}
@@ -173,6 +186,14 @@ export function PayrollHistoryPanel({
           urls={preview.urls}
           title={preview.title}
           onClose={() => setPreview(null)}
+        />
+      ) : null}
+
+      {docReceipt ? (
+        <PayrollPaymentDocModal
+          receipt={docReceipt}
+          payee={payeeFromEmployee(emp, empName)}
+          onClose={() => setDocReceipt(null)}
         />
       ) : null}
     </div>
@@ -194,6 +215,7 @@ function FragmentMonth({
   hasPending,
   items,
   onOpenSlips,
+  onOpenDoc,
 }: {
   open: boolean;
   onToggle: () => void;
@@ -209,6 +231,7 @@ function FragmentMonth({
   hasPending: boolean;
   items: PayrollItem[];
   onOpenSlips: (item: PayrollItem) => void;
+  onOpenDoc: (receipt: StaffTransferReceipt) => void;
 }) {
   const statusLabel = paidComplete
     ? "ครบแล้ว"
@@ -219,6 +242,9 @@ function FragmentMonth({
         : "—";
 
   const seenCombined = new Set<string>();
+  const paidReceipts = open
+    ? buildStaffTransferReceipts(items.filter((i) => i.status === "paid"))
+    : [];
 
   return (
     <>
@@ -270,6 +296,34 @@ function FragmentMonth({
           </span>
         </td>
       </tr>
+      {open && paidReceipts.length ? (
+        <tr className="payroll-tr is-detail payroll-history-docs-row">
+          <td colSpan={5}>
+            <div className="payroll-history-docs" aria-label="ใบสรุปหลักฐานการจ่าย">
+              <span className="muted payroll-history-docs-label">
+                ใบสรุปหลักฐานจ่าย
+              </span>
+              <div className="payroll-history-docs-actions">
+                {paidReceipts.map((receipt) => {
+                  const label = receipt.combined
+                    ? `โอนรวม ฿${fmt(receipt.transferTotal)}`
+                    : `${shortPayrollKindLabel(receipt.lines[0]?.kind || "salary_mid")} ฿${fmt(receipt.transferTotal)}`;
+                  return (
+                    <button
+                      key={receipt.key}
+                      type="button"
+                      className="ghost-btn payroll-table-btn"
+                      onClick={() => onOpenDoc(receipt)}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </td>
+        </tr>
+      ) : null}
       {open
         ? items.map((item) => {
             const dueLabel = kindUsesMonthEndAccount(item.kind)
