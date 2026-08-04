@@ -312,34 +312,31 @@ async function main() {
         );
       }
 
-      // หน้าชงส่วนใหญ่เป็น update — เทียบ updatedAt ล่าสุดกับ lastSeenAt
-      const otUpdateMismatches = [];
+      // สัญญาณจริง: สร้าง OT แล้ว lastSeenAt ต้อง ≥ createdAt (อย่าใช้ updatedAt — สคริปต์ซ่อมเรททำให้หลายคนพร้อมกัน)
+      const otCreateMismatches = [];
       for (const d of otDocs) {
         const f = d.fields;
         const createdAt = Number(parseField(f.createdAt) || 0);
-        const updatedAt = Number(parseField(f.updatedAt) || 0);
         const createdBy = String(parseField(f.createdBy) || "");
-        // เฉพาะแถวที่ถูกแก้จริง (ไม่ใช่สร้างอย่างเดียว) ใน 24 ชม.
         if (!createdBy.includes("@")) continue;
-        if (!(updatedAt > createdAt + 60_000)) continue;
-        if (updatedAt < now - 24 * 60 * 60 * 1000) continue;
+        if (createdAt < now - 24 * 60 * 60 * 1000) continue;
         const staff = staffById.get(createdBy);
         if (!staff) {
-          otUpdateMismatches.push(`${createdBy} updated ot ${formatIct(updatedAt)} but NO staff doc`);
+          otCreateMismatches.push(`${createdBy} created ot ${formatIct(createdAt)} but NO staff doc`);
           continue;
         }
-        if (!staff.lastSeenAt || staff.lastSeenAt + 60_000 < updatedAt) {
-          otUpdateMismatches.push(
-            `${staff.label} (${createdBy}) ot update ${formatIct(updatedAt)} (${formatAge(updatedAt, now)}) but lastSeen ${staff.lastSeenIct} (${staff.age})`,
+        if (!staff.lastSeenAt || staff.lastSeenAt + 60_000 < createdAt) {
+          otCreateMismatches.push(
+            `${staff.label} (${createdBy}) ot create ${formatIct(createdAt)} (${formatAge(createdAt, now)}) but lastSeen ${staff.lastSeenIct} (${staff.age})`,
           );
         }
       }
       lines.push("");
-      lines.push(`=== presence vs ot-update mismatches 24h (${otUpdateMismatches.length}) ===`);
-      if (!otUpdateMismatches.length) {
-        lines.push("none — recent ot editors have lastSeenAt >= ot updatedAt");
+      lines.push(`=== presence vs ot-create mismatches 24h (${otCreateMismatches.length}) ===`);
+      if (!otCreateMismatches.length) {
+        lines.push("none — recent ot creators have lastSeenAt >= ot createdAt");
       } else {
-        for (const m of otUpdateMismatches.slice(0, 30)) lines.push(`MISMATCH ${m}`);
+        for (const m of otCreateMismatches.slice(0, 30)) lines.push(`MISMATCH ${m}`);
       }
     } catch (err) {
       lines.push(`prod/ot dump failed: ${err instanceof Error ? err.message : String(err)}`);

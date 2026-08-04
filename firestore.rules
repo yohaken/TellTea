@@ -491,7 +491,8 @@ service cloud.firestore {
     }
 
     match /staff/{staffId} {
-      allow get: if signedIn() && (staffId == resolvedStaffId() || staffHubManage());
+      // อ่านบัญชีตัวเอง: id == resolved หรืออีเมล/เบอร์บน doc ตรง token (คู่กับ presence update)
+      allow get: if signedIn() && (staffId == resolvedStaffId() || isOwnStaffDoc(staffId) || staffHubManage());
       allow list: if staffHubManage();
       allow create: if staffHubCreateOk()
         || (isOwnerEmail()

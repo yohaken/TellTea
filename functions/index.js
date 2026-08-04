@@ -66,6 +66,11 @@ exports.vatOutlookSync = vatOutlook.vatOutlookSync;
 const vatSalesAlerts = require("./vat-sales-alerts");
 exports.vatSalesDailyAlert = vatSalesAlerts.vatSalesDailyAlert;
 exports.vatSalesAlertCheck = vatSalesAlerts.vatSalesAlertCheck;
+const staffPresence = require("./staff-presence");
+exports.touchStaffPresence = staffPresence.touchStaffPresence;
+exports.onOtEntryCreatedForPresence = staffPresence.onOtEntryCreatedForPresence;
+exports.onProdEntryCreatedForPresence = staffPresence.onProdEntryCreatedForPresence;
+exports.onStockCountWrittenForPresence = staffPresence.onStockCountWrittenForPresence;
 const VAPID_PUBLIC =
   process.env.VAPID_PUBLIC_KEY ||
   "BI74S6JyDs61V0eqRuS9iy6XdhER9wtA-EXhLfWiEFZSeg2VBBQM1dnPnFsyVY2AQzcKF7gHZm-Eifpsc7cF0Zg";
