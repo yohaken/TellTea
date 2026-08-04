@@ -12,7 +12,7 @@ const read = (p) => readFileSync(join(root, p), "utf8");
 const require = createRequire(import.meta.url);
 
 assert.ok(
-  Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)?.[1] || 0) >= 625,
+  Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)?.[1] || 0) >= 700,
 );
 
 assert.ok(existsSync(join(root, "src/lib/pos-sales-dashboard.ts")));
@@ -27,7 +27,9 @@ assert.match(agg, /summarizePosSalesProducts/);
 assert.match(agg, /bangkokWeekday/);
 
 const charts = read("src/components/PosSalesDashboardCharts.tsx");
+assert.match(charts, /PosDashDailyTotalsTable/);
 assert.match(charts, /ยอดขายรายวัน/);
+assert.match(charts, /กราฟรายวัน/);
 assert.match(charts, /ยอดขายแยกตามช่วงเวลา/);
 assert.match(charts, /ยอดขายแยกตามช่วงวัน/);
 assert.match(charts, /pos-dash-area-fill|pos-dash-bar--hour/);
@@ -37,6 +39,8 @@ assert.match(products, /10 อันดับสินค้าขายดี/)
 assert.match(products, /เมนูที่มีขาย|ขายดีสุด|หมวดขายดี/);
 
 const dash = read("src/components/PosSalesDashboard.tsx");
+assert.match(dash, /PosDashDailyTotalsTable/);
+assert.match(dash, /pos-dash-daily-block/);
 assert.match(dash, /PosDashDailyAreaChart|PosDashHourBarChart|PosDashWeekdayBarChart/);
 assert.match(dash, /PosSalesDashboardProducts/);
 assert.match(dash, /ส่วนลด|สถิติบิล|กิจกรรม/);
@@ -44,6 +48,8 @@ assert.match(dash, /subscribeMenuItems|subscribeMenuCategories/);
 assert.doesNotMatch(dash, /โต๊ะอาหาร|อัตราการใช้โต๊ะ/);
 
 const css = read("src/app/globals.css");
+assert.match(css, /\.pos-dash-daily-block/);
+assert.match(css, /\.pos-dash-day-table\b/);
 assert.match(css, /\.pos-dash-chart-row/);
 assert.match(css, /\.pos-dash-top-items/);
 assert.match(css, /\.pos-dash-bar--hour/);

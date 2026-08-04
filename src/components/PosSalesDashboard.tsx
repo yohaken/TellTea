@@ -36,6 +36,7 @@ import type { MenuCategory, MenuItem, PosSale, StockMovement } from "@/lib/types
 import { formatPlainNumber, parseDateInput, startOfLocalDay } from "@/lib/utils";
 import {
   PosDashDailyAreaChart,
+  PosDashDailyTotalsTable,
   PosDashHourBarChart,
   PosDashWeekdayBarChart,
 } from "@/components/PosSalesDashboardCharts";
@@ -516,7 +517,10 @@ export function PosSalesDashboard({
             </article>
           </div>
 
-          <PosDashDailyAreaChart points={byDay} />
+          <div className="pos-dash-daily-block">
+            <PosDashDailyTotalsTable points={byDay} />
+            <PosDashDailyAreaChart points={byDay} />
+          </div>
 
           <div className="pos-dash-chart-row">
             <div className="pos-dash-chart-row__hour">

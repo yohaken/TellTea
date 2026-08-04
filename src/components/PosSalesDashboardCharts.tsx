@@ -28,6 +28,42 @@ function formatAxisBaht(n: number): string {
   return String(Math.round(n));
 }
 
+/** Numbers-first daily sales box — date + amount only (newest first). */
+export function PosDashDailyTotalsTable({ points }: { points: PosDashDayPoint[] }) {
+  const rows = useMemo(() => [...points].reverse(), [points]);
+  return (
+    <section className="pos-dash-day-table-card" aria-label="ยอดขายรายวันตัวเลข">
+      <h3 className="pos-dash-card-title">ยอดขายรายวัน</h3>
+      {rows.length ? (
+        <div className="pos-dash-day-table-scroll">
+          <table className="pos-dash-day-table">
+            <thead>
+              <tr>
+                <th scope="col">วันที่</th>
+                <th scope="col" className="is-num">
+                  ยอดขาย
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((p) => (
+                <tr key={p.dateKey} className={p.total <= 0 ? "is-zero" : undefined}>
+                  <td>{p.label}</td>
+                  <td className="is-num">
+                    <strong>{formatPlainNumber(p.total)}</strong>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="muted pos-dash-day-table-empty">ยังไม่มียอดในช่วงนี้</p>
+      )}
+    </section>
+  );
+}
+
 export function PosDashDailyAreaChart({ points }: { points: PosDashDayPoint[] }) {
   const W = 720;
   const H = 220;
@@ -68,9 +104,9 @@ export function PosDashDailyAreaChart({ points }: { points: PosDashDayPoint[] })
 
   return (
     <div className="pos-dash-chart-card">
-      <h3 className="pos-dash-card-title">ยอดขายรายวัน</h3>
+      <h3 className="pos-dash-card-title">กราฟรายวัน</h3>
       <div className="pos-dash-chart-svg-wrap">
-        <svg viewBox={`0 0 ${W} ${H}`} className="pos-dash-chart-svg" role="img" aria-label="ยอดขายรายวัน">
+        <svg viewBox={`0 0 ${W} ${H}`} className="pos-dash-chart-svg" role="img" aria-label="กราฟยอดขายรายวัน">
           {ticks.map((t) => {
             const y = pad.top + innerH - (t / max) * innerH;
             return (
