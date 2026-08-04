@@ -1049,10 +1049,10 @@ export function CashInLedgerPanel({
                       : handoff === "mismatch"
                         ? "ไม่ตรง"
                         : "";
-                  const openLabel = opener
+                  const titleOpen = opener
                     ? `เปิด ${openHm} ${opener}`
                     : `เปิด ${openHm}`;
-                  const closeLabel = closer
+                  const titleClose = closer
                     ? `ปิด ${closeHm} ${closer}`
                     : `ปิด ${closeHm}`;
                   return (
@@ -1069,7 +1069,7 @@ export function CashInLedgerPanel({
                         title={
                           ticked
                             ? `ยกเลิกติ๊ก ${billNo}`
-                            : `ติ๊กบิล ${billNo} · ${openLabel} · ${closeLabel}`
+                            : `ติ๊กบิล ${billNo} · ${titleOpen} · ${titleClose}`
                         }
                         aria-pressed={ticked}
                         onClick={() => toggleSessionTick(s)}
@@ -1078,28 +1078,42 @@ export function CashInLedgerPanel({
                           {ticked ? "✓" : ""}
                         </span>
                         <span className="cash-in-bill-body">
-                          <span className="cash-in-bill-amt">
-                            ฿{formatPlainNumber(remit)}
-                          </span>
-                          <span className="cash-in-bill-meta">
-                            <span>
-                              {formatCashDayShort(s.date || s.openedAt || 0)}
+                          <span className="cash-in-bill-line">
+                            <span className="cash-in-bill-amt">
+                              ฿{formatPlainNumber(remit)}
                             </span>
-                            <span>·</span>
-                            <span>{sessionCounterLabel(s)}</span>
-                            <span>·</span>
-                            <span>{billNo}</span>
-                            {statusShort ? (
-                              <>
-                                <span>·</span>
-                                <span>{statusShort}</span>
-                              </>
-                            ) : null}
+                            <span className="cash-in-bill-meta">
+                              <span>
+                                {formatCashDayShort(s.date || s.openedAt || 0)}
+                              </span>
+                              <span>·</span>
+                              <span>{sessionCounterLabel(s)}</span>
+                              <span>·</span>
+                              <span>{billNo}</span>
+                              {statusShort ? (
+                                <>
+                                  <span>·</span>
+                                  <span>{statusShort}</span>
+                                </>
+                              ) : null}
+                            </span>
                           </span>
                           <span className="cash-in-bill-shift">
-                            <span>{openLabel}</span>
+                            <span className="cash-in-bill-shift-part is-open">
+                              <span className="cash-in-bill-shift-label">เปิด</span>
+                              <span className="cash-in-bill-shift-time">{openHm}</span>
+                              {opener ? (
+                                <span className="cash-in-bill-shift-name">{opener}</span>
+                              ) : null}
+                            </span>
                             <span aria-hidden>·</span>
-                            <span>{closeLabel}</span>
+                            <span className="cash-in-bill-shift-part is-close">
+                              <span className="cash-in-bill-shift-label">ปิด</span>
+                              <span className="cash-in-bill-shift-time">{closeHm}</span>
+                              {closer ? (
+                                <span className="cash-in-bill-shift-name">{closer}</span>
+                              ) : null}
+                            </span>
                           </span>
                         </span>
                       </button>
