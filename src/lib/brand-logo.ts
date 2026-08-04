@@ -1,6 +1,7 @@
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { getDb } from "./firebase";
 import { isEvidencePhotoRef, resolveEvidencePhotoSrc } from "./evidence-photos";
+import { prepareBrandLogoPngDataUrl } from "./receipts";
 
 /** Soft cap — brand marks must stay tiny so AppShell stays snappy. */
 export const BRAND_LOGO_MAX_CHARS = 80_000;
@@ -13,6 +14,8 @@ type BrandLogoDoc = {
   dataUrl: string;
   updatedAt: number;
   updatedBy: string;
+  /** Light edge pad knocked out → transparent PNG (no white corners on login). */
+  lightBgKnockedOut?: boolean;
 };
 
 let memorySrc = "";
@@ -53,49 +56,43 @@ export function setBrandLogoMemory(src: string, emit = true) {
   }
 }
 
-async function shrinkDataUrlIfNeeded(dataUrl: string, maxChars = BRAND_LOGO_MAX_CHARS): Promise<string> {
+async function shrinkPngDataUrlIfNeeded(
+  dataUrl: string,
+  maxChars = BRAND_LOGO_MAX_CHARS,
+): Promise<string> {
   const raw = String(dataUrl || "").trim();
   if (!raw.startsWith("data:image/") || raw.length <= maxChars) return raw;
 
-  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const el = new Image();
-    el.onload = () => resolve(el);
-    el.onerror = () => reject(new Error("อ่านโลโก้ไม่สำเร็จ"));
-    el.src = raw;
-  });
-
-  let edge = Math.min(320, Math.max(img.naturalWidth || 320, img.naturalHeight || 320));
+  let edge = 280;
   while (edge >= 96) {
-    const scale = Math.min(1, edge / Math.max(img.naturalWidth || 1, img.naturalHeight || 1));
-    const w = Math.max(1, Math.round((img.naturalWidth || edge) * scale));
-    const h = Math.max(1, Math.round((img.naturalHeight || edge) * scale));
-    const canvas = document.createElement("canvas");
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) break;
-    ctx.clearRect(0, 0, w, h);
-    ctx.drawImage(img, 0, 0, w, h);
-    const isPng = raw.startsWith("data:image/png");
-    const next = canvas.toDataURL(isPng ? "image/png" : "image/jpeg", isPng ? undefined : 0.82);
+    const next = await prepareBrandLogoPngDataUrl(raw, edge);
     if (next.length <= maxChars) return next;
     edge = Math.round(edge * 0.75);
   }
   throw new Error("โลโก้ใหญ่เกินไป — ลดขนาด PNG แล้วลองใหม่");
 }
 
+/** Knock out light pad + shrink — always stores transparent PNG. */
+async function prepareAndShrinkLogo(dataUrl: string): Promise<string> {
+  const punched = await prepareBrandLogoPngDataUrl(dataUrl.trim(), 320);
+  return shrinkPngDataUrlIfNeeded(punched);
+}
+
 export async function saveBrandLogo(dataUrl: string, updatedBy: string): Promise<string> {
-  const shrunk = dataUrl.trim()
-    ? await shrinkDataUrlIfNeeded(dataUrl.trim())
-    : "";
+  const shrunk = dataUrl.trim() ? await prepareAndShrinkLogo(dataUrl.trim()) : "";
   const payload: BrandLogoDoc = {
     dataUrl: shrunk,
     updatedAt: Date.now(),
     updatedBy,
+    lightBgKnockedOut: Boolean(shrunk),
   };
   await setDoc(brandLogoRef(), payload, { merge: true });
   // Keep businessProfile lean — never store image bytes there again.
-  await setDoc(profileRef(), { logoUrl: shrunk ? "brandLogo" : "", updatedAt: Date.now(), updatedBy }, { merge: true });
+  await setDoc(
+    profileRef(),
+    { logoUrl: shrunk ? "brandLogo" : "", updatedAt: Date.now(), updatedBy },
+    { merge: true },
+  );
   setBrandLogoMemory(shrunk, true);
   loadPromise = Promise.resolve(shrunk);
   return shrunk;
@@ -104,6 +101,7 @@ export async function saveBrandLogo(dataUrl: string, updatedBy: string): Promise
 /**
  * Load brand logo once per session. Safe on login (meta/brandLogo is public-read).
  * Migrates fat data URLs left on businessProfile by the previous build.
+ * Also one-shot knocks out white/cream edge pads on older uploads.
  */
 export async function loadBrandLogo(): Promise<string> {
   if (memorySrc) return memorySrc;
@@ -113,7 +111,9 @@ export async function loadBrandLogo(): Promise<string> {
     purgeLegacyBrandLogoStorage();
     try {
       const snap = await getDoc(brandLogoRef());
-      let src = snap.exists() ? String((snap.data() as BrandLogoDoc)?.dataUrl || "").trim() : "";
+      const docData = snap.exists() ? (snap.data() as BrandLogoDoc) : null;
+      let src = docData ? String(docData.dataUrl || "").trim() : "";
+      const alreadyKnocked = Boolean(docData?.lightBgKnockedOut);
 
       if (!src) {
         const profileSnap = await getDoc(profileRef());
@@ -122,10 +122,15 @@ export async function loadBrandLogo(): Promise<string> {
           : "";
         if (legacy.startsWith("data:image/")) {
           try {
-            src = await shrinkDataUrlIfNeeded(legacy);
+            src = await prepareAndShrinkLogo(legacy);
             await setDoc(
               brandLogoRef(),
-              { dataUrl: src, updatedAt: Date.now(), updatedBy: "migrate" } satisfies BrandLogoDoc,
+              {
+                dataUrl: src,
+                updatedAt: Date.now(),
+                updatedBy: "migrate",
+                lightBgKnockedOut: true,
+              } satisfies BrandLogoDoc,
               { merge: true },
             );
           } catch {
@@ -135,11 +140,18 @@ export async function loadBrandLogo(): Promise<string> {
         } else if (isEvidencePhotoRef(legacy)) {
           try {
             const resolved = await resolveEvidencePhotoSrc(legacy);
-            src = resolved.startsWith("data:") ? await shrinkDataUrlIfNeeded(resolved) : "";
+            src = resolved.startsWith("data:")
+              ? await prepareAndShrinkLogo(resolved)
+              : "";
             if (src) {
               await setDoc(
                 brandLogoRef(),
-                { dataUrl: src, updatedAt: Date.now(), updatedBy: "migrate" } satisfies BrandLogoDoc,
+                {
+                  dataUrl: src,
+                  updatedAt: Date.now(),
+                  updatedBy: "migrate",
+                  lightBgKnockedOut: true,
+                } satisfies BrandLogoDoc,
                 { merge: true },
               );
               await setDoc(profileRef(), { logoUrl: "brandLogo" }, { merge: true });
@@ -150,16 +162,21 @@ export async function loadBrandLogo(): Promise<string> {
         } else if (/^https?:\/\//i.test(legacy)) {
           src = legacy;
         }
-      } else if (src.length > BRAND_LOGO_MAX_CHARS) {
+      } else if (!alreadyKnocked || src.length > BRAND_LOGO_MAX_CHARS) {
         try {
-          src = await shrinkDataUrlIfNeeded(src);
+          src = await prepareAndShrinkLogo(src);
           await setDoc(
             brandLogoRef(),
-            { dataUrl: src, updatedAt: Date.now(), updatedBy: "shrink" } satisfies BrandLogoDoc,
+            {
+              dataUrl: src,
+              updatedAt: Date.now(),
+              updatedBy: alreadyKnocked ? "shrink" : "knockout",
+              lightBgKnockedOut: true,
+            } satisfies BrandLogoDoc,
             { merge: true },
           );
         } catch {
-          src = "";
+          /* keep original src if re-encode fails */
         }
       }
 
