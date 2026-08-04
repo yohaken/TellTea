@@ -22960,6 +22960,16 @@ a.ghost-btn {
   color: #5a6570;
 }
 
+.cash-in-bill-shift {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #3a453c;
+}
+
 .cash-in-bill-use {
   grid-column: 2;
   grid-row: 1 / span 2;

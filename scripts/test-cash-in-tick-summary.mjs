@@ -18,12 +18,16 @@ const doc = read("docs/npos-remit-rounds-phases.md");
 
 const buildMatch = version.match(/APP_BUILD\s*=\s*(\d+)/);
 assert.ok(buildMatch);
-assert.ok(Number(buildMatch[1]) >= 674, `APP_BUILD >= 674, got ${buildMatch[1]}`);
+assert.ok(Number(buildMatch[1]) >= 692, `APP_BUILD >= 692, got ${buildMatch[1]}`);
 
 assert.match(panel, /function toggleSessionTick/);
 assert.match(panel, /function clearAllTicks/);
 assert.match(panel, /function applyWorkingDays/);
 assert.match(panel, /withRefreshedBankAmount/);
+assert.match(panel, /formatCashInHm/);
+assert.match(panel, /openedByName/);
+assert.match(panel, /closedByName/);
+assert.match(panel, /cash-in-bill-shift/);
 assert.match(panel, /is-tick/);
 assert.match(panel, /cash-in-bill-card/);
 assert.match(panel, /cash-in-summary-bar/);
@@ -59,6 +63,7 @@ assert.match(css, /\.cash-in-summary-slips\b/);
 assert.match(css, /\.cash-in-summary-row\.is-diff\b/);
 assert.match(css, /\.cash-in-bill-card\b/);
 assert.match(css, /\.cash-in-bill-check\b/);
-assert.match(doc, /R2\.14|ตัดแนบใบรอบ/);
+assert.match(css, /\.cash-in-bill-shift\b/);
+assert.match(doc, /R2\.15|การ์ดรอโอนมีกะ/);
 
 console.log("OK test-cash-in-tick-summary");

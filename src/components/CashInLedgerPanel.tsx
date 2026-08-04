@@ -102,6 +102,15 @@ function transferUiClass(state: CashDepositTransferUiState) {
   }
 }
 
+/** Local HH:mm for cash-in pending cards (Bangkok wall clock via th-TH). */
+function formatCashInHm(ts: number): string {
+  if (!ts) return "—";
+  return new Date(ts).toLocaleTimeString("th-TH", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 type DraftRound = {
   key: string;
   transferDate: number;
@@ -1029,6 +1038,9 @@ export function CashInLedgerPanel({
                   const remit = sessionRemitAmount(s) || 0;
                   const handoff = deriveRemitStatus(s);
                   const opener = (s.openedByName || "").trim();
+                  const closer = (s.closedByName || "").trim();
+                  const openHm = formatCashInHm(s.openedAt || 0);
+                  const closeHm = formatCashInHm(s.closedAt || 0);
                   const billNo = posSessionCode(s.id);
                   const ticked = workingSessionIds.has(s.id);
                   const statusShort =
@@ -1037,6 +1049,12 @@ export function CashInLedgerPanel({
                       : handoff === "mismatch"
                         ? "ไม่ตรง"
                         : "";
+                  const openLabel = opener
+                    ? `เปิด ${openHm} ${opener}`
+                    : `เปิด ${openHm}`;
+                  const closeLabel = closer
+                    ? `ปิด ${closeHm} ${closer}`
+                    : `ปิด ${closeHm}`;
                   return (
                     <li key={s.id}>
                       <button
@@ -1051,7 +1069,7 @@ export function CashInLedgerPanel({
                         title={
                           ticked
                             ? `ยกเลิกติ๊ก ${billNo}`
-                            : `ติ๊กบิล ${billNo}`
+                            : `ติ๊กบิล ${billNo} · ${openLabel} · ${closeLabel}`
                         }
                         aria-pressed={ticked}
                         onClick={() => toggleSessionTick(s)}
@@ -1071,18 +1089,17 @@ export function CashInLedgerPanel({
                             <span>{sessionCounterLabel(s)}</span>
                             <span>·</span>
                             <span>{billNo}</span>
-                            {opener ? (
-                              <>
-                                <span>·</span>
-                                <span>{opener}</span>
-                              </>
-                            ) : null}
                             {statusShort ? (
                               <>
                                 <span>·</span>
                                 <span>{statusShort}</span>
                               </>
                             ) : null}
+                          </span>
+                          <span className="cash-in-bill-shift">
+                            <span>{openLabel}</span>
+                            <span aria-hidden>·</span>
+                            <span>{closeLabel}</span>
                           </span>
                         </span>
                       </button>
