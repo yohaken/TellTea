@@ -437,8 +437,8 @@ function StaffView() {
     <div className="staff-hub">
       <header className="staff-hub-head">
         <div>
-          <h1 className="staff-hub-title">ทีม / พนักงาน</h1>
-          <p className="staff-hub-sub">หลังร้าน · จัดการชื่อ บัญชี และลำดับสิทธิ์</p>
+          <h1 className="staff-hub-title">ทีม</h1>
+          <p className="staff-hub-sub">ชื่อ · บัญชี · ลำดับสิทธิ์</p>
         </div>
         <div className="staff-hub-head-actions">
           {isOwner ? (
@@ -467,12 +467,6 @@ function StaffView() {
           </ol>
         </section>
       ) : null}
-
-      <nav className="staff-hub-jump" aria-label="ข้ามไปส่วน">
-        <a href="#staff-team">ทีม</a>
-        <a href="#staff-accounts">สร้างบัญชี</a>
-        <a href="#staff-levels">ลำดับสิทธิ์</a>
-      </nav>
 
       {error ? <p className="error-text staff-hub-msg">{error}</p> : null}
       {success ? (

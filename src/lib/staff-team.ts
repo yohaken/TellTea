@@ -146,11 +146,9 @@ export function teamReadyTone(
   return "none";
 }
 
+/** เงินเดือนเต็มในตารางทีม (ไม่ย่อเป็น ก) */
 export function formatSalaryShort(amount?: number): string {
   if (amount == null || !(amount > 0)) return "—";
-  if (amount >= 1000 && amount % 1000 === 0) {
-    return `฿${(amount / 1000).toLocaleString("th-TH")}ก`;
-  }
   return `฿${amount.toLocaleString("th-TH")}`;
 }
 

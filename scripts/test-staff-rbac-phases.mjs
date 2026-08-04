@@ -92,7 +92,8 @@ assert.match(staffPage, /onPreviewMember/);
 
 const teamMini = read("src/components/StaffTeamMiniTable.tsx");
 assert.match(teamMini, /staff-mini-col-level/);
-assert.match(teamMini, /ดูแบบเขา/);
+assert.match(teamMini, /มุมมอง/);
+assert.match(teamMini, /onPreviewMember/);
 assert.match(read("src/lib/staff-team.ts"), /staffLevelBadgeLabel/);
 
 const ledger = read("src/app/ledger/page.tsx");

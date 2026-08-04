@@ -31,13 +31,13 @@ import {
   formatPresenceAge,
   formatPresenceLastLogin,
 } from "@/lib/staff-presence";
-import { Eye, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 
 function accountActionLabel(row: StaffTeamRow): string {
   const r = row.readiness;
-  if (!r || r.kind === "roster-only" || !row.member) return "สร้างบัญชี";
-  if (!r.checks.roster) return "เชื่อมชื่อ";
-  return "แก้บัญชี";
+  if (!r || r.kind === "roster-only" || !row.member) return "สร้างบช.";
+  if (!r.checks.roster) return "เชื่อม";
+  return "บัญชี";
 }
 
 function readinessAsEditRow(row: StaffTeamRow): StaffReadinessRow | null {
@@ -190,7 +190,7 @@ function MemberPermEditor({
             onSave(perms, levelId, customized);
           }}
         >
-          บันทึกสิทธิ์
+          บันทึก
         </button>
       </div>
       {showCustom ? (
@@ -360,7 +360,7 @@ function EmployeeEditPanel({
           disabled={saving || busy}
           onClick={() => void saveEdit()}
         >
-          {saving ? "..." : "บันทึกชื่อ/เงิน"}
+          {saving ? "..." : "บันทึก"}
         </button>
       </div>
     </div>
@@ -465,7 +465,7 @@ export function StaffTeamMiniTable({
         <div>
           <h2 className="staff-hub-panel-title">ทีม</h2>
           <p className="staff-readiness-summary muted">
-            {summary.active} คนใช้ · บัญชี {summary.withAccount} · ครบ {summary.complete}
+            {summary.active} คน
             {summary.awaiting ? ` · รอบัญชี ${summary.awaiting}` : ""}
             {summary.inactive ? ` · ปิด ${summary.inactive}` : ""}
           </p>
@@ -501,17 +501,16 @@ export function StaffTeamMiniTable({
               <tr>
                 <th className="staff-mini-col-name">ชื่อ</th>
                 <th className="staff-mini-col-level">ลำดับ</th>
-                <th className="staff-mini-col-account">บัญชี</th>
                 <th className="staff-mini-col-ready">พร้อม</th>
                 <th className="staff-mini-col-seen">ใช้</th>
-                <th className="staff-mini-col-pay">เงิน</th>
+                <th className="staff-mini-col-pay">เงินเดือน</th>
                 <th className="staff-mini-col-more" />
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => {
                 const open = openId === row.id;
-                const colSpan = 7;
+                const colSpan = 6;
                 return (
                   <Fragment key={row.id}>
                     <tr
@@ -551,23 +550,13 @@ export function StaffTeamMiniTable({
                           {row.levelCustomized ? "*" : ""}
                         </span>
                       </td>
-                      <td className="staff-mini-col-account muted" title={row.linkLabel}>
-                        {row.accountLabel}
-                      </td>
                       <td className="staff-mini-col-ready">
                         <ReadyPill row={row} />
                       </td>
                       <td className="staff-mini-col-seen">
                         <LastSeenMini lastSeenAt={row.lastSeenAt} now={now} />
                       </td>
-                      <td
-                        className="staff-mini-col-pay muted"
-                        title={
-                          row.monthlySalary
-                            ? `฿${row.monthlySalary.toLocaleString("th-TH")}`
-                            : "ยังไม่ใส่เงินเดือน"
-                        }
-                      >
+                      <td className="staff-mini-col-pay muted">
                         {formatSalaryShort(row.monthlySalary)}
                       </td>
                       <td className="staff-mini-col-more">
@@ -586,8 +575,14 @@ export function StaffTeamMiniTable({
                       <tr className="staff-mini-detail-row">
                         <td colSpan={colSpan}>
                           <div className="staff-mini-detail">
+                            <p className="staff-mini-account-line">
+                              <span className="muted">บัญชี</span>{" "}
+                              {row.accountLabel !== "—" ? row.accountLabel : "—"}
+                              {row.linkLabel ? (
+                                <span className="muted"> · {row.linkLabel}</span>
+                              ) : null}
+                            </p>
                             <CheckDots row={row} />
-                            <p className="muted staff-mini-link">{row.linkLabel}</p>
                             <div className="staff-mini-detail-actions">
                               <button
                                 type="button"
@@ -608,7 +603,7 @@ export function StaffTeamMiniTable({
                                     )
                                   }
                                 >
-                                  {editingPermsId === row.member.id ? "ปิดสิทธิ์" : "สิทธิ์"}
+                                  {editingPermsId === row.member.id ? "ปิด" : "สิทธิ์"}
                                 </button>
                               ) : null}
                               {ownerView && row.member && row.member.role === "staff" && onPreviewMember ? (
@@ -619,11 +614,11 @@ export function StaffTeamMiniTable({
                                   title="ดูเมนูตามสิทธิ์บัญชีนี้"
                                   onClick={() => onPreviewMember(row.member!)}
                                 >
-                                  <Eye size={13} aria-hidden /> ดูแบบเขา
+                                  มุมมอง
                                 </button>
                               ) : null}
                               {ownerView && row.member && row.member.role === "staff" ? (
-                                <StaffPersonalInfoButton member={row.member} />
+                                <StaffPersonalInfoButton member={row.member} compact />
                               ) : null}
                               {row.member &&
                               row.member.role === "staff" &&
@@ -635,7 +630,7 @@ export function StaffTeamMiniTable({
                                   title={`ลบบัญชี ${staffAccountLabel(row.member)}`}
                                   onClick={() => onDeleteAccount(row.member!)}
                                 >
-                                  ลบบัญชี
+                                  ลบบช.
                                 </button>
                               ) : null}
                               {row.employee ? (
@@ -654,7 +649,7 @@ export function StaffTeamMiniTable({
                                         )
                                     }
                                   >
-                                    {row.employee.active ? "ปิดชื่อ" : "เปิดชื่อ"}
+                                    {row.employee.active ? "ปิด" : "เปิด"}
                                   </button>
                                   <button
                                     type="button"
@@ -663,7 +658,7 @@ export function StaffTeamMiniTable({
                                     disabled={busy}
                                     onClick={() => onDeleteEmployee(row.employee!)}
                                   >
-                                    <Trash2 size={13} />
+                                    <Trash2 size={12} />
                                   </button>
                                 </>
                               ) : null}
@@ -717,8 +712,7 @@ export function StaffTeamMiniTable({
       )}
 
       <p className="muted staff-readiness-legend">
-        เปิด▾ = บัญชี/สิทธิ์/ชื่อ/เงิน · ลบบัญชี ≠ ลบชื่อ · ใช้ = ≤5น
-        {!ownerView ? " · บัตรเห็นได้เฉพาะเจ้าของ" : ""}
+        ▾ รายละเอียด · ลบบช. ≠ ลบชื่อ · ใช้ ≤5น
       </p>
     </section>
   );

@@ -1086,38 +1086,15 @@ body.modal-open .main-panel {
   white-space: nowrap;
 }
 
-.staff-hub-jump {
-  display: flex;
-  gap: 0.25rem;
-  margin: 0 0 0.65rem;
-  padding: 0.2rem;
-  border-radius: 0.65rem;
-  background: rgba(28, 42, 31, 0.06);
-}
-
-.staff-hub-jump a {
-  flex: 1;
-  text-align: center;
-  text-decoration: none;
-  color: rgba(28, 42, 31, 0.7);
-  font-size: 0.78rem;
-  font-weight: 650;
-  padding: 0.38rem 0.35rem;
-  border-radius: 0.5rem;
-}
-
-.staff-hub-jump a:hover {
-  background: rgba(255, 255, 255, 0.72);
-  color: var(--tea-leaf);
-}
-
 .staff-hub-anchor {
-  scroll-margin-top: 4.5rem;
+  scroll-margin-top: 3.5rem;
 }
 
 #staff-team + #staff-accounts,
 #staff-accounts + #staff-levels {
-  margin-top: 0.35rem;
+  margin-top: 0.55rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid rgba(28, 42, 31, 0.08);
 }
 
 .staff-owner-card {
@@ -1171,11 +1148,16 @@ body.modal-open .main-panel {
 }
 
 .staff-btn-sm {
-  font-size: 0.72rem !important;
-  padding: 0.28rem 0.5rem !important;
+  font-size: 0.68rem !important;
+  padding: 0.16rem 0.38rem !important;
   min-height: 0 !important;
-  line-height: 1.2 !important;
-  border-radius: 0.45rem !important;
+  line-height: 1.15 !important;
+  border-radius: 0.35rem !important;
+}
+
+.staff-hub .primary-btn.staff-btn-sm,
+.staff-hub .ghost-btn.staff-btn-sm {
+  gap: 0.15rem;
 }
 
 .staff-btn-sm.is-danger {
@@ -1561,47 +1543,51 @@ body.modal-open .main-panel {
 }
 
 .staff-team-mini-table {
-  font-size: 0.8rem;
+  font-size: 0.74rem;
+}
+
+.staff-team-mini-table th,
+.staff-team-mini-table td {
+  padding: 0.28rem 0.28rem !important;
 }
 
 .staff-mini-col-name {
-  min-width: 5.5rem;
+  min-width: 4.5rem;
   text-align: left;
 }
 
 .staff-mini-col-level {
-  width: 4.2rem;
-  max-width: 5rem;
+  width: 3.6rem;
+  max-width: 4.2rem;
 }
 
 .staff-mini-col-level .staff-chip {
-  font-size: 0.68rem;
-  padding: 0.1rem 0.28rem;
-}
-
-.staff-mini-col-account {
-  max-width: 7.5rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.72rem;
+  font-size: 0.62rem;
+  padding: 0.06rem 0.22rem;
 }
 
 .staff-mini-col-ready {
-  width: 3.6rem;
+  width: 3rem;
   text-align: center;
 }
 
 .staff-mini-col-seen {
-  width: 2.8rem;
+  width: 2.4rem;
   text-align: center;
 }
 
 .staff-mini-col-pay {
-  width: 3.2rem;
+  min-width: 4.2rem;
   text-align: right;
   font-variant-numeric: tabular-nums;
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.staff-mini-account-line {
+  margin: 0;
   font-size: 0.72rem;
+  word-break: break-all;
 }
 
 .staff-mini-col-more {
@@ -1749,8 +1735,13 @@ body.modal-open .main-panel {
 .staff-mini-detail-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.3rem;
+  gap: 0.2rem;
   align-items: center;
+}
+
+.staff-mini-detail-actions .staff-btn-sm {
+  font-size: 0.66rem !important;
+  padding: 0.12rem 0.32rem !important;
 }
 
 .staff-mini-edit {
@@ -1780,10 +1771,6 @@ body.modal-open .main-panel {
 }
 
 @media (max-width: 520px) {
-  .staff-mini-col-account {
-    max-width: 4.5rem;
-  }
-
   .staff-mini-edit {
     grid-template-columns: 1fr;
   }
