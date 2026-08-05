@@ -80,6 +80,11 @@ export type CashDepositDayLine = {
    * Missing key → use system remit for that session.
    */
   sessionActualAmounts: Record<string, number>;
+  /**
+   * Per-session staff prep notes while bundling remit bills for bank transfer.
+   * Keys = sessionIds. Empty values are dropped on normalize.
+   */
+  sessionNotes: Record<string, string>;
 };
 
 export type CashDeposit = {
@@ -392,6 +397,7 @@ function normalizeDay(raw: unknown): CashDepositDayLine | null {
     d.sessionActualAmounts,
     sessionIds,
   );
+  const sessionNotes = normalizeSessionNotes(d.sessionNotes, sessionIds);
   return {
     id: String(d.id || newCashDepositDayId()),
     date: Number(d.date) || 0,
@@ -406,6 +412,7 @@ function normalizeDay(raw: unknown): CashDepositDayLine | null {
     slipUrls: normalizeUrls(d.slipUrls, CASH_DEPOSIT_DAY_SLIP_MAX),
     sessionIds,
     sessionActualAmounts,
+    sessionNotes,
   };
 }
 
@@ -426,6 +433,29 @@ export function normalizeSessionActualAmounts(
     const n = Number(val);
     if (!Number.isFinite(n) || n < 0) continue;
     out[id] = Math.round(n * 100) / 100;
+  }
+  return out;
+}
+
+/** Keep trimmed non-empty prep notes for known session ids. */
+export function normalizeSessionNotes(
+  raw: unknown,
+  sessionIds: string[],
+): Record<string, string> {
+  const allow = new Set(
+    sessionIds.map((id) => String(id || "").trim()).filter(Boolean),
+  );
+  const out: Record<string, string> = {};
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+  if (!allow.size) return out;
+  for (const [key, val] of Object.entries(raw as Record<string, unknown>)) {
+    const id = String(key || "").trim();
+    if (!id || !allow.has(id)) continue;
+    const note = String(val || "")
+      .trim()
+      .slice(0, 200);
+    if (!note) continue;
+    out[id] = note;
   }
   return out;
 }
@@ -982,6 +1012,7 @@ export function emptyCashDepositDay(dateMs: number): CashDepositDayLine {
     slipUrls: [],
     sessionIds: [],
     sessionActualAmounts: {},
+    sessionNotes: {},
   };
 }
 

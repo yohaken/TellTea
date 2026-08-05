@@ -23012,6 +23012,61 @@ a.ghost-btn {
   gap: 0.28rem;
 }
 
+.cash-in-bill-item {
+  display: grid;
+  gap: 0;
+  min-width: 0;
+}
+
+.cash-in-bill-note {
+  display: grid;
+  gap: 0.12rem;
+  margin: 0;
+  padding: 0.18rem 0.3rem 0.22rem 1.65rem;
+  border: 1px solid rgba(28, 42, 31, 0.14);
+  border-top: 0;
+  border-radius: 0 0 0.3rem 0.3rem;
+  background: rgba(255, 253, 248, 0.92);
+}
+
+.cash-in-bill-card.has-note {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.cash-in-bill-card.is-on + .cash-in-bill-note,
+.cash-in-bill-item:has(.cash-in-bill-card.is-on) .cash-in-bill-note {
+  border-color: rgba(47, 107, 79, 0.45);
+  background: rgba(127, 183, 126, 0.1);
+}
+
+.cash-in-bill-note-system {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: #7a4a10;
+}
+
+.cash-in-bill-note-input {
+  width: 100%;
+  min-width: 0;
+  font-size: 0.68rem;
+}
+
+.cash-in-bill-note-ro {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.64rem;
+  color: #3d4a55;
+}
+
 .cash-in-pending-actions {
   display: flex;
   flex-wrap: wrap;
@@ -23474,9 +23529,49 @@ a.ghost-btn {
   min-width: 0;
 }
 
+.cash-in-summary-note {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.35rem;
+  align-items: center;
+  margin: 0;
+  min-width: 0;
+}
+
+.cash-in-summary-note-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #5a6570;
+  white-space: nowrap;
+}
+
+.cash-in-summary-note-input {
+  width: 100%;
+  min-width: 0;
+  font-size: 0.72rem;
+}
+
+.cash-in-summary-note-ro {
+  min-width: 0;
+  font-size: 0.72rem;
+  color: #3d4a55;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .cash-in-slim .col-note {
   min-width: 4.2rem;
   max-width: 7.5rem;
+}
+
+.cash-in-round-note {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.68rem;
+  color: #3d4a55;
 }
 
 .cash-in-slip-btn-row {

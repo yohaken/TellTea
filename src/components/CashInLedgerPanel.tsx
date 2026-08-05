@@ -38,6 +38,7 @@ import {
   labelCashDepositRound,
   labelCashDepositTransferUiState,
   listCashDeposits,
+  normalizeSessionNotes,
   subscribeCashDepositsPage,
   suggestedNetBankTransfer,
   sumBankTransferAmounts,
@@ -78,6 +79,62 @@ function readOpenPref() {
   } catch {
     return false;
   }
+}
+
+/** POS mid-shift / close notes that affect cash — shown under pending remit cards. */
+function formatSessionSystemNotes(session: PosSession): string {
+  const parts: string[] = [];
+  for (const drop of session.cashDropNotes || []) {
+    const amt = Number(drop.amount) || 0;
+    if (!(amt > 0)) continue;
+    const reason = String(drop.reason || "").trim();
+    parts.push(
+      reason
+        ? `ถอน ฿${formatPlainNumber(amt)} ${reason}`
+        : `ถอน ฿${formatPlainNumber(amt)}`,
+    );
+  }
+  const disc = String(session.discrepancyNote || "").trim();
+  if (disc) parts.push(disc);
+  return parts.join(" · ").slice(0, 240);
+}
+
+function collectSessionNotesFromDays(
+  days: CashDepositDayLine[],
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const day of days) {
+    const notes = day.sessionNotes || {};
+    for (const [id, note] of Object.entries(notes)) {
+      const key = String(id || "").trim();
+      const text = String(note || "").trim();
+      if (key && text) out[key] = text.slice(0, 200);
+    }
+  }
+  return out;
+}
+
+function withSessionNotesOnDays(
+  days: CashDepositDayLine[],
+  prepNotes: Record<string, string>,
+): CashDepositDayLine[] {
+  return days.map((day) => {
+    const ids = (day.sessionIds || [])
+      .map((id) => String(id || "").trim())
+      .filter(Boolean);
+    const merged: Record<string, string> = { ...(day.sessionNotes || {}) };
+    for (const id of ids) {
+      if (Object.prototype.hasOwnProperty.call(prepNotes, id)) {
+        const text = String(prepNotes[id] || "").trim().slice(0, 200);
+        if (text) merged[id] = text;
+        else delete merged[id];
+      }
+    }
+    return {
+      ...day,
+      sessionNotes: normalizeSessionNotes(merged, ids),
+    };
+  });
 }
 
 function writeOpenPref(open: boolean) {
@@ -193,6 +250,10 @@ export function CashInLedgerPanel({
   const [draft, setDraft] = useState<DraftRound | null>(null);
   const [busy, setBusy] = useState(false);
   const [editNote, setEditNote] = useState("");
+  /** Per pending-bill prep notes (sessionId → text) while bundling for bank transfer. */
+  const [prepSessionNotes, setPrepSessionNotes] = useState<Record<string, string>>(
+    {},
+  );
   const [imagePreview, setImagePreview] = useState<PhotoPreviewState | null>(null);
   const [uploadProgress, setUploadProgress] = useState<PhotoUploadProgress | null>(null);
   const uploadCancelRef = useRef(false);
@@ -270,9 +331,11 @@ export function CashInLedgerPanel({
         slipUrls: [...d.slipUrls],
         sessionIds: [...(d.sessionIds || [])],
         sessionActualAmounts: { ...(d.sessionActualAmounts || {}) },
+        sessionNotes: { ...(d.sessionNotes || {}) },
       })),
     );
     setEditNote(selected.note || "");
+    setPrepSessionNotes(collectSessionNotesFromDays(selected.days));
   }, [selected, draft, staffName]);
 
   /** Always load nPos rounds while cash-in is mounted — queue "รอบรอฝาก". */
@@ -297,6 +360,7 @@ export function CashInLedgerPanel({
 
   const workingDays = draft?.days ?? editDays;
   const workingTransfers = draft?.bankTransfers ?? editBankTransfers;
+  const workingNote = draft?.note ?? editNote;
   const workingBank = sumBankTransferAmounts(workingTransfers);
   const workingFee = sumBankTransferFees(workingTransfers);
   const expected = sumCashDepositDays(workingDays);
@@ -336,6 +400,7 @@ export function CashInLedgerPanel({
     const rows: {
       roundId: string;
       roundLabel: string;
+      roundNote: string;
       status: CashDepositStatus;
       transferUi: CashDepositTransferUiState;
       day: CashDepositDayLine;
@@ -347,10 +412,12 @@ export function CashInLedgerPanel({
       const label = labelCashDepositRound(entry);
       const bankSlipUrls = cashDepositBankSlipUrls(entry);
       const transferUi = deriveCashDepositTransferUiState(entry);
+      const roundNote = (entry.note || "").trim();
       for (const day of entry.days) {
         rows.push({
           roundId: entry.id,
           roundLabel: label,
+          roundNote,
           status: entry.status,
           transferUi,
           day,
@@ -383,6 +450,34 @@ export function CashInLedgerPanel({
   function setTransfers(next: CashDepositBankTransfer[]) {
     if (draft) setDraft({ ...draft, bankTransfers: next });
     else setEditBankTransfers(next);
+  }
+
+  function patchWorkingNote(next: string) {
+    const note = next.slice(0, 500);
+    if (draft) setDraft({ ...draft, note });
+    else setEditNote(note);
+  }
+
+  function patchSessionPrepNote(sessionId: string, next: string) {
+    const id = String(sessionId || "").trim();
+    if (!id) return;
+    const text = next.slice(0, 200);
+    setPrepSessionNotes((prev) => {
+      const out = { ...prev };
+      if (text.trim()) out[id] = text;
+      else delete out[id];
+      return out;
+    });
+    if (!workingSessionIds.has(id)) return;
+    const applyNotes = (days: CashDepositDayLine[]) =>
+      withSessionNotesOnDays(days, { [id]: text });
+    if (draft) {
+      setDraft((prev) =>
+        prev ? { ...prev, days: applyNotes(prev.days) } : prev,
+      );
+    } else {
+      setEditDays((prev) => applyNotes(prev));
+    }
   }
 
   function patchTransfer(
@@ -575,20 +670,24 @@ export function CashInLedgerPanel({
       if (!bankSlipUrlCount) {
         throw new Error("ต้องแนบรูปสลิปโอนเข้าบัญชีอย่างน้อย 1 รูป");
       }
-      const days = workingDays.map((d) => ({
-        ...d,
-        date: cashDepositDayKey(d.date),
-        cashAmount: Number(d.cashAmount) || 0,
-        drawerCloseAmount: Number(d.drawerCloseAmount) || 0,
-        cashAmountSource: d.cashAmountSource || ("" as CashFillSource),
-        drawerCloseAmountSource: d.drawerCloseAmountSource || ("" as CashFillSource),
-        dateSource: d.dateSource || ("" as CashFillSource),
-        note: (d.note || "").trim().slice(0, 200),
-        // Keep prior round-slip photos — staff must not re-attach after UI refresh.
-        slipUrls: [...d.slipUrls],
-        sessionIds: [...(d.sessionIds || [])],
-        sessionActualAmounts: { ...(d.sessionActualAmounts || {}) },
-      }));
+      const days = withSessionNotesOnDays(workingDays, prepSessionNotes).map(
+        (d) => ({
+          ...d,
+          date: cashDepositDayKey(d.date),
+          cashAmount: Number(d.cashAmount) || 0,
+          drawerCloseAmount: Number(d.drawerCloseAmount) || 0,
+          cashAmountSource: d.cashAmountSource || ("" as CashFillSource),
+          drawerCloseAmountSource:
+            d.drawerCloseAmountSource || ("" as CashFillSource),
+          dateSource: d.dateSource || ("" as CashFillSource),
+          note: (d.note || "").trim().slice(0, 200),
+          // Keep prior round-slip photos — staff must not re-attach after UI refresh.
+          slipUrls: [...d.slipUrls],
+          sessionIds: [...(d.sessionIds || [])],
+          sessionActualAmounts: { ...(d.sessionActualAmounts || {}) },
+          sessionNotes: { ...(d.sessionNotes || {}) },
+        }),
+      );
       assertCashDepositDaysNposLinked(days);
       const bankTransfers = workingTransfers.map((t) => ({
         ...t,
@@ -612,10 +711,12 @@ export function CashInLedgerPanel({
         await addCashDeposit({ ...payload, createdBy: actorId });
         setDraft(null);
         setSelectedId(null);
+        setPrepSessionNotes({});
         setAiHint("โอนแล้ว");
       } else if (selected) {
         await updateCashDeposit(selected.id, payload);
         setSelectedId(null);
+        setPrepSessionNotes({});
         setAiHint("อัปเดตแล้ว");
       }
     } catch (err) {
@@ -688,24 +789,28 @@ export function CashInLedgerPanel({
       return;
     }
     const endMs = groups[groups.length - 1]!.date;
-    const days = groups.map(({ date, sessions: daySessions }) => {
-      const base = emptyCashDepositDay(date);
-      const filled = fillDayCashFromSessions(
-        base,
-        daySessions,
-        daySessions.map((s) => s.id),
-      );
-      return {
-        ...base,
-        cashAmount: filled.cashAmount,
-        cashAmountSource: filled.cashAmountSource,
-        sessionIds: filled.sessionIds,
-        sessionActualAmounts: filled.sessionActualAmounts,
-        note: filled.note,
-        slipKind: "shift" as const,
-        shiftLabel: "รอบขาย",
-      };
-    });
+    const days = withSessionNotesOnDays(
+      groups.map(({ date, sessions: daySessions }) => {
+        const base = emptyCashDepositDay(date);
+        const filled = fillDayCashFromSessions(
+          base,
+          daySessions,
+          daySessions.map((s) => s.id),
+        );
+        return {
+          ...base,
+          cashAmount: filled.cashAmount,
+          cashAmountSource: filled.cashAmountSource,
+          sessionIds: filled.sessionIds,
+          sessionActualAmounts: filled.sessionActualAmounts,
+          sessionNotes: filled.sessionNotes,
+          note: filled.note,
+          slipKind: "shift" as const,
+          shiftLabel: "รอบขาย",
+        };
+      }),
+      prepSessionNotes,
+    );
     setError(null);
     setSelectedId(null);
     const bundleTotal = sumSessionRemits(sessions);
@@ -717,11 +822,12 @@ export function CashInLedgerPanel({
       transferDate: endMs,
       dayCount: days.length,
       staffName: staffName || "",
-      note: `มัดรวมบิลรอโอน ${sessions.length} ใบ`,
+      note: "",
       bankTransfers: [bankRow],
       days,
       aiReason: "",
     });
+    setEditNote("");
     setAiHint(`${sessions.length} บิล · ฿${formatPlainNumber(bundleTotal)}`);
     if (!open) {
       setOpen(true);
@@ -796,6 +902,7 @@ export function CashInLedgerPanel({
       sessionIds: [...(d.sessionIds || [])],
       slipUrls: [...(d.slipUrls || [])],
       sessionActualAmounts: { ...(d.sessionActualAmounts || {}) },
+      sessionNotes: { ...(d.sessionNotes || {}) },
     }));
     const have = new Set<string>();
     for (const d of days) {
@@ -825,6 +932,7 @@ export function CashInLedgerPanel({
         existing.cashAmountSource = filled.cashAmountSource;
         existing.sessionIds = filled.sessionIds;
         existing.sessionActualAmounts = filled.sessionActualAmounts;
+        existing.sessionNotes = filled.sessionNotes;
         existing.note = filled.note;
         // slipUrls untouched — prior round photos stay embedded
         have.add(session.id);
@@ -843,6 +951,7 @@ export function CashInLedgerPanel({
         cashAmountSource: filled.cashAmountSource,
         sessionIds: filled.sessionIds,
         sessionActualAmounts: filled.sessionActualAmounts,
+        sessionNotes: filled.sessionNotes,
         note: filled.note,
         slipKind: "shift",
         shiftLabel: "รอบขาย",
@@ -850,7 +959,10 @@ export function CashInLedgerPanel({
       have.add(session.id);
       added += 1;
     }
-    days = [...days].sort((a, b) => a.date - b.date);
+    days = withSessionNotesOnDays(
+      [...days].sort((a, b) => a.date - b.date),
+      prepSessionNotes,
+    );
     return { days, added, skipped };
   }
 
@@ -913,6 +1025,7 @@ export function CashInLedgerPanel({
     setEditBankTransfers([emptyCashDepositBankTransfer()]);
     setEditStaff(staffName || "");
     setEditNote("");
+    setPrepSessionNotes({});
     setError(null);
     setAiHint("");
   }
@@ -939,6 +1052,7 @@ export function CashInLedgerPanel({
         cashAmountSource: filled.cashAmountSource,
         sessionIds: filled.sessionIds,
         sessionActualAmounts: filled.sessionActualAmounts,
+        sessionNotes: filled.sessionNotes,
         note: filled.note,
         // keep day slipUrls (shared photos for the sales day)
       });
@@ -1075,13 +1189,18 @@ export function CashInLedgerPanel({
                   const titleClose = closer
                     ? `ปิด ${closeDayHm} ${closer}`
                     : `ปิด ${closeDayHm}`;
+                  const systemNotes = formatSessionSystemNotes(s);
+                  const staffNote = prepSessionNotes[s.id] || "";
+                  const showNoteRow =
+                    !readOnly || !!systemNotes.trim() || !!staffNote.trim();
                   return (
-                    <li key={s.id}>
+                    <li key={s.id} className="cash-in-bill-item">
                       <button
                         type="button"
                         className={[
                           "cash-in-bill-card is-tick",
                           ticked ? "is-on" : "",
+                          showNoteRow ? "has-note" : "",
                         ]
                           .filter(Boolean)
                           .join(" ")}
@@ -1144,6 +1263,38 @@ export function CashInLedgerPanel({
                           </span>
                         </span>
                       </button>
+                      {showNoteRow ? (
+                        <div className="cash-in-bill-note">
+                          {systemNotes ? (
+                            <span
+                              className="cash-in-bill-note-system"
+                              title={systemNotes}
+                            >
+                              จากรอบ · {systemNotes}
+                            </span>
+                          ) : null}
+                          {!readOnly ? (
+                            <input
+                              type="text"
+                              className="cash-in-cell-input cash-in-bill-note-input"
+                              maxLength={200}
+                              placeholder="โน้ตบิลนี้ (ทอนโอนเกิน / ส่งตู้…)"
+                              value={staffNote}
+                              disabled={busy}
+                              aria-label={`โน้ตบิล ${billNo}`}
+                              onClick={(e) => e.stopPropagation()}
+                              onKeyDown={(e) => e.stopPropagation()}
+                              onChange={(e) =>
+                                patchSessionPrepNote(s.id, e.target.value)
+                              }
+                            />
+                          ) : staffNote ? (
+                            <span className="cash-in-bill-note-ro" title={staffNote}>
+                              โน้ต · {staffNote}
+                            </span>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </li>
                   );
                 })}
@@ -1323,6 +1474,25 @@ export function CashInLedgerPanel({
                 </ul>
               </section>
 
+              <label className="cash-in-summary-note" aria-label="โน้ตมัดโอน">
+                <span className="cash-in-summary-note-label">โน้ต</span>
+                {!readOnly ? (
+                  <input
+                    type="text"
+                    className="cash-in-cell-input cash-in-note-field cash-in-summary-note-input"
+                    maxLength={500}
+                    placeholder="เช่น ทอนโอนเกิน · ส่งตู้เซฟ · หมายเหตุมัดนี้"
+                    value={workingNote}
+                    onChange={(e) => patchWorkingNote(e.target.value)}
+                    disabled={busy}
+                  />
+                ) : (
+                  <span className="cash-in-summary-note-ro">
+                    {workingNote.trim() || "—"}
+                  </span>
+                )}
+              </label>
+
               {coverage.issues.length ? (
                 <ul className="cash-in-issues">
                   {coverage.issues.slice(0, 3).map((issue, i) => (
@@ -1459,6 +1629,9 @@ export function CashInLedgerPanel({
                         <th className="col-num" title="ยอดบิล">
                           ยอด
                         </th>
+                        <th className="col-note" title="โน้ตมัดโอน">
+                          โน้ต
+                        </th>
                         <th className="col-slip" title="สลิปโอนเข้าบัญชี">
                           สลิปโอน
                         </th>
@@ -1485,6 +1658,13 @@ export function CashInLedgerPanel({
                             {row.day.cashAmount
                               ? formatPlainNumber(row.day.cashAmount)
                               : ""}
+                          </td>
+                          <td className="col-note" title={row.roundNote || undefined}>
+                            {row.roundNote ? (
+                              <span className="cash-in-round-note">{row.roundNote}</span>
+                            ) : (
+                              <span className="muted">—</span>
+                            )}
                           </td>
                           <td className="col-slip">
                             {row.bankSlipUrls.length ? (
