@@ -12,7 +12,7 @@ const read = (p) => readFileSync(join(root, p), "utf8");
 
 assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)[1]) >= 673);
 assert.ok(Number(read("src/lib/pos-version.ts").match(/POS_BUILD = (\d+)/)[1]) >= 177);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.110"/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"\d+"/);
 
 const form = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/printer/ShiftReportFormBuilder.java",

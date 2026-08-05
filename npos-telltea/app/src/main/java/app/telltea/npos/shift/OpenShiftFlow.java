@@ -135,17 +135,15 @@ public final class OpenShiftFlow {
     hint.setPadding(0, 0, 0, ui.dp(8));
     box.addView(hint);
 
-    final String[] pickId = {ShiftPrefs.lastOpenedByEmployeeId(activity)};
-    final String[] pickName = {ShiftPrefs.lastOpenedByName(activity)};
+    // Always start empty after close — staff must tap (or type) who starts this round.
+    final String[] pickId = {""};
+    final String[] pickName = {""};
 
     EditText typed = new EditText(activity);
     typed.setHint(R.string.open_shift_who_type_hint);
     typed.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.max(15f, ui.bodySp));
     typed.setTypeface(NposFonts.regular(activity));
     typed.setSingleLine(true);
-    if (!pickName[0].isEmpty() && pickId[0].isEmpty()) {
-      typed.setText(pickName[0]);
-    }
     typed.setPadding(ui.dp(10), ui.dp(10), ui.dp(10), ui.dp(10));
 
     if (!roster.isEmpty()) {
@@ -165,14 +163,8 @@ public final class OpenShiftFlow {
         chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.max(14f, ui.bodySp));
         chip.setTypeface(NposFonts.semibold(activity));
         chip.setPadding(ui.dp(10), ui.dp(8), ui.dp(10), ui.dp(8));
-        chip.setBackgroundColor(
-            p.id.equals(pickId[0]) || p.name.equals(pickName[0])
-                ? 0xFF1B6B3A
-                : 0xFFE8EEE9);
-        chip.setTextColor(
-            p.id.equals(pickId[0]) || p.name.equals(pickName[0])
-                ? Color.WHITE
-                : 0xFF1A1A1A);
+        chip.setBackgroundColor(0xFFE8EEE9);
+        chip.setTextColor(0xFF1A1A1A);
         LinearLayout.LayoutParams lp =
             new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
