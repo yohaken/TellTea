@@ -13,7 +13,7 @@ const read = (p) => readFileSync(join(root, p), "utf8");
 const gradle = read("npos-telltea/app/build.gradle");
 const code = Number((gradle.match(/versionCode\s+(\d+)/) || [])[1] || 0);
 const name = (gradle.match(/versionName\s+"([^"]+)"/) || [])[1] || "";
-assert.ok(code >= 135, `versionCode expected ≥135, got ${code}`);
+assert.ok(code >= 136, `versionCode expected ≥136, got ${code}`);
 assert.ok(name, "versionName missing");
 
 const pin = read("src/lib/npos-apk-release.ts");
@@ -23,20 +23,22 @@ assert.match(
 );
 assert.match(pin, new RegExp(`NPOS_SYSTEM_VERSION_CODE = ${code};`));
 
-assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)[1]) >= 717);
-assert.ok(Number(read("src/lib/pos-version.ts").match(/POS_BUILD = (\d+)/)[1]) >= 180);
+assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)[1]) >= 718);
+assert.ok(Number(read("src/lib/pos-version.ts").match(/POS_BUILD = (\d+)/)[1]) >= 181);
 
 assert.ok(existsSync(join(root, "docs/npos-shift-opener-checklist.md")));
 const doc = read("docs/npos-shift-opener-checklist.md");
 assert.match(doc, /openedByName|OpenShiftFlow/);
 assert.match(doc, /ไม่ผูก|ไม่.*OT|นอกสcope/);
 assert.match(doc, /หลังปิด|ไม่จำ|เลือกชื่อ|เริ่มรอบ/);
+assert.match(doc, /รายชื่อ|roster|ไม่.*พิมพ์|ระบบเท่านั้น/);
 
 const strings = read("npos-telltea/app/src/main/res/values/strings.xml");
 assert.match(strings, /open_shift_who_title">ใครเริ่มรอบนี้</);
-assert.match(strings, /open_shift_who_hint/);
+assert.match(strings, /open_shift_who_hint">แตะชื่อจากรายชื่อพนักงานในระบบเท่านั้น</);
 assert.match(strings, /open_shift_who_confirm">เริ่มรอบ</);
 assert.match(strings, /open_shift_who_required/);
+assert.match(strings, /open_shift_who_empty_roster/);
 
 const roster = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/shift/EmployeeRoster.java",
@@ -51,8 +53,11 @@ const openFlow = read(
 assert.match(openFlow, /askWhoOpened|EmployeeRoster/);
 assert.match(openFlow, /openSession\(\s*activity\s*,\s*openingCash\s*,\s*openerId\s*,\s*openerName/);
 assert.doesNotMatch(openFlow, /otSessions|workerIds|ตารางกะ|OtShift/);
-// Fresh pick: no lastOpenedBy preselect
+// Fresh pick: no lastOpenedBy preselect; roster-only (no free type)
 assert.doesNotMatch(openFlow, /lastOpenedByEmployeeId|lastOpenedByName/);
+assert.doesNotMatch(openFlow, /EditText|typedName|open_shift_who_or_type|open_shift_who_type_hint/);
+assert.match(openFlow, /open_shift_who_empty_roster/);
+assert.match(openFlow, /onRoster/);
 assert.match(openFlow, /final String\[] pickId = \{""\}/);
 assert.match(openFlow, /final String\[] pickName = \{""\}/);
 
