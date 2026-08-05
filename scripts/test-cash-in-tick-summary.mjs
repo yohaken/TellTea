@@ -18,7 +18,7 @@ const doc = read("docs/npos-remit-rounds-phases.md");
 
 const buildMatch = version.match(/APP_BUILD\s*=\s*(\d+)/);
 assert.ok(buildMatch);
-assert.ok(Number(buildMatch[1]) >= 715, `APP_BUILD >= 715, got ${buildMatch[1]}`);
+assert.ok(Number(buildMatch[1]) >= 716, `APP_BUILD >= 716, got ${buildMatch[1]}`);
 assert.match(panel, /cash-in-bill-shift-name/);
 assert.match(panel, /cash-in-bill-line/);
 assert.match(panel, /formatCashInDayHm/);
