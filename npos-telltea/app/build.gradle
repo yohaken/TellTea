@@ -15,9 +15,9 @@ android {
         applicationId "app.telltea.npos"
         minSdk 23
         targetSdk 35
-        // Bump BOTH when shipping an APK users should receive as an update.
-        versionCode 134
-        versionName "1.14.111"
+        // versionCode = sole OTA gate (must rise every ship). versionName = short label (= code).
+        versionCode 135
+        versionName "135"
         buildConfigField "String", "UPDATE_MANIFEST_URL", "\"https://telltea-pos.web.app/downloads/latest.json\""
         buildConfigField "String", "DEFAULT_APK_URL", "\"https://telltea-pos.web.app/downloads/nPos-telltea.apk\""
         buildConfigField "String", "INSTALL_PAGE_URL", "\"https://telltea-pos.web.app/install/\""

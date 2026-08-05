@@ -396,7 +396,7 @@ public final class UpdatePromptController {
           activity,
           "update",
           "ติดตั้งอัปเดต",
-          manifest.versionName + " (" + manifest.versionCode + ")");
+          manifest.versionName);
       ApkInstaller.install(activity, apkFile);
       // Package replace kills process; ResumePrefs + InstallResultReceiver restart sell.
     } catch (Exception e) {

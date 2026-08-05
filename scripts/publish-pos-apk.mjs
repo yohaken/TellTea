@@ -72,9 +72,12 @@ if (!versionCode || !versionName) {
   process.exit(1);
 }
 
+// Display label is short (= versionCode). OTA clients use versionCode only.
 const notes =
   process.env.POS_APK_NOTES?.trim() ||
-  `nPos-telltea ${versionName} (${versionCode})`;
+  (versionName === String(versionCode)
+    ? `nPos-telltea ${versionCode}`
+    : `nPos-telltea ${versionName} (${versionCode})`);
 
 const meta = {
   product: "nPos-telltea",

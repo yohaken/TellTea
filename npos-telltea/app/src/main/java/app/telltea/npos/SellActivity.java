@@ -603,34 +603,36 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
     }
   }
 
-  /** Overflow: settings / shift / history / menu admin (cart tools live on cart header row). */
+  /** Overflow: top actions + nested shift / menu / settings (cart tools stay on cart row). */
   private void showSellHubMenu(View anchor) {
     PopupMenu popup = new PopupMenu(this, anchor);
-    popup.getMenu().add(0, 1, 0, R.string.nav_open_bills);
-    popup.getMenu().add(0, 11, 1, R.string.nav_menu);
-    popup.getMenu().add(0, 2, 2, R.string.nav_receipts);
-    popup.getMenu().add(0, 3, 3, R.string.nav_shift);
-    popup.getMenu().add(0, 8, 4, R.string.sell_hub_open_drawer);
-    popup
-        .getMenu()
-        .add(
-            0,
-            9,
-            5,
-            getString(
-                R.string.sell_hub_change_display_fmt, ChangeDisplayPrefs.label(this)));
-    popup.getMenu().add(0, 10, 6, R.string.sell_hub_refresh_menu);
-    popup.getMenu().add(0, 4, 7, R.string.btn_settings_device);
-    popup.getMenu().add(0, 5, 8, R.string.sell_hub_x_report);
-    popup.getMenu().add(0, 6, 9, R.string.sell_hub_close_shift);
-    popup.getMenu().add(0, 7, 10, R.string.nav_lock_pin);
+    popup.getMenu().add(0, 8, 0, R.string.sell_hub_open_drawer);
+    popup.getMenu().add(0, 2, 1, R.string.nav_receipts);
+
+    android.view.SubMenu shiftMenu =
+        popup.getMenu().addSubMenu(0, 100, 2, R.string.sell_hub_group_shift);
+    shiftMenu.add(0, 3, 0, R.string.nav_shift);
+    shiftMenu.add(0, 5, 1, R.string.sell_hub_x_report);
+    shiftMenu.add(0, 6, 2, R.string.sell_hub_close_shift);
+
+    android.view.SubMenu menuGroup =
+        popup.getMenu().addSubMenu(0, 101, 3, R.string.sell_hub_group_menu);
+    menuGroup.add(0, 11, 0, R.string.nav_menu);
+    menuGroup.add(0, 10, 1, R.string.sell_hub_refresh_menu);
+
+    android.view.SubMenu settingsMenu =
+        popup.getMenu().addSubMenu(0, 102, 4, R.string.sell_hub_group_settings);
+    settingsMenu.add(0, 4, 0, R.string.btn_settings_device);
+    settingsMenu.add(
+        0,
+        9,
+        1,
+        getString(R.string.sell_hub_change_display_fmt, ChangeDisplayPrefs.label(this)));
+
+    popup.getMenu().add(0, 7, 5, R.string.nav_lock_pin);
     popup.setOnMenuItemClickListener(
         (MenuItem item) -> {
           int id = item.getItemId();
-          if (id == 1) {
-            PosShellNav.openOpenBillsHint(this);
-            return true;
-          }
           if (id == 11) {
             PosShellNav.openMenuAdmin(this);
             return true;

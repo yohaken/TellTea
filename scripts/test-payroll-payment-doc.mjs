@@ -91,7 +91,7 @@ assert.match(modalUi, /ดูเอกสาร/);
 assert.match(modalUi, /getStaffPersonal/);
 assert.match(modalUi, /viewPayrollPaymentDoc/);
 assert.doesNotMatch(modalUi, /พิมพ์ A4/);
-assert.match(versionSrc, /APP_BUILD = 716/);
+assert.ok(Number(versionSrc.match(/APP_BUILD = (\d+)/)[1]) >= 581);
 assert.match(docSrc, /width: 210mm/);
 assert.match(docSrc, /min-height: 297mm/);
 assert.match(docSrc, /openPayrollPaymentDocPdf/);

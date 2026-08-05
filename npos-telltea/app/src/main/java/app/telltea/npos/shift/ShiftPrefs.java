@@ -615,6 +615,8 @@ public final class ShiftPrefs {
   }
 
   public static void close(Context context) {
+    // Clear opener identity so the next open requires an explicit name pick
+    // (same person must tap their name again — no silent preselect).
     context
         .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         .edit()
@@ -622,6 +624,11 @@ public final class ShiftPrefs {
         .putBoolean(KEY_SERVER_SYNCED, false)
         .putBoolean(KEY_REMOTE_CLOSED_PENDING, false)
         .putString(KEY_REMOTE_CLOSE_SOURCE, "")
+        .putString(KEY_OPENED_BY_ID, "")
+        .putString(KEY_OPENED_BY_NAME, "")
+        .putString(KEY_LAST_OPENED_BY_ID, "")
+        .putString(KEY_LAST_OPENED_BY_NAME, "")
+        .putBoolean(KEY_OPENER_SERVER_OK, true)
         .commit();
   }
 }
