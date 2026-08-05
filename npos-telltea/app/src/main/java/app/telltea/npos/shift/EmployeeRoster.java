@@ -59,7 +59,7 @@ public final class EmployeeRoster {
                 row.optString("nickname", "").trim()));
       }
     } catch (Exception ignored) {
-      /* empty roster → typed name fallback */
+      /* empty roster — opener UI blocks until shop employees sync */
     }
     return out;
   }

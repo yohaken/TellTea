@@ -357,11 +357,12 @@
     <string name="open_shift_float_hint_field">เงินทอนเริ่มต้น (บาท)</string>
     <string name="open_shift_float_confirm">ถัดไป</string>
     <string name="open_shift_who_title">ใครเริ่มรอบนี้</string>
-    <string name="open_shift_who_hint">แตะชื่อผู้เริ่มรอบนี้ · ไม่ใช่รหัสปลดล็อกเครื่อง</string>
+    <string name="open_shift_who_hint">แตะชื่อจากรายชื่อพนักงานในระบบเท่านั้น</string>
     <string name="open_shift_who_or_type">หรือพิมพ์ชื่อ</string>
     <string name="open_shift_who_type_hint">ชื่อผู้เริ่มรอบ</string>
     <string name="open_shift_who_confirm">เริ่มรอบ</string>
-    <string name="open_shift_who_required">เลือกหรือพิมพ์ชื่อผู้เริ่มรอบ</string>
+    <string name="open_shift_who_required">แตะชื่อจากรายชื่อในระบบก่อนเริ่มรอบ</string>
+    <string name="open_shift_who_empty_roster">ยังไม่มีรายชื่อพนักงานบนเครื่อง — เพิ่มพนักงานหลังบ้าน แล้วรีเฟรชเมนูหน้าร้านก่อนเปิดรอบ</string>
     <string name="sell_hub_group_shift">รอบการขาย</string>
     <string name="sell_hub_group_menu">เมนู</string>
     <string name="sell_hub_group_settings">ตั้งค่า</string>
