@@ -1,6 +1,6 @@
 /**
  * Daily weather for POS sales dashboard (Udon Thani).
- * Server: functions/pos-weather.js — TMD today + history backfill, final lock.
+ * Past days: read Firestore only (final). Today: refresh at most every 45 min.
  */
 import {
   collection,
@@ -14,6 +14,9 @@ import { httpsCallable } from "firebase/functions";
 import { getDb, getFirebaseFunctions } from "./firebase";
 
 export const WEATHER_DAYS_COL = "weatherDays";
+
+/** Don't re-hit TMD/history for "today" more often than this. */
+export const WEATHER_TODAY_REFRESH_MS = 45 * 60 * 1000;
 
 export type WeatherPeriodSlice = {
   labelTh: string;
@@ -46,6 +49,15 @@ export type WeatherDayDoc = {
   error?: string;
 };
 
+function bangkokTodayKey(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
 function mapDoc(id: string, data: DocumentData | undefined): WeatherDayDoc | null {
   if (!data) return null;
   const labelTh = typeof data.labelTh === "string" ? data.labelTh : "";
@@ -74,6 +86,11 @@ function mapDoc(id: string, data: DocumentData | undefined): WeatherDayDoc | nul
   };
 }
 
+function hasUsableWeather(row: WeatherDayDoc | undefined): boolean {
+  if (!row || row.error) return false;
+  return Boolean(row.labelTh || row.shortLine && row.shortLine !== "—");
+}
+
 /** Read cached weather docs (chunks of 30 for `in` queries). */
 export async function loadWeatherDays(
   dateKeys: string[],
@@ -95,9 +112,30 @@ export async function loadWeatherDays(
   return out;
 }
 
+function keysNeedingFetch(
+  keys: string[],
+  cached: Record<string, WeatherDayDoc>,
+  today: string,
+  now = Date.now(),
+): string[] {
+  return keys.filter((k) => {
+    const row = cached[k];
+    if (k > today) return false;
+    if (k < today) {
+      // Past: only fetch if never saved. Saved past days stay locked.
+      return !hasUsableWeather(row);
+    }
+    // Today: refresh only when missing or stale.
+    if (!hasUsableWeather(row)) return true;
+    const fetchedAt = Number(row.fetchedAt) || 0;
+    return now - fetchedAt >= WEATHER_TODAY_REFRESH_MS;
+  });
+}
+
 /**
- * Ensure weather for date keys: past days final (backfill once), today refresh.
- * Uses callable (TMD CORS blocks browser).
+ * Ensure weather for date keys.
+ * - Past: Firestore cache only after first save (final).
+ * - Today: refresh at most every WEATHER_TODAY_REFRESH_MS.
  */
 export async function ensurePosWeatherDays(
   dateKeys: string[],
@@ -106,21 +144,8 @@ export async function ensurePosWeatherDays(
   if (!keys.length) return {};
 
   const cached = await loadWeatherDays(keys);
-  const today = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Bangkok",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-
-  const need = keys.filter((k) => {
-    const row = cached[k];
-    if (!row) return true;
-    if (row.status === "final") return false;
-    if (k === today) return true;
-    // Past but still open → seal via CF
-    return k < today;
-  });
+  const today = bangkokTodayKey();
+  const need = keysNeedingFetch(keys, cached, today);
 
   if (!need.length) return cached;
 
@@ -149,3 +174,10 @@ export function weatherCellTitle(day: WeatherDayDoc | undefined): string {
     parts.push("แหล่ง: ข้อมูลอุตุฯพิกัดสถานีอุดรฯ (ย้อนหลัง)");
   return parts.filter(Boolean).join(" · ");
 }
+
+/** Exported for unit tests. */
+export const __posWeatherTest = {
+  keysNeedingFetch,
+  hasUsableWeather,
+  bangkokTodayKey,
+};

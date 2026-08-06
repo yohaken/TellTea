@@ -200,9 +200,14 @@ export function PosSalesDashboard({
   const summary = useMemo(() => summarizePosSalesDetailed(sales), [sales]);
   const tenders = useMemo(() => tenderSegments(summary), [summary]);
   const byDay = useMemo(() => summarizePosSalesByDay(sales, clamped), [sales, clamped]);
+  // Stable key list — do not re-fetch weather on every sales snapshot tick.
+  const weatherDateKeys = useMemo(
+    () => byDay.map((d) => d.dateKey).join(","),
+    [byDay],
+  );
 
   useEffect(() => {
-    const keys = byDay.map((d) => d.dateKey);
+    const keys = weatherDateKeys ? weatherDateKeys.split(",") : [];
     if (!keys.length) {
       setWeatherByDay({});
       return;
@@ -218,7 +223,7 @@ export function PosSalesDashboard({
     return () => {
       cancelled = true;
     };
-  }, [byDay]);
+  }, [weatherDateKeys]);
 
   const byHour = useMemo(() => summarizePosSalesByHour(sales), [sales]);
   const byWeekday = useMemo(() => summarizePosSalesByWeekday(sales), [sales]);
