@@ -711,6 +711,15 @@ service cloud.firestore {
       allow read, write: if hasPerm('pnl');
     }
 
+    /**
+     * อากาศรายวันสถานีอุดรฯ สำหรับแดชบอร์ดยอดขาย — เจ้าของอ่าน
+     * เขียนจาก Cloud Functions (Admin SDK) เท่านั้น
+     */
+    match /weatherDays/{dateId} {
+      allow read: if isOwner() || isOwnerEmail();
+      allow write: if false;
+    }
+
     /** ยอดขายรายวัน + VAT — เจ้าของเท่านั้น (พนักงานหลังร้านอ่านไม่ได้) */
     match /dailySales/{dateId} {
       allow read: if isOwner();

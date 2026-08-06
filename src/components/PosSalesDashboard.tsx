@@ -44,6 +44,10 @@ import { PosSalesDashboardProducts } from "@/components/PosSalesDashboardProduct
 import { PosSalesDashboardStock } from "@/components/PosSalesDashboardStock";
 import { collection, onSnapshot } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
+import {
+  ensurePosWeatherDays,
+  type WeatherDayDoc,
+} from "@/lib/pos-weather";
 
 function pct(part: number, whole: number): number {
   if (!(whole > 0) || !(part > 0)) return 0;
@@ -98,6 +102,7 @@ export function PosSalesDashboard({
   const [stockCosts, setStockCosts] = useState<Map<string, number>>(() => new Map());
   const [loading, setLoading] = useState(true);
   const [stockNote, setStockNote] = useState<string | null>(null);
+  const [weatherByDay, setWeatherByDay] = useState<Record<string, WeatherDayDoc>>({});
 
   const clamped = useMemo(() => clampPosDateRange(range), [range]);
   const dayCount = useMemo(() => posDateRangeDayCount(clamped), [clamped]);
@@ -195,6 +200,26 @@ export function PosSalesDashboard({
   const summary = useMemo(() => summarizePosSalesDetailed(sales), [sales]);
   const tenders = useMemo(() => tenderSegments(summary), [summary]);
   const byDay = useMemo(() => summarizePosSalesByDay(sales, clamped), [sales, clamped]);
+
+  useEffect(() => {
+    const keys = byDay.map((d) => d.dateKey);
+    if (!keys.length) {
+      setWeatherByDay({});
+      return;
+    }
+    let cancelled = false;
+    ensurePosWeatherDays(keys)
+      .then((map) => {
+        if (!cancelled) setWeatherByDay(map);
+      })
+      .catch(() => {
+        // Weather is optional — keep sales table usable.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [byDay]);
+
   const byHour = useMemo(() => summarizePosSalesByHour(sales), [sales]);
   const byWeekday = useMemo(() => summarizePosSalesByWeekday(sales), [sales]);
   const products = useMemo(
@@ -518,7 +543,7 @@ export function PosSalesDashboard({
           </div>
 
           <div className="pos-dash-daily-block">
-            <PosDashDailyTotalsTable points={byDay} />
+            <PosDashDailyTotalsTable points={byDay} weatherByDay={weatherByDay} />
             <PosDashDailyAreaChart points={byDay} />
           </div>
 

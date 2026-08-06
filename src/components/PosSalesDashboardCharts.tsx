@@ -6,6 +6,8 @@ import type {
   PosDashHourPoint,
   PosDashWeekdayPoint,
 } from "@/lib/pos-sales-dashboard";
+import type { WeatherDayDoc } from "@/lib/pos-weather";
+import { weatherCellTitle } from "@/lib/pos-weather";
 import { formatPlainNumber } from "@/lib/utils";
 
 function niceMax(raw: number): number {
@@ -28,32 +30,84 @@ function formatAxisBaht(n: number): string {
   return String(Math.round(n));
 }
 
-/** Numbers-first daily sales box — date + amount only (newest first). */
-export function PosDashDailyTotalsTable({ points }: { points: PosDashDayPoint[] }) {
+/** Numbers-first daily sales box — date + weather + amount (newest first). */
+export function PosDashDailyTotalsTable({
+  points,
+  weatherByDay = {},
+}: {
+  points: PosDashDayPoint[];
+  weatherByDay?: Record<string, WeatherDayDoc>;
+}) {
   const rows = useMemo(() => [...points].reverse(), [points]);
   return (
     <section className="pos-dash-day-table-card" aria-label="ยอดขายรายวันตัวเลข">
       <h3 className="pos-dash-card-title">ยอดขายรายวัน</h3>
+      <p className="muted pos-dash-day-weather-note">
+        อากาศเมืองอุดรฯ (สถานีกรมอุตุฯ) · วันอดีตล็อกแล้ว · วันนี้รีเฟรชได้
+      </p>
       {rows.length ? (
         <div className="pos-dash-day-table-scroll">
           <table className="pos-dash-day-table">
             <thead>
               <tr>
                 <th scope="col">วันที่</th>
+                <th scope="col">อากาศ</th>
                 <th scope="col" className="is-num">
                   ยอดขาย
                 </th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((p) => (
-                <tr key={p.dateKey} className={p.total <= 0 ? "is-zero" : undefined}>
-                  <td>{p.label}</td>
-                  <td className="is-num">
-                    <strong>{formatPlainNumber(p.total)}</strong>
-                  </td>
-                </tr>
-              ))}
+              {rows.map((p) => {
+                const w = weatherByDay[p.dateKey];
+                return (
+                  <tr key={p.dateKey} className={p.total <= 0 ? "is-zero" : undefined}>
+                    <td>{p.label}</td>
+                    <td className="pos-dash-day-weather" title={weatherCellTitle(w)}>
+                      {w ? (
+                        <>
+                          <span className="pos-dash-day-weather-main" aria-hidden={false}>
+                            <span className="pos-dash-day-weather-emoji">{w.emoji}</span>
+                            <span className="pos-dash-day-weather-label">{w.labelTh}</span>
+                            {Number.isFinite(Number(w.tempMin)) &&
+                            Number.isFinite(Number(w.tempMax)) ? (
+                              <span className="pos-dash-day-weather-temp">
+                                {Math.round(Number(w.tempMin))}–{Math.round(Number(w.tempMax))}°
+                              </span>
+                            ) : null}
+                          </span>
+                          {w.periods?.day?.emoji ||
+                          w.periods?.evening?.emoji ||
+                          w.periods?.night?.emoji ? (
+                            <span className="pos-dash-day-weather-periods">
+                              {w.periods.day?.emoji ? (
+                                <span title={`กลางวัน ${w.periods.day.labelTh}`}>
+                                  วัน{w.periods.day.emoji}
+                                </span>
+                              ) : null}
+                              {w.periods.evening?.emoji ? (
+                                <span title={`เย็น ${w.periods.evening.labelTh}`}>
+                                  เย็น{w.periods.evening.emoji}
+                                </span>
+                              ) : null}
+                              {w.periods.night?.emoji ? (
+                                <span title={`ดึก ${w.periods.night.labelTh}`}>
+                                  ดึก{w.periods.night.emoji}
+                                </span>
+                              ) : null}
+                            </span>
+                          ) : null}
+                        </>
+                      ) : (
+                        <span className="muted">…</span>
+                      )}
+                    </td>
+                    <td className="is-num">
+                      <strong>{formatPlainNumber(p.total)}</strong>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
