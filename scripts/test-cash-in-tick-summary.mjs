@@ -55,6 +55,8 @@ assert.match(panel, /cash-in-bill-note/);
 assert.match(panel, /patchSessionPrepNote/);
 assert.match(panel, /prepSessionNotes/);
 assert.match(panel, /formatSessionSystemNotes/);
+assert.match(panel, /ไม่มีเหตุผล/);
+assert.match(panel, /discrepancyLabel/);
 assert.match(panel, /sessionNotes/);
 assert.match(cash, /normalizeSessionNotes/);
 assert.match(cash, /sessionNotes/);

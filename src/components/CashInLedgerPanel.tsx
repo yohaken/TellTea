@@ -95,7 +95,20 @@ function formatSessionSystemNotes(session: PosSession): string {
     );
   }
   const disc = String(session.discrepancyNote || "").trim();
-  if (disc) parts.push(disc);
+  if (disc) {
+    parts.push(disc);
+  } else {
+    const label = String(session.discrepancyLabel || "").trim();
+    const diff = Number(session.cashDifference);
+    if (
+      label &&
+      label !== "ตรง" &&
+      Number.isFinite(diff) &&
+      Math.abs(diff) >= 0.5
+    ) {
+      parts.push(`${label} · ไม่มีเหตุผล`);
+    }
+  }
   return parts.join(" · ").slice(0, 240);
 }
 

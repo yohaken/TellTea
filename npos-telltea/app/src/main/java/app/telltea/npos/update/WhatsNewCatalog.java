@@ -16,6 +16,14 @@ public final class WhatsNewCatalog {
   private WhatsNewCatalog() {}
 
   public static List<WhatsNewSlide> slidesFor(int versionCode) {
+    if (versionCode == 137) {
+      List<WhatsNewSlide> slides = new ArrayList<>();
+      slides.add(
+          new WhatsNewSlide(
+              "เงินไม่ตรงต้องใส่เหตุผล",
+              "ปิดรอบแล้วเงินขาดหรือเกิน ต้องระบุเหตุผลก่อนยืนยัน — หลังร้านเห็นเหตุผลนั้นด้วย"));
+      return slides;
+    }
     if (versionCode == 136) {
       List<WhatsNewSlide> slides = new ArrayList<>();
       slides.add(

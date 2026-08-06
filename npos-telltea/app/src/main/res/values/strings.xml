@@ -381,9 +381,12 @@
     <string name="blind_close_extra_title">เงินทอนรอบถัดไป</string>
     <string name="blind_close_leave_float">เหลือเงินทอนในลิ้นชักให้กะถัดไป</string>
     <string name="blind_close_leave_too_high">เงินทอนค้างต้องไม่เกินเงินที่นับได้ในลิ้นชัก</string>
-    <string name="blind_close_note_needed">ยอดไม่ตรง — ระบุเหตุผลสั้นๆ (ถ้ามี)</string>
+    <string name="blind_close_note_needed">ยอดไม่ตรง — ต้องระบุเหตุผลก่อนปิดรอบ</string>
+    <string name="blind_close_note_needed_hint">เช่น นับผิด / ทอนโอนเกิน / ทอนผิด / อื่นๆ</string>
+    <string name="blind_close_note_required_toast">ยอดไม่ตรง — ใส่เหตุผลก่อนปิดรอบ</string>
     <string name="blind_close_note_optional">หมายเหตุปิดกะ (ถ้ามี · ยังไม่โชว์ยอดระบบ)</string>
     <string name="blind_close_note_hint">เช่น นับผิด / ทอนเกิน / อื่นๆ</string>
+    <string name="blind_close_note_confirm_btn">บันทึกเหตุผลแล้วปิดรอบ</string>
     <string name="blind_close_confirm_title">ยืนยันปิดกะ</string>
     <string name="blind_close_confirm_btn">ยืนยันปิดกะ · พิมพ์</string>
     <string name="shift_nav_title">เมนูรอบขาย</string>

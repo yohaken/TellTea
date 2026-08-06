@@ -32,7 +32,7 @@ assert.equal(
   String(code),
   `versionName must be short digits equal to versionCode (got name=${name} code=${code})`,
 );
-assert.ok(code >= 136, `versionCode must keep rising for OTA (got ${code})`);
+assert.ok(code >= 137, `versionCode must keep rising for OTA (got ${code})`);
 
 assert.match(
   pin,

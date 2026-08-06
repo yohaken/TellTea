@@ -29,6 +29,10 @@ const flow = read(
 );
 assert.match(flow, /askCountedCash|blind_close_count/);
 assert.match(flow, /revealSummary|discrepancyLabel/);
+assert.match(flow, /askRequiredDiscrepancyNote/);
+assert.match(flow, /withDiscrepancyNote/);
+assert.match(flow, /commitClose/);
+assert.match(flow, /isBalanced\(\)/);
 assert.match(flow, /leaveFloat/);
 assert.match(flow, /flushThenCloseSession/);
 assert.match(flow, /NposNumberPad/);
@@ -56,6 +60,16 @@ assert.match(closeChunk, /postCloseSession/);
 const strings = read("npos-telltea/app/src/main/res/values/strings.xml");
 assert.match(strings, /blind_close_sync_required/);
 assert.match(strings, /ต้องต่อเน็ตและซิงก์/);
+assert.match(strings, /blind_close_note_needed/);
+assert.match(strings, /blind_close_note_required_toast/);
+assert.match(strings, /ต้องระบุเหตุผล/);
+
+const report = read(
+  "npos-telltea/app/src/main/java/app/telltea/npos/shift/BlindCloseReport.java",
+);
+assert.match(report, /withDiscrepancyNote/);
+
+assert.match(read("docs/npos-blind-shift-close-checklist.md"), /บังคับ/);
 
 const cf = read("functions/npos-sell.js");
 assert.match(cf, /closingCashCounted/);

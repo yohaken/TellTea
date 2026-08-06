@@ -16,8 +16,8 @@ android {
         minSdk 23
         targetSdk 35
         // versionCode = sole OTA gate (must rise every ship). versionName = short label (= code).
-        versionCode 136
-        versionName "136"
+        versionCode 137
+        versionName "137"
         buildConfigField "String", "UPDATE_MANIFEST_URL", "\"https://telltea-pos.web.app/downloads/latest.json\""
         buildConfigField "String", "DEFAULT_APK_URL", "\"https://telltea-pos.web.app/downloads/nPos-telltea.apk\""
         buildConfigField "String", "INSTALL_PAGE_URL", "\"https://telltea-pos.web.app/install/\""
