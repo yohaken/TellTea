@@ -269,10 +269,19 @@ function toDoc(dateKey, built, status) {
   };
 }
 
+const TODAY_REFRESH_MS = 45 * 60 * 1000;
+
+function usableDoc(data) {
+  if (!data) return false;
+  const line = String(data.shortLine || "").trim();
+  const label = String(data.labelTh || "").trim();
+  return Boolean(label || (line && line !== "—"));
+}
+
 async function ensureOne(db, dateKey, todayKey, archiveCache) {
   const ref = db.collection(COL).doc(dateKey);
   const snap = await ref.get();
-  if (snap.exists && snap.get("status") === "final") {
+  if (snap.exists && snap.get("status") === "final" && usableDoc(snap.data())) {
     return { dateKey, doc: snap.data(), skipped: true };
   }
 
@@ -280,6 +289,17 @@ async function ensureOne(db, dateKey, todayKey, archiveCache) {
   const isPast = dateKey < todayKey;
 
   if (isPast) {
+    // Already saved once → lock immediately, never re-fetch history APIs.
+    if (snap.exists && usableDoc(snap.data())) {
+      const sealed = {
+        ...snap.data(),
+        status: "final",
+        finalizedAt: snap.get("finalizedAt") || Date.now(),
+        updatedAt: Date.now(),
+      };
+      await ref.set(sealed, { merge: true });
+      return { dateKey, doc: sealed, skipped: true };
+    }
     if (!archiveCache.payload) {
       archiveCache.payload = await fetchHistoryRange(
         archiveCache.startKey,
@@ -297,16 +317,31 @@ async function ensureOne(db, dateKey, todayKey, archiveCache) {
   }
 
   if (isToday) {
+    // Fresh enough → return cache, do not call TMD again.
+    if (snap.exists && usableDoc(snap.data())) {
+      const fetchedAt = Number(snap.get("fetchedAt")) || 0;
+      if (Date.now() - fetchedAt < TODAY_REFRESH_MS) {
+        return { dateKey, doc: snap.data(), skipped: true };
+      }
+    }
     let built;
     try {
       const tmd = await fetchTmdToday();
-      // Periods from same-day history model (aligned to shop hours).
-      if (!archiveCache.payload) {
-        archiveCache.payload = await fetchHistoryRange(todayKey, todayKey, todayKey);
+      // Keep prior periods if we already have them — avoid history API every refresh.
+      const priorPeriods = snap.exists ? snap.get("periods") : null;
+      if (priorPeriods) {
+        built = { ...tmd, periods: priorPeriods };
+      } else {
+        if (!archiveCache.payload) {
+          archiveCache.payload = await fetchHistoryRange(todayKey, todayKey, todayKey);
+        }
+        const hist = buildFromArchiveDay(archiveCache.payload, todayKey);
+        built = { ...tmd, periods: hist?.periods || null };
       }
-      const hist = buildFromArchiveDay(archiveCache.payload, todayKey);
-      built = { ...tmd, periods: hist?.periods || null };
     } catch (err) {
+      if (snap.exists && usableDoc(snap.data())) {
+        return { dateKey, doc: snap.data(), skipped: true };
+      }
       if (!archiveCache.payload) {
         archiveCache.payload = await fetchHistoryRange(todayKey, todayKey, todayKey);
       }

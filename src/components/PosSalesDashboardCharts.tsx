@@ -43,7 +43,7 @@ export function PosDashDailyTotalsTable({
     <section className="pos-dash-day-table-card" aria-label="ยอดขายรายวันตัวเลข">
       <h3 className="pos-dash-card-title">ยอดขายรายวัน</h3>
       <p className="muted pos-dash-day-weather-note">
-        อากาศเมืองอุดรฯ (สถานีกรมอุตุฯ) · วันอดีตล็อกแล้ว · วันนี้รีเฟรชได้
+        อากาศเมืองอุดรฯ · วันผ่านมาเซฟถาวร · วันนี้รีเฟรชไม่เกินทุก 45 นาที
       </p>
       {rows.length ? (
         <div className="pos-dash-day-table-scroll">
