@@ -1,7 +1,8 @@
 # ใช้แต้มที่เคาน์เตอร์ + ข้อมูลบนบิล / หลังร้าน / แดชบอร์ด — เฟส
 
 อัปเดต: 2026-08-07  
-อ้างอิง: [members-crm-phases.md](./members-crm-phases.md) · [members-receipt-qr-phases.md](./members-receipt-qr-phases.md) · [pos-sales-dashboard-phases.md](./pos-sales-dashboard-phases.md)
+อ้างอิง: [members-crm-phases.md](./members-crm-phases.md) · [members-receipt-qr-phases.md](./members-receipt-qr-phases.md) · [pos-sales-dashboard-phases.md](./pos-sales-dashboard-phases.md)  
+**เช็กลิสต์ติ๊กทีละข้อ (ยาว):** [members-redeem-checklist.md](./members-redeem-checklist.md)
 
 ไอเดียง่ายที่ล็อกแล้ว (พนักงานคีย์):
 
