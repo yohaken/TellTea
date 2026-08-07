@@ -264,6 +264,23 @@ export function subscribeEmployeesForPresence(
   );
 }
 
+/** Admin callable — เมื่อ rules ฝั่ง client ปฏิเสธการปัก lastSeenAt */
+async function touchStaffPresenceViaCallable(): Promise<boolean> {
+  try {
+    const { httpsCallable } = await import("firebase/functions");
+    const { getFirebaseFunctions } = await import("./firebase");
+    const fn = httpsCallable(getFirebaseFunctions(), "touchStaffPresence");
+    const res = await fn({});
+    const data = (res?.data || {}) as { ok?: boolean };
+    return data.ok !== false;
+  } catch (err) {
+    if (typeof console !== "undefined") {
+      console.warn(mapFirestoreError(err, "อัปเดตเข้าใช้ล่าสุด (server)", "staff"));
+    }
+    return false;
+  }
+}
+
 /** พนักงาน/เจ้าของอัปเดตว่าเข้าใช้ล่าสุดเมื่อไหร่ — คืน true เมื่อเขียนสำเร็จ */
 export async function touchStaffPresence(staffId: string): Promise<boolean> {
   if (!staffId) return false;
@@ -278,6 +295,8 @@ export async function touchStaffPresence(staffId: string): Promise<boolean> {
       await setDoc(ref, { lastSeenAt: at }, { merge: true });
       return true;
     } catch (err2) {
+      // ทางหลักที่พังกับพนักงานจริง: rules ปฏิเสธ — ให้ Cloud Function ปักแทน
+      if (await touchStaffPresenceViaCallable()) return true;
       if (typeof console !== "undefined") {
         console.warn(mapFirestoreError(err2 ?? err, "อัปเดตเข้าใช้ล่าสุด", "staff"));
       }

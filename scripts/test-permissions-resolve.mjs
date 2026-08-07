@@ -37,6 +37,9 @@ const KEYS = [
   "exportData",
   "staffManage",
   "payrollPay",
+  "membersView",
+  "membersManage",
+  "membersAdjustPoints",
 ];
 
 function empty() {

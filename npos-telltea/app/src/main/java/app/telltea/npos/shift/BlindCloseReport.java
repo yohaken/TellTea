@@ -67,4 +67,25 @@ public final class BlindCloseReport {
     if (cashDifference > 0) return "เกิน (Over)";
     return "ขาด (Short)";
   }
+
+  /** Copy with a required over/short reason (same cash figures). */
+  public BlindCloseReport withDiscrepancyNote(String note) {
+    return new BlindCloseReport(
+        openingCash,
+        cashSales,
+        promptpaySales,
+        transferSales,
+        cashBills,
+        promptpayBills,
+        transferBills,
+        saleCount,
+        voidedCount,
+        discountTotal,
+        cashOutTotal,
+        cashInTotal,
+        cashDropCount,
+        countedCash,
+        leaveFloat,
+        note);
+  }
 }

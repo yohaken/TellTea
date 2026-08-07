@@ -146,13 +146,84 @@ export async function fileToReceiptDataUrl(
 /** Soft target for brand logos (PNG with alpha) — keep tiny for AppShell. */
 export const LOGO_DATA_URL_SOFT_MAX = 80_000;
 
-function isPngFile(file: File) {
-  const type = (file.type || "").toLowerCase();
-  if (type === "image/png") return true;
-  return /\.png$/i.test(file.name || "");
+/** Near-white / cream / light gray pad around circular marks (phone exports). */
+export function isLogoKnockoutRgb(r: number, g: number, b: number): boolean {
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const avg = (r + g + b) / 3;
+  return avg >= 210 && max - min <= 60;
 }
 
-/** Resize keeping PNG alpha — used for transparent brand marks. */
+/**
+ * Flood-fill from edges: turn connected light pixels transparent.
+ * Keeps white line-art inside the green mark (not edge-connected).
+ */
+export function knockOutLogoLightBackground(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+): boolean {
+  if (w <= 0 || h <= 0) return false;
+  const img = ctx.getImageData(0, 0, w, h);
+  const d = img.data;
+  const seen = new Uint8Array(w * h);
+  const stack: number[] = [];
+  let cleared = 0;
+
+  const tryPush = (x: number, y: number) => {
+    if (x < 0 || y < 0 || x >= w || y >= h) return;
+    const i = y * w + x;
+    if (seen[i]) return;
+    const o = i * 4;
+    if (d[o + 3] < 12) {
+      seen[i] = 1;
+      return;
+    }
+    if (!isLogoKnockoutRgb(d[o], d[o + 1], d[o + 2])) return;
+    seen[i] = 1;
+    stack.push(i);
+  };
+
+  for (let x = 0; x < w; x++) {
+    tryPush(x, 0);
+    tryPush(x, h - 1);
+  }
+  for (let y = 0; y < h; y++) {
+    tryPush(0, y);
+    tryPush(w - 1, y);
+  }
+
+  while (stack.length) {
+    const i = stack.pop()!;
+    const o = i * 4;
+    d[o + 3] = 0;
+    cleared += 1;
+    const x = i % w;
+    const y = (i / w) | 0;
+    tryPush(x + 1, y);
+    tryPush(x - 1, y);
+    tryPush(x, y + 1);
+    tryPush(x, y - 1);
+  }
+
+  if (!cleared) return false;
+  ctx.putImageData(img, 0, 0);
+  return true;
+}
+
+function canvasToPngDataUrl(canvas: HTMLCanvasElement): Promise<string> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error("ไม่สามารถเข้ารหัสโลโก้ PNG ได้"));
+        return;
+      }
+      void readAsDataUrl(blob).then(resolve, reject);
+    }, "image/png");
+  });
+}
+
+/** Resize any image to PNG + knock out light edge background. */
 async function resizeToPngDataUrl(file: File, maxEdge: number): Promise<string> {
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
@@ -161,7 +232,7 @@ async function resizeToPngDataUrl(file: File, maxEdge: number): Promise<string> 
   const canvas = document.createElement("canvas");
   canvas.width = w;
   canvas.height = h;
-  const ctx = canvas.getContext("2d");
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
   if (!ctx) {
     bitmap.close();
     throw new Error("ไม่สามารถย่อโลโก้ได้");
@@ -169,16 +240,47 @@ async function resizeToPngDataUrl(file: File, maxEdge: number): Promise<string> 
   ctx.clearRect(0, 0, w, h);
   ctx.drawImage(bitmap, 0, 0, w, h);
   bitmap.close();
-  const blob = await new Promise<Blob | null>((resolve) =>
-    canvas.toBlob(resolve, "image/png"),
-  );
-  if (!blob) throw new Error("ไม่สามารถเข้ารหัสโลโก้ PNG ได้");
-  return readAsDataUrl(blob);
+  knockOutLogoLightBackground(ctx, w, h);
+  return canvasToPngDataUrl(canvas);
 }
 
 /**
- * โลโก้แบรนด์ — เก็บ PNG โปร่งใสไว้ (ไม่แปลงเป็น JPEG)
- * ไฟล์อื่น fallback เป็น JPEG แบบสลิป
+ * Re-encode a stored logo data URL as PNG with light edge pad removed.
+ * Safe for already-uploaded JPEG/PNG marks that show white corners on login.
+ */
+export async function prepareBrandLogoPngDataUrl(
+  dataUrl: string,
+  maxEdge = 320,
+): Promise<string> {
+  const raw = String(dataUrl || "").trim();
+  if (!raw.startsWith("data:image/")) return raw;
+
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new Image();
+    el.onload = () => resolve(el);
+    el.onerror = () => reject(new Error("อ่านโลโก้ไม่สำเร็จ"));
+    el.src = raw;
+  });
+
+  const nw = img.naturalWidth || maxEdge;
+  const nh = img.naturalHeight || maxEdge;
+  const scale = Math.min(1, maxEdge / Math.max(nw, nh));
+  const w = Math.max(1, Math.round(nw * scale));
+  const h = Math.max(1, Math.round(nh * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) throw new Error("ไม่สามารถย่อโลโก้ได้");
+  ctx.clearRect(0, 0, w, h);
+  ctx.drawImage(img, 0, 0, w, h);
+  knockOutLogoLightBackground(ctx, w, h);
+  return canvasToPngDataUrl(canvas);
+}
+
+/**
+ * โลโก้แบรนด์ — เก็บ PNG โปร่งใส · ตัดพื้นขาว/ครีมที่ขอบตอนอัปโหลด
+ * (JPEG เดิมทำให้มีแถบขาวบนพื้นเขียวหน้าล็อกอิน)
  */
 export async function fileToLogoDataUrl(
   file: File,
@@ -189,20 +291,16 @@ export async function fileToLogoDataUrl(
   }
   const soft = Math.min(Math.max(40_000, maxChars), RECEIPT_DATA_URL_HARD_MAX);
 
-  if (isPngFile(file)) {
-    // Always start from a modest edge — full-res PNGs freeze the UI when cached/fetched.
-    let edge = 320;
-    let dataUrl = await resizeToPngDataUrl(file, edge);
+  // Always PNG + knockout — never bake a white square via JPEG.
+  let edge = 320;
+  let dataUrl = await resizeToPngDataUrl(file, edge);
+  if (dataUrl.length <= soft) return dataUrl;
+  while (edge >= 96) {
+    edge = Math.round(edge * 0.75);
+    dataUrl = await resizeToPngDataUrl(file, edge);
     if (dataUrl.length <= soft) return dataUrl;
-    while (edge >= 96) {
-      edge = Math.round(edge * 0.75);
-      dataUrl = await resizeToPngDataUrl(file, edge);
-      if (dataUrl.length <= soft) return dataUrl;
-    }
-    throw new Error("โลโก้ PNG ใหญ่เกินไป — ลดขนาดไฟล์แล้วลองใหม่");
   }
-
-  return fileToReceiptDataUrl(file, soft);
+  throw new Error("โลโก้ใหญ่เกินไป — ลดขนาดไฟล์แล้วลองใหม่");
 }
 
 /** อ่านข้อความ error จาก Firestore/เซิร์ฟเวอร์ให้เป็นภาษาไทยที่ใช้ได้จริง */

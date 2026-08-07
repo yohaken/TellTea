@@ -6,6 +6,8 @@ import type {
   PosDashHourPoint,
   PosDashWeekdayPoint,
 } from "@/lib/pos-sales-dashboard";
+import type { WeatherDayDoc } from "@/lib/pos-weather";
+import { weatherCellTitle } from "@/lib/pos-weather";
 import { formatPlainNumber } from "@/lib/utils";
 
 function niceMax(raw: number): number {
@@ -26,6 +28,94 @@ function yTicks(max: number, count = 5): number[] {
 function formatAxisBaht(n: number): string {
   if (n >= 1000) return `${Math.round(n / 100) / 10}k`.replace(/\.0k$/, "k");
   return String(Math.round(n));
+}
+
+/** Numbers-first daily sales box — date + weather + amount (newest first). */
+export function PosDashDailyTotalsTable({
+  points,
+  weatherByDay = {},
+}: {
+  points: PosDashDayPoint[];
+  weatherByDay?: Record<string, WeatherDayDoc>;
+}) {
+  const rows = useMemo(() => [...points].reverse(), [points]);
+  return (
+    <section className="pos-dash-day-table-card" aria-label="ยอดขายรายวันตัวเลข">
+      <h3 className="pos-dash-card-title">ยอดขายรายวัน</h3>
+      <p className="muted pos-dash-day-weather-note">
+        อากาศเมืองอุดรฯ · วันผ่านมาเซฟถาวร · วันนี้รีเฟรชไม่เกินทุก 45 นาที
+      </p>
+      {rows.length ? (
+        <div className="pos-dash-day-table-scroll">
+          <table className="pos-dash-day-table">
+            <thead>
+              <tr>
+                <th scope="col">วันที่</th>
+                <th scope="col">อากาศ</th>
+                <th scope="col" className="is-num">
+                  ยอดขาย
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((p) => {
+                const w = weatherByDay[p.dateKey];
+                return (
+                  <tr key={p.dateKey} className={p.total <= 0 ? "is-zero" : undefined}>
+                    <td>{p.label}</td>
+                    <td className="pos-dash-day-weather" title={weatherCellTitle(w)}>
+                      {w ? (
+                        <>
+                          <span className="pos-dash-day-weather-main" aria-hidden={false}>
+                            <span className="pos-dash-day-weather-emoji">{w.emoji}</span>
+                            <span className="pos-dash-day-weather-label">{w.labelTh}</span>
+                            {Number.isFinite(Number(w.tempMin)) &&
+                            Number.isFinite(Number(w.tempMax)) ? (
+                              <span className="pos-dash-day-weather-temp">
+                                {Math.round(Number(w.tempMin))}–{Math.round(Number(w.tempMax))}°
+                              </span>
+                            ) : null}
+                          </span>
+                          {w.periods?.day?.emoji ||
+                          w.periods?.evening?.emoji ||
+                          w.periods?.night?.emoji ? (
+                            <span className="pos-dash-day-weather-periods">
+                              {w.periods.day?.emoji ? (
+                                <span title={`กลางวัน ${w.periods.day.labelTh}`}>
+                                  วัน{w.periods.day.emoji}
+                                </span>
+                              ) : null}
+                              {w.periods.evening?.emoji ? (
+                                <span title={`เย็น ${w.periods.evening.labelTh}`}>
+                                  เย็น{w.periods.evening.emoji}
+                                </span>
+                              ) : null}
+                              {w.periods.night?.emoji ? (
+                                <span title={`ดึก ${w.periods.night.labelTh}`}>
+                                  ดึก{w.periods.night.emoji}
+                                </span>
+                              ) : null}
+                            </span>
+                          ) : null}
+                        </>
+                      ) : (
+                        <span className="muted">…</span>
+                      )}
+                    </td>
+                    <td className="is-num">
+                      <strong>{formatPlainNumber(p.total)}</strong>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="muted pos-dash-day-table-empty">ยังไม่มียอดในช่วงนี้</p>
+      )}
+    </section>
+  );
 }
 
 export function PosDashDailyAreaChart({ points }: { points: PosDashDayPoint[] }) {
@@ -68,9 +158,9 @@ export function PosDashDailyAreaChart({ points }: { points: PosDashDayPoint[] })
 
   return (
     <div className="pos-dash-chart-card">
-      <h3 className="pos-dash-card-title">ยอดขายรายวัน</h3>
+      <h3 className="pos-dash-card-title">กราฟรายวัน</h3>
       <div className="pos-dash-chart-svg-wrap">
-        <svg viewBox={`0 0 ${W} ${H}`} className="pos-dash-chart-svg" role="img" aria-label="ยอดขายรายวัน">
+        <svg viewBox={`0 0 ${W} ${H}`} className="pos-dash-chart-svg" role="img" aria-label="กราฟยอดขายรายวัน">
           {ticks.map((t) => {
             const y = pad.top + innerH - (t / max) * innerH;
             return (

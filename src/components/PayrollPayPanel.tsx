@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
+import { PayrollPaymentDocModal } from "@/components/PayrollPaymentDocModal";
 import {
   StaffLatestTransferCard,
   type StaffBonusExplain,
@@ -36,9 +37,14 @@ import {
   type PayrollSchedule,
 } from "@/lib/payroll";
 import {
+  buildReceiptFromJustPaid,
+  payeeFromEmployee,
+} from "@/lib/payroll-payment-doc";
+import {
   buildCombinedTransferClipboard,
   digitsOnlyAccount,
   plainTransferAmount,
+  type StaffTransferReceipt,
 } from "@/lib/payroll-staff-receipt";
 import type { ProdEntry } from "@/lib/production";
 import {
@@ -146,8 +152,15 @@ export function PayrollPayPanel({
     urls: string[];
     title: string;
   } | null>(null);
+  const [paymentDoc, setPaymentDoc] = useState<{
+    receipt: StaffTransferReceipt;
+    employeeId: string;
+    employeeName: string;
+  } | null>(null);
 
-  useBodyScrollLock(!!payTarget || specialOpen || advanceOpen || !!slipPreview);
+  useBodyScrollLock(
+    !!payTarget || specialOpen || advanceOpen || !!slipPreview || !!paymentDoc,
+  );
 
   const periodItems = useMemo(
     () => items.filter((i) => i.periodMonth === periodMonth),
@@ -475,6 +488,7 @@ export function PayrollPayPanel({
     if (!payTarget || !canPay) return;
     setBusy(true);
     try {
+      const paidAt = Date.now();
       if (payTarget.mode === "combined" && payTarget.pair) {
         const result = await markPayrollPaidCombined({
           salaryId: payTarget.pair.salary.id,
@@ -485,22 +499,58 @@ export function PayrollPayPanel({
           prodEntries,
           otEntries,
         });
-        setPayTarget(null);
-        onInfo?.(
-          `โอนรวมแล้ว · ${payTarget.pair.employeeName} · ฿${fmt(result.transferTotal)}` +
-            ` (สิ้นเดือน ฿${fmt(payTarget.pair.salary.amount)} + โบนัส ฿${fmt(payTarget.pair.bonus.amount)})`,
-        );
-      } else {
-        await markPayrollPaid({
-          id: payTarget.item.id,
-          paidBy: actorId,
+        const receipt = buildReceiptFromJustPaid({
+          items: [payTarget.pair.salary, payTarget.pair.bonus],
           slipUrls: payTarget.slipUrls,
           note: payTarget.note,
+          paidAt,
+          combinedPayId: result.combinedPayId,
+        });
+        setPayTarget(null);
+        setPaymentDoc({
+          receipt,
+          employeeId: payTarget.pair.employeeId,
+          employeeName: payTarget.pair.employeeName,
+        });
+        onInfo?.(
+          `โอนรวมแล้ว · ${payTarget.pair.employeeName} · ฿${fmt(result.transferTotal)}` +
+            ` (สิ้นเดือน ฿${fmt(payTarget.pair.salary.amount)} + โบนัส ฿${fmt(payTarget.pair.bonus.amount)})` +
+            " · เปิดใบสรุปหลักฐานแล้ว",
+        );
+      } else {
+        const paidItem = payTarget.item;
+        const slipUrls = payTarget.slipUrls;
+        const note = payTarget.note;
+        await markPayrollPaid({
+          id: paidItem.id,
+          paidBy: actorId,
+          slipUrls,
+          note,
           prodEntries,
           otEntries,
         });
         setPayTarget(null);
-        onInfo?.(`จ่ายแล้ว · ${payrollDescription(payTarget.item)}`);
+        // ร้านเน้นหลักฐานท้ายเดือน — กลางเดือนไม่เด้งใบสรุป (ยังเปิดจากแท็บหลักฐานจ่ายได้)
+        if (paidItem.kind !== "salary_mid") {
+          const receipt = buildReceiptFromJustPaid({
+            items: [paidItem],
+            slipUrls,
+            note,
+            paidAt,
+          });
+          setPaymentDoc({
+            receipt,
+            employeeId: paidItem.employeeId,
+            employeeName: paidItem.employeeName,
+          });
+          onInfo?.(
+            `จ่ายแล้ว · ${payrollDescription(paidItem)} · เปิดใบสรุปหลักฐานแล้ว`,
+          );
+        } else {
+          onInfo?.(
+            `จ่ายแล้ว · ${payrollDescription(paidItem)} · ดูใบสรุปได้ที่แท็บหลักฐานจ่าย`,
+          );
+        }
       }
     } catch (err) {
       onError((err as Error).message || "บันทึกจ่ายไม่สำเร็จ");
@@ -627,6 +677,7 @@ export function PayrollPayPanel({
         <StaffLatestTransferCard
           items={items}
           periodMonth={periodMonth}
+          employees={employees}
           bonusExplain={bonusExplain}
           onOpenBonusMonth={onOpenBonusMonth}
           onOpenHistory={onOpenHistory}
@@ -714,7 +765,14 @@ export function PayrollPayPanel({
                       const inCombined = isCombinedPairLine(item, pair);
                       const lineMeta: string[] = [];
                       if (item.advanceDeduct > 0) {
-                        lineMeta.push(`หักเบิก ฿${fmt(item.advanceDeduct)}`);
+                        const gross =
+                          item.grossAmount > 0
+                            ? item.grossAmount
+                            : item.amount + item.advanceDeduct;
+                        lineMeta.push(`ก่อนหัก ฿${fmt(gross)}`);
+                        lineMeta.push(
+                          `คืนเบิก ฿${fmt(item.advanceDeduct)} (ได้ไปก่อนแล้ว)`,
+                        );
                       }
                       if (kindUsesMonthEndAccount(item.kind)) {
                         lineMeta.push(
@@ -788,7 +846,7 @@ export function PayrollPayPanel({
           {shopView
             ? "ยังไม่มีรายการในมุมมองนี้ — กดสร้างรายการรอโอน"
             : filter === "pending"
-              ? "ไม่มีรายการรอโอนในเดือนนี้ — ดูรอบล่าสุดด้านบน หรือแท็บทั้งหมด / ประวัติ"
+              ? "ไม่มีรายการรอโอนในเดือนนี้ — ดูรอบล่าสุดด้านบน หรือแท็บทั้งหมด / หลักฐานจ่าย"
               : "ยังไม่มีรายการจ่ายของคุณในมุมมองนี้"}
         </p>
       ) : (
@@ -822,7 +880,14 @@ export function PayrollPayPanel({
                   metaBits.push(`บช.${formatDateShortBe(item.accountDate || item.dueDate)}`);
                 }
                 if (item.advanceDeduct > 0) {
-                  metaBits.push(`หักเบิก ฿${fmt(item.advanceDeduct)}`);
+                  const gross =
+                    item.grossAmount > 0
+                      ? item.grossAmount
+                      : item.amount + item.advanceDeduct;
+                  metaBits.push(`ก่อนหัก ฿${fmt(gross)}`);
+                  metaBits.push(
+                    `คืนเบิก ฿${fmt(item.advanceDeduct)} (ได้ไปก่อนแล้ว)`,
+                  );
                 }
                 if (item.combinedPayId) {
                   metaBits.push("โอนรวมสิ้นเดือน+โบนัส");
@@ -969,12 +1034,22 @@ export function PayrollPayPanel({
                 })()}
                 <ul className="payroll-combined-breakdown">
                   <li>
-                    สิ้นเดือน ฿{fmt(payTarget.pair.salary.amount)}
+                    สิ้นเดือน โอน ฿{fmt(payTarget.pair.salary.amount)}
                     {payTarget.pair.salary.advanceDeduct > 0
-                      ? ` (หักเบิก ฿${fmt(payTarget.pair.salary.advanceDeduct)})`
+                      ? ` · ก่อนหัก ฿${fmt(
+                          payTarget.pair.salary.grossAmount > 0
+                            ? payTarget.pair.salary.grossAmount
+                            : payTarget.pair.salary.amount +
+                                payTarget.pair.salary.advanceDeduct,
+                        )} · คืนเบิก ฿${fmt(payTarget.pair.salary.advanceDeduct)}`
                       : ""}
                   </li>
-                  <li>โบนัส ฿{fmt(payTarget.pair.bonus.amount)}</li>
+                  <li>
+                    โบนัส โอน ฿{fmt(payTarget.pair.bonus.amount)}
+                    {payTarget.pair.bonus.advanceDeduct > 0
+                      ? ` · คืนเบิก ฿${fmt(payTarget.pair.bonus.advanceDeduct)}`
+                      : ""}
+                  </li>
                 </ul>
                 <p style={{ margin: "0.35rem 0 0" }}>
                   พนักงานยังเห็น 2 รายการแยกในคิวของตัวเอง
@@ -1082,6 +1157,20 @@ export function PayrollPayPanel({
           urls={slipPreview.urls}
           title={slipPreview.title}
           onClose={() => setSlipPreview(null)}
+        />
+      ) : null}
+
+      {paymentDoc ? (
+        <PayrollPaymentDocModal
+          receipt={paymentDoc.receipt}
+          payee={payeeFromEmployee(
+            employees.find((e) => e.id === paymentDoc.employeeId),
+            paymentDoc.employeeName,
+          )}
+          linkedStaffId={
+            employees.find((e) => e.id === paymentDoc.employeeId)?.linkedStaffId
+          }
+          onClose={() => setPaymentDoc(null)}
         />
       ) : null}
 

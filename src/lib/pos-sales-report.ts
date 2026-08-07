@@ -127,6 +127,21 @@ function mapPosSale(id: string, data: Record<string, unknown>): PosSale {
     ...(typeof data.transferRef === "string" && data.transferRef.trim()
       ? { transferRef: data.transferRef.trim() }
       : {}),
+    ...(typeof data.memberId === "string" && data.memberId.trim()
+      ? { memberId: data.memberId.trim() }
+      : {}),
+    ...(typeof data.memberPhone === "string" && data.memberPhone.trim()
+      ? { memberPhone: data.memberPhone.trim() }
+      : {}),
+    ...(typeof data.pointsEarned === "number" && data.pointsEarned > 0
+      ? { pointsEarned: data.pointsEarned }
+      : {}),
+    ...(typeof data.pointsRedeemed === "number" && data.pointsRedeemed > 0
+      ? { pointsRedeemed: data.pointsRedeemed }
+      : {}),
+    ...(typeof data.redeemBaht === "number" && data.redeemBaht > 0
+      ? { redeemBaht: data.redeemBaht }
+      : {}),
     cashReceived: typeof data.cashReceived === "number" ? data.cashReceived : 0,
     change: typeof data.change === "number" ? data.change : 0,
     ledgerEntryId: typeof data.ledgerEntryId === "string" ? data.ledgerEntryId : undefined,

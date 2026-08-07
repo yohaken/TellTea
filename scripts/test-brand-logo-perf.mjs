@@ -18,14 +18,22 @@ const receipts = read("src/lib/receipts.ts");
 const rules = read("firestore.rules");
 const version = read("src/lib/version.ts");
 
-assert.match(version, /APP_BUILD = 365/);
+assert.ok(Number(version.match(/APP_BUILD\s*=\s*(\d+)/)?.[1] || 0) >= 698);
+assert.doesNotMatch(appBrand, /brand-logo-dark-pad/);
+assert.match(appBrand, /brand-logo-custom/);
 assert.match(brand, /BRAND_LOGO_MAX_CHARS = 80_000/);
 assert.match(brand, /meta", "brandLogo"/);
 assert.match(brand, /purgeLegacyBrandLogoStorage/);
 assert.match(brand, /if \(next === memorySrc\) return/);
 assert.match(brand, /loadPromise/);
+assert.match(brand, /lightBgKnockedOut/);
+assert.match(brand, /prepareBrandLogoPngDataUrl|prepareAndShrinkLogo/);
 assert.match(receipts, /LOGO_DATA_URL_SOFT_MAX = 80_000/);
 assert.match(receipts, /edge = 320/);
+assert.match(receipts, /knockOutLogoLightBackground/);
+assert.match(receipts, /prepareBrandLogoPngDataUrl/);
+assert.match(receipts, /isLogoKnockoutRgb/);
+assert.match(logoField, /ตัดแถบขาว|ตัดพื้นขาว/);
 
 // businessProfile must stay text-only (no localStorage of data URLs)
 assert.doesNotMatch(profile, /localStorage|cacheBrandLogo|saveBusinessLogo/);

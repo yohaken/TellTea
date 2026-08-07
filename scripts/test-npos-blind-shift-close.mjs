@@ -11,8 +11,8 @@ const read = (p) => readFileSync(join(root, p), "utf8");
 
 assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)[1]) >= 673);
 assert.ok(Number(read("src/lib/pos-version.ts").match(/POS_BUILD = (\d+)/)[1]) >= 177);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+133/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.110"/);
+assert.ok(Number((read("npos-telltea/app/build.gradle").match(/versionCode\s+(\d+)/) || [])[1]) >= 130);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"\d+"/);
 assert.match(read("docs/npos-blind-shift-close-checklist.md"), /Blind|Over|Short|B1/);
 
 assert.ok(
@@ -29,6 +29,10 @@ const flow = read(
 );
 assert.match(flow, /askCountedCash|blind_close_count/);
 assert.match(flow, /revealSummary|discrepancyLabel/);
+assert.match(flow, /askRequiredDiscrepancyNote/);
+assert.match(flow, /withDiscrepancyNote/);
+assert.match(flow, /commitClose/);
+assert.match(flow, /isBalanced\(\)/);
 assert.match(flow, /leaveFloat/);
 assert.match(flow, /flushThenCloseSession/);
 assert.match(flow, /NposNumberPad/);
@@ -56,6 +60,16 @@ assert.match(closeChunk, /postCloseSession/);
 const strings = read("npos-telltea/app/src/main/res/values/strings.xml");
 assert.match(strings, /blind_close_sync_required/);
 assert.match(strings, /ต้องต่อเน็ตและซิงก์/);
+assert.match(strings, /blind_close_note_needed/);
+assert.match(strings, /blind_close_note_required_toast/);
+assert.match(strings, /ต้องระบุเหตุผล/);
+
+const report = read(
+  "npos-telltea/app/src/main/java/app/telltea/npos/shift/BlindCloseReport.java",
+);
+assert.match(report, /withDiscrepancyNote/);
+
+assert.match(read("docs/npos-blind-shift-close-checklist.md"), /บังคับ/);
 
 const cf = read("functions/npos-sell.js");
 assert.match(cf, /closingCashCounted/);

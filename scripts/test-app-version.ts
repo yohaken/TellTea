@@ -9,5 +9,6 @@ import {
 assert.equal(APP_VERSION_MAJOR, 4);
 assert.ok(APP_BUILD >= 433);
 assert.equal(appVersionString(), `4.${APP_BUILD}`);
-assert.ok(appVersionLabel().startsWith(`4.${APP_BUILD}`));
+assert.equal(appVersionLabel(), `4.${APP_BUILD}`);
+assert.doesNotMatch(appVersionLabel(), /\d{2}\/\d{2}\/\d{2}/);
 console.log("test-app-version: ok ·", appVersionString());

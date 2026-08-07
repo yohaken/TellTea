@@ -407,7 +407,20 @@ export type PosSale = {
   change: number;
   /** Optional bank-slip ref for transfer tender */
   transferRef?: string;
+  /** Optional CRM — absent on bills without member */
+  memberId?: string;
+  memberPhone?: string;
+  pointsEarned?: number;
+  pointsRedeemed?: number;
+  redeemBaht?: number;
   ledgerEntryId?: string;
+  /** Receipt QR claim (R0+) — issued from BOH experiment / later print */
+  claimToken?: string;
+  claimTokenExpiresAt?: number;
+  claimStatus?: "open" | "claimed" | string;
+  claimedAt?: number;
+  claimedByMemberId?: string;
+  pointsClaimed?: number;
   createdAt: number;
   createdBy: string;
   status: "completed" | "voided";

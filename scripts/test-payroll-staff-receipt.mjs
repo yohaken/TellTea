@@ -42,9 +42,9 @@ assert.match(cardUi, /รอบล่าสุด · เข้าบัญชี
 assert.match(cardUi, /สรุปโบนัส \+ หลักฐานหัก/);
 assert.match(histUi, /โอนครั้งเดียว/);
 assert.match(histUi, /salaryHistoryMetaBits/);
-assert.match(pageSrc, /ดูแบบพนักงาน/);
+assert.match(pageSrc, /มุมพนักงาน/);
 assert.match(pageSrc, /onOpenBonusMonth/);
-assert.match(versionSrc, /APP_BUILD = 560/);
+assert.match(versionSrc, /APP_BUILD = \d+/);
 assert.match(checklist, /ขึ้นหน้าเว็บจริง/);
 
 function digitsOnlyAccount(payAccountNo) {

@@ -993,7 +993,13 @@ export function PosSessionsSlimTable({
                         (row.transferBills != null && row.transferBills > 0))
                         ? ` · บิล สด ${row.cashBills ?? 0} / โอน ${row.transferBills ?? 0} / PP ${row.ppBills ?? 0}`
                         : ""}
-                      {row.note ? ` · ${row.note}` : ""}
+                      {row.note
+                        ? ` · ${row.note}`
+                        : !row.open &&
+                            row.discrepancyLabel &&
+                            row.discrepancyLabel !== "ตรง"
+                          ? " · ไม่มีเหตุผล"
+                          : ""}
                       {" · "}
                       <button
                         type="button"

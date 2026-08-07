@@ -1,5 +1,14 @@
 const { HttpsError } = require("firebase-functions/v1/https");
 const { startOfBangkokDay } = require("./bangkok-day");
+const {
+  normalizeMemberId,
+  loadMemberSettings,
+  redeemBahtFromPoints,
+  planRedeemFromMemberSnap,
+  writeRedeemInSaleTx,
+  tryEarnPointsForSale,
+  tryReverseEarnForVoid,
+} = require("./pos-members");
 
 function formatBillNo(dateMs, seq) {
   const parts = new Intl.DateTimeFormat("en-GB", {
@@ -99,6 +108,24 @@ async function completePosSaleAdmin(db, data, uid) {
   const subtotal = Math.round(lines.reduce((sum, l) => sum + l.price * l.qty, 0) * 100) / 100;
   let discountBaht = Math.round(Number(data?.discountBaht || 0) * 100) / 100;
   if (!Number.isFinite(discountBaht) || discountBaht < 0) discountBaht = 0;
+
+  /** Optional CRM — omitted on almost all live bills; must not change cash path when 0. */
+  const memberId = normalizeMemberId(data?.memberId);
+  let pointsToRedeem = Math.trunc(Number(data?.pointsToRedeem || 0));
+  if (!Number.isFinite(pointsToRedeem) || pointsToRedeem < 0) pointsToRedeem = 0;
+  if (!memberId) pointsToRedeem = 0;
+
+  let redeemBaht = 0;
+  let memberSettings = null;
+  if (pointsToRedeem > 0) {
+    memberSettings = await loadMemberSettings(db);
+    redeemBaht = redeemBahtFromPoints(pointsToRedeem, memberSettings);
+    if (redeemBaht <= 0) {
+      throw new HttpsError("invalid-argument", "จำนวนแต้มแลกไม่พอคิดเป็นส่วนลด");
+    }
+    discountBaht = Math.round((discountBaht + redeemBaht) * 100) / 100;
+  }
+
   if (discountBaht > subtotal) discountBaht = subtotal;
   const total = Math.round((subtotal - discountBaht) * 100) / 100;
   if (total < 0) {
@@ -124,11 +151,22 @@ async function completePosSaleAdmin(db, data, uid) {
   const mutationRef = clientMutationId ? db.doc(`posSaleMutations/${clientMutationId}`) : null;
 
   const txResult = await db.runTransaction(async (tx) => {
+    // All reads first (Firestore txn rule), then writes.
     if (mutationRef) {
       const mutSnap = await tx.get(mutationRef);
       if (mutSnap.exists) {
         return { replay: mutSnap.data() || {} };
       }
+    }
+
+    let redeemPlan = null;
+    if (pointsToRedeem > 0 && memberId) {
+      const memberSnap = await tx.get(db.collection("members").doc(memberId));
+      redeemPlan = planRedeemFromMemberSnap(memberSnap, {
+        memberId,
+        pointsToRedeem,
+        settings: memberSettings,
+      });
     }
 
     const posSnap = await tx.get(metaPosRef);
@@ -138,6 +176,14 @@ async function completePosSaleAdmin(db, data, uid) {
       seq = posData.billSeq + 1;
     }
     const nextBillNo = formatBillNo(date, seq);
+    const pointsRedeemed = redeemPlan ? redeemPlan.pointsRedeemed : 0;
+
+    if (redeemPlan) {
+      writeRedeemInSaleTx(tx, db, redeemPlan, {
+        saleId: saleRef.id,
+        actorId: createdBy,
+      });
+    }
 
     tx.set(metaPosRef, { billDate: date, billSeq: seq, updatedAt: now }, { merge: true });
     tx.set(saleRef, {
@@ -155,6 +201,20 @@ async function completePosSaleAdmin(db, data, uid) {
       change,
       ...(typeof data?.transferRef === "string" && data.transferRef.trim()
         ? { transferRef: data.transferRef.trim().slice(0, 32) }
+        : {}),
+      ...(memberId
+        ? {
+            memberId,
+            ...(typeof data?.memberPhone === "string" && data.memberPhone.trim()
+              ? { memberPhone: data.memberPhone.trim().slice(0, 20) }
+              : {}),
+            ...(redeemPlan?.memberPhone && !data?.memberPhone
+              ? { memberPhone: redeemPlan.memberPhone }
+              : {}),
+          }
+        : {}),
+      ...(pointsRedeemed > 0
+        ? { pointsRedeemed, redeemBaht: redeemPlan?.redeemBaht || redeemBaht || 0 }
         : {}),
       createdAt: now,
       createdBy,
@@ -187,6 +247,16 @@ async function completePosSaleAdmin(db, data, uid) {
   }
 
   const billNo = txResult.billNo;
+
+  // Earn after commit — failure must not undo/fail the sale.
+  if (memberId) {
+    await tryEarnPointsForSale(db, {
+      saleId: saleRef.id,
+      memberId,
+      total,
+      actorId: createdBy,
+    });
+  }
 
   const sessionRef = db.doc(`posSessions/${data.sessionId}`);
   await db.runTransaction(async (tx) => {
@@ -328,6 +398,14 @@ async function voidPosSaleAdmin(db, data, deviceId) {
       const voidedCount = Math.max(0, (Number(session.voidedCount) || 0) + 1);
       patch.voidedCount = voidedCount;
       tx.set(sessionRef, patch, { merge: true });
+    });
+  }
+
+  // Best-effort reverse of earn_sale — never blocks void.
+  if (!outcome.alreadyVoided) {
+    await tryReverseEarnForVoid(db, {
+      saleId: outcome.saleId,
+      actorId: `pos:${deviceId}`,
     });
   }
 

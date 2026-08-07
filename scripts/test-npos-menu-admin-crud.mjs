@@ -9,10 +9,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+130/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.107"/);
-assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_NAME = "1.14.107"/);
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 581/);
+assert.ok(Number((read("npos-telltea/app/build.gradle").match(/versionCode\s+(\d+)/) || [])[1]) >= 130);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"\d+"/);
+assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_NAME = "\d+"/);
+assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)[1]) >= 581);
 
 assert.ok(existsSync(join(root, "functions/npos-menu-admin.js")));
 const cf = read("functions/npos-menu-admin.js");
@@ -98,6 +98,6 @@ assert.match(boh, /subscribeMenuItems/);
 
 const phases = read("docs/npos-menu-management-phases.md");
 assert.match(phases, /Phase 3|P3/);
-assert.match(phases, /1.14.107|nposMenuMutate/);
+assert.match(phases, /1\.14\.\d+|nposMenuMutate/);
 
 console.log("OK test-npos-menu-admin-crud");

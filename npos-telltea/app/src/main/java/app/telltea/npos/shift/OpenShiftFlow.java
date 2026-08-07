@@ -5,7 +5,6 @@ import android.graphics.Color;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
-import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -24,8 +23,8 @@ import app.telltea.npos.ui.NposUi;
 import app.telltea.npos.ui.UiScale;
 
 /**
- * Confirm opening float + pick who opened (employee roster) before openSession.
- * Roster is from shop settings — not linked to OT shift table.
+ * Confirm opening float + pick who opened from the shop employee roster.
+ * Roster only — no free-typed names. Not linked to OT shift table.
  */
 public final class OpenShiftFlow {
   public interface Done {
@@ -131,76 +130,72 @@ public final class OpenShiftFlow {
     int pad = ui.dp(12);
     box.setPadding(pad, ui.dp(4), pad, 0);
 
+    if (roster.isEmpty()) {
+      TextView empty =
+          NposUi.body(activity, activity.getString(R.string.open_shift_who_empty_roster));
+      empty.setPadding(0, ui.dp(4), 0, ui.dp(8));
+      box.addView(empty);
+      NposConfirmDialog.customMedium(
+          activity,
+          activity.getString(R.string.open_shift_who_title),
+          null,
+          box,
+          activity.getString(android.R.string.ok),
+          activity.getString(android.R.string.cancel),
+          true,
+          () -> {
+            if (onCancel != null) onCancel.run();
+            return true;
+          },
+          onCancel);
+      return;
+    }
+
     TextView hint = NposUi.caption(activity, activity.getString(R.string.open_shift_who_hint));
     hint.setPadding(0, 0, 0, ui.dp(8));
     box.addView(hint);
 
-    final String[] pickId = {ShiftPrefs.lastOpenedByEmployeeId(activity)};
-    final String[] pickName = {ShiftPrefs.lastOpenedByName(activity)};
+    // Always start empty after close — staff must tap a roster name for this round.
+    final String[] pickId = {""};
+    final String[] pickName = {""};
 
-    EditText typed = new EditText(activity);
-    typed.setHint(R.string.open_shift_who_type_hint);
-    typed.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.max(15f, ui.bodySp));
-    typed.setTypeface(NposFonts.regular(activity));
-    typed.setSingleLine(true);
-    if (!pickName[0].isEmpty() && pickId[0].isEmpty()) {
-      typed.setText(pickName[0]);
-    }
-    typed.setPadding(ui.dp(10), ui.dp(10), ui.dp(10), ui.dp(10));
+    ScrollView sc = new ScrollView(activity);
+    LinearLayout chips = new LinearLayout(activity);
+    chips.setOrientation(LinearLayout.VERTICAL);
+    sc.addView(chips);
+    int chipH = Math.min(ui.dp(220), Math.max(ui.dp(148), roster.size() * ui.dp(44)));
+    LinearLayout.LayoutParams scLp =
+        new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, chipH);
+    box.addView(sc, scLp);
 
-    if (!roster.isEmpty()) {
-      ScrollView sc = new ScrollView(activity);
-      LinearLayout chips = new LinearLayout(activity);
-      chips.setOrientation(LinearLayout.VERTICAL);
-      sc.addView(chips);
-      // Mid-size roster — not a full-screen profile wall.
-      LinearLayout.LayoutParams scLp =
+    for (EmployeeRoster.Person p : roster) {
+      TextView chip = new TextView(activity);
+      chip.setText(p.label());
+      chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.max(14f, ui.bodySp));
+      chip.setTypeface(NposFonts.semibold(activity));
+      chip.setPadding(ui.dp(10), ui.dp(8), ui.dp(10), ui.dp(8));
+      chip.setBackgroundColor(0xFFE8EEE9);
+      chip.setTextColor(0xFF1A1A1A);
+      LinearLayout.LayoutParams lp =
           new LinearLayout.LayoutParams(
-              LinearLayout.LayoutParams.MATCH_PARENT, ui.dp(148));
-      box.addView(sc, scLp);
-
-      for (EmployeeRoster.Person p : roster) {
-        TextView chip = new TextView(activity);
-        chip.setText(p.label());
-        chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.max(14f, ui.bodySp));
-        chip.setTypeface(NposFonts.semibold(activity));
-        chip.setPadding(ui.dp(10), ui.dp(8), ui.dp(10), ui.dp(8));
-        chip.setBackgroundColor(
-            p.id.equals(pickId[0]) || p.name.equals(pickName[0])
-                ? 0xFF1B6B3A
-                : 0xFFE8EEE9);
-        chip.setTextColor(
-            p.id.equals(pickId[0]) || p.name.equals(pickName[0])
-                ? Color.WHITE
-                : 0xFF1A1A1A);
-        LinearLayout.LayoutParams lp =
-            new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT);
-        lp.bottomMargin = ui.dp(4);
-        chip.setLayoutParams(lp);
-        chip.setOnClickListener(
-            v -> {
-              pickId[0] = p.id;
-              pickName[0] = p.name;
-              typed.setText("");
-              for (int i = 0; i < chips.getChildCount(); i++) {
-                View child = chips.getChildAt(i);
-                if (!(child instanceof TextView)) continue;
-                TextView tv = (TextView) child;
-                boolean on = tv == chip;
-                tv.setBackgroundColor(on ? 0xFF1B6B3A : 0xFFE8EEE9);
-                tv.setTextColor(on ? Color.WHITE : 0xFF1A1A1A);
-              }
-            });
-        chips.addView(chip);
-      }
-      TextView orType = NposUi.caption(activity, activity.getString(R.string.open_shift_who_or_type));
-      orType.setPadding(0, ui.dp(8), 0, ui.dp(4));
-      box.addView(orType);
+              LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+      lp.bottomMargin = ui.dp(4);
+      chip.setLayoutParams(lp);
+      chip.setOnClickListener(
+          v -> {
+            pickId[0] = p.id;
+            pickName[0] = p.name;
+            for (int i = 0; i < chips.getChildCount(); i++) {
+              View child = chips.getChildAt(i);
+              if (!(child instanceof TextView)) continue;
+              TextView tv = (TextView) child;
+              boolean on = tv == chip;
+              tv.setBackgroundColor(on ? 0xFF1B6B3A : 0xFFE8EEE9);
+              tv.setTextColor(on ? Color.WHITE : 0xFF1A1A1A);
+            }
+          });
+      chips.addView(chip);
     }
-
-    box.addView(typed);
 
     NposConfirmDialog.customMedium(
         activity,
@@ -211,14 +206,22 @@ public final class OpenShiftFlow {
         activity.getString(android.R.string.cancel),
         true,
         () -> {
-          String typedName = typed.getText() == null ? "" : typed.getText().toString().trim();
           String id = pickId[0] == null ? "" : pickId[0].trim();
           String name = pickName[0] == null ? "" : pickName[0].trim();
-          if (!typedName.isEmpty()) {
-            id = "";
-            name = typedName;
-          }
           if (name.isEmpty()) {
+            Toast.makeText(activity, R.string.open_shift_who_required, Toast.LENGTH_SHORT).show();
+            return false;
+          }
+          // Must match a roster row (block spoofed / typed names).
+          boolean onRoster = false;
+          for (EmployeeRoster.Person p : roster) {
+            if (p.name.equals(name) && (id.isEmpty() || p.id.equals(id))) {
+              onRoster = true;
+              if (id.isEmpty()) id = p.id;
+              break;
+            }
+          }
+          if (!onRoster) {
             Toast.makeText(activity, R.string.open_shift_who_required, Toast.LENGTH_SHORT).show();
             return false;
           }

@@ -2,9 +2,13 @@
  * Expected nPos APK release for BO version compare («เวอร์ชันระบบ»).
  * MUST match `npos-telltea/app/build.gradle` versionName/versionCode on every nPos ship.
  * Gate: `scripts/test-npos-system-ver-sync.mjs` — bumping APK without this pin fails CI.
+ *
+ * OTA safety: tablets compare **versionCode only** (`manifest.versionCode > local`).
+ * versionName is a short display label (same digits as versionCode). Renaming it never
+ * blocks or unlocks an update — only a higher versionCode does.
  */
-export const NPOS_SYSTEM_VERSION_NAME = "1.14.111";
-export const NPOS_SYSTEM_VERSION_CODE = 134;
+export const NPOS_SYSTEM_VERSION_NAME = "137";
+export const NPOS_SYSTEM_VERSION_CODE = 137;
 
 export const NPOS_LATEST_MANIFEST_URL =
   "https://telltea-pos.web.app/downloads/latest.json";
@@ -16,10 +20,12 @@ export type NposSystemRelease = {
   source: "bundled" | "manifest";
 };
 
+/** Short friendly label — prefer one number, never "1.14.112 (134)". */
 export function formatNposReleaseLabel(versionName: string, versionCode: number): string {
   const name = (versionName || "").trim();
   const code = Number.isFinite(versionCode) ? Math.floor(versionCode) : 0;
-  if (name && code > 0) return `${name} (${code})`;
+  if (code > 0 && (name === String(code) || !name)) return String(code);
+  if (name && code > 0 && name !== String(code)) return `${name} (${code})`;
   if (name) return name;
   if (code > 0) return String(code);
   return "—";

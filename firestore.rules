@@ -57,6 +57,19 @@ service cloud.firestore {
       return isOwner() || hasPerm('staffManage') || isOwnerEmail();
     }
 
+    /** CRM สมาชิก / แต้ม หลังร้าน — เจ้าของร้านเท่านั้น (เคาน์เตอร์ใช้ Admin CF) */
+    function membersHubView() {
+      return isOwner() || isOwnerEmail();
+    }
+
+    function membersHubManage() {
+      return isOwner() || isOwnerEmail();
+    }
+
+    function membersHubAdjustPoints() {
+      return isOwner() || isOwnerEmail();
+    }
+
     function actorId() {
       return hasEmail() ? authEmail() : authPhone();
     }
@@ -100,6 +113,9 @@ service cloud.firestore {
           || data.permissions.exportData == true
           || data.permissions.staffManage == true
           || data.permissions.payrollPay == true
+          || data.permissions.membersView == true
+          || data.permissions.membersManage == true
+          || data.permissions.membersAdjustPoints == true
         );
     }
 
@@ -109,7 +125,10 @@ service cloud.firestore {
         || perms.transferIn == true
         || perms.exportData == true
         || perms.staffManage == true
-        || perms.payrollPay == true;
+        || perms.payrollPay == true
+        || perms.membersView == true
+        || perms.membersManage == true
+        || perms.membersAdjustPoints == true;
     }
 
     function isSeedPermissionLevelId(levelId) {
@@ -491,7 +510,8 @@ service cloud.firestore {
     }
 
     match /staff/{staffId} {
-      allow get: if signedIn() && (staffId == resolvedStaffId() || staffHubManage());
+      // อ่านบัญชีตัวเอง: id == resolved หรืออีเมล/เบอร์บน doc ตรง token (คู่กับ presence update)
+      allow get: if signedIn() && (staffId == resolvedStaffId() || isOwnStaffDoc(staffId) || staffHubManage());
       allow list: if staffHubManage();
       allow create: if staffHubCreateOk()
         || (isOwnerEmail()
@@ -594,8 +614,9 @@ service cloud.firestore {
 
     /**
      * ตารางเทียบเงินนำเข้า — เงินสดหน้าร้านโอนเข้า บช. ร้าน + สลิปสรุป POS
-     * อ่าน/สร้าง: มีสิทธิ ledger · พนักงานแก้ได้เฉพาะของตัวเองและคงสถานะรอตรวจ
-     * ตรวจสถานะ (verify): เจ้าของ · ลบ: เจ้าของหรือคนสร้าง
+     * อ่าน/สร้าง/แก้: มีสิทธิ ledger (พนักงานที่เข้าบัญชีได้ เช่น เป้)
+     * พนักงานแก้/ลบได้เฉพาะมัดที่ตัวเองสร้าง · เจ้าของแก้ได้ทั้งหมด
+     * บันทึก = matched (โอนตามระบบ) ได้เลย ไม่ต้องรอตรวจ
      */
     match /cashDeposits/{entryId} {
       allow read: if hasPerm('ledger');
@@ -609,16 +630,14 @@ service cloud.firestore {
         && request.resource.data.days is list
         && request.resource.data.days.size() > 0
         && request.resource.data.days.size() <= 31
-        && request.resource.data.status == 'pending';
+        && request.resource.data.status in ['pending', 'matched'];
       allow update: if hasPerm('ledger')
         && (
           isOwner()
           || (
             resource.data.createdBy == actorId()
             && request.resource.data.createdBy == resource.data.createdBy
-            && request.resource.data.status == 'pending'
-            && request.resource.data.verifiedBy == ''
-            && request.resource.data.verifiedAt == 0
+            && request.resource.data.status in ['pending', 'matched']
           )
         );
       allow delete: if hasPerm('ledger')
@@ -709,6 +728,15 @@ service cloud.firestore {
 
     match /monthlyIncome/{monthId} {
       allow read, write: if hasPerm('pnl');
+    }
+
+    /**
+     * อากาศรายวันสถานีอุดรฯ สำหรับแดชบอร์ดยอดขาย — เจ้าของอ่าน
+     * เขียนจาก Cloud Functions (Admin SDK) เท่านั้น
+     */
+    match /weatherDays/{dateId} {
+      allow read: if isOwner() || isOwnerEmail();
+      allow write: if false;
     }
 
     /** ยอดขายรายวัน + VAT — เจ้าของเท่านั้น (พนักงานหลังร้านอ่านไม่ได้) */
@@ -865,6 +893,47 @@ service cloud.firestore {
       allow read: if isStaff();
       allow create, delete: if staffHubManage();
       allow update: if staffHubManage() || employeeSelfLinkUpdate() || employeePayMigrateStrip();
+    }
+
+    /**
+     * ลูกค้าสมาชิก (บัตร + แต้ม) — คนละโดเมนกับ staff/employees
+     * doc id = phoneDigits (E.164 ไม่มี +)
+     */
+    match /members/{memberId} {
+      allow read: if membersHubView();
+      allow create: if membersHubManage()
+        && request.resource.data.keys().hasAll([
+          'phone', 'phoneDigits', 'displayName', 'cardNo', 'status',
+          'pointsBalance', 'lifetimePointsEarned', 'source',
+          'createdAt', 'updatedAt', 'createdBy', 'updatedBy'
+        ])
+        && request.resource.data.phoneDigits == memberId
+        && request.resource.data.pointsBalance is number
+        && request.resource.data.pointsBalance >= 0;
+      allow update: if membersHubManage()
+        || (membersHubAdjustPoints()
+            && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['pointsBalance', 'lifetimePointsEarned', 'updatedAt', 'updatedBy'])
+            && request.resource.data.pointsBalance is number
+            && request.resource.data.pointsBalance >= 0
+            && request.resource.data.phoneDigits == resource.data.phoneDigits
+            && request.resource.data.createdAt == resource.data.createdAt);
+      allow delete: if isOwner() || isOwnerEmail();
+    }
+
+    match /memberLedger/{entryId} {
+      allow read: if membersHubView();
+      allow create: if membersHubAdjustPoints()
+        && request.resource.data.keys().hasAll([
+          'memberId', 'delta', 'balanceAfter', 'reason',
+          'actorType', 'actorId', 'createdAt'
+        ])
+        && request.resource.data.delta is number
+        && request.resource.data.delta != 0
+        && request.resource.data.balanceAfter is number
+        && request.resource.data.balanceAfter >= 0
+        && request.resource.data.actorId == actorId();
+      allow update, delete: if false;
     }
 
     /**
@@ -1103,6 +1172,7 @@ service cloud.firestore {
         || (docId == 'vatAgentChatPresence' && (isOwner() || isOwnerEmail()))
         || (docId == 'vatMonthlySettings' && (isOwner() || isOwnerEmail()))
         || (docId == 'personalTaxSettings' && (isOwner() || isOwnerEmail()))
+        || (docId == 'payrollPaymentDoc' && (isOwner() || isOwnerEmail() || isStaff()))
         || (docId == 'vatMailOAuth' && isOwner())
         || (docId == 'vatMailOAuthLineman' && isOwner())
         || (docId == 'vatMailOAuthConfig' && isOwner())
@@ -1123,6 +1193,7 @@ service cloud.firestore {
         || (hasPerm('ownerBooks') && docId == 'ownerBooks')
         || (hasPerm('ownerBooks') && docId == 'capitalBooks')
         || (isOwner() && docId == 'otSettings')
+        || ((isOwner() || isOwnerEmail()) && docId == 'memberSettings')
         || (isPosDeviceAuth() && docId == 'pos' && posMetaBillWrite());
     }
 
@@ -1224,7 +1295,10 @@ service cloud.firestore {
         && request.resource.data.exp is number
         && request.resource.data.exp > request.time.toMillis()
         && request.resource.data.exp < request.time.toMillis() + 300000;
-      allow get: if resource.data.exp > request.time.toMillis();
+      // resource == null → ให้ client แยก “ไม่มีตั๋ว” จาก permission-denied
+      // (ตั๋วหมดอายุ/ใช้แล้วเคยทำให้หน้า login ค้างข้อความสิทธิ์พนักงานผิดๆ)
+      allow get: if resource == null
+        || resource.data.exp > request.time.toMillis();
       allow delete: if true;
       allow list, update: if false;
     }

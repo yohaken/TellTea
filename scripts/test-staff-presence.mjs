@@ -9,9 +9,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD\s*=\s*(\d+)/)[1]) >= 684);
+assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD\s*=\s*(\d+)/)[1]) >= 686);
 assert.match(read("src/lib/staff-presence.ts"), /touchStaffPresence/);
 assert.match(read("src/lib/staff-presence.ts"), /touchStaffPresenceFromActor/);
+assert.match(read("src/lib/staff-presence.ts"), /touchStaffPresenceViaCallable/);
 assert.match(read("src/lib/staff-presence.ts"), /resolvePresenceStaffId/);
 assert.match(read("src/lib/staff-presence.ts"), /coercePresenceMs/);
 assert.match(read("src/lib/staff-presence.ts"), /formatPresenceAge/);
@@ -21,6 +22,7 @@ assert.match(read("src/lib/staff-presence.ts"), /setDoc/);
 assert.match(read("firestore.rules"), /isOwnStaffDoc/);
 assert.match(read("firestore.rules"), /staffId == resolvedStaffId\(\) && staffPresenceTouch\(\)/);
 assert.match(read("firestore.rules"), /isOwnStaffDoc\(staffId\) && staffPresenceTouch\(\)/);
+assert.match(read("firestore.rules"), /isOwnStaffDoc\(staffId\) \|\| staffHubManage\(\)/);
 // resolvedStaffId must stay email-first (don't reshuffle — breaks hasPerm app-wide)
 assert.match(
   read("firestore.rules"),

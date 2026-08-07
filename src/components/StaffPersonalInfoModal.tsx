@@ -81,7 +81,14 @@ export function StaffPersonalInfoModal({
   );
 }
 
-export function StaffPersonalInfoButton({ member }: { member: StaffMember }) {
+export function StaffPersonalInfoButton({
+  member,
+  compact = false,
+}: {
+  member: StaffMember;
+  /** ป้ายสั้นสำหรับตารางทีมฝั่งเจ้าของ */
+  compact?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [personal, setPersonal] = useState<StaffPersonalData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -98,10 +105,25 @@ export function StaffPersonalInfoButton({ member }: { member: StaffMember }) {
     }
   }
 
+  const label = loading
+    ? "..."
+    : member.personalProfileComplete
+      ? compact
+        ? "บัตร"
+        : "ดูบัตร ปชช."
+      : compact
+        ? "ไม่มีบัตร"
+        : "ยังไม่กรอก";
+
   return (
     <>
-      <button type="button" className="ghost-btn" onClick={() => void openModal()} disabled={loading}>
-        {loading ? "โหลด..." : member.personalProfileComplete ? "ดูบัตร ปชช." : "ยังไม่กรอก"}
+      <button
+        type="button"
+        className={compact ? "ghost-btn staff-btn-sm" : "ghost-btn"}
+        onClick={() => void openModal()}
+        disabled={loading}
+      >
+        {label}
       </button>
       {open ? (
         <StaffPersonalInfoModal

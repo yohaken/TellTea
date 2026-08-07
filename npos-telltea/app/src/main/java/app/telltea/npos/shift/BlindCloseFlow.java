@@ -183,40 +183,101 @@ public final class BlindCloseFlow {
         scroll,
         activity.getString(R.string.blind_close_confirm_btn),
         () -> {
-          Toast.makeText(activity, R.string.sell_closing_shift, Toast.LENGTH_SHORT).show();
-          saleSync.printShiftReport(
-              activity,
-              "close",
-              report,
-              () ->
-                  saleSync.flushThenCloseSession(
-                      activity,
-                      report,
-                      ok ->
-                          activity.runOnUiThread(
-                              () -> {
-                                if (ok) {
-                                  Toast.makeText(
-                                          activity, R.string.shift_closed, Toast.LENGTH_SHORT)
-                                      .show();
-                                  if (done != null) done.onClosed();
-                                } else if (SaleSync.hasUnsyncedWork(activity)) {
-                                  Toast.makeText(
-                                          activity,
-                                          R.string.blind_close_sync_required,
-                                          Toast.LENGTH_LONG)
-                                      .show();
-                                } else {
-                                  Toast.makeText(
-                                          activity,
-                                          R.string.blind_close_server_failed,
-                                          Toast.LENGTH_LONG)
-                                      .show();
-                                }
-                              })));
+          // Over/short without a reason → force note before Z + sync (still blind until here).
+          if (!report.isBalanced() && report.discrepancyNote.isEmpty()) {
+            askRequiredDiscrepancyNote(activity, saleSync, done, report);
+            return true;
+          }
+          commitClose(activity, saleSync, done, report);
           return true;
         },
         null);
+  }
+
+  /**
+   * When counted ≠ expected, staff must explain before the round can close.
+   * Optional note from the prior (blind) step is reused when already filled.
+   */
+  private static void askRequiredDiscrepancyNote(
+      Activity activity, SaleSync saleSync, Done done, BlindCloseReport report) {
+    UiScale ui = UiScale.from(activity);
+    LinearLayout box = new LinearLayout(activity);
+    box.setOrientation(LinearLayout.VERTICAL);
+    int pad = ui.dp(12);
+    box.setPadding(pad, ui.dp(4), pad, 0);
+
+    TextView hint = NposUi.caption(activity, activity.getString(R.string.blind_close_note_needed));
+    hint.setPadding(0, 0, 0, ui.dp(6));
+    box.addView(hint);
+
+    TextView meta =
+        NposUi.caption(
+            activity,
+            report.discrepancyLabel()
+                + " ฿"
+                + ShiftPrefs.moneyPlain(Math.abs(report.cashDifference)));
+    meta.setPadding(0, 0, 0, ui.dp(8));
+    box.addView(meta);
+
+    EditText note = NposUi.field(activity);
+    note.setHint(R.string.blind_close_note_needed_hint);
+    note.setMinHeight(ui.touchMinPx);
+    note.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+    box.addView(note);
+
+    ScrollView scroll = new ScrollView(activity);
+    scroll.addView(box);
+
+    NposConfirmDialog.custom(
+        activity,
+        activity.getString(R.string.blind_close_note_needed),
+        scroll,
+        activity.getString(R.string.blind_close_note_confirm_btn),
+        () -> {
+          String text = note.getText() == null ? "" : note.getText().toString().trim();
+          if (text.isEmpty()) {
+            Toast.makeText(activity, R.string.blind_close_note_required_toast, Toast.LENGTH_LONG)
+                .show();
+            return false;
+          }
+          commitClose(activity, saleSync, done, report.withDiscrepancyNote(text));
+          return true;
+        },
+        null);
+  }
+
+  private static void commitClose(
+      Activity activity, SaleSync saleSync, Done done, BlindCloseReport report) {
+    Toast.makeText(activity, R.string.sell_closing_shift, Toast.LENGTH_SHORT).show();
+    saleSync.printShiftReport(
+        activity,
+        "close",
+        report,
+        () ->
+            saleSync.flushThenCloseSession(
+                activity,
+                report,
+                ok ->
+                    activity.runOnUiThread(
+                        () -> {
+                          if (ok) {
+                            Toast.makeText(activity, R.string.shift_closed, Toast.LENGTH_SHORT)
+                                .show();
+                            if (done != null) done.onClosed();
+                          } else if (SaleSync.hasUnsyncedWork(activity)) {
+                            Toast.makeText(
+                                    activity,
+                                    R.string.blind_close_sync_required,
+                                    Toast.LENGTH_LONG)
+                                .show();
+                          } else {
+                            Toast.makeText(
+                                    activity,
+                                    R.string.blind_close_server_failed,
+                                    Toast.LENGTH_LONG)
+                                .show();
+                          }
+                        })));
   }
 
   private static TextView moneyDisplay(

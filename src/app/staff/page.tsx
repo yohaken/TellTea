@@ -10,12 +10,9 @@ import { useAuth } from "@/lib/auth";
 import {
   addEmployee,
   deleteEmployee,
-  employeeLinkLabel,
   employeesForLink,
   listEmployeesWithPay,
   migrateAllLegacyEmployeePay,
-  planEmployeeIdentityPatch,
-  updateEmployee,
   type Employee,
 } from "@/lib/employees";
 import {
@@ -30,7 +27,6 @@ import {
   DEFAULT_STAFF_PERMISSIONS,
   can,
   clampPermissionsForNonOwner,
-  normalizePermissions,
   type StaffPermissions,
 } from "@/lib/permissions";
 import {
@@ -39,7 +35,6 @@ import {
   findLevel,
   isOwnerSystemLevel,
   permissionsMatchLevel,
-  staffLevelBadgeLabel,
 } from "@/lib/permission-levels";
 import {
   PERM_PREVIEW_CHECKLIST,
@@ -47,11 +42,9 @@ import {
   previewFromMember,
 } from "@/lib/perm-preview";
 import { staffHomeHref } from "@/lib/nav-menu";
-import { formatPhoneDisplay, staffAccountLabel } from "@/lib/utils";
+import { staffAccountLabel } from "@/lib/utils";
 import { mapFirestoreError } from "@/lib/firestore-errors";
-import { Eye, Trash2 } from "lucide-react";
-import { StaffPersonalInfoButton } from "@/components/StaffPersonalInfoModal";
-import { StaffReadinessTable } from "@/components/StaffReadinessTable";
+import { StaffTeamMiniTable } from "@/components/StaffTeamMiniTable";
 import {
   StaffReadinessEditModal,
   type StaffReadinessEditTarget,
@@ -59,8 +52,6 @@ import {
 import { listStaffPersonalMap } from "@/lib/staff-personal";
 import type { StaffReadinessRow } from "@/lib/staff-readiness";
 import type { StaffPersonalData } from "@/lib/types";
-
-type HubTab = "team" | "accounts" | "levels";
 
 export default function StaffPage() {
   return (
@@ -83,24 +74,10 @@ function useAccountFocusParam() {
   return searchParams.get("account")?.trim() || "";
 }
 
-function rosterLinkLabel(emp: Employee): string {
-  return employeeLinkLabel(emp);
-}
-
-function memberLinkLabel(member: StaffMember, employees: Employee[]): string {
-  const emp = member.employeeId
-    ? employees.find((e) => e.id === member.employeeId)
-    : employees.find((e) => e.linkedStaffId === member.id);
-  if (emp) return `→ ${emp.name}`;
-  if (member.profileComplete && member.displayName) return `→ ${member.displayName}`;
-  return "ยังไม่เชื่อม";
-}
-
 function StaffView() {
   const { realStaff, refreshStaff, startPermPreview, permissionLevels } = useAuth();
   const router = useRouter();
   const focusAccountId = useAccountFocusParam();
-  const [tab, setTab] = useState<HubTab>(focusAccountId ? "accounts" : "team");
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [members, setMembers] = useState<StaffMember[]>([]);
   const [levels, setLevels] = useState<PermissionLevel[]>([]);
@@ -120,6 +97,8 @@ function StaffView() {
   const [loading, setLoading] = useState(true);
   const [editTarget, setEditTarget] = useState<StaffReadinessEditTarget>(null);
   const [showPreviewCheck, setShowPreviewCheck] = useState(false);
+  const [showCreateAccount, setShowCreateAccount] = useState(false);
+  const [showLevels, setShowLevels] = useState(false);
 
   const linkOptions = employeesForLink(employees);
   const staff = realStaff;
@@ -232,10 +211,10 @@ function StaffView() {
 
   useEffect(() => {
     if (!focusAccountId || loading) return;
-    setTab("accounts");
-    if (members.some((m) => m.id === focusAccountId && m.role === "staff")) {
-      setEditingStaffId(focusAccountId);
-    }
+    if (!members.some((m) => m.id === focusAccountId && m.role === "staff")) return;
+    setEditingStaffId(focusAccountId);
+    const el = document.getElementById("staff-team");
+    el?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [focusAccountId, loading, members]);
 
   useEffect(() => {
@@ -334,6 +313,7 @@ function StaffView() {
       const defLevel = findLevel(levels, def);
       setPerms(defLevel ? { ...defLevel.permissions } : { ...DEFAULT_STAFF_PERMISSIONS });
       setShowCustomPerms(false);
+      setShowCreateAccount(false);
       setSuccess(
         linkedName
           ? `สร้าง ${account} · เชื่อม "${linkedName}"`
@@ -460,8 +440,8 @@ function StaffView() {
     <div className="staff-hub">
       <header className="staff-hub-head">
         <div>
-          <h1 className="staff-hub-title">ทีม / พนักงาน</h1>
-          <p className="staff-hub-sub">หลังร้าน · จัดการชื่อ บัญชี และลำดับสิทธิ์</p>
+          <h1 className="staff-hub-title">ทีม</h1>
+          <p className="staff-hub-sub">ชื่อ · บัญชี · ลำดับสิทธิ์</p>
         </div>
         <div className="staff-hub-head-actions">
           {isOwner ? (
@@ -481,7 +461,7 @@ function StaffView() {
         <section className="staff-hub-panel staff-preview-check">
           <h2 className="staff-hub-panel-title">เช็คมุมมองพนักงาน</h2>
           <p className="staff-hub-panel-hint">
-            กด «ดูแบบนี้» ที่ลำดับ หรือ «ดูแบบเขา» ที่บัญชี — แท็บจะเปลี่ยนตามสิทธิ์ · แถบส้มกดออกกลับเจ้าของ
+            กด «ดูแบบนี้» ที่ลำดับ หรือ «ดูแบบเขา» ที่บัญชี — เมนูจะเปลี่ยนตามสิทธิ์ · แถบส้มกดออกกลับเจ้าของ
           </p>
           <ol className="staff-preview-check-list">
             {PERM_PREVIEW_CHECKLIST.map((item) => (
@@ -490,25 +470,6 @@ function StaffView() {
           </ol>
         </section>
       ) : null}
-
-      <nav className="staff-hub-tabs" aria-label="ส่วนจัดการพนักงาน">
-        {(
-          [
-            ["team", "ทีม"],
-            ["accounts", "บัญชี"],
-            ["levels", "ลำดับสิทธิ์"],
-          ] as const
-        ).map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            className={`staff-hub-tab${tab === key ? " is-active" : ""}`}
-            onClick={() => setTab(key)}
-          >
-            {label}
-          </button>
-        ))}
-      </nav>
 
       {error ? <p className="error-text staff-hub-msg">{error}</p> : null}
       {success ? (
@@ -527,577 +488,190 @@ function StaffView() {
         onSave={saveReadinessEdit}
       />
 
-      {tab === "team" ? (
-        <>
-          <StaffReadinessTable
-            members={members}
-            employees={employees}
-            levels={levels}
-            personalByStaffId={personalMap}
-            ownerView={isOwner}
-            busy={busy}
-            onEditRow={openReadinessEdit}
-          />
-
-          <section className="staff-hub-panel">
-            <div className="staff-hub-panel-head">
-              <div>
-                <h2 className="staff-hub-panel-title">รายชื่อร้าน</h2>
-                <p className="staff-hub-panel-hint">ใช้ตอนผลิต / ชง / เชื่อมบัญชี</p>
-              </div>
-            </div>
-            <form className="staff-compact-form staff-inline-add" onSubmit={(e) => void onAddEmployee(e)}>
-              <input
-                value={empName}
-                onChange={(e) => setEmpName(e.target.value)}
-                placeholder="ชื่อ"
-                required
-                aria-label="ชื่อ"
-              />
-              <input
-                value={empNickname}
-                onChange={(e) => setEmpNickname(e.target.value)}
-                placeholder="ชื่อเล่น"
-                maxLength={12}
-                aria-label="ชื่อเล่น"
-              />
-              <button type="submit" className="primary-btn staff-btn-sm" disabled={busy}>
-                เพิ่ม
-              </button>
-            </form>
-            <div className="list-card staff-compact-list">
-              {employees.length === 0 ? (
-                <p className="muted staff-empty">ยังไม่มีรายชื่อ</p>
-              ) : (
-                employees.map((emp) => (
-                  <EmployeeRosterRow
-                    key={emp.id}
-                    emp={emp}
-                    busy={busy}
-                    onError={setError}
-                    onReload={() => reload().then(() => undefined)}
-                    onPatchLocal={(id, patch) => {
-                      setEmployees((prev) =>
-                        prev
-                          .map((row) => (row.id === id ? { ...row, ...patch } : row))
-                          .sort((a, b) => a.name.localeCompare(b.name, "th")),
-                      );
-                    }}
-                    onDelete={() => void onDeleteEmployee(emp)}
-                  />
-                ))
-              )}
-            </div>
-          </section>
-        </>
-      ) : null}
-
-      {tab === "accounts" ? (
-        <section className="staff-hub-panel">
-          <div className="staff-hub-panel-head">
-            <div>
-              <h2 className="staff-hub-panel-title">บัญชีเข้าใช้</h2>
-              <p className="staff-hub-panel-hint">อีเมลหรือเบอร์ + ลำดับสิทธิ์ + เชื่อมชื่อ</p>
-            </div>
-          </div>
-          <form className="staff-compact-form" onSubmit={(e) => void onSubmitAccount(e)}>
-            <div className="staff-compact-form-grid">
-              <div className="field">
-                <label htmlFor="email">อีเมล</label>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="staff@gmail.com"
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="phone">เบอร์</label>
-                <input
-                  id="phone"
-                  type="tel"
-                  inputMode="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="0812345678"
-                />
-              </div>
-            </div>
-            <div className="staff-compact-form-grid">
-              <div className="field">
-                <label htmlFor="link-employee">ชื่อในร้าน</label>
-                <select
-                  id="link-employee"
-                  value={linkEmployeeId}
-                  onChange={(e) => setLinkEmployeeId(e.target.value)}
-                >
-                  <option value="">— ยังไม่เชื่อม —</option>
-                  {linkOptions.map((emp) => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="field">
-                <label htmlFor="account-level">ลำดับสิทธิ์</label>
-                <PermissionLevelSelect
-                  id="account-level"
-                  levels={levels}
-                  value={levelId}
-                  onChange={applyLevel}
-                  disabled={busy}
-                  hideElevated={!isOwner}
-                  allowEmpty
-                />
-              </div>
-            </div>
-            <div className="staff-perm-toggle-row">
-              <button
-                type="button"
-                className="ghost-btn staff-btn-sm"
-                disabled={busy}
-                onClick={() => setShowCustomPerms((v) => !v)}
-              >
-                {showCustomPerms ? "ซ่อนติ๊กสิทธิ์" : "ปรับสิทธิ์รายข้อ"}
-              </button>
-              <button type="submit" className="primary-btn staff-btn-sm" disabled={busy}>
-                {busy ? "..." : "บันทึกบัญชี"}
-              </button>
-            </div>
-            {showCustomPerms ? (
-              <PermissionPicker
-                value={perms}
-                onChange={setPerms}
-                disabled={busy}
-                hideElevated={!isOwner}
-                compact
-              />
-            ) : null}
-          </form>
-
-          <div className="list-card staff-compact-list" style={{ marginTop: "0.75rem" }}>
-            {members.map((member) => {
-              const isSelf = member.id === staff!.id;
-              const editing = editingStaffId === member.id;
-              const memberPerms = normalizePermissions(member.permissions, member.role);
-              const levelLabel = staffLevelBadgeLabel(member, levels);
-              return (
-                <div key={member.id} className="staff-account-row">
-                  <div className="staff-account-main">
-                    <div className="staff-level-name-row">
-                      <strong>{staffAccountLabel(member)}</strong>
-                      <span className="staff-chip is-soft">{levelLabel}</span>
-                      {member.permissionsCustomized ? (
-                        <span className="staff-chip is-muted">ปรับเอง</span>
-                      ) : null}
-                    </div>
-                    <div className="muted staff-level-meta">
-                      {member.role === "owner" ? "เจ้าของ" : "พนักงาน"}
-                      {member.email && member.phone
-                        ? ` · ${formatPhoneDisplay(member.phone)}`
-                        : ""}
-                      {member.role === "staff"
-                        ? ` · ${memberLinkLabel(member, employees)}`
-                        : member.displayName
-                          ? ` · ${member.displayName}`
-                          : ""}
-                    </div>
-                  </div>
-                  <div className="staff-level-actions">
-                    {isOwner && member.role === "staff" ? (
-                      <button
-                        type="button"
-                        className="ghost-btn staff-btn-sm"
-                        disabled={busy}
-                        title="ดูเมนูตามสิทธิ์บัญชีนี้"
-                        onClick={() => beginPreviewFromMember(member)}
-                      >
-                        <Eye size={13} aria-hidden /> ดูแบบเขา
-                      </button>
-                    ) : null}
-                    {isOwner && member.role === "staff" ? (
-                      <StaffPersonalInfoButton member={member} />
-                    ) : null}
-                    {member.role === "staff" ? (
-                      <button
-                        type="button"
-                        className="ghost-btn staff-btn-sm"
-                        onClick={() => setEditingStaffId(editing ? null : member.id)}
-                      >
-                        {editing ? "ปิด" : "สิทธิ์"}
-                      </button>
-                    ) : null}
-                    {!isSelf ? (
-                      <button
-                        type="button"
-                        className="ghost-btn staff-btn-sm is-danger"
-                        disabled={busy}
-                        onClick={() => {
-                          if (!window.confirm(`ลบ ${staffAccountLabel(member)}?`)) return;
-                          setBusy(true);
-                          void removeStaffById(member.id)
-                            .then(reload)
-                            .then(refreshStaff)
-                            .catch((err) => setError(err.message || "ลบไม่สำเร็จ"))
-                            .finally(() => setBusy(false));
-                        }}
-                      >
-                        ลบ
-                      </button>
-                    ) : (
-                      <span className="muted">คุณ</span>
-                    )}
-                  </div>
-                  {editing ? (
-                    <MemberPermEditor
-                      initial={memberPerms}
-                      initialLevelId={member.permissionLevelId || ""}
-                      levels={levels}
-                      busy={busy}
-                      hideElevated={!isOwner}
-                      onSave={(next, nextLevelId, customized) =>
-                        void saveMemberPerms(member, next, nextLevelId, customized)
-                      }
-                    />
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      ) : null}
-
-      {tab === "levels" ? (
-        <PermissionLevelsPanel
+      <div id="staff-team" className="staff-hub-anchor">
+        <StaffTeamMiniTable
+          members={members}
+          employees={employees}
           levels={levels}
-          isOwner={!!isOwner}
+          personalByStaffId={personalMap}
+          ownerView={isOwner}
           busy={busy}
-          setBusy={setBusy}
+          empName={empName}
+          empNickname={empNickname}
+          onEmpNameChange={setEmpName}
+          onEmpNicknameChange={setEmpNickname}
+          onAddEmployee={(e) => void onAddEmployee(e)}
+          onEditAccount={openReadinessEdit}
+          onDeleteEmployee={(emp) => void onDeleteEmployee(emp)}
+          onDeleteAccount={(member) => {
+            if (!window.confirm(`ลบบัญชี ${staffAccountLabel(member)}?`)) return;
+            setBusy(true);
+            void removeStaffById(member.id)
+              .then(reload)
+              .then(refreshStaff)
+              .catch((err) => setError(err.message || "ลบไม่สำเร็จ"))
+              .finally(() => setBusy(false));
+          }}
+          onPreviewMember={isOwner ? beginPreviewFromMember : undefined}
+          onSaveMemberPerms={(member, next, nextLevelId, customized) =>
+            void saveMemberPerms(member, next, nextLevelId, customized)
+          }
+          selfStaffId={staff?.id || ""}
+          focusStaffId={editingStaffId || ""}
+          hideElevated={!isOwner}
           onError={setError}
-          onSuccess={setSuccess}
           onReload={() => reload().then(() => undefined)}
-          linkedCountByLevelId={linkedCountByLevelId}
-          onPreviewLevel={isOwner ? beginPreviewFromLevel : undefined}
+          onPatchEmployeeLocal={(id, patch) => {
+            setEmployees((prev) =>
+              prev
+                .map((row) => (row.id === id ? { ...row, ...patch } : row))
+                .sort((a, b) => a.name.localeCompare(b.name, "th")),
+            );
+          }}
         />
-      ) : null}
-    </div>
-  );
-}
-
-function EmployeeRosterRow({
-  emp,
-  busy,
-  onError,
-  onReload,
-  onPatchLocal,
-  onDelete,
-}: {
-  emp: Employee;
-  busy: boolean;
-  onError: (msg: string) => void;
-  onReload: () => Promise<void>;
-  onPatchLocal: (id: string, patch: Partial<Employee>) => void;
-  onDelete: () => void;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [name, setName] = useState(emp.name);
-  const [nickname, setNickname] = useState(emp.nickname || "");
-  const [monthlySalary, setMonthlySalary] = useState(
-    emp.monthlySalary != null && emp.monthlySalary > 0 ? String(emp.monthlySalary) : "",
-  );
-  const [payBank, setPayBank] = useState(emp.payBank || "");
-  const [payAccountNo, setPayAccountNo] = useState(emp.payAccountNo || "");
-  const [payAccountName, setPayAccountName] = useState(emp.payAccountName || "");
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (!editing) {
-      setName(emp.name);
-      setNickname(emp.nickname || "");
-      setMonthlySalary(
-        emp.monthlySalary != null && emp.monthlySalary > 0 ? String(emp.monthlySalary) : "",
-      );
-      setPayBank(emp.payBank || "");
-      setPayAccountNo(emp.payAccountNo || "");
-      setPayAccountName(emp.payAccountName || "");
-    }
-  }, [
-    emp.name,
-    emp.nickname,
-    emp.monthlySalary,
-    emp.payBank,
-    emp.payAccountNo,
-    emp.payAccountName,
-    editing,
-  ]);
-
-  async function saveEdit() {
-    const nextName = name.trim();
-    if (!nextName) {
-      onError("ใส่ชื่อพนักงาน");
-      return;
-    }
-    const salaryRaw = monthlySalary.trim();
-    const salaryNum = salaryRaw === "" ? 0 : Number(salaryRaw);
-    if (salaryRaw !== "" && (!Number.isFinite(salaryNum) || salaryNum < 0)) {
-      onError("เงินเดือนไม่ถูกต้อง");
-      return;
-    }
-    setSaving(true);
-    onError("");
-    const nextNick = nickname.trim();
-    const identity = planEmployeeIdentityPatch(emp, {
-      name: nextName,
-      nickname: nextNick,
-    });
-    const saveName = identity.name ?? nextName;
-    const saveNick = identity.nickname ?? nextNick;
-    try {
-      await updateEmployee(emp.id, {
-        name: saveName,
-        nickname: saveNick,
-        monthlySalary: salaryNum,
-        payBank: payBank.trim(),
-        payAccountNo: payAccountNo.trim(),
-        payAccountName: payAccountName.trim(),
-      });
-      onPatchLocal(emp.id, {
-        name: saveName,
-        nickname: saveNick || undefined,
-        monthlySalary: salaryNum > 0 ? salaryNum : undefined,
-        payBank: payBank.trim() || undefined,
-        payAccountNo: payAccountNo.trim() || undefined,
-        payAccountName: payAccountName.trim() || undefined,
-        updatedAt: Date.now(),
-      });
-      setEditing(false);
-      await onReload();
-    } catch (err) {
-      onError((err as Error).message || "อัปเดตไม่สำเร็จ");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div className="employee-roster-row">
-      <div className="employee-roster-main">
-        {editing ? (
-          <div className="employee-roster-edit">
-            <label className="field">
-              <span>ชื่อ</span>
-              <input
-                value={name}
-                disabled={saving || busy}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="ชื่อในร้าน"
-              />
-            </label>
-            <label className="field">
-              <span>ชื่อเล่น</span>
-              <input
-                value={nickname}
-                disabled={saving || busy}
-                onChange={(e) => setNickname(e.target.value)}
-                placeholder="สั้นๆ"
-                maxLength={12}
-              />
-            </label>
-            <label className="field">
-              <span>เงินเดือน</span>
-              <input
-                type="number"
-                min={0}
-                step={100}
-                inputMode="decimal"
-                value={monthlySalary}
-                disabled={saving || busy}
-                onChange={(e) => setMonthlySalary(e.target.value)}
-                placeholder="15000"
-              />
-            </label>
-            <label className="field">
-              <span>ธนาคาร</span>
-              <input
-                value={payBank}
-                disabled={saving || busy}
-                onChange={(e) => setPayBank(e.target.value)}
-              />
-            </label>
-            <label className="field">
-              <span>เลขบัญชี</span>
-              <input
-                value={payAccountNo}
-                disabled={saving || busy}
-                onChange={(e) => setPayAccountNo(e.target.value)}
-              />
-            </label>
-            <label className="field">
-              <span>ชื่อบัญชี</span>
-              <input
-                value={payAccountName}
-                disabled={saving || busy}
-                onChange={(e) => setPayAccountName(e.target.value)}
-              />
-            </label>
-          </div>
-        ) : (
-          <>
-            <strong>
-              {emp.name}
-              {emp.nickname ? (
-                <span className="employee-roster-nick"> · {emp.nickname}</span>
-              ) : null}
-            </strong>
-            <div className="muted employee-roster-meta">
-              {emp.active ? "ใช้" : "ปิด"} · {rosterLinkLabel(emp)}
-              {emp.monthlySalary && emp.monthlySalary > 0
-                ? ` · ฿${emp.monthlySalary.toLocaleString("th-TH")}`
-                : ""}
-            </div>
-          </>
-        )}
       </div>
-      <div className="employee-roster-actions">
-        {editing ? (
-          <>
-            <button
-              type="button"
-              className="primary-btn staff-btn-sm"
-              disabled={saving || busy}
-              onClick={() => void saveEdit()}
-            >
-              {saving ? "..." : "บันทึก"}
-            </button>
+
+      <section id="staff-accounts" className="staff-hub-panel staff-hub-anchor">
+          <div className="staff-hub-panel-head staff-create-head">
+            <div>
+              <h2 className="staff-hub-panel-title">บัญชี</h2>
+              <p className="staff-hub-panel-hint">แก้/ลบที่ตารางทีม ▾</p>
+            </div>
             <button
               type="button"
               className="ghost-btn staff-btn-sm"
-              disabled={saving || busy}
-              onClick={() => setEditing(false)}
+              disabled={busy}
+              aria-expanded={showCreateAccount}
+              onClick={() => setShowCreateAccount((v) => !v)}
             >
-              ยกเลิก
+              {showCreateAccount ? "ซ่อนฟอร์ม" : "+บัญชี"}
             </button>
-          </>
-        ) : (
+          </div>
+
+          {showCreateAccount ? (
+            <form className="staff-compact-form" onSubmit={(e) => void onSubmitAccount(e)}>
+              <div className="staff-compact-form-grid">
+                <div className="field">
+                  <label htmlFor="email">อีเมล</label>
+                  <input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="staff@gmail.com"
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="phone">เบอร์</label>
+                  <input
+                    id="phone"
+                    type="tel"
+                    inputMode="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="0812345678"
+                  />
+                </div>
+              </div>
+              <div className="staff-compact-form-grid">
+                <div className="field">
+                  <label htmlFor="link-employee">ชื่อในร้าน</label>
+                  <select
+                    id="link-employee"
+                    value={linkEmployeeId}
+                    onChange={(e) => setLinkEmployeeId(e.target.value)}
+                  >
+                    <option value="">— ยังไม่เชื่อม —</option>
+                    {linkOptions.map((emp) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field">
+                  <label htmlFor="account-level">ลำดับสิทธิ์</label>
+                  <PermissionLevelSelect
+                    id="account-level"
+                    levels={levels}
+                    value={levelId}
+                    onChange={applyLevel}
+                    disabled={busy}
+                    hideElevated={!isOwner}
+                    allowEmpty
+                  />
+                </div>
+              </div>
+              <div className="staff-perm-toggle-row">
+                <button
+                  type="button"
+                  className="ghost-btn staff-btn-sm"
+                  disabled={busy}
+                  onClick={() => setShowCustomPerms((v) => !v)}
+                >
+                  {showCustomPerms ? "ซ่อนติ๊ก" : "ติ๊กสิทธิ์"}
+                </button>
+                <button type="submit" className="primary-btn staff-btn-sm" disabled={busy}>
+                  {busy ? "..." : "สร้าง"}
+                </button>
+              </div>
+              {showCustomPerms ? (
+                <PermissionPicker
+                  value={perms}
+                  onChange={setPerms}
+                  disabled={busy}
+                  hideElevated={!isOwner}
+                  compact
+                />
+              ) : null}
+            </form>
+          ) : null}
+
+          {(() => {
+            const owner = members.find((m) => m.role === "owner");
+            if (!owner) return null;
+            return (
+              <div className="staff-owner-card muted">
+                <strong>{staffAccountLabel(owner)}</strong>
+                <span> · เจ้าของ</span>
+                {owner.id === staff?.id ? <span> · คุณ</span> : null}
+              </div>
+            );
+          })()}
+        </section>
+
+      <section id="staff-levels" className="staff-hub-panel staff-hub-anchor">
+        <div className="staff-hub-panel-head staff-create-head">
+          <div>
+            <h2 className="staff-hub-panel-title">ลำดับสิทธิ์</h2>
+            <p className="staff-hub-panel-hint">{levels.length} แม่แบบ</p>
+          </div>
           <button
             type="button"
             className="ghost-btn staff-btn-sm"
             disabled={busy}
-            onClick={() => setEditing(true)}
+            aria-expanded={showLevels}
+            onClick={() => setShowLevels((v) => !v)}
           >
-            แก้
+            {showLevels ? "ซ่อน" : "เปิด"}
           </button>
-        )}
-        <button
-          type="button"
-          className="ghost-btn staff-btn-sm"
-          disabled={busy || editing}
-          onClick={() =>
-            void updateEmployee(emp.id, { active: !emp.active })
-              .then(onReload)
-              .catch((err) => onError(err.message || "อัปเดตไม่สำเร็จ"))
-          }
-        >
-          {emp.active ? "ปิด" : "เปิด"}
-        </button>
-        <button
-          type="button"
-          className="ghost-btn icon-btn staff-btn-sm"
-          aria-label={`ลบ ${emp.name}`}
-          disabled={busy || editing}
-          onClick={onDelete}
-        >
-          <Trash2 size={13} />
-        </button>
-      </div>
+        </div>
+        {showLevels ? (
+          <PermissionLevelsPanel
+            levels={levels}
+            isOwner={!!isOwner}
+            busy={busy}
+            setBusy={setBusy}
+            onError={setError}
+            onSuccess={setSuccess}
+            onReload={() => reload().then(() => undefined)}
+            linkedCountByLevelId={linkedCountByLevelId}
+            onPreviewLevel={isOwner ? beginPreviewFromLevel : undefined}
+            embedded
+          />
+        ) : null}
+      </section>
     </div>
   );
 }
 
-function MemberPermEditor({
-  initial,
-  initialLevelId,
-  levels,
-  busy,
-  hideElevated = false,
-  onSave,
-}: {
-  initial: StaffPermissions;
-  initialLevelId: string;
-  levels: PermissionLevel[];
-  busy: boolean;
-  hideElevated?: boolean;
-  onSave: (next: StaffPermissions, levelId: string, customized: boolean) => void;
-}) {
-  const [levelId, setLevelId] = useState(initialLevelId);
-  const [perms, setPerms] = useState(initial);
-  const [showCustom, setShowCustom] = useState(
-    !initialLevelId ||
-      (() => {
-        const level = findLevel(levels, initialLevelId);
-        return !level || !permissionsMatchLevel(initial, level);
-      })(),
-  );
-
-  function applyLevel(nextId: string) {
-    setLevelId(nextId);
-    const level = findLevel(levels, nextId);
-    if (level) {
-      setPerms({ ...level.permissions });
-      setShowCustom(false);
-    } else {
-      setShowCustom(true);
-    }
-  }
-
-  return (
-    <div className="permission-editor">
-      <div className="field" style={{ marginBottom: "0.4rem" }}>
-        <label htmlFor={`member-level-${initialLevelId || "x"}`}>ลำดับสิทธิ์</label>
-        <PermissionLevelSelect
-          id={`member-level-${initialLevelId || "x"}`}
-          levels={levels}
-          value={levelId}
-          onChange={applyLevel}
-          disabled={busy}
-          hideElevated={hideElevated}
-          allowEmpty
-        />
-      </div>
-      <div className="staff-perm-toggle-row">
-        <button
-          type="button"
-          className="ghost-btn staff-btn-sm"
-          disabled={busy}
-          onClick={() => setShowCustom((v) => !v)}
-        >
-          {showCustom ? "ซ่อนติ๊ก" : "ปรับรายข้อ"}
-        </button>
-        <button
-          type="button"
-          className="primary-btn staff-btn-sm"
-          disabled={busy}
-          onClick={() => {
-            const level = findLevel(levels, levelId);
-            const customized =
-              !level || showCustom || !permissionsMatchLevel(perms, level);
-            onSave(perms, levelId, customized);
-          }}
-        >
-          บันทึก
-        </button>
-      </div>
-      {showCustom ? (
-        <PermissionPicker
-          value={perms}
-          onChange={setPerms}
-          disabled={busy}
-          hideElevated={hideElevated}
-          compact
-        />
-      ) : null}
-    </div>
-  );
-}

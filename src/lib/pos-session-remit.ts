@@ -389,6 +389,7 @@ export function fillDayCashFromSessions(
     note?: string;
     sessionIds?: string[];
     sessionActualAmounts?: Record<string, number>;
+    sessionNotes?: Record<string, string>;
   },
   sessions: PosSession[],
   sessionIds: string[],
@@ -397,6 +398,7 @@ export function fillDayCashFromSessions(
   cashAmountSource: "staff";
   sessionIds: string[];
   sessionActualAmounts: Record<string, number>;
+  sessionNotes: Record<string, string>;
   note: string;
 } {
   const idSet = new Set(sessionIds.map((id) => String(id || "").trim()).filter(Boolean));
@@ -405,12 +407,19 @@ export function fillDayCashFromSessions(
     day.sessionActualAmounts && typeof day.sessionActualAmounts === "object"
       ? day.sessionActualAmounts
       : {};
+  const prevNotes =
+    day.sessionNotes && typeof day.sessionNotes === "object" ? day.sessionNotes : {};
   const sessionActualAmounts: Record<string, number> = {};
+  const sessionNotes: Record<string, string> = {};
   for (const s of picked) {
     const raw = prevActuals[s.id];
     if (raw != null && Number.isFinite(raw) && raw >= 0) {
       sessionActualAmounts[s.id] = roundMoney(raw);
     }
+    const noteText = String(prevNotes[s.id] || "")
+      .trim()
+      .slice(0, 200);
+    if (noteText) sessionNotes[s.id] = noteText;
   }
   const cashAmount = roundMoney(
     picked.reduce(
@@ -433,6 +442,7 @@ export function fillDayCashFromSessions(
     cashAmountSource: "staff",
     sessionIds: picked.map((s) => s.id),
     sessionActualAmounts,
+    sessionNotes,
     note,
   };
 }
