@@ -414,6 +414,13 @@ export type PosSale = {
   pointsRedeemed?: number;
   redeemBaht?: number;
   ledgerEntryId?: string;
+  /** Receipt QR claim (R0+) — issued from BOH experiment / later print */
+  claimToken?: string;
+  claimTokenExpiresAt?: number;
+  claimStatus?: "open" | "claimed" | string;
+  claimedAt?: number;
+  claimedByMemberId?: string;
+  pointsClaimed?: number;
   createdAt: number;
   createdBy: string;
   status: "completed" | "voided";

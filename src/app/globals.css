@@ -1035,6 +1035,47 @@ body.modal-open .main-panel {
   margin-top: 1rem;
 }
 
+.claim-pdpa {
+  display: grid !important;
+  grid-template-columns: auto 1fr;
+  gap: 0.55rem !important;
+  align-items: start;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  color: #3d4a42;
+}
+
+.claim-pdpa input {
+  margin-top: 0.2rem;
+  min-height: auto !important;
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.members-claim-qr {
+  display: grid;
+  gap: 0.75rem;
+  justify-items: start;
+  margin-top: 0.75rem;
+}
+
+.members-claim-qr img {
+  width: min(100%, 280px);
+  height: auto;
+  background: #fff;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(47, 107, 79, 0.18);
+}
+
+.members-claim-banner {
+  margin: 0 0 0.75rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: 0.55rem;
+  background: rgba(180, 83, 9, 0.1);
+  color: #7c2d12;
+  font-size: 0.9rem;
+}
+
 .members-hub-layout {
   align-items: start;
 }

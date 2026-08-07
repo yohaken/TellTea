@@ -6,11 +6,14 @@ const functions = require("firebase-functions/v1");
 const { getFirestore } = require("firebase-admin/firestore");
 const { completePosSaleAdmin, voidPosSaleAdmin } = require("./pos-complete-sale");
 const { assertNposDeviceAllowed } = require("./npos-device-gate");
+const { getAuth } = require("firebase-admin/auth");
 const {
   loadMemberSettings,
   lookupMember,
   quickCreateMember,
   publicSignup,
+  previewReceiptClaim,
+  claimReceiptPoints,
 } = require("./pos-members");
 
 function cors(res) {
@@ -822,5 +825,75 @@ exports.publicMemberSignup = functions.region("asia-southeast1").https.onRequest
   } catch (err) {
     console.error("publicMemberSignup", err);
     res.status(500).json({ ok: false, error: "signup_failed" });
+  }
+});
+
+/** Public receipt-claim preview — saleId + claimToken; no auth. */
+exports.publicReceiptClaimPreview = functions.region("asia-southeast1").https.onRequest(async (req, res) => {
+  cors(res);
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
+  }
+  if (req.method !== "POST") {
+    res.status(405).json({ ok: false, error: "POST only" });
+    return;
+  }
+  const body = parseBody(req);
+  if (!body) {
+    res.status(400).json({ ok: false, error: "bad_body" });
+    return;
+  }
+  try {
+    const db = getFirestore();
+    const result = await previewReceiptClaim(db, {
+      saleId: body.saleId || body.s,
+      token: body.token || body.t,
+    });
+    const deny = result.ok === false && (result.error === "bad_token" || result.error === "missing_sale");
+    res.status(deny ? 403 : 200).json(result);
+  } catch (err) {
+    console.error("publicReceiptClaimPreview", err);
+    res.status(500).json({ ok: false, error: "preview_failed" });
+  }
+});
+
+/**
+ * Public receipt-claim — Firebase phone OTP idToken required.
+ * Does not touch POS complete-sale path.
+ */
+exports.publicReceiptClaim = functions.region("asia-southeast1").https.onRequest(async (req, res) => {
+  cors(res);
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
+  }
+  if (req.method !== "POST") {
+    res.status(405).json({ ok: false, error: "POST only" });
+    return;
+  }
+  const body = parseBody(req);
+  if (!body) {
+    res.status(400).json({ ok: false, error: "bad_body" });
+    return;
+  }
+  try {
+    const db = getFirestore();
+    const result = await claimReceiptPoints(db, getAuth(), {
+      saleId: body.saleId || body.s,
+      token: body.token || body.t,
+      displayName: body.displayName,
+      pdpaAccepted: body.pdpaAccepted === true,
+      idToken: body.idToken,
+    });
+    const deny =
+      result.ok === false &&
+      (result.error === "bad_token" ||
+        result.error === "auth_required" ||
+        result.error === "auth_mismatch");
+    res.status(deny ? 403 : 200).json(result);
+  } catch (err) {
+    console.error("publicReceiptClaim", err);
+    res.status(500).json({ ok: false, error: "claim_failed" });
   }
 });

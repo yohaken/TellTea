@@ -28,9 +28,16 @@ import {
   type ShopMember,
 } from "@/lib/members";
 import { can, canAccessMembersHub } from "@/lib/permissions";
+import {
+  claimQrDataUrl,
+  issueReceiptClaimForSale,
+  type ReceiptClaimIssue,
+} from "@/lib/receipt-claim";
+import { subscribePosSalesToday } from "@/lib/pos-sales-admin";
+import type { PosSale } from "@/lib/types";
 import { formatPhoneDisplay } from "@/lib/utils";
 
-type TabKey = "list" | "settings";
+type TabKey = "list" | "claim" | "settings";
 
 export default function MembersPage() {
   return (
@@ -85,6 +92,14 @@ function MembersView() {
   const [setRedeem, setSetRedeem] = useState("1");
   const [setBonus, setSetBonus] = useState("0");
   const [setPublic, setSetPublic] = useState(false);
+  const [setReceiptClaim, setSetReceiptClaim] = useState(false);
+  const [setEarnPercent, setSetEarnPercent] = useState("1");
+  const [setClaimTtl, setSetClaimTtl] = useState("30");
+
+  const [todaySales, setTodaySales] = useState<PosSale[]>([]);
+  const [claimSaleId, setClaimSaleId] = useState("");
+  const [claimIssue, setClaimIssue] = useState<ReceiptClaimIssue | null>(null);
+  const [claimQr, setClaimQr] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     if (!canHub) return;
@@ -99,6 +114,9 @@ function MembersView() {
       setSetRedeem(String(cfg.pointsPerBahtRedeem));
       setSetBonus(String(cfg.signupBonusPoints));
       setSetPublic(cfg.publicSignupEnabled);
+      setSetReceiptClaim(cfg.receiptClaimEnabled);
+      setSetEarnPercent(String(cfg.earnPercent));
+      setSetClaimTtl(String(cfg.claimTokenTtlDays));
       setSelected((prev) => {
         if (!prev) return null;
         return list.find((m) => m.id === prev.id) || null;
@@ -145,6 +163,14 @@ function MembersView() {
       cancelled = true;
     };
   }, [selected]);
+
+  useEffect(() => {
+    if (!canHub || tab !== "claim") return;
+    return subscribePosSalesToday(
+      (sales) => setTodaySales(sales.filter((s) => s.status !== "voided")),
+      (err) => setError(err.message || "โหลดบิลวันนี้ไม่สำเร็จ"),
+    );
+  }, [canHub, tab]);
 
   const filtered = useMemo(
     () => filterMembers(members, deferredQuery),
@@ -274,8 +300,18 @@ function MembersView() {
     const baht = Number(setBaht);
     const redeem = Number(setRedeem);
     const bonus = Number(setBonus);
+    const earnPercent = Number(setEarnPercent);
+    const claimTtl = Number(setClaimTtl);
     if (!(baht > 0) || !(redeem > 0) || !(bonus >= 0) || !Number.isFinite(bonus)) {
       setError("ค่าตั้งค่าแต้มไม่ถูกต้อง");
+      return;
+    }
+    if (!(earnPercent > 0) || earnPercent > 100 || !Number.isFinite(earnPercent)) {
+      setError("% สะสมจากสลิปต้องอยู่ระหว่าง 0–100");
+      return;
+    }
+    if (!(claimTtl >= 1) || claimTtl > 365 || !Number.isFinite(claimTtl)) {
+      setError("อายุลิงก์เคลมต้องเป็น 1–365 วัน");
       return;
     }
     setSaving(true);
@@ -289,6 +325,9 @@ function MembersView() {
           pointsPerBahtRedeem: redeem,
           signupBonusPoints: Math.floor(bonus),
           publicSignupEnabled: setPublic,
+          receiptClaimEnabled: setReceiptClaim,
+          earnPercent,
+          claimTokenTtlDays: Math.floor(claimTtl),
         },
         actorId,
       );
@@ -296,6 +335,36 @@ function MembersView() {
       setMsg("บันทึกตั้งค่าสมาชิกแล้ว");
     } catch (err) {
       setError(mapFirestoreError(err, "บันทึกตั้งค่า"));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function onIssueClaim(saleId: string, forceNew = false) {
+    if (!canManage || !actorId) return;
+    const id = saleId.trim();
+    if (!id) {
+      setError("ใส่รหัสบิลหรือเลือกจากรายการ");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    setMsg(null);
+    setClaimIssue(null);
+    setClaimQr(null);
+    try {
+      const issued = await issueReceiptClaimForSale(id, actorId, { forceNewToken: forceNew });
+      setClaimSaleId(issued.saleId);
+      setClaimIssue(issued);
+      const qr = await claimQrDataUrl(issued.claimUrl);
+      setClaimQr(qr);
+      setMsg(
+        issued.reused
+          ? `ใช้ลิงก์เดิม · บิล ${issued.billNo} · ~${issued.pointsPreview} แต้ม`
+          : `ออก QR แล้ว · บิล ${issued.billNo} · ~${issued.pointsPreview} แต้ม`,
+      );
+    } catch (err) {
+      setError(mapFirestoreError(err, "ออก QR เคลม"));
     } finally {
       setSaving(false);
     }
@@ -309,6 +378,7 @@ function MembersView() {
           <p className="staff-hub-sub muted">
             บัตรสมาชิก · สะสมแต้ม · สาขาเดียว
             {settings && !settings.enabled ? " · ระบบปิดชั่วคราว" : ""}
+            {settings?.receiptClaimEnabled ? " · ทดลอง QR สลิป" : ""}
           </p>
         </div>
         <div className="staff-hub-head-actions">
@@ -318,6 +388,13 @@ function MembersView() {
             onClick={() => setTab("list")}
           >
             รายชื่อ
+          </button>
+          <button
+            type="button"
+            className={tab === "claim" ? "primary-btn staff-btn-sm" : "ghost-btn staff-btn-sm"}
+            onClick={() => setTab("claim")}
+          >
+            QR สลิป
           </button>
           <button
             type="button"
@@ -347,12 +424,144 @@ function MembersView() {
       {error ? <p className="staff-hub-msg" style={{ color: "var(--danger, #b42318)" }}>{error}</p> : null}
       {msg ? <p className="staff-hub-msg">{msg}</p> : null}
 
-      {tab === "settings" ? (
+      {tab === "claim" ? (
+        <section className="staff-hub-panel">
+          <div className="staff-hub-panel-head">
+            <h2 className="staff-hub-panel-title">ออก QR เคลมจากบิล (ทดลอง)</h2>
+            <p className="staff-hub-panel-hint muted">
+              เลือกบิลจริงหรือใส่รหัสบิล → สแกนด้วยมือถือคุณเอง · ยังไม่พิมพ์ที่เคาน์เตอร์
+            </p>
+          </div>
+          <p className="members-claim-banner">
+            โหมดทดลองเจ้าของร้าน · อย่าเปิดขายจริงให้ลูกค้าจนกว่าจะทดลองครบ
+          </p>
+          {!settings?.enabled || !settings.receiptClaimEnabled ? (
+            <p className="muted">
+              เปิด «ระบบสมาชิก» และ «ทดลองเคลมจาก QR สลิป» ที่แท็บตั้งค่าก่อน
+            </p>
+          ) : null}
+          <form
+            className="staff-compact-form-grid"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void onIssueClaim(claimSaleId);
+            }}
+          >
+            <label className="field" style={{ gridColumn: "1 / -1" }}>
+              <span>รหัสบิล (saleId)</span>
+              <input
+                type="text"
+                value={claimSaleId}
+                onChange={(e) => setClaimSaleId(e.target.value)}
+                placeholder="วางรหัสบิลจาก /pos-sales หรือเลือกด้านล่าง"
+                disabled={!canManage || saving}
+              />
+            </label>
+            {canManage ? (
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                <button type="submit" className="primary-btn" disabled={saving}>
+                  {saving ? "กำลังออก..." : "ออก QR / ลิงก์"}
+                </button>
+                {claimIssue ? (
+                  <button
+                    type="button"
+                    className="ghost-btn"
+                    disabled={saving}
+                    onClick={() => void onIssueClaim(claimIssue.saleId, true)}
+                  >
+                    ออกโทเคนใหม่
+                  </button>
+                ) : null}
+              </div>
+            ) : (
+              <p className="muted">ดูอย่างเดียว</p>
+            )}
+          </form>
+
+          {claimIssue ? (
+            <div className="members-claim-qr">
+              <p>
+                บิล <strong>{claimIssue.billNo}</strong> · ยอด {claimIssue.total} บาท →{" "}
+                <strong>{claimIssue.pointsPreview}</strong> แต้ม
+              </p>
+              {claimQr ? <img src={claimQr} alt="QR เคลมแต้ม" /> : null}
+              <p className="muted" style={{ wordBreak: "break-all" }}>
+                <code>{claimIssue.claimUrl}</code>
+              </p>
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  className="ghost-btn staff-btn-sm"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(claimIssue.claimUrl);
+                      setMsg("คัดออกลิงก์แล้ว");
+                    } catch {
+                      setError("คัดลอกไม่ได้");
+                    }
+                  }}
+                >
+                  คัดออกลิงก์
+                </button>
+                <a
+                  className="ghost-btn staff-btn-sm"
+                  href={claimIssue.claimUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  เปิดหน้าเคลม
+                </a>
+              </div>
+              <p className="muted">
+                หมดอายุ{" "}
+                {new Intl.DateTimeFormat("th-TH", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                }).format(new Date(claimIssue.expiresAt))}
+              </p>
+            </div>
+          ) : null}
+
+          <div style={{ marginTop: "1.25rem" }}>
+            <h3 className="staff-hub-panel-title" style={{ fontSize: "1rem" }}>
+              บิลวันนี้ (เลือกเพื่อออก QR)
+            </h3>
+            {todaySales.length === 0 ? (
+              <p className="muted">ยังไม่มีบิลวันนี้ — ใส่รหัสบิลเองได้</p>
+            ) : (
+              <ul className="staff-hub-list">
+                {todaySales.slice(0, 40).map((s) => (
+                  <li key={s.id}>
+                    <button
+                      type="button"
+                      className="ghost-btn"
+                      style={{ width: "100%", textAlign: "left" }}
+                      disabled={!canManage || saving || s.claimStatus === "claimed"}
+                      onClick={() => {
+                        setClaimSaleId(s.id);
+                        void onIssueClaim(s.id);
+                      }}
+                    >
+                      <strong>{s.billNo}</strong> · {s.total} บาท ·{" "}
+                      {formatWhen(s.createdAt)}
+                      {s.claimStatus === "claimed"
+                        ? " · เคลมแล้ว"
+                        : s.claimToken
+                          ? " · มีโทเคน"
+                          : ""}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+      ) : tab === "settings" ? (
         <section className="staff-hub-panel">
           <div className="staff-hub-panel-head">
             <h2 className="staff-hub-panel-title">กฎแต้มร้าน</h2>
             <p className="staff-hub-panel-hint muted">
-              ใช้ตอน POS สะสมแต้ม (M2) · QR สมัครเองจองธงไว้ก่อน (M4)
+              กฎแต้มร้าน · ทดลอง QR สลิป (R0) ค่าเริ่มปิด · ยังไม่กระทบหน้าร้าน
             </p>
           </div>
           {!canManage ? (
@@ -404,6 +613,44 @@ function MembersView() {
                 required
               />
             </label>
+            <label className="field">
+              <span>ทดลองเคลมจาก QR สลิป (ยังไม่ขายจริง)</span>
+              <input
+                type="checkbox"
+                checked={setReceiptClaim}
+                disabled={!canManage || saving}
+                onChange={(e) => setSetReceiptClaim(e.target.checked)}
+              />
+            </label>
+            <label className="field">
+              <span>% ยอดสุทธิ → แต้ม (สลิป)</span>
+              <input
+                type="number"
+                min={0.01}
+                max={100}
+                step={0.1}
+                value={setEarnPercent}
+                disabled={!canManage || saving}
+                onChange={(e) => setSetEarnPercent(e.target.value)}
+                required
+              />
+            </label>
+            <label className="field">
+              <span>อายุลิงก์เคลม (วัน)</span>
+              <input
+                type="number"
+                min={1}
+                max={365}
+                step={1}
+                value={setClaimTtl}
+                disabled={!canManage || saving}
+                onChange={(e) => setSetClaimTtl(e.target.value)}
+                required
+              />
+            </label>
+            <p className="muted" style={{ gridColumn: "1 / -1" }}>
+              โหมดทดลอง: เปิดธงด้านบนแล้วออก QR จากแท็บ «QR สลิป» — ยังไม่พิมพ์ที่เครื่องขาย
+            </p>
             <label className="field">
               <span>เปิดสมัครผ่าน QR (หน้า /join)</span>
               <input

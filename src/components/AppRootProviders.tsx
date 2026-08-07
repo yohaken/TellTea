@@ -10,9 +10,10 @@ import { installChunkLoadRecovery } from "@/lib/chunk-load-recovery";
 export function AppRootProviders({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "";
   const isPos = pathname === "/pos" || pathname.startsWith("/pos/");
-  /** Public QR signup — no staff auth shell */
+  /** Public QR signup / receipt claim — no staff auth shell */
   const isPublicJoin = pathname === "/join" || pathname.startsWith("/join/");
-  const skipBoAuth = isPos || isPublicJoin;
+  const isPublicClaim = pathname === "/claim" || pathname.startsWith("/claim/");
+  const skipBoAuth = isPos || isPublicJoin || isPublicClaim;
 
   useEffect(() => {
     if (skipBoAuth) return;

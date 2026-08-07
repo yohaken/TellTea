@@ -49,6 +49,16 @@ function normalizeMemberId(raw) {
 async function loadMemberSettings(db) {
   const snap = await db.doc("meta/memberSettings").get();
   const d = snap.exists ? snap.data() || {} : {};
+  const earnPercent =
+    typeof d.earnPercent === "number" && d.earnPercent > 0 && d.earnPercent <= 100
+      ? d.earnPercent
+      : 1;
+  const claimTokenTtlDays =
+    typeof d.claimTokenTtlDays === "number" &&
+    d.claimTokenTtlDays >= 1 &&
+    d.claimTokenTtlDays <= 365
+      ? Math.floor(d.claimTokenTtlDays)
+      : 30;
   return {
     // Default OFF when doc missing — live counters stay unchanged until owner enables.
     enabled: d.enabled === true,
@@ -64,6 +74,9 @@ async function loadMemberSettings(db) {
         : 0,
     publicSignupEnabled: d.publicSignupEnabled === true,
     publicSignupToken: typeof d.publicSignupToken === "string" ? d.publicSignupToken : "",
+    receiptClaimEnabled: d.receiptClaimEnabled === true,
+    earnPercent,
+    claimTokenTtlDays,
   };
 }
 
@@ -71,6 +84,12 @@ function pointsFromSaleAmount(amountBaht, settings) {
   if (!settings?.enabled || !(settings.bahtPerPoint > 0)) return 0;
   if (!(amountBaht > 0)) return 0;
   return Math.floor(amountBaht / settings.bahtPerPoint);
+}
+
+function pointsFromReceiptClaim(amountBaht, settings) {
+  if (!settings?.enabled || !settings.receiptClaimEnabled) return 0;
+  if (!(settings.earnPercent > 0) || !(amountBaht > 0)) return 0;
+  return Math.floor((amountBaht * settings.earnPercent) / 100);
 }
 
 function redeemBahtFromPoints(points, settings) {
@@ -158,12 +177,20 @@ async function tryReverseEarnForVoid(db, { saleId, actorId }) {
     if (await ledgerExistsForSale(db, saleId, "void_reverse")) {
       return { ok: true, skipped: "already_reversed" };
     }
-    const earnSnap = await db
+    let earnSnap = await db
       .collection("memberLedger")
       .where("saleId", "==", saleId)
       .where("reason", "==", "earn_sale")
       .limit(1)
       .get();
+    if (earnSnap.empty) {
+      earnSnap = await db
+        .collection("memberLedger")
+        .where("saleId", "==", saleId)
+        .where("reason", "==", "earn_receipt_claim")
+        .limit(1)
+        .get();
+    }
     if (earnSnap.empty) return { ok: false, skipped: "no_earn" };
     const earn = earnSnap.docs[0].data() || {};
     const mid = asString(earn.memberId, 32);
@@ -299,7 +326,14 @@ async function quickCreateMember(db, { phone, displayName, actorId, source }) {
     lifetimePointsEarned: 0,
     birthday: "",
     note: "",
-    source: source === "qr_self" ? "qr_self" : source === "staff_pos" ? "staff_pos" : "staff_boh",
+    source:
+      source === "qr_self"
+        ? "qr_self"
+        : source === "receipt_qr"
+          ? "receipt_qr"
+          : source === "staff_pos"
+            ? "staff_pos"
+            : "staff_boh",
     createdAt: now,
     updatedAt: now,
     createdBy: actorId || "pos",
@@ -357,11 +391,201 @@ async function publicSignup(db, { token, phone, displayName }) {
   });
 }
 
+
+function asSaleClaimView(saleId, data, settings) {
+  const total = typeof data.total === "number" ? data.total : 0;
+  return {
+    saleId,
+    billNo: asString(data.billNo, 40) || saleId,
+    total,
+    pointsPreview: pointsFromReceiptClaim(total, settings),
+    earnPercent: settings.earnPercent,
+    expiresAt: typeof data.claimTokenExpiresAt === "number" ? data.claimTokenExpiresAt : 0,
+    claimStatus: asString(data.claimStatus, 24) || "open",
+  };
+}
+
+async function loadSaleForClaim(db, saleId, token) {
+  const id = asString(saleId, 80);
+  const tok = asString(token, 128);
+  if (!id || !tok) return { ok: false, error: "bad_token" };
+  const settings = await loadMemberSettings(db);
+  if (!settings.enabled) return { ok: false, error: "disabled" };
+  if (!settings.receiptClaimEnabled) return { ok: false, error: "receipt_off" };
+  const snap = await db.collection("posSales").doc(id).get();
+  if (!snap.exists) return { ok: false, error: "missing_sale" };
+  const data = snap.data() || {};
+  if (asString(data.claimToken, 128) !== tok) return { ok: false, error: "bad_token" };
+  if (data.status === "voided") return { ok: false, error: "voided" };
+  const exp = typeof data.claimTokenExpiresAt === "number" ? data.claimTokenExpiresAt : 0;
+  if (exp && exp < Date.now()) return { ok: false, error: "expired" };
+  if (data.claimStatus === "claimed") return { ok: false, error: "already_claimed", view: asSaleClaimView(id, data, settings) };
+  if (await ledgerExistsForSale(db, id, "earn_sale")) {
+    return { ok: false, error: "already_earned" };
+  }
+  if (await ledgerExistsForSale(db, id, "earn_receipt_claim")) {
+    return { ok: false, error: "already_claimed" };
+  }
+  return { ok: true, settings, saleId: id, data, view: asSaleClaimView(id, data, settings) };
+}
+
+async function previewReceiptClaim(db, { saleId, token }) {
+  const loaded = await loadSaleForClaim(db, saleId, token);
+  if (!loaded.ok) {
+    return {
+      ok: false,
+      error: loaded.error,
+      ...(loaded.view || {}),
+    };
+  }
+  return {
+    ok: true,
+    ...loaded.view,
+  };
+}
+
+/**
+ * Claim points from a sale-bound receipt QR after Firebase phone OTP.
+ * idToken must be a Firebase Auth ID token with matching phone_number.
+ */
+async function claimReceiptPoints(db, auth, {
+  saleId,
+  token,
+  displayName,
+  pdpaAccepted,
+  idToken,
+}) {
+  if (pdpaAccepted !== true) return { ok: false, error: "pdpa_required" };
+  const rawToken = asString(idToken, 4096);
+  if (!rawToken) return { ok: false, error: "auth_required" };
+
+  let decoded;
+  try {
+    decoded = await auth.verifyIdToken(rawToken);
+  } catch (err) {
+    console.error("claimReceiptPoints verifyIdToken", err && err.message);
+    return { ok: false, error: "auth_required" };
+  }
+  const phoneFromAuth = asString(decoded.phone_number, 32);
+  const digits = phoneDigitsFromInput(phoneFromAuth);
+  if (!digits) return { ok: false, error: "invalid_phone" };
+
+  const loaded = await loadSaleForClaim(db, saleId, token);
+  if (!loaded.ok) return { ok: false, error: loaded.error, ...(loaded.view || {}) };
+
+  const settings = loaded.settings;
+  const points = pointsFromReceiptClaim(Number(loaded.data.total) || 0, settings);
+  if (points <= 0) return { ok: false, error: "zero_points" };
+
+  const memberRef = db.collection("members").doc(digits);
+  let isNew = false;
+  const existing = await memberRef.get();
+  if (!existing.exists) {
+    const created = await quickCreateMember(db, {
+      phone: phoneFromAuth || digits,
+      displayName,
+      actorId: "receipt_qr",
+      source: "receipt_qr",
+    });
+    if (!created.ok) return created;
+    isNew = true;
+  } else {
+    const m = existing.data() || {};
+    if (m.status === "suspended") return { ok: false, error: "suspended" };
+  }
+
+  const saleRef = db.collection("posSales").doc(loaded.saleId);
+  const ledgerRef = db.collection("memberLedger").doc();
+  const now = Date.now();
+
+  try {
+    const result = await db.runTransaction(async (tx) => {
+      const [mSnap, sSnap] = await Promise.all([tx.get(memberRef), tx.get(saleRef)]);
+      if (!mSnap.exists) return { error: "invalid_phone" };
+      if (!sSnap.exists) return { error: "missing_sale" };
+      const sale = sSnap.data() || {};
+      if (sale.status === "voided") return { error: "voided" };
+      if (asString(sale.claimToken, 128) !== asString(token, 128)) return { error: "bad_token" };
+      const exp = typeof sale.claimTokenExpiresAt === "number" ? sale.claimTokenExpiresAt : 0;
+      if (exp && exp < now) return { error: "expired" };
+      if (sale.claimStatus === "claimed") return { error: "already_claimed" };
+
+      const m = mSnap.data() || {};
+      if (m.status === "suspended") return { error: "suspended" };
+      const balance = typeof m.pointsBalance === "number" ? m.pointsBalance : 0;
+      const lifetime = typeof m.lifetimePointsEarned === "number" ? m.lifetimePointsEarned : 0;
+      const balanceAfter = balance + points;
+      const namePatch = asString(displayName, 80);
+      const memberPatch = {
+        pointsBalance: balanceAfter,
+        lifetimePointsEarned: lifetime + points,
+        updatedAt: now,
+        updatedBy: "receipt_qr",
+      };
+      if (namePatch && !asString(m.displayName, 80)) {
+        memberPatch.displayName = namePatch;
+      }
+      tx.update(memberRef, memberPatch);
+      tx.set(ledgerRef, {
+        memberId: digits,
+        delta: points,
+        balanceAfter,
+        reason: "earn_receipt_claim",
+        saleId: loaded.saleId,
+        note: "เคลมจาก QR สลิป",
+        channel: "receipt_qr",
+        actorType: "customer",
+        actorId: digits,
+        createdAt: now,
+      });
+      tx.set(
+        saleRef,
+        {
+          claimStatus: "claimed",
+          claimedAt: now,
+          claimedByMemberId: digits,
+          pointsClaimed: points,
+          pointsEarned: points,
+          memberId: digits,
+          memberPhone: asString(m.phone, 20) || phoneE164(digits),
+        },
+        { merge: true },
+      );
+      return {
+        points,
+        balanceAfter,
+        displayName: asString(memberPatch.displayName, 80) || asString(m.displayName, 80) || formatPhoneDisplay(digits),
+        cardNo: asString(m.cardNo, 24) || cardNoFromDigits(digits),
+      };
+    });
+
+    if (result.error) return { ok: false, error: result.error };
+
+    // Double-check race: if earn_sale landed concurrently, leave claim as-is (already written).
+    return {
+      ok: true,
+      points: result.points,
+      balanceAfter: result.balanceAfter,
+      member: {
+        id: digits,
+        displayName: result.displayName,
+        cardNo: result.cardNo,
+        pointsBalance: result.balanceAfter,
+        isNew,
+      },
+    };
+  } catch (err) {
+    console.error("claimReceiptPoints", err && err.message);
+    return { ok: false, error: "claim_failed" };
+  }
+}
+
 module.exports = {
   phoneDigitsFromInput,
   normalizeMemberId,
   loadMemberSettings,
   pointsFromSaleAmount,
+  pointsFromReceiptClaim,
   redeemBahtFromPoints,
   tryEarnPointsForSale,
   tryReverseEarnForVoid,
@@ -370,6 +594,8 @@ module.exports = {
   lookupMember,
   quickCreateMember,
   publicSignup,
+  previewReceiptClaim,
+  claimReceiptPoints,
   formatPhoneDisplay,
   cardNoFromDigits,
 };

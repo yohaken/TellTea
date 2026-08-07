@@ -72,6 +72,14 @@ function mapPosSale(id: string, data: Record<string, unknown>): PosSale {
     cashReceived: typeof data.cashReceived === "number" ? data.cashReceived : 0,
     change: typeof data.change === "number" ? data.change : 0,
     ledgerEntryId: typeof data.ledgerEntryId === "string" ? data.ledgerEntryId : undefined,
+    claimToken: typeof data.claimToken === "string" ? data.claimToken : undefined,
+    claimTokenExpiresAt:
+      typeof data.claimTokenExpiresAt === "number" ? data.claimTokenExpiresAt : undefined,
+    claimStatus: typeof data.claimStatus === "string" ? data.claimStatus : undefined,
+    claimedAt: typeof data.claimedAt === "number" ? data.claimedAt : undefined,
+    claimedByMemberId:
+      typeof data.claimedByMemberId === "string" ? data.claimedByMemberId : undefined,
+    pointsClaimed: typeof data.pointsClaimed === "number" ? data.pointsClaimed : undefined,
     createdAt: typeof data.createdAt === "number" ? data.createdAt : 0,
     createdBy: typeof data.createdBy === "string" ? data.createdBy : "",
     status: data.status === "voided" ? "voided" : "completed",

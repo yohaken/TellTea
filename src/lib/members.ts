@@ -20,12 +20,13 @@ import {
 } from "./utils";
 
 /** แหล่งสมัคร — จอง `qr_self` ไว้ตั้งแต่โครง (M4) */
-export type MemberSource = "staff_boh" | "staff_pos" | "qr_self";
+export type MemberSource = "staff_boh" | "staff_pos" | "qr_self" | "receipt_qr";
 
 export type MemberStatus = "active" | "suspended";
 
 export type MemberLedgerReason =
   | "earn_sale"
+  | "earn_receipt_claim"
   | "redeem"
   | "adjust"
   | "signup_bonus"
@@ -67,7 +68,7 @@ export type MemberLedgerEntry = {
 
 export type MemberSettings = {
   enabled: boolean;
-  /** ทุก bahtPerPoint บาท = 1 แต้ม (ปัดลง) */
+  /** ทุก bahtPerPoint บาท = 1 แต้ม (ปัดลง) — path POS ผูกสมาชิก */
   bahtPerPoint: number;
   /** แต้มต่อ 1 บาทส่วนลดตอนแลก — ใช้ M3 */
   pointsPerBahtRedeem: number;
@@ -75,6 +76,15 @@ export type MemberSettings = {
   /** ธงโครง QR — ยังไม่เปิด UI สาธารณะ */
   publicSignupEnabled: boolean;
   publicSignupToken: string;
+  /**
+   * ทดลองเคลมแต้มจาก QR สลิป (R0+) — ค่าเริ่มปิด
+   * ยังไม่พิมพ์บนเครื่องขายจนกว่าจะถึง R3
+   */
+  receiptClaimEnabled: boolean;
+  /** % ของยอดสุทธิ → แต้มตอนเคลมจากสลิป (เช่น 1 = 1%) */
+  earnPercent: number;
+  /** อายุ claimToken (วัน) */
+  claimTokenTtlDays: number;
   updatedAt: number;
   updatedBy: string;
 };
@@ -91,6 +101,9 @@ export const DEFAULT_MEMBER_SETTINGS: MemberSettings = {
   signupBonusPoints: 0,
   publicSignupEnabled: false,
   publicSignupToken: "",
+  receiptClaimEnabled: false,
+  earnPercent: 1,
+  claimTokenTtlDays: 30,
   updatedAt: 0,
   updatedBy: "",
 };
@@ -99,10 +112,12 @@ export const MEMBER_SOURCE_LABELS: Record<MemberSource, string> = {
   staff_boh: "หลังร้าน",
   staff_pos: "หน้าร้าน",
   qr_self: "สแกน QR",
+  receipt_qr: "QR สลิป",
 };
 
 export const MEMBER_LEDGER_REASON_LABELS: Record<MemberLedgerReason, string> = {
   earn_sale: "สะสมจากบิล",
+  earn_receipt_claim: "เคลมจากสลิป",
   redeem: "แลกแต้ม",
   adjust: "ปรับมือ",
   signup_bonus: "โบนัสสมัคร",
@@ -157,7 +172,9 @@ function mapMember(snap: QueryDocumentSnapshot | { id: string; data: () => Recor
     birthday: typeof d.birthday === "string" ? d.birthday : "",
     note: typeof d.note === "string" ? d.note : "",
     source:
-      d.source === "staff_pos" || d.source === "qr_self" ? d.source : "staff_boh",
+      d.source === "staff_pos" || d.source === "qr_self" || d.source === "receipt_qr"
+        ? d.source
+        : "staff_boh",
     createdAt: typeof d.createdAt === "number" ? d.createdAt : 0,
     updatedAt: typeof d.updatedAt === "number" ? d.updatedAt : 0,
     createdBy: typeof d.createdBy === "string" ? d.createdBy : "",
@@ -175,6 +192,7 @@ function mapLedger(snap: QueryDocumentSnapshot): MemberLedgerEntry {
     balanceAfter: typeof d.balanceAfter === "number" ? d.balanceAfter : 0,
     reason:
       reason === "earn_sale" ||
+      reason === "earn_receipt_claim" ||
       reason === "redeem" ||
       reason === "signup_bonus" ||
       reason === "void_reverse"
@@ -193,6 +211,12 @@ function mapLedger(snap: QueryDocumentSnapshot): MemberLedgerEntry {
 
 function mapSettings(data: Partial<MemberSettings> | undefined): MemberSettings {
   if (!data) return { ...DEFAULT_MEMBER_SETTINGS };
+  const earnPercentRaw =
+    typeof data.earnPercent === "number" ? data.earnPercent : DEFAULT_MEMBER_SETTINGS.earnPercent;
+  const ttlRaw =
+    typeof data.claimTokenTtlDays === "number"
+      ? data.claimTokenTtlDays
+      : DEFAULT_MEMBER_SETTINGS.claimTokenTtlDays;
   return {
     enabled: data.enabled === true,
     bahtPerPoint:
@@ -210,6 +234,15 @@ function mapSettings(data: Partial<MemberSettings> | undefined): MemberSettings 
     publicSignupEnabled: data.publicSignupEnabled === true,
     publicSignupToken:
       typeof data.publicSignupToken === "string" ? data.publicSignupToken : "",
+    receiptClaimEnabled: data.receiptClaimEnabled === true,
+    earnPercent:
+      Number.isFinite(earnPercentRaw) && earnPercentRaw > 0 && earnPercentRaw <= 100
+        ? earnPercentRaw
+        : DEFAULT_MEMBER_SETTINGS.earnPercent,
+    claimTokenTtlDays:
+      Number.isFinite(ttlRaw) && ttlRaw >= 1 && ttlRaw <= 365
+        ? Math.floor(ttlRaw)
+        : DEFAULT_MEMBER_SETTINGS.claimTokenTtlDays,
     updatedAt: typeof data.updatedAt === "number" ? data.updatedAt : 0,
     updatedBy: typeof data.updatedBy === "string" ? data.updatedBy : "",
   };
@@ -231,6 +264,9 @@ export async function saveMemberSettings(
       | "signupBonusPoints"
       | "publicSignupEnabled"
       | "publicSignupToken"
+      | "receiptClaimEnabled"
+      | "earnPercent"
+      | "claimTokenTtlDays"
     >
   >,
   updatedBy: string,
@@ -250,11 +286,29 @@ export async function saveMemberSettings(
         ? crypto.randomUUID().replace(/-/g, "")
         : `tt${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
   }
+  const earnPercent =
+    typeof patch.earnPercent === "number" &&
+    patch.earnPercent > 0 &&
+    patch.earnPercent <= 100
+      ? patch.earnPercent
+      : current.earnPercent;
+  const claimTokenTtlDays =
+    typeof patch.claimTokenTtlDays === "number" &&
+    patch.claimTokenTtlDays >= 1 &&
+    patch.claimTokenTtlDays <= 365
+      ? Math.floor(patch.claimTokenTtlDays)
+      : current.claimTokenTtlDays;
   const next: MemberSettings = {
     ...current,
     ...patch,
     publicSignupEnabled,
     publicSignupToken,
+    receiptClaimEnabled:
+      typeof patch.receiptClaimEnabled === "boolean"
+        ? patch.receiptClaimEnabled
+        : current.receiptClaimEnabled,
+    earnPercent,
+    claimTokenTtlDays,
     bahtPerPoint:
       typeof patch.bahtPerPoint === "number" && patch.bahtPerPoint > 0
         ? patch.bahtPerPoint
@@ -279,6 +333,9 @@ export async function saveMemberSettings(
       signupBonusPoints: next.signupBonusPoints,
       publicSignupEnabled: next.publicSignupEnabled,
       publicSignupToken: next.publicSignupToken,
+      receiptClaimEnabled: next.receiptClaimEnabled,
+      earnPercent: next.earnPercent,
+      claimTokenTtlDays: next.claimTokenTtlDays,
       updatedAt: next.updatedAt,
       updatedBy: next.updatedBy,
     },
@@ -531,4 +588,14 @@ export function pointsFromSaleAmount(
   if (!settings.enabled || settings.bahtPerPoint <= 0) return 0;
   if (!(amountBaht > 0)) return 0;
   return Math.floor(amountBaht / settings.bahtPerPoint);
+}
+
+/** แต้มจากยอดสุทธิตาม % (ปัดลง) — path เคลม QR สลิป */
+export function pointsFromReceiptClaim(
+  amountBaht: number,
+  settings: MemberSettings = DEFAULT_MEMBER_SETTINGS,
+): number {
+  if (!settings.enabled || !settings.receiptClaimEnabled) return 0;
+  if (!(settings.earnPercent > 0) || !(amountBaht > 0)) return 0;
+  return Math.floor((amountBaht * settings.earnPercent) / 100);
 }
