@@ -2,8 +2,9 @@
 
 อัปเดต: 2026-08-07  
 อ้างอิง: [members-crm-phases.md](./members-crm-phases.md) · [members-receipt-qr-phases.md](./members-receipt-qr-phases.md) · [pos-sales-dashboard-phases.md](./pos-sales-dashboard-phases.md)  
+**ลำดับเฟสรอบนี้ (หลัก):** [members-round-phases.md](./members-round-phases.md) — P0–P7 รวม QR ทุกใบ (A1)  
 **เช็กลิสต์ติ๊กทีละข้อ (ยาว):** [members-redeem-checklist.md](./members-redeem-checklist.md)  
-ครอบคลุมถึงแผนที่ไฟล์ · จอเครื่องทีละจอ · ตัวอย่างตัวเลขเทส · วันเปิดใช้ · DoD · backlog · แบบตอบเจ้าของ
+**UX จ่ายเงิน nPos:** [members-npos-pay-ux.md](./members-npos-pay-ux.md)
 
 ไอเดียง่ายที่ล็อกแล้ว (พนักงานคีย์):
 
