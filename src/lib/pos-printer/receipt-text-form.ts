@@ -147,8 +147,31 @@ export function buildUnifiedReceiptText(
   out.push(rule(width));
   out.push(pairRow("จำนวน:", String(itemCount), width));
   out.push(pairRow("รวม:", formatMoney(subtotal), width));
-  if (data.discountBaht && data.discountBaht > 0) {
-    out.push(pairRow("ส่วนลด", `-${formatMoney(data.discountBaht)}`, width));
+  {
+    const manual =
+      typeof data.manualDiscountBaht === "number" && data.manualDiscountBaht > 0
+        ? data.manualDiscountBaht
+        : 0;
+    const redeem =
+      typeof data.redeemBaht === "number" && data.redeemBaht > 0 ? data.redeemBaht : 0;
+    const pts =
+      typeof data.pointsRedeemed === "number" && data.pointsRedeemed > 0
+        ? data.pointsRedeemed
+        : 0;
+    if (manual > 0 || redeem > 0) {
+      if (manual > 0) out.push(pairRow("ส่วนลด", `-${formatMoney(manual)}`, width));
+      if (redeem > 0) {
+        out.push(
+          pairRow(
+            pts > 0 ? `แลกแต้ม (${pts})` : "แลกแต้ม",
+            `-${formatMoney(redeem)}`,
+            width,
+          ),
+        );
+      }
+    } else if (data.discountBaht && data.discountBaht > 0) {
+      out.push(pairRow("ส่วนลด", `-${formatMoney(data.discountBaht)}`, width));
+    }
   }
   if (data.serviceChargeBaht && data.serviceChargeBaht > 0) {
     out.push(pairRow("ค่าบริการ", formatMoney(data.serviceChargeBaht), width));
@@ -163,6 +186,9 @@ export function buildUnifiedReceiptText(
   if (data.paymentMethod === "cash") {
     out.push(pairRow("เงินสด", formatMoney(data.cashReceived || 0), width));
     out.push(pairRow("เงินทอน", formatMoney(data.change || 0), width));
+  }
+  if (data.pointsEarned && data.pointsEarned > 0) {
+    out.push(pairRow("แต้มที่ได้", `+${data.pointsEarned}`, width));
   }
   if (data.orderNotes?.trim()) {
     out.push(rule(width));

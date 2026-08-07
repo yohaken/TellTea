@@ -28,6 +28,12 @@ export function saleToLocalReceipt(sale: PosSale): PosLocalReceipt {
     vatBaht?: number;
     serviceChargeBaht?: number;
   };
+  const memberPhone = (sale.memberPhone || "").trim();
+  const customerPhone = (extra.customerPhone || memberPhone || "").trim() || undefined;
+  const customerName =
+    (extra.customerName || "").trim() ||
+    (memberPhone || sale.memberId ? "สมาชิก" : "") ||
+    undefined;
   return {
     id: sale.id,
     billNo: sale.billNo,
@@ -37,6 +43,10 @@ export function saleToLocalReceipt(sale: PosSale): PosLocalReceipt {
     linePreview: sale.lines.map((l) => `${l.name}×${l.qty}`).join(", "),
     lines: saleLinesToLocalReceiptLines(sale.lines),
     discountBaht: sale.discountBaht,
+    manualDiscountBaht: sale.manualDiscountBaht,
+    redeemBaht: sale.redeemBaht,
+    pointsRedeemed: sale.pointsRedeemed,
+    pointsEarned: sale.pointsEarned,
     cashReceived: sale.cashReceived,
     change: sale.change,
     createdAt: sale.createdAt,
@@ -44,8 +54,8 @@ export function saleToLocalReceipt(sale: PosSale): PosLocalReceipt {
     voided: sale.status === "voided",
     voidedAt: sale.voidedAt,
     voidReason: sale.voidReason,
-    customerName: extra.customerName,
-    customerPhone: extra.customerPhone,
+    customerName,
+    customerPhone,
     staffName: extra.staffName,
     vatBaht: extra.vatBaht,
     serviceChargeBaht: extra.serviceChargeBaht,

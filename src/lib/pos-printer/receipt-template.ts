@@ -70,6 +70,35 @@ function paymentLabel(method: ReceiptPrintPayload["paymentMethod"]): string {
   return "เงินสด";
 }
 
+/** ส่วนลดมือ / แลกแต้ม แยกเมื่อมี · ไม่มีแยกแล้วใช้ «ส่วนลด» รวม */
+function receiptDiscountRowsHtml(data: ReceiptPrintPayload): string {
+  const manual =
+    typeof data.manualDiscountBaht === "number" && data.manualDiscountBaht > 0
+      ? data.manualDiscountBaht
+      : 0;
+  const redeem =
+    typeof data.redeemBaht === "number" && data.redeemBaht > 0 ? data.redeemBaht : 0;
+  const pts =
+    typeof data.pointsRedeemed === "number" && data.pointsRedeemed > 0
+      ? data.pointsRedeemed
+      : 0;
+  if (manual > 0 || redeem > 0) {
+    let html = "";
+    if (manual > 0) {
+      html += `<div class="total-row"><span>ส่วนลด</span><span>-${formatMoney(manual)}</span></div>`;
+    }
+    if (redeem > 0) {
+      const ptsLabel = pts > 0 ? ` (${pts} แต้ม)` : "";
+      html += `<div class="total-row"><span>แลกแต้ม${ptsLabel}</span><span>-${formatMoney(redeem)}</span></div>`;
+    }
+    return html;
+  }
+  if (data.discountBaht && data.discountBaht > 0) {
+    return `<div class="total-row"><span>ส่วนลด</span><span>-${formatMoney(data.discountBaht)}</span></div>`;
+  }
+  return "";
+}
+
 function shopDisplayName(data: ReceiptPrintPayload): string {
   const en = (data.shopName || DEFAULT_SHOP.shopName).trim();
   const th = (data.shopNameTh || DEFAULT_SHOP.shopNameTh).trim();
@@ -371,11 +400,7 @@ export function buildUnifiedReceiptBody(data: ReceiptPrintPayload, layout: Print
     <div class="totals">
       <div class="total-row"><span>จำนวน:</span><span>${itemCount}</span></div>
       <div class="total-row"><span>รวม:</span><span>${formatMoney(data.subtotal ?? data.total)}</span></div>
-      ${
-        data.discountBaht && data.discountBaht > 0
-          ? `<div class="total-row"><span>ส่วนลด</span><span>-${formatMoney(data.discountBaht)}</span></div>`
-          : ""
-      }
+      ${receiptDiscountRowsHtml(data)}
       ${serviceRow}
       ${vatRow}
       <hr class="rule double" />
@@ -385,6 +410,11 @@ export function buildUnifiedReceiptBody(data: ReceiptPrintPayload, layout: Print
     <div class="payment">
       <div class="total-row"><span>ชำระ</span><span>${escapeReceiptHtml(paymentLabel(data.paymentMethod))}</span></div>
       ${cashRows}
+      ${
+        data.pointsEarned && data.pointsEarned > 0
+          ? `<div class="total-row"><span>แต้มที่ได้</span><span>+${data.pointsEarned}</span></div>`
+          : ""
+      }
     </div>
     ${notesBlock}
     <div class="footer">${escapeReceiptHtml(footerNote)}</div>

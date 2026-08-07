@@ -67,6 +67,22 @@ export function localReceiptToPrintPayload(
     lines,
     subtotal,
     discountBaht: discountBaht > 0 ? discountBaht : undefined,
+    manualDiscountBaht:
+      typeof receipt.manualDiscountBaht === "number" && receipt.manualDiscountBaht > 0
+        ? receipt.manualDiscountBaht
+        : undefined,
+    redeemBaht:
+      typeof receipt.redeemBaht === "number" && receipt.redeemBaht > 0
+        ? receipt.redeemBaht
+        : undefined,
+    pointsRedeemed:
+      typeof receipt.pointsRedeemed === "number" && receipt.pointsRedeemed > 0
+        ? receipt.pointsRedeemed
+        : undefined,
+    pointsEarned:
+      typeof receipt.pointsEarned === "number" && receipt.pointsEarned > 0
+        ? receipt.pointsEarned
+        : undefined,
     total: receipt.total,
     paymentMethod: receipt.paymentMethod,
     cashReceived: receipt.cashReceived,
