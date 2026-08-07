@@ -90,6 +90,12 @@ function mapPosSale(id: string, data: Record<string, unknown>): PosSale {
     ...(typeof data.memberPhone === "string" && data.memberPhone.trim()
       ? { memberPhone: data.memberPhone.trim() }
       : {}),
+    ...(typeof data.memberName === "string" && data.memberName.trim()
+      ? { memberName: data.memberName.trim() }
+      : {}),
+    ...(typeof data.memberPhoneDisplay === "string" && data.memberPhoneDisplay.trim()
+      ? { memberPhoneDisplay: data.memberPhoneDisplay.trim() }
+      : {}),
     ...(typeof data.pointsEarned === "number" && data.pointsEarned > 0
       ? { pointsEarned: data.pointsEarned }
       : {}),
@@ -97,6 +103,9 @@ function mapPosSale(id: string, data: Record<string, unknown>): PosSale {
       ? { pointsRedeemed: data.pointsRedeemed }
       : {}),
     ...(redeemBaht > 0 ? { redeemBaht } : {}),
+    ...(typeof data.staffName === "string" && data.staffName.trim()
+      ? { staffName: data.staffName.trim() }
+      : {}),
     claimToken: typeof data.claimToken === "string" ? data.claimToken : undefined,
     claimTokenExpiresAt:
       typeof data.claimTokenExpiresAt === "number" ? data.claimTokenExpiresAt : undefined,

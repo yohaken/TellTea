@@ -37,6 +37,9 @@ export type PosLocalReceipt = {
   /** Optional — search/display when present; counter does not capture yet. */
   customerName?: string;
   customerPhone?: string;
+  /** Member on slip (nPos parity) — separate from customerName */
+  memberName?: string;
+  memberPhone?: string;
   staffName?: string;
   vatBaht?: number;
   serviceChargeBaht?: number;

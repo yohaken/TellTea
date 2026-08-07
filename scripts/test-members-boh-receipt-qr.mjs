@@ -39,10 +39,13 @@ const paper = read("src/components/PosReceiptPaper.tsx");
 assert.match(paper, /claimQrDataUrl/);
 assert.match(paper, /claimUrl/);
 
+const report = read("src/lib/pos-sales-report.ts");
+assert.match(report, /claimToken/);
+
 const version = read("src/lib/version.ts");
-assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 743);
+assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 745);
 
 const posVer = read("src/lib/pos-version.ts");
-assert.ok(Number(posVer.match(/POS_BUILD = (\d+)/)[1]) >= 192);
+assert.ok(Number(posVer.match(/POS_BUILD = (\d+)/)[1]) >= 193);
 
 console.log("OK test-members-boh-receipt-qr");
