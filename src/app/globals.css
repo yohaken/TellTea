@@ -15306,7 +15306,12 @@ body.modal-open .main-panel {
 }
 
 .pos-receipt-paper-wrap--compact .pos-receipt-paper--print-parity .pos-print-doc-frame {
-  height: 22rem;
+  /* Tall enough to show shop header + items + claim QR without looking cropped */
+  height: min(70vh, 36rem);
+}
+
+.pos-sales-bill-detail .pos-receipt-paper-wrap--compact .pos-receipt-paper--print-parity .pos-print-doc-frame {
+  height: min(72vh, 40rem);
 }
 
 .pos-session-print-docs {

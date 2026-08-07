@@ -412,10 +412,15 @@ export type PosSale = {
   /** Optional CRM — absent on bills without member */
   memberId?: string;
   memberPhone?: string;
+  /** Display name on slip (nPos) */
+  memberName?: string;
+  memberPhoneDisplay?: string;
   pointsEarned?: number;
   pointsRedeemed?: number;
   redeemBaht?: number;
   ledgerEntryId?: string;
+  /** Optional staff label on paper when present */
+  staffName?: string;
   /** Receipt QR claim (R0+) — issued from BOH experiment / later print */
   claimToken?: string;
   claimTokenExpiresAt?: number;

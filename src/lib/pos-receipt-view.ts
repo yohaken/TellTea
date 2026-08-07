@@ -90,6 +90,8 @@ export function localReceiptToPrintPayload(
     createdAt: receipt.createdAt,
     customerName: receipt.customerName?.trim() || undefined,
     customerPhone: receipt.customerPhone?.trim() || undefined,
+    memberName: receipt.memberName?.trim() || undefined,
+    memberPhone: receipt.memberPhone?.trim() || undefined,
     staffName,
     staffId: staffId || undefined,
     receiptFooterNote: shop.receiptFooterNote,

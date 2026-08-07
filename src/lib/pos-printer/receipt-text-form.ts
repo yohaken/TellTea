@@ -184,13 +184,21 @@ export function buildUnifiedReceiptText(
   out.push(doubleRule(width));
   out.push(pairRow("ยอดสุทธิ:", formatMoney(data.total), width));
   out.push(doubleRule(width));
-  out.push(pairRow("ชำระ", paymentLabel(data.paymentMethod), width));
-  if (data.paymentMethod === "cash") {
-    out.push(pairRow("เงินสด", formatMoney(data.cashReceived || 0), width));
-    out.push(pairRow("เงินทอน", formatMoney(data.change || 0), width));
+  if (data.total > 0.009) {
+    out.push(pairRow("ชำระ", paymentLabel(data.paymentMethod), width));
+    if (data.paymentMethod === "cash") {
+      out.push(pairRow("เงินสด", formatMoney(data.cashReceived || 0), width));
+      out.push(pairRow("เงินทอน", formatMoney(data.change || 0), width));
+    }
   }
   if (data.pointsEarned && data.pointsEarned > 0) {
     out.push(pairRow("แต้มที่ได้", `+${data.pointsEarned}`, width));
+  }
+  const memberName = (data.memberName || "").trim();
+  const memberPhone = (data.memberPhone || "").trim();
+  if (memberName || memberPhone) {
+    const mem = `สมาชิก: ${memberName || "สมาชิก"}${memberPhone ? ` · ${memberPhone}` : ""}`;
+    for (const part of wrap(mem, width)) out.push(part);
   }
   if (data.orderNotes?.trim()) {
     out.push(rule(width));

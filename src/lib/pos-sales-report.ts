@@ -153,6 +153,12 @@ function mapPosSale(id: string, data: Record<string, unknown>): PosSale {
     ...(typeof data.memberPhone === "string" && data.memberPhone.trim()
       ? { memberPhone: data.memberPhone.trim() }
       : {}),
+    ...(typeof data.memberName === "string" && data.memberName.trim()
+      ? { memberName: data.memberName.trim() }
+      : {}),
+    ...(typeof data.memberPhoneDisplay === "string" && data.memberPhoneDisplay.trim()
+      ? { memberPhoneDisplay: data.memberPhoneDisplay.trim() }
+      : {}),
     ...(typeof data.pointsEarned === "number" && data.pointsEarned > 0
       ? { pointsEarned: data.pointsEarned }
       : {}),
@@ -160,6 +166,23 @@ function mapPosSale(id: string, data: Record<string, unknown>): PosSale {
       ? { pointsRedeemed: data.pointsRedeemed }
       : {}),
     ...(redeemBaht > 0 ? { redeemBaht } : {}),
+    ...(typeof data.claimToken === "string" && data.claimToken.trim()
+      ? { claimToken: data.claimToken.trim() }
+      : {}),
+    ...(typeof data.claimTokenExpiresAt === "number"
+      ? { claimTokenExpiresAt: data.claimTokenExpiresAt }
+      : {}),
+    ...(typeof data.claimStatus === "string" && data.claimStatus.trim()
+      ? { claimStatus: data.claimStatus.trim() }
+      : {}),
+    ...(typeof data.claimedAt === "number" ? { claimedAt: data.claimedAt } : {}),
+    ...(typeof data.claimedByMemberId === "string" && data.claimedByMemberId.trim()
+      ? { claimedByMemberId: data.claimedByMemberId.trim() }
+      : {}),
+    ...(typeof data.pointsClaimed === "number" ? { pointsClaimed: data.pointsClaimed } : {}),
+    ...(typeof data.staffName === "string" && data.staffName.trim()
+      ? { staffName: data.staffName.trim() }
+      : {}),
     cashReceived: typeof data.cashReceived === "number" ? data.cashReceived : 0,
     change: typeof data.change === "number" ? data.change : 0,
     ledgerEntryId: typeof data.ledgerEntryId === "string" ? data.ledgerEntryId : undefined,

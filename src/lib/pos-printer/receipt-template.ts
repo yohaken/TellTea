@@ -308,6 +308,12 @@ export function unifiedReceiptStyles(layout: PrinterKindProfile, cutMode: PosPri
       font-size: ${layout.metaFontPx}px;
       color: #555;
     }
+    .member {
+      margin-top: 6px;
+      font-size: ${layout.metaFontPx}px;
+      color: #222;
+      word-break: break-word;
+    }
     .claim-qr {
       margin-top: 10px;
       text-align: center;
@@ -389,6 +395,15 @@ export function buildUnifiedReceiptBody(data: ReceiptPrintPayload, layout: Print
     ? `<div class="customer">${escapeReceiptHtml(customerParts.join(" · "))}</div>`
     : "";
 
+  const memberName = data.memberName?.trim() || "";
+  const memberPhone = data.memberPhone?.trim() || "";
+  const memberBlock =
+    memberName || memberPhone
+      ? `<div class="member">${escapeReceiptHtml(
+          `สมาชิก: ${memberName || "สมาชิก"}${memberPhone ? ` · ${memberPhone}` : ""}`,
+        )}</div>`
+      : "";
+
   const vatRow =
     data.vatBaht != null && data.vatBaht > 0
       ? `<div class="total-row"><span>VAT</span><span>${formatMoney(data.vatBaht)}</span></div>`
@@ -399,6 +414,7 @@ export function buildUnifiedReceiptBody(data: ReceiptPrintPayload, layout: Print
       : "";
 
   const footerNote = (data.receiptFooterNote || "ขอบคุณที่อุดหนุน").trim();
+  const showTender = data.total > 0.009;
 
   const claimQrSrc = (data.claimQrDataUrl || "").trim();
   const claimUrl = (data.claimUrl || "").trim();
@@ -408,7 +424,7 @@ export function buildUnifiedReceiptBody(data: ReceiptPrintPayload, layout: Print
       ${
         claimQrSrc
           ? `<img src="${escapeReceiptHtml(claimQrSrc)}" alt="QR สะสมแต้ม" width="${compact ? 112 : 132}" height="${compact ? 112 : 132}" />`
-          : `<div class="claim-qr-invite">${escapeReceiptHtml(claimUrl)}</div>`
+          : ""
       }
       <div class="claim-qr-invite">สแกนสะสมแต้ม</div>
     </div>`
@@ -439,15 +455,20 @@ export function buildUnifiedReceiptBody(data: ReceiptPrintPayload, layout: Print
       <div class="total-row grand"><span>ยอดสุทธิ:</span><span>${formatMoney(data.total)}</span></div>
       <hr class="rule double" />
     </div>
-    <div class="payment">
+    ${
+      showTender
+        ? `<div class="payment">
       <div class="total-row"><span>ชำระ</span><span>${escapeReceiptHtml(paymentLabel(data.paymentMethod))}</span></div>
       ${cashRows}
-      ${
-        data.pointsEarned && data.pointsEarned > 0
-          ? `<div class="total-row"><span>แต้มที่ได้</span><span>+${data.pointsEarned}</span></div>`
-          : ""
-      }
-    </div>
+    </div>`
+        : ""
+    }
+    ${
+      data.pointsEarned && data.pointsEarned > 0
+        ? `<div class="total-row"><span>แต้มที่ได้</span><span>+${data.pointsEarned}</span></div>`
+        : ""
+    }
+    ${memberBlock}
     ${notesBlock}
     ${claimBlock}
     <div class="footer">${escapeReceiptHtml(footerNote)}</div>
