@@ -54,7 +54,7 @@ const smoke = read("scripts/smoke-hosting-export.mjs");
 assert.match(smoke, /"claim"/);
 
 const version = read("src/lib/version.ts");
-assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 728);
+assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 729);
 
 // Must not ship nPos print / APK bump for R0–R2
 assert.equal(
