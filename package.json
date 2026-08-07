@@ -17,6 +17,7 @@
     "test:members-boh-receipt-qr": "node scripts/test-members-boh-receipt-qr.mjs",
     "test:members-boh-slip-parity": "node scripts/test-members-boh-slip-parity.mjs",
     "test:members-npos-redeem-confirm": "node scripts/test-members-npos-redeem-confirm.mjs",
+    "test:npos-member-pay-bar": "node scripts/test-npos-member-pay-bar.mjs",
     "test:members-p6-gate": "node scripts/test-members-p6-gate.mjs",
     "test:production-staff-month": "node scripts/test-production-staff-month.mjs",
     "test:preview-staff-identity": "node scripts/test-preview-staff-identity.mjs",

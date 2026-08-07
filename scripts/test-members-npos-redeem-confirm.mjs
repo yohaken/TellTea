@@ -27,13 +27,13 @@ assert.match(strings, /redeem_use_max_fmt/);
 assert.match(strings, /redeem_balance_fmt/);
 
 const gradle = read("npos-telltea/app/build.gradle");
-assert.ok(Number(gradle.match(/versionCode\s+(\d+)/)[1]) >= 140);
+assert.ok(Number(gradle.match(/versionCode\s+(\d+)/)[1]) >= 141);
 
 const pin = read("src/lib/npos-apk-release.ts");
-assert.ok(Number(pin.match(/NPOS_SYSTEM_VERSION_CODE = (\d+)/)[1]) >= 140);
+assert.ok(Number(pin.match(/NPOS_SYSTEM_VERSION_CODE = (\d+)/)[1]) >= 141);
 
 const whats = read("npos-telltea/app/src/main/java/app/telltea/npos/update/WhatsNewCatalog.java");
-assert.match(whats, /versionCode == 140/);
+assert.match(whats, /versionCode == 141/);
 
 const ux = read("docs/members-npos-pay-ux.md");
 assert.match(ux, /1b คอนเฟิร์มแต้ม/);

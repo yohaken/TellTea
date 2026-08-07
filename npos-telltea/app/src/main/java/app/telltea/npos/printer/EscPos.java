@@ -91,7 +91,7 @@ public final class EscPos {
     return concat(parts);
   }
 
-  /** Esc/POS QR Code: Model 2 · module size 5 · ECC M — medium footprint on 58mm. */
+  /** Esc/POS QR Code: Model 2 · module size 4 · ECC M — compact on 58mm. */
   static void appendClaimQr(List<byte[]> parts, String data) {
     if (data == null || data.isEmpty()) return;
     byte[] raw = data.getBytes(StandardCharsets.UTF_8);
@@ -99,8 +99,8 @@ public final class EscPos {
     parts.add(new byte[] {0x1B, 0x61, 0x01});
     // GS ( k 4 0 49 65 50 0 — model 2
     parts.add(new byte[] {0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00});
-    // GS ( k 3 0 49 67 n — module size (3–16); 5 ≈ medium
-    parts.add(new byte[] {0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x05});
+    // GS ( k 3 0 49 67 n — module size (3–16); 4 = smaller paper footprint
+    parts.add(new byte[] {0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x04});
     // GS ( k 3 0 49 69 n — error correction M (49)
     parts.add(new byte[] {0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x31});
     // Store: GS ( k pL pH 49 80 48 + data

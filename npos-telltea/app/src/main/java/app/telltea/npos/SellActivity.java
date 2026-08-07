@@ -396,6 +396,10 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
     if (payAllButton != null) {
       payAllButton.setMinimumHeight(uiScale.payPrimaryMinPx);
     }
+    if (memberButton != null) {
+      memberButton.setMinimumHeight(uiScale.payPrimaryMinPx);
+      memberButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.max(12f, uiScale.bodySp - 1f));
+    }
     if (holdBillButton != null) {
       holdBillButton.setMinimumHeight(uiScale.payPrimaryMinPx);
       holdBillButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.max(12f, uiScale.bodySp - 1f));
@@ -425,6 +429,7 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
       xReport.setVisibility(View.GONE);
     }
     styleCartTextAction(findViewById(R.id.discountButton), false);
+    styleSoftCartAction(memberButton);
     styleSoftCartAction(holdBillButton);
     styleCartTextAction(findViewById(R.id.restoreHoldButton), false);
     styleCartTextAction(findViewById(R.id.clearCartButton), true);
@@ -2669,6 +2674,7 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
         memberButton.setText(hasMember() ? R.string.member_remove : R.string.sell_hub_member);
       }
     }
+    applyPayBarWeights(on);
     if (redeemButton != null) {
       boolean showRedeem = on && hasMember() && memberPointsBalance > 0 && !cart.isEmpty();
       redeemButton.setVisibility(showRedeem ? View.VISIBLE : View.GONE);
@@ -2697,6 +2703,24 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
       } else {
         memberStatusLabel.setVisibility(View.GONE);
         memberStatusLabel.setText("");
+      }
+    }
+  }
+
+  /** Pay bar: ชำระ | สมาชิก | บันทึก when CRM on · else ชำระ | บันทึก. */
+  private void applyPayBarWeights(boolean memberVisible) {
+    if (payAllButton != null) {
+      LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) payAllButton.getLayoutParams();
+      if (lp != null) {
+        lp.weight = memberVisible ? 70f : 85f;
+        payAllButton.setLayoutParams(lp);
+      }
+    }
+    if (holdBillButton != null) {
+      LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) holdBillButton.getLayoutParams();
+      if (lp != null) {
+        lp.weight = 15f;
+        holdBillButton.setLayoutParams(lp);
       }
     }
   }
