@@ -140,7 +140,6 @@ function ClaimForm() {
           <p className="muted" style={{ marginTop: "0.75rem" }}>
             บิล {preview.billNo} · ยอด {preview.total} บาท →{" "}
             <strong>{preview.pointsPreview}</strong> แต้ม
-            {typeof preview.earnPercent === "number" ? ` (${preview.earnPercent}%)` : ""}
           </p>
         ) : null}
 

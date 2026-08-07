@@ -55,6 +55,14 @@ function formatWhen(ms: number) {
   }).format(new Date(ms));
 }
 
+function phoneLabel(m: ShopMember) {
+  try {
+    return formatPhoneDisplay(m.phone);
+  } catch {
+    return m.phone || m.phoneDigits;
+  }
+}
+
 function MembersView() {
   const { staff, actorId } = useAuth();
   const router = useRouter();
@@ -74,13 +82,10 @@ function MembersView() {
   const [showAdd, setShowAdd] = useState(false);
   const [addPhone, setAddPhone] = useState("");
   const [addName, setAddName] = useState("");
-  const [addBirthday, setAddBirthday] = useState("");
-  const [addNote, setAddNote] = useState("");
   const [saving, setSaving] = useState(false);
 
   const [selected, setSelected] = useState<ShopMember | null>(null);
   const [editName, setEditName] = useState("");
-  const [editBirthday, setEditBirthday] = useState("");
   const [editNote, setEditNote] = useState("");
   const [ledger, setLedger] = useState<MemberLedgerEntry[]>([]);
   const [ledgerLoading, setLedgerLoading] = useState(false);
@@ -93,7 +98,6 @@ function MembersView() {
   const [setBonus, setSetBonus] = useState("0");
   const [setPublic, setSetPublic] = useState(false);
   const [setReceiptClaim, setSetReceiptClaim] = useState(false);
-  const [setEarnPercent, setSetEarnPercent] = useState("1");
   const [setClaimTtl, setSetClaimTtl] = useState("30");
 
   const [todaySales, setTodaySales] = useState<PosSale[]>([]);
@@ -115,7 +119,6 @@ function MembersView() {
       setSetBonus(String(cfg.signupBonusPoints));
       setSetPublic(cfg.publicSignupEnabled);
       setSetReceiptClaim(cfg.receiptClaimEnabled);
-      setSetEarnPercent(String(cfg.earnPercent));
       setSetClaimTtl(String(cfg.claimTokenTtlDays));
       setSelected((prev) => {
         if (!prev) return null;
@@ -129,9 +132,7 @@ function MembersView() {
   }, [canHub]);
 
   useEffect(() => {
-    if (staff && !canHub) {
-      router.replace("/ledger/");
-    }
+    if (staff && !canHub) router.replace("/ledger/");
   }, [staff, canHub, router]);
 
   useEffect(() => {
@@ -145,7 +146,6 @@ function MembersView() {
       return;
     }
     setEditName(selected.displayName);
-    setEditBirthday(selected.birthday);
     setEditNote(selected.note);
     let cancelled = false;
     setLedgerLoading(true);
@@ -187,21 +187,13 @@ function MembersView() {
     setMsg(null);
     try {
       const created = await createMember(
-        {
-          phone: addPhone,
-          displayName: addName,
-          birthday: addBirthday,
-          note: addNote,
-          source: "staff_boh",
-        },
+        { phone: addPhone, displayName: addName, source: "staff_boh" },
         actorId,
       );
       setShowAdd(false);
       setAddPhone("");
       setAddName("");
-      setAddBirthday("");
-      setAddNote("");
-      setMsg(`สมัครแล้ว · ${created.displayName} · บัตร ${created.cardNo}`);
+      setMsg(`สมัครแล้ว · ${created.displayName}`);
       await reload();
       setSelected(created);
     } catch (err) {
@@ -220,15 +212,11 @@ function MembersView() {
     try {
       const next = await updateMember(
         selected.id,
-        {
-          displayName: editName,
-          birthday: editBirthday,
-          note: editNote,
-        },
+        { displayName: editName, note: editNote },
         actorId,
       );
       setSelected(next);
-      setMsg("บันทึกโปรไฟล์แล้ว");
+      setMsg("บันทึกแล้ว");
       await reload();
     } catch (err) {
       setError(mapFirestoreError(err, "บันทึกโปรไฟล์"));
@@ -244,13 +232,9 @@ function MembersView() {
     setMsg(null);
     try {
       const nextStatus = selected.status === "active" ? "suspended" : "active";
-      const next = await updateMember(
-        selected.id,
-        { status: nextStatus },
-        actorId,
-      );
+      const next = await updateMember(selected.id, { status: nextStatus }, actorId);
       setSelected(next);
-      setMsg(nextStatus === "active" ? "เปิดใช้บัตรแล้ว" : "ระงับบัตรแล้ว");
+      setMsg(nextStatus === "active" ? "เปิดใช้แล้ว" : "ระงับแล้ว");
       await reload();
     } catch (err) {
       setError(mapFirestoreError(err, "เปลี่ยนสถานะ"));
@@ -264,7 +248,7 @@ function MembersView() {
     if (!canAdjust || !actorId || !selected) return;
     const delta = Math.trunc(Number(pointsDelta));
     if (!Number.isFinite(delta) || !delta) {
-      setError("ใส่จำนวนแต้มเป็นจำนวนเต็มที่ไม่เป็นศูนย์");
+      setError("ใส่จำนวนแต้มที่ไม่เป็นศูนย์");
       return;
     }
     setSaving(true);
@@ -272,20 +256,14 @@ function MembersView() {
     setMsg(null);
     try {
       const next = await adjustMemberPoints(
-        {
-          memberId: selected.id,
-          delta,
-          reason: "adjust",
-          note: pointsNote,
-        },
+        { memberId: selected.id, delta, reason: "adjust", note: pointsNote },
         actorId,
       );
       setSelected(next);
       setPointsDelta("");
       setPointsNote("");
-      setMsg(`ปรับแต้มแล้ว · ยอด ${next.pointsBalance}`);
-      const rows = await listMemberLedger(next.id);
-      setLedger(rows);
+      setMsg(`แต้ม ${next.pointsBalance}`);
+      setLedger(await listMemberLedger(next.id));
       await reload();
     } catch (err) {
       setError(mapFirestoreError(err, "ปรับแต้ม"));
@@ -300,18 +278,13 @@ function MembersView() {
     const baht = Number(setBaht);
     const redeem = Number(setRedeem);
     const bonus = Number(setBonus);
-    const earnPercent = Number(setEarnPercent);
     const claimTtl = Number(setClaimTtl);
     if (!(baht > 0) || !(redeem > 0) || !(bonus >= 0) || !Number.isFinite(bonus)) {
-      setError("ค่าตั้งค่าแต้มไม่ถูกต้อง");
-      return;
-    }
-    if (!(earnPercent > 0) || earnPercent > 100 || !Number.isFinite(earnPercent)) {
-      setError("% สะสมจากสลิปต้องอยู่ระหว่าง 0–100");
+      setError("ค่าตั้งค่าไม่ถูกต้อง");
       return;
     }
     if (!(claimTtl >= 1) || claimTtl > 365 || !Number.isFinite(claimTtl)) {
-      setError("อายุลิงก์เคลมต้องเป็น 1–365 วัน");
+      setError("อายุลิงก์ 1–365 วัน");
       return;
     }
     setSaving(true);
@@ -326,13 +299,12 @@ function MembersView() {
           signupBonusPoints: Math.floor(bonus),
           publicSignupEnabled: setPublic,
           receiptClaimEnabled: setReceiptClaim,
-          earnPercent,
           claimTokenTtlDays: Math.floor(claimTtl),
         },
         actorId,
       );
       setSettings(next);
-      setMsg("บันทึกตั้งค่าสมาชิกแล้ว");
+      setMsg("บันทึกแล้ว");
     } catch (err) {
       setError(mapFirestoreError(err, "บันทึกตั้งค่า"));
     } finally {
@@ -356,13 +328,8 @@ function MembersView() {
       const issued = await issueReceiptClaimForSale(id, actorId, { forceNewToken: forceNew });
       setClaimSaleId(issued.saleId);
       setClaimIssue(issued);
-      const qr = await claimQrDataUrl(issued.claimUrl);
-      setClaimQr(qr);
-      setMsg(
-        issued.reused
-          ? `ใช้ลิงก์เดิม · บิล ${issued.billNo} · ~${issued.pointsPreview} แต้ม`
-          : `ออก QR แล้ว · บิล ${issued.billNo} · ~${issued.pointsPreview} แต้ม`,
-      );
+      setClaimQr(await claimQrDataUrl(issued.claimUrl));
+      setMsg(`บิล ${issued.billNo} · ~${issued.pointsPreview} แต้ม`);
     } catch (err) {
       setError(mapFirestoreError(err, "ออก QR เคลม"));
     } finally {
@@ -371,137 +338,105 @@ function MembersView() {
   }
 
   return (
-    <div className="staff-hub members-hub">
-      <header className="staff-hub-head">
-        <div>
-          <h1 className="staff-hub-title">สมาชิก / แต้ม</h1>
-          <p className="staff-hub-sub muted">
-            บัตรสมาชิก · สะสมแต้ม · สาขาเดียว
-            {settings && !settings.enabled ? " · ระบบปิดชั่วคราว" : ""}
-            {settings?.receiptClaimEnabled ? " · ทดลอง QR สลิป" : ""}
-          </p>
-        </div>
+    <div className="staff-hub members-hub members-hub--slim">
+      <header className="staff-hub-head members-slim-head">
+        <h1 className="staff-hub-title">
+          สมาชิก
+          {settings && !settings.enabled ? (
+            <span className="members-slim-pill">ปิด</span>
+          ) : null}
+        </h1>
         <div className="staff-hub-head-actions">
-          <button
-            type="button"
-            className={tab === "list" ? "primary-btn staff-btn-sm" : "ghost-btn staff-btn-sm"}
-            onClick={() => setTab("list")}
-          >
-            รายชื่อ
-          </button>
-          <button
-            type="button"
-            className={tab === "claim" ? "primary-btn staff-btn-sm" : "ghost-btn staff-btn-sm"}
-            onClick={() => setTab("claim")}
-          >
-            QR สลิป
-          </button>
-          <button
-            type="button"
-            className={
-              tab === "settings" ? "primary-btn staff-btn-sm" : "ghost-btn staff-btn-sm"
-            }
-            onClick={() => setTab("settings")}
-          >
-            ตั้งค่า
-          </button>
+          {(
+            [
+              ["list", "รายชื่อ"],
+              ["claim", "QR สลิป"],
+              ["settings", "ตั้งค่า"],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              className={tab === key ? "primary-btn staff-btn-sm" : "ghost-btn staff-btn-sm"}
+              onClick={() => setTab(key)}
+            >
+              {label}
+            </button>
+          ))}
           {tab === "list" && canManage ? (
             <button
               type="button"
               className="primary-btn staff-btn-sm"
               onClick={() => {
-                setShowAdd(true);
+                setShowAdd((v) => !v);
                 setMsg(null);
                 setError(null);
               }}
             >
-              สมัครสมาชิก
+              {showAdd ? "ปิดฟอร์ม" : "+ สมัคร"}
             </button>
           ) : null}
         </div>
       </header>
 
-      {error ? <p className="staff-hub-msg" style={{ color: "var(--danger, #b42318)" }}>{error}</p> : null}
-      {msg ? <p className="staff-hub-msg">{msg}</p> : null}
+      {error ? (
+        <p className="staff-hub-msg members-slim-msg" style={{ color: "var(--danger, #b42318)" }}>
+          {error}
+        </p>
+      ) : null}
+      {msg ? <p className="staff-hub-msg members-slim-msg">{msg}</p> : null}
 
       {tab === "claim" ? (
-        <section className="staff-hub-panel">
-          <div className="staff-hub-panel-head">
-            <h2 className="staff-hub-panel-title">ออก QR เคลมจากบิล (ทดลอง)</h2>
-            <p className="staff-hub-panel-hint muted">
-              เลือกบิลจริงหรือใส่รหัสบิล → สแกนด้วยมือถือคุณเอง · ยังไม่พิมพ์ที่เคาน์เตอร์
-            </p>
-          </div>
-          <p className="members-claim-banner">
-            โหมดทดลองเจ้าของร้าน · อย่าเปิดขายจริงให้ลูกค้าจนกว่าจะทดลองครบ
+        <section className="staff-hub-panel members-slim-panel">
+          <p className="members-slim-hint muted">
+            ทดลอง · ออก QR จากบิล → สแกนเอง · ยังไม่พิมพ์ที่เครื่องขาย
+            {!settings?.enabled || !settings.receiptClaimEnabled
+              ? " · เปิดธงที่ตั้งค่าก่อน"
+              : ""}
           </p>
-          {!settings?.enabled || !settings.receiptClaimEnabled ? (
-            <p className="muted">
-              เปิด «ระบบสมาชิก» และ «ทดลองเคลมจาก QR สลิป» ที่แท็บตั้งค่าก่อน
-            </p>
-          ) : null}
           <form
-            className="staff-compact-form-grid"
+            className="members-slim-inline"
             onSubmit={(e) => {
               e.preventDefault();
               void onIssueClaim(claimSaleId);
             }}
           >
-            <label className="field" style={{ gridColumn: "1 / -1" }}>
-              <span>รหัสบิล (saleId)</span>
-              <input
-                type="text"
-                value={claimSaleId}
-                onChange={(e) => setClaimSaleId(e.target.value)}
-                placeholder="วางรหัสบิลจาก /pos-sales หรือเลือกด้านล่าง"
-                disabled={!canManage || saving}
-              />
-            </label>
+            <input
+              type="text"
+              value={claimSaleId}
+              onChange={(e) => setClaimSaleId(e.target.value)}
+              placeholder="saleId หรือเลือกบิลด้านล่าง"
+              disabled={!canManage || saving}
+            />
             {canManage ? (
-              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                <button type="submit" className="primary-btn" disabled={saving}>
-                  {saving ? "กำลังออก..." : "ออก QR / ลิงก์"}
-                </button>
-                {claimIssue ? (
-                  <button
-                    type="button"
-                    className="ghost-btn"
-                    disabled={saving}
-                    onClick={() => void onIssueClaim(claimIssue.saleId, true)}
-                  >
-                    ออกโทเคนใหม่
-                  </button>
-                ) : null}
-              </div>
-            ) : (
-              <p className="muted">ดูอย่างเดียว</p>
-            )}
+              <button type="submit" className="primary-btn staff-btn-sm" disabled={saving}>
+                ออก QR
+              </button>
+            ) : null}
           </form>
 
           {claimIssue ? (
-            <div className="members-claim-qr">
-              <p>
-                บิล <strong>{claimIssue.billNo}</strong> · ยอด {claimIssue.total} บาท →{" "}
-                <strong>{claimIssue.pointsPreview}</strong> แต้ม
+            <div className="members-claim-qr members-claim-qr--slim">
+              <p className="members-slim-line">
+                {claimIssue.billNo} · {claimIssue.total}฿ → <strong>{claimIssue.pointsPreview}</strong>{" "}
+                แต้ม
               </p>
               {claimQr ? <img src={claimQr} alt="QR เคลมแต้ม" /> : null}
-              <p className="muted" style={{ wordBreak: "break-all" }}>
-                <code>{claimIssue.claimUrl}</code>
-              </p>
-              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              <code className="members-slim-code">{claimIssue.claimUrl}</code>
+              <div className="members-slim-actions">
                 <button
                   type="button"
                   className="ghost-btn staff-btn-sm"
                   onClick={async () => {
                     try {
                       await navigator.clipboard.writeText(claimIssue.claimUrl);
-                      setMsg("คัดออกลิงก์แล้ว");
+                      setMsg("คัดลอกแล้ว");
                     } catch {
                       setError("คัดลอกไม่ได้");
                     }
                   }}
                 >
-                  คัดออกลิงก์
+                  คัดลอก
                 </button>
                 <a
                   className="ghost-btn staff-btn-sm"
@@ -509,75 +444,81 @@ function MembersView() {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  เปิดหน้าเคลม
+                  เปิด
                 </a>
+                <button
+                  type="button"
+                  className="ghost-btn staff-btn-sm"
+                  disabled={saving}
+                  onClick={() => void onIssueClaim(claimIssue.saleId, true)}
+                >
+                  โทเคนใหม่
+                </button>
               </div>
-              <p className="muted">
-                หมดอายุ{" "}
-                {new Intl.DateTimeFormat("th-TH", {
-                  dateStyle: "medium",
-                  timeStyle: "short",
-                }).format(new Date(claimIssue.expiresAt))}
-              </p>
             </div>
           ) : null}
 
-          <div style={{ marginTop: "1.25rem" }}>
-            <h3 className="staff-hub-panel-title" style={{ fontSize: "1rem" }}>
-              บิลวันนี้ (เลือกเพื่อออก QR)
-            </h3>
-            {todaySales.length === 0 ? (
-              <p className="muted">ยังไม่มีบิลวันนี้ — ใส่รหัสบิลเองได้</p>
-            ) : (
-              <ul className="staff-hub-list">
-                {todaySales.slice(0, 40).map((s) => (
-                  <li key={s.id}>
-                    <button
-                      type="button"
-                      className="ghost-btn"
-                      style={{ width: "100%", textAlign: "left" }}
-                      disabled={!canManage || saving || s.claimStatus === "claimed"}
-                      onClick={() => {
-                        setClaimSaleId(s.id);
-                        void onIssueClaim(s.id);
-                      }}
-                    >
-                      <strong>{s.billNo}</strong> · {s.total} บาท ·{" "}
-                      {formatWhen(s.createdAt)}
-                      {s.claimStatus === "claimed"
-                        ? " · เคลมแล้ว"
-                        : s.claimToken
-                          ? " · มีโทเคน"
-                          : ""}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
+          <div className="table-wrap members-slim-table-wrap">
+            <table className="sheet-table sheet-table--dense members-slim-table">
+              <thead>
+                <tr>
+                  <th>บิล</th>
+                  <th className="num">ยอด</th>
+                  <th>เวลา</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {todaySales.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="muted">
+                      ยังไม่มีบิลวันนี้
+                    </td>
+                  </tr>
+                ) : (
+                  todaySales.slice(0, 40).map((s) => (
+                    <tr key={s.id}>
+                      <td>
+                        <strong>{s.billNo}</strong>
+                        {s.claimStatus === "claimed" ? (
+                          <span className="muted"> · เคลมแล้ว</span>
+                        ) : null}
+                      </td>
+                      <td className="num">{s.total}</td>
+                      <td className="muted">{formatWhen(s.createdAt)}</td>
+                      <td className="num">
+                        <button
+                          type="button"
+                          className="ghost-btn staff-btn-sm"
+                          disabled={!canManage || saving || s.claimStatus === "claimed"}
+                          onClick={() => {
+                            setClaimSaleId(s.id);
+                            void onIssueClaim(s.id);
+                          }}
+                        >
+                          QR
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </section>
       ) : tab === "settings" ? (
-        <section className="staff-hub-panel">
-          <div className="staff-hub-panel-head">
-            <h2 className="staff-hub-panel-title">กฎแต้มร้าน</h2>
-            <p className="staff-hub-panel-hint muted">
-              กฎแต้มร้าน · ทดลอง QR สลิป (R0) ค่าเริ่มปิด · ยังไม่กระทบหน้าร้าน
-            </p>
-          </div>
-          {!canManage ? (
-            <p className="muted">ดูอย่างเดียว — ต้องมีสิทธิ์จัดการสมาชิกถึงจะแก้ได้</p>
-          ) : null}
-          <form className="staff-compact-form-grid" onSubmit={onSaveSettings}>
-            <label className="field">
-              <span>เปิดระบบสมาชิก</span>
+        <section className="staff-hub-panel members-slim-panel">
+          <form className="members-slim-settings" onSubmit={onSaveSettings}>
+            <label className="members-slim-check">
               <input
                 type="checkbox"
                 checked={setEnabled}
                 disabled={!canManage || saving}
                 onChange={(e) => setSetEnabled(e.target.checked)}
               />
+              <span>เปิดระบบสมาชิก</span>
             </label>
-            <label className="field">
+            <label>
               <span>ทุกกี่บาท = 1 แต้ม</span>
               <input
                 type="number"
@@ -589,8 +530,8 @@ function MembersView() {
                 required
               />
             </label>
-            <label className="field">
-              <span>แต้มต่อ 1 บาทส่วนลด (M3)</span>
+            <label>
+              <span>แต้มต่อ 1฿ ส่วนลด</span>
               <input
                 type="number"
                 min={1}
@@ -601,8 +542,8 @@ function MembersView() {
                 required
               />
             </label>
-            <label className="field">
-              <span>โบนัสแต้มสมัครใหม่</span>
+            <label>
+              <span>โบนัสสมัคร</span>
               <input
                 type="number"
                 min={0}
@@ -613,29 +554,16 @@ function MembersView() {
                 required
               />
             </label>
-            <label className="field">
-              <span>ทดลองเคลมจาก QR สลิป (ยังไม่ขายจริง)</span>
+            <label className="members-slim-check">
               <input
                 type="checkbox"
                 checked={setReceiptClaim}
                 disabled={!canManage || saving}
                 onChange={(e) => setSetReceiptClaim(e.target.checked)}
               />
+              <span>ทดลอง QR สลิป (ใช้สูตรบาท/แต้มด้านบน)</span>
             </label>
-            <label className="field">
-              <span>% ยอดสุทธิ → แต้ม (สลิป)</span>
-              <input
-                type="number"
-                min={0.01}
-                max={100}
-                step={0.1}
-                value={setEarnPercent}
-                disabled={!canManage || saving}
-                onChange={(e) => setSetEarnPercent(e.target.value)}
-                required
-              />
-            </label>
-            <label className="field">
+            <label>
               <span>อายุลิงก์เคลม (วัน)</span>
               <input
                 type="number"
@@ -648,183 +576,111 @@ function MembersView() {
                 required
               />
             </label>
-            <p className="muted" style={{ gridColumn: "1 / -1" }}>
-              โหมดทดลอง: เปิดธงด้านบนแล้วออก QR จากแท็บ «QR สลิป» — ยังไม่พิมพ์ที่เครื่องขาย
-            </p>
-            <label className="field">
-              <span>เปิดสมัครผ่าน QR (หน้า /join)</span>
+            <label className="members-slim-check">
               <input
                 type="checkbox"
                 checked={setPublic}
                 disabled={!canManage || saving}
                 onChange={(e) => setSetPublic(e.target.checked)}
               />
+              <span>สมัครผ่าน /join</span>
             </label>
             {settings?.publicSignupEnabled && settings.publicSignupToken ? (
-              <p className="muted" style={{ gridColumn: "1 / -1" }}>
-                ลิงก์สมัคร:{" "}
-                <code style={{ wordBreak: "break-all" }}>
-                  {typeof window !== "undefined"
-                    ? `${window.location.origin}/join/?t=${settings.publicSignupToken}`
-                    : `/join/?t=${settings.publicSignupToken}`}
-                </code>
-              </p>
-            ) : (
-              <p className="muted" style={{ gridColumn: "1 / -1" }}>
-                เปิดช่องด้านบนแล้วกดบันทึก — ระบบจะสร้างโทเคนและลิงก์ให้
-              </p>
-            )}
-            {canManage ? (
-              <div>
-                <button type="submit" className="primary-btn" disabled={saving}>
-                  {saving ? "กำลังบันทึก..." : "บันทึกตั้งค่า"}
-                </button>
-              </div>
+              <code className="members-slim-code">
+                {typeof window !== "undefined"
+                  ? `${window.location.origin}/join/?t=${settings.publicSignupToken}`
+                  : `/join/?t=${settings.publicSignupToken}`}
+              </code>
             ) : null}
+            {canManage ? (
+              <button type="submit" className="primary-btn staff-btn-sm" disabled={saving}>
+                {saving ? "..." : "บันทึก"}
+              </button>
+            ) : (
+              <p className="muted">ดูอย่างเดียว</p>
+            )}
           </form>
         </section>
       ) : (
         <>
-          <div className="field" style={{ marginBottom: "0.75rem" }}>
-            <label>
-              <span className="sr-only">ค้นหา</span>
-              <input
-                type="search"
-                placeholder="ค้นหาเบอร์ · ชื่อ · เลขบัตร"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </label>
+          <div className="members-slim-toolbar">
+            <input
+              type="search"
+              placeholder="ค้นหาเบอร์ · ชื่อ · บัตร"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            <span className="muted members-slim-count">
+              {filtered.length}
+              {deferredQuery ? `/${members.length}` : ""}
+            </span>
           </div>
 
           {showAdd && canManage ? (
-            <section className="staff-hub-panel" style={{ marginBottom: "1rem" }}>
-              <div className="staff-hub-panel-head">
-                <h2 className="staff-hub-panel-title">สมัครสมาชิกใหม่</h2>
-              </div>
-              <form className="staff-compact-form-grid" onSubmit={onAdd}>
-                <label className="field">
-                  <span>เบอร์โทร *</span>
-                  <input
-                    type="tel"
-                    inputMode="tel"
-                    value={addPhone}
-                    onChange={(e) => setAddPhone(e.target.value)}
-                    placeholder="08x-xxx-xxxx"
-                    required
-                    disabled={saving}
-                  />
-                </label>
-                <label className="field">
-                  <span>ชื่อเรียก</span>
-                  <input
-                    type="text"
-                    value={addName}
-                    onChange={(e) => setAddName(e.target.value)}
-                    placeholder="ชื่อเล่น / ชื่อลูกค้า"
-                    disabled={saving}
-                  />
-                </label>
-                <label className="field">
-                  <span>วันเกิด</span>
-                  <input
-                    type="date"
-                    value={addBirthday}
-                    onChange={(e) => setAddBirthday(e.target.value)}
-                    disabled={saving}
-                  />
-                </label>
-                <label className="field">
-                  <span>หมายเหตุ</span>
-                  <input
-                    type="text"
-                    value={addNote}
-                    onChange={(e) => setAddNote(e.target.value)}
-                    disabled={saving}
-                  />
-                </label>
-                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                  <button type="submit" className="primary-btn" disabled={saving}>
-                    {saving ? "กำลังสมัคร..." : "บันทึกสมัคร"}
-                  </button>
-                  <button
-                    type="button"
-                    className="ghost-btn"
-                    disabled={saving}
-                    onClick={() => setShowAdd(false)}
-                  >
-                    ยกเลิก
-                  </button>
-                </div>
-              </form>
-            </section>
+            <form className="members-slim-inline members-slim-add" onSubmit={onAdd}>
+              <input
+                type="tel"
+                inputMode="tel"
+                value={addPhone}
+                onChange={(e) => setAddPhone(e.target.value)}
+                placeholder="เบอร์ *"
+                required
+                disabled={saving}
+              />
+              <input
+                type="text"
+                value={addName}
+                onChange={(e) => setAddName(e.target.value)}
+                placeholder="ชื่อ"
+                disabled={saving}
+              />
+              <button type="submit" className="primary-btn staff-btn-sm" disabled={saving}>
+                บันทึก
+              </button>
+            </form>
           ) : null}
 
           {loading ? (
-            <p className="staff-hub-loading muted">กำลังโหลด...</p>
+            <p className="muted">กำลังโหลด...</p>
           ) : (
             <div
-              style={{
-                display: "grid",
-                gap: "1rem",
-                gridTemplateColumns: selected ? "minmax(0, 1fr) minmax(0, 1.1fr)" : "1fr",
-              }}
-              className="members-hub-layout"
+              className={`members-hub-layout members-slim-layout${
+                selected ? " is-split" : ""
+              }`}
             >
-              <section className="staff-hub-panel">
-                <div className="staff-hub-panel-head">
-                  <h2 className="staff-hub-panel-title">
-                    รายชื่อ ({filtered.length}
-                    {deferredQuery ? ` / ${members.length}` : ""})
-                  </h2>
-                </div>
+              <section className="staff-hub-panel members-slim-panel">
                 {filtered.length === 0 ? (
-                  <p className="muted">ยังไม่มีสมาชิก{deferredQuery ? "ที่ตรงค้นหา" : ""}</p>
+                  <p className="muted">ยังไม่มีสมาชิก</p>
                 ) : (
-                  <div className="table-wrap">
-                    <table className="sheet-table sheet-table--dense">
+                  <div className="table-wrap members-slim-table-wrap">
+                    <table className="sheet-table sheet-table--dense members-slim-table">
                       <thead>
                         <tr>
-                          <th>ชื่อ</th>
-                          <th>เบอร์</th>
-                          <th>แต้ม</th>
-                          <th>สถานะ</th>
+                          <th>สมาชิก</th>
+                          <th className="num">แต้ม</th>
+                          <th></th>
                         </tr>
                       </thead>
                       <tbody>
                         {filtered.map((m) => (
                           <tr
                             key={m.id}
+                            className={selected?.id === m.id ? "is-selected" : undefined}
                             onClick={() => {
                               setSelected(m);
                               setMsg(null);
                               setError(null);
                             }}
-                            style={{
-                              cursor: "pointer",
-                              background:
-                                selected?.id === m.id
-                                  ? "rgba(0,0,0,0.04)"
-                                  : undefined,
-                            }}
                           >
                             <td>
                               <strong>{m.displayName || "—"}</strong>
-                              <div className="muted" style={{ fontSize: "0.85em" }}>
-                                {m.cardNo}
+                              <div className="muted members-slim-sub">
+                                {phoneLabel(m)}
+                                {m.status !== "active" ? " · ระงับ" : ""}
                               </div>
                             </td>
-                            <td>
-                              {(() => {
-                                try {
-                                  return formatPhoneDisplay(m.phone);
-                                } catch {
-                                  return m.phone || m.phoneDigits;
-                                }
-                              })()}
-                            </td>
-                            <td>{m.pointsBalance}</td>
-                            <td>{m.status === "active" ? "ใช้ได้" : "ระงับ"}</td>
+                            <td className="num">{m.pointsBalance}</td>
+                            <td className="muted members-slim-card">{m.cardNo}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -834,9 +690,15 @@ function MembersView() {
               </section>
 
               {selected ? (
-                <section className="staff-hub-panel">
-                  <div className="staff-hub-panel-head">
-                    <h2 className="staff-hub-panel-title">{selected.displayName}</h2>
+                <section className="staff-hub-panel members-slim-panel members-slim-detail">
+                  <div className="members-slim-detail-head">
+                    <div>
+                      <strong>{selected.displayName}</strong>
+                      <div className="muted members-slim-sub">
+                        {phoneLabel(selected)} · {selected.cardNo} ·{" "}
+                        {MEMBER_SOURCE_LABELS[selected.source]}
+                      </div>
+                    </div>
                     <button
                       type="button"
                       className="ghost-btn staff-btn-sm"
@@ -845,38 +707,22 @@ function MembersView() {
                       ปิด
                     </button>
                   </div>
-                  <p className="muted" style={{ marginTop: 0 }}>
-                    บัตร {selected.cardNo} ·{" "}
-                    {MEMBER_SOURCE_LABELS[selected.source]} · อัปเดต{" "}
-                    {formatWhen(selected.updatedAt)}
-                  </p>
-                  <p>
+
+                  <p className="members-slim-points">
                     <strong>{selected.pointsBalance}</strong> แต้ม
-                    <span className="muted">
-                      {" "}
-                      · สะสมรวม {selected.lifetimePointsEarned}
-                    </span>
+                    <span className="muted"> · รวม {selected.lifetimePointsEarned}</span>
                   </p>
 
-                  <form className="staff-compact-form-grid" onSubmit={onSaveProfile}>
-                    <label className="field">
-                      <span>ชื่อเรียก</span>
+                  <form className="members-slim-settings" onSubmit={onSaveProfile}>
+                    <label>
+                      <span>ชื่อ</span>
                       <input
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
                         disabled={!canManage || saving}
                       />
                     </label>
-                    <label className="field">
-                      <span>วันเกิด</span>
-                      <input
-                        type="date"
-                        value={editBirthday}
-                        onChange={(e) => setEditBirthday(e.target.value)}
-                        disabled={!canManage || saving}
-                      />
-                    </label>
-                    <label className="field">
+                    <label>
                       <span>หมายเหตุ</span>
                       <input
                         value={editNote}
@@ -885,100 +731,91 @@ function MembersView() {
                       />
                     </label>
                     {canManage ? (
-                      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                        <button type="submit" className="primary-btn" disabled={saving}>
-                          บันทึกโปรไฟล์
+                      <div className="members-slim-actions">
+                        <button type="submit" className="primary-btn staff-btn-sm" disabled={saving}>
+                          บันทึก
                         </button>
                         <button
                           type="button"
-                          className="ghost-btn"
+                          className="ghost-btn staff-btn-sm"
                           disabled={saving}
                           onClick={() => void onToggleStatus()}
                         >
-                          {selected.status === "active" ? "ระงับบัตร" : "เปิดใช้บัตร"}
+                          {selected.status === "active" ? "ระงับ" : "เปิดใช้"}
                         </button>
                       </div>
                     ) : null}
                   </form>
 
                   {canAdjust ? (
-                    <form
-                      className="staff-compact-form-grid"
-                      style={{ marginTop: "1rem" }}
-                      onSubmit={onAdjustPoints}
-                    >
-                      <h3 className="staff-hub-panel-title" style={{ gridColumn: "1 / -1" }}>
-                        ปรับแต้ม
-                      </h3>
-                      <label className="field">
-                        <span>จำนวน (+/−)</span>
-                        <input
-                          type="number"
-                          step={1}
-                          value={pointsDelta}
-                          onChange={(e) => setPointsDelta(e.target.value)}
-                          placeholder="เช่น 10 หรือ -5"
-                          disabled={saving}
-                          required
-                        />
-                      </label>
-                      <label className="field">
-                        <span>เหตุผล *</span>
-                        <input
-                          value={pointsNote}
-                          onChange={(e) => setPointsNote(e.target.value)}
-                          placeholder="จำเป็นทุกครั้งที่ปรับมือ"
-                          disabled={saving}
-                          required
-                        />
-                      </label>
-                      <div>
-                        <button type="submit" className="primary-btn" disabled={saving}>
-                          บันทึกแต้ม
-                        </button>
-                      </div>
+                    <form className="members-slim-inline" onSubmit={onAdjustPoints}>
+                      <input
+                        type="number"
+                        step={1}
+                        value={pointsDelta}
+                        onChange={(e) => setPointsDelta(e.target.value)}
+                        placeholder="+/− แต้ม"
+                        disabled={saving}
+                        required
+                      />
+                      <input
+                        value={pointsNote}
+                        onChange={(e) => setPointsNote(e.target.value)}
+                        placeholder="เหตุผล *"
+                        disabled={saving}
+                        required
+                      />
+                      <button type="submit" className="primary-btn staff-btn-sm" disabled={saving}>
+                        ปรับ
+                      </button>
                     </form>
                   ) : null}
 
-                  <div style={{ marginTop: "1.25rem" }}>
-                    <h3 className="staff-hub-panel-title">ประวัติแต้ม</h3>
-                    {ledgerLoading ? (
-                      <p className="muted">กำลังโหลด...</p>
-                    ) : ledger.length === 0 ? (
-                      <p className="muted">ยังไม่มีรายการ</p>
-                    ) : (
-                      <div className="table-wrap">
-                        <table className="sheet-table sheet-table--dense">
-                          <thead>
-                            <tr>
-                              <th>เมื่อ</th>
-                              <th>รายการ</th>
-                              <th>+/−</th>
-                              <th>คงเหลือ</th>
+                  <div className="table-wrap members-slim-table-wrap">
+                    <table className="sheet-table sheet-table--dense members-slim-table">
+                      <thead>
+                        <tr>
+                          <th>เมื่อ</th>
+                          <th>รายการ</th>
+                          <th className="num">+/−</th>
+                          <th className="num">คงเหลือ</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ledgerLoading ? (
+                          <tr>
+                            <td colSpan={4} className="muted">
+                              กำลังโหลด...
+                            </td>
+                          </tr>
+                        ) : ledger.length === 0 ? (
+                          <tr>
+                            <td colSpan={4} className="muted">
+                              ยังไม่มีรายการ
+                            </td>
+                          </tr>
+                        ) : (
+                          ledger.map((row) => (
+                            <tr key={row.id}>
+                              <td className="muted">{formatWhen(row.createdAt)}</td>
+                              <td>
+                                {MEMBER_LEDGER_REASON_LABELS[row.reason]}
+                                {row.saleId ? (
+                                  <span className="muted members-slim-sub"> · {row.saleId}</span>
+                                ) : null}
+                                {row.note ? (
+                                  <div className="muted members-slim-sub">{row.note}</div>
+                                ) : null}
+                              </td>
+                              <td className="num">
+                                {row.delta > 0 ? `+${row.delta}` : row.delta}
+                              </td>
+                              <td className="num">{row.balanceAfter}</td>
                             </tr>
-                          </thead>
-                          <tbody>
-                            {ledger.map((row) => (
-                              <tr key={row.id}>
-                                <td>{formatWhen(row.createdAt)}</td>
-                                <td>
-                                  {MEMBER_LEDGER_REASON_LABELS[row.reason]}
-                                  {row.note ? (
-                                    <div className="muted" style={{ fontSize: "0.85em" }}>
-                                      {row.note}
-                                    </div>
-                                  ) : null}
-                                </td>
-                                <td>
-                                  {row.delta > 0 ? `+${row.delta}` : row.delta}
-                                </td>
-                                <td>{row.balanceAfter}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
+                          ))
+                        )}
+                      </tbody>
+                    </table>
                   </div>
                 </section>
               ) : null}

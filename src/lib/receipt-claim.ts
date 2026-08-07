@@ -118,7 +118,7 @@ export type ReceiptClaimPreview = {
   billNo?: string;
   total?: number;
   pointsPreview?: number;
-  earnPercent?: number;
+  bahtPerPoint?: number;
   expiresAt?: number;
   claimStatus?: string;
   alreadyMemberHint?: boolean;

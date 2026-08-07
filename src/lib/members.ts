@@ -78,11 +78,9 @@ export type MemberSettings = {
   publicSignupToken: string;
   /**
    * ทดลองเคลมแต้มจาก QR สลิป (R0+) — ค่าเริ่มปิด
-   * ยังไม่พิมพ์บนเครื่องขายจนกว่าจะถึง R3
+   * สูตรแต้มใช้ bahtPerPoint เหมือนกัน
    */
   receiptClaimEnabled: boolean;
-  /** % ของยอดสุทธิ → แต้มตอนเคลมจากสลิป (เช่น 1 = 1%) */
-  earnPercent: number;
   /** อายุ claimToken (วัน) */
   claimTokenTtlDays: number;
   updatedAt: number;
@@ -102,7 +100,6 @@ export const DEFAULT_MEMBER_SETTINGS: MemberSettings = {
   publicSignupEnabled: false,
   publicSignupToken: "",
   receiptClaimEnabled: false,
-  earnPercent: 1,
   claimTokenTtlDays: 30,
   updatedAt: 0,
   updatedBy: "",
@@ -211,8 +208,6 @@ function mapLedger(snap: QueryDocumentSnapshot): MemberLedgerEntry {
 
 function mapSettings(data: Partial<MemberSettings> | undefined): MemberSettings {
   if (!data) return { ...DEFAULT_MEMBER_SETTINGS };
-  const earnPercentRaw =
-    typeof data.earnPercent === "number" ? data.earnPercent : DEFAULT_MEMBER_SETTINGS.earnPercent;
   const ttlRaw =
     typeof data.claimTokenTtlDays === "number"
       ? data.claimTokenTtlDays
@@ -235,10 +230,6 @@ function mapSettings(data: Partial<MemberSettings> | undefined): MemberSettings 
     publicSignupToken:
       typeof data.publicSignupToken === "string" ? data.publicSignupToken : "",
     receiptClaimEnabled: data.receiptClaimEnabled === true,
-    earnPercent:
-      Number.isFinite(earnPercentRaw) && earnPercentRaw > 0 && earnPercentRaw <= 100
-        ? earnPercentRaw
-        : DEFAULT_MEMBER_SETTINGS.earnPercent,
     claimTokenTtlDays:
       Number.isFinite(ttlRaw) && ttlRaw >= 1 && ttlRaw <= 365
         ? Math.floor(ttlRaw)
@@ -265,8 +256,7 @@ export async function saveMemberSettings(
       | "publicSignupEnabled"
       | "publicSignupToken"
       | "receiptClaimEnabled"
-      | "earnPercent"
-      | "claimTokenTtlDays"
+            | "claimTokenTtlDays"
     >
   >,
   updatedBy: string,
@@ -286,12 +276,6 @@ export async function saveMemberSettings(
         ? crypto.randomUUID().replace(/-/g, "")
         : `tt${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
   }
-  const earnPercent =
-    typeof patch.earnPercent === "number" &&
-    patch.earnPercent > 0 &&
-    patch.earnPercent <= 100
-      ? patch.earnPercent
-      : current.earnPercent;
   const claimTokenTtlDays =
     typeof patch.claimTokenTtlDays === "number" &&
     patch.claimTokenTtlDays >= 1 &&
@@ -307,7 +291,6 @@ export async function saveMemberSettings(
       typeof patch.receiptClaimEnabled === "boolean"
         ? patch.receiptClaimEnabled
         : current.receiptClaimEnabled,
-    earnPercent,
     claimTokenTtlDays,
     bahtPerPoint:
       typeof patch.bahtPerPoint === "number" && patch.bahtPerPoint > 0
@@ -334,7 +317,6 @@ export async function saveMemberSettings(
       publicSignupEnabled: next.publicSignupEnabled,
       publicSignupToken: next.publicSignupToken,
       receiptClaimEnabled: next.receiptClaimEnabled,
-      earnPercent: next.earnPercent,
       claimTokenTtlDays: next.claimTokenTtlDays,
       updatedAt: next.updatedAt,
       updatedBy: next.updatedBy,
@@ -590,12 +572,11 @@ export function pointsFromSaleAmount(
   return Math.floor(amountBaht / settings.bahtPerPoint);
 }
 
-/** แต้มจากยอดสุทธิตาม % (ปัดลง) — path เคลม QR สลิป */
+/** แต้มเคลมจากสลิป — ใช้ bahtPerPoint ชุดเดียวกับระบบสมาชิก */
 export function pointsFromReceiptClaim(
   amountBaht: number,
   settings: MemberSettings = DEFAULT_MEMBER_SETTINGS,
 ): number {
   if (!settings.enabled || !settings.receiptClaimEnabled) return 0;
-  if (!(settings.earnPercent > 0) || !(amountBaht > 0)) return 0;
-  return Math.floor((amountBaht * settings.earnPercent) / 100);
+  return pointsFromSaleAmount(amountBaht, settings);
 }

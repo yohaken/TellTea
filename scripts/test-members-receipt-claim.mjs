@@ -11,7 +11,6 @@ const read = (p) => readFileSync(join(root, p), "utf8");
 
 const members = read("src/lib/members.ts");
 assert.match(members, /receiptClaimEnabled: false/);
-assert.match(members, /earnPercent/);
 assert.match(members, /pointsFromReceiptClaim/);
 assert.match(members, /earn_receipt_claim/);
 assert.match(members, /receipt_qr/);
@@ -30,7 +29,7 @@ const boh = read("src/app/members/page.tsx");
 assert.match(boh, /receiptClaimEnabled/);
 assert.match(boh, /issueReceiptClaimForSale/);
 assert.match(boh, /QR สลิป/);
-assert.match(boh, /โหมดทดลอง/);
+assert.match(boh, /ทดลอง QR สลิป/);
 
 const providers = read("src/components/AppRootProviders.tsx");
 assert.match(providers, /isPublicClaim/);
@@ -54,7 +53,7 @@ const smoke = read("scripts/smoke-hosting-export.mjs");
 assert.match(smoke, /"claim"/);
 
 const version = read("src/lib/version.ts");
-assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 729);
+assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 730);
 
 // Must not ship nPos print / APK bump for R0–R2
 assert.equal(

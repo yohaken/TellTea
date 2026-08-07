@@ -49,10 +49,6 @@ function normalizeMemberId(raw) {
 async function loadMemberSettings(db) {
   const snap = await db.doc("meta/memberSettings").get();
   const d = snap.exists ? snap.data() || {} : {};
-  const earnPercent =
-    typeof d.earnPercent === "number" && d.earnPercent > 0 && d.earnPercent <= 100
-      ? d.earnPercent
-      : 1;
   const claimTokenTtlDays =
     typeof d.claimTokenTtlDays === "number" &&
     d.claimTokenTtlDays >= 1 &&
@@ -75,7 +71,6 @@ async function loadMemberSettings(db) {
     publicSignupEnabled: d.publicSignupEnabled === true,
     publicSignupToken: typeof d.publicSignupToken === "string" ? d.publicSignupToken : "",
     receiptClaimEnabled: d.receiptClaimEnabled === true,
-    earnPercent,
     claimTokenTtlDays,
   };
 }
@@ -88,8 +83,7 @@ function pointsFromSaleAmount(amountBaht, settings) {
 
 function pointsFromReceiptClaim(amountBaht, settings) {
   if (!settings?.enabled || !settings.receiptClaimEnabled) return 0;
-  if (!(settings.earnPercent > 0) || !(amountBaht > 0)) return 0;
-  return Math.floor((amountBaht * settings.earnPercent) / 100);
+  return pointsFromSaleAmount(amountBaht, settings);
 }
 
 function redeemBahtFromPoints(points, settings) {
@@ -399,7 +393,7 @@ function asSaleClaimView(saleId, data, settings) {
     billNo: asString(data.billNo, 40) || saleId,
     total,
     pointsPreview: pointsFromReceiptClaim(total, settings),
-    earnPercent: settings.earnPercent,
+    bahtPerPoint: settings.bahtPerPoint,
     expiresAt: typeof data.claimTokenExpiresAt === "number" ? data.claimTokenExpiresAt : 0,
     claimStatus: asString(data.claimStatus, 24) || "open",
   };
