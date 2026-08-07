@@ -450,8 +450,12 @@ export function PosSalesDashboard({
                     <dd>{formatPlainNumber(summary.grossTotal)} บาท</dd>
                   </div>
                   <div>
-                    <dt>ส่วนลด</dt>
-                    <dd>−{formatPlainNumber(summary.discountTotal)} บาท</dd>
+                    <dt>ส่วนลดมือ</dt>
+                    <dd>−{formatPlainNumber(summary.manualDiscountTotal)} บาท</dd>
+                  </div>
+                  <div>
+                    <dt>แลกแต้ม</dt>
+                    <dd>−{formatPlainNumber(summary.redeemTotal)} บาท</dd>
                   </div>
                   <div className="pos-dash-breakdown--total">
                     <dt>รวมสุทธิ</dt>
@@ -575,13 +579,44 @@ export function PosSalesDashboard({
               />
 
               <article className="pos-dash-card">
-                <h3 className="pos-dash-card-title">ส่วนลด</h3>
+                <h3 className="pos-dash-card-title">ส่วนลด / แลกแต้ม</h3>
                 <p className="pos-dash-side-value">{formatPlainNumber(summary.discountTotal)} บาท</p>
                 <p className="muted pos-dash-side-meta">
-                  บิลที่มีส่วนลด {summary.discountCount.toLocaleString("th-TH")} ·{" "}
-                  {discountBillPct.toFixed(2)}% ของบิล
+                  รวมส่วนลด · บิลที่มีลด {summary.discountCount.toLocaleString("th-TH")} ·{" "}
+                  {discountBillPct.toFixed(2)}%
                 </p>
-                <p className="muted pos-dash-footnote">ส่วนลดท้ายบิล (ยังไม่มีระบบโปรโมชั่น)</p>
+                <dl className="pos-dash-breakdown pos-dash-breakdown--compact">
+                  <div>
+                    <dt>ส่วนลดมือ</dt>
+                    <dd>−{formatPlainNumber(summary.manualDiscountTotal)}</dd>
+                  </div>
+                  <div>
+                    <dt>แลกแต้ม</dt>
+                    <dd>−{formatPlainNumber(summary.redeemTotal)}</dd>
+                  </div>
+                  <div>
+                    <dt>บิลแลกแต้ม</dt>
+                    <dd>{summary.redeemBillCount.toLocaleString("th-TH")}</dd>
+                  </div>
+                </dl>
+              </article>
+
+              <article className="pos-dash-card">
+                <h3 className="pos-dash-card-title">แต้มสมาชิก</h3>
+                <div className="pos-dash-stat-pair">
+                  <div>
+                    <span className="muted">แต้มที่ได้</span>
+                    <strong>+{summary.pointsEarnedTotal.toLocaleString("th-TH")}</strong>
+                    <span className="muted">จากบิลในช่วง</span>
+                  </div>
+                  <div>
+                    <span className="muted">แต้มที่ตัด</span>
+                    <strong>−{summary.pointsRedeemedTotal.toLocaleString("th-TH")}</strong>
+                    <span className="muted">
+                      ≈ {formatPlainNumber(summary.redeemTotal)} บาท
+                    </span>
+                  </div>
+                </div>
               </article>
 
               <article className="pos-dash-card">
@@ -595,7 +630,7 @@ export function PosSalesDashboard({
                   <div>
                     <span className="muted">จ่ายเงินเฉลี่ย</span>
                     <strong>{formatPlainNumber(avgBill)} บาท/บิล</strong>
-                    <span className="muted">ไม่ใช่ต่อลูกค้า (ไม่มี CRM)</span>
+                    <span className="muted">เฉลี่ยต่อบิล (ไม่ใช่ต่อลูกค้า)</span>
                   </div>
                 </div>
               </article>

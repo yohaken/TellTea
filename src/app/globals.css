@@ -25654,6 +25654,17 @@ a.ghost-btn {
   font-weight: 700;
 }
 
+.pos-dash-breakdown--compact {
+  margin-top: 0.45rem;
+  padding: 0;
+  border-left: 0;
+  gap: 0.2rem;
+}
+
+.pos-dash-breakdown--compact > div {
+  font-size: 0.74rem;
+}
+
 .pos-dash-bills-body {
   display: grid;
   gap: 0.75rem;
