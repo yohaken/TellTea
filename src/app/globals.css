@@ -972,6 +972,69 @@ body.modal-open .main-panel {
   max-width: 56rem;
 }
 
+/* QR สมัครสมาชิก (สาธารณะ) */
+.join-page {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background:
+    radial-gradient(120% 80% at 10% 0%, rgba(47, 107, 79, 0.16), transparent 55%),
+    linear-gradient(165deg, #f7f3ec 0%, #e7f0ea 45%, #f3eee6 100%);
+}
+
+.join-card {
+  width: min(100%, 22rem);
+  padding: 1.5rem 1.35rem 1.75rem;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 12px 40px rgba(40, 60, 45, 0.08);
+}
+
+.join-brand {
+  font-family: var(--font-display), sans-serif;
+  font-weight: 700;
+  font-size: 1.65rem;
+  letter-spacing: -0.02em;
+  color: #2f6b4f;
+  margin: 0 0 0.35rem;
+}
+
+.join-card h1 {
+  font-family: var(--font-display), sans-serif;
+  font-size: 1.25rem;
+  margin: 0 0 0.35rem;
+}
+
+.join-form {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.join-form label {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.9rem;
+}
+
+.join-form input {
+  min-height: 2.75rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(47, 107, 79, 0.28);
+  font: inherit;
+}
+
+.join-error {
+  color: #b42318;
+  margin: 0;
+}
+
+.join-done {
+  margin-top: 1rem;
+}
+
 .members-hub-layout {
   align-items: start;
 }

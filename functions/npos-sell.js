@@ -6,6 +6,12 @@ const functions = require("firebase-functions/v1");
 const { getFirestore } = require("firebase-admin/firestore");
 const { completePosSaleAdmin, voidPosSaleAdmin } = require("./pos-complete-sale");
 const { assertNposDeviceAllowed } = require("./npos-device-gate");
+const {
+  loadMemberSettings,
+  lookupMember,
+  quickCreateMember,
+  publicSignup,
+} = require("./pos-members");
 
 function cors(res) {
   res.set("Access-Control-Allow-Origin", "*");
@@ -281,6 +287,17 @@ exports.nposShopSettings = functions.region("asia-southeast1").https.onRequest(a
       console.warn("nposShopSettings employees", empErr && empErr.message);
       employees = [];
     }
+    let membersEnabled = false;
+    let membersBahtPerPoint = 25;
+    let membersPointsPerBahtRedeem = 1;
+    try {
+      const ms = await loadMemberSettings(db);
+      membersEnabled = ms.enabled === true;
+      membersBahtPerPoint = ms.bahtPerPoint;
+      membersPointsPerBahtRedeem = ms.pointsPerBahtRedeem;
+    } catch (msErr) {
+      console.warn("nposShopSettings members", msErr && msErr.message);
+    }
     res.status(200).json({
       ok: true,
       shopName: asString(x.shopName, 120) || "TellTea",
@@ -312,6 +329,10 @@ exports.nposShopSettings = functions.region("asia-southeast1").https.onRequest(a
           : "",
       storeClaimUpdatedAt:
         typeof x.storeClaimUpdatedAt === "number" ? x.storeClaimUpdatedAt : 0,
+      // Additive CRM flags — old APKs ignore unknown keys.
+      membersEnabled,
+      membersBahtPerPoint,
+      membersPointsPerBahtRedeem,
       updatedAt: typeof x.shopSettingsUpdatedAt === "number" ? x.shopSettingsUpdatedAt : 0,
     });
   } catch (err) {
@@ -606,6 +627,10 @@ exports.nposCompleteSale = functions.region("asia-southeast1").https.onRequest(a
       cashReceived: body.cashReceived,
       discountBaht: body.discountBaht,
       transferRef: body.transferRef,
+      // Optional — absent on every current live bill.
+      memberId: body.memberId,
+      memberPhone: body.memberPhone,
+      pointsToRedeem: body.pointsToRedeem,
     };
     const result = await completePosSaleAdmin(db, payload, installId);
     res.status(200).json({ ok: true, ...result });
@@ -705,5 +730,97 @@ exports.nposReorderCategories = functions.region("asia-southeast1").https.onRequ
   } catch (err) {
     console.error("nposReorderCategories", err);
     res.status(500).json({ ok: false, error: "reorder_failed" });
+  }
+});
+
+/** Lookup member by phone — Admin SDK; does not touch sale path. */
+exports.nposMemberLookup = functions.region("asia-southeast1").https.onRequest(async (req, res) => {
+  cors(res);
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
+  }
+  if (req.method !== "POST") {
+    res.status(405).json({ ok: false, error: "POST only" });
+    return;
+  }
+  const body = parseBody(req);
+  const installId = requireInstallId(body);
+  if (!installId) {
+    res.status(400).json({ ok: false, error: "invalid installId" });
+    return;
+  }
+  try {
+    const db = getFirestore();
+    if (await rejectIfDeviceNotAllowed(db, installId, res)) return;
+    const result = await lookupMember(db, body.phone || body.phoneDigits);
+    res.status(200).json(result);
+  } catch (err) {
+    console.error("nposMemberLookup", err);
+    res.status(500).json({ ok: false, error: "lookup_failed" });
+  }
+});
+
+/** Quick enroll at counter — Admin SDK. */
+exports.nposMemberQuickCreate = functions.region("asia-southeast1").https.onRequest(async (req, res) => {
+  cors(res);
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
+  }
+  if (req.method !== "POST") {
+    res.status(405).json({ ok: false, error: "POST only" });
+    return;
+  }
+  const body = parseBody(req);
+  const installId = requireInstallId(body);
+  if (!installId) {
+    res.status(400).json({ ok: false, error: "invalid installId" });
+    return;
+  }
+  try {
+    const db = getFirestore();
+    if (await rejectIfDeviceNotAllowed(db, installId, res)) return;
+    const result = await quickCreateMember(db, {
+      phone: body.phone,
+      displayName: body.displayName,
+      actorId: `pos:${installId}`,
+      source: "staff_pos",
+    });
+    res.status(200).json(result);
+  } catch (err) {
+    console.error("nposMemberQuickCreate", err);
+    res.status(500).json({ ok: false, error: "create_failed" });
+  }
+});
+
+/** Public QR signup — token gated; no device/staff auth. */
+exports.publicMemberSignup = functions.region("asia-southeast1").https.onRequest(async (req, res) => {
+  cors(res);
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
+  }
+  if (req.method !== "POST") {
+    res.status(405).json({ ok: false, error: "POST only" });
+    return;
+  }
+  const body = parseBody(req);
+  if (!body) {
+    res.status(400).json({ ok: false, error: "bad_body" });
+    return;
+  }
+  try {
+    const db = getFirestore();
+    const result = await publicSignup(db, {
+      token: body.token,
+      phone: body.phone,
+      displayName: body.displayName,
+    });
+    const http = result.ok === false && result.error === "bad_token" ? 403 : 200;
+    res.status(http).json(result);
+  } catch (err) {
+    console.error("publicMemberSignup", err);
+    res.status(500).json({ ok: false, error: "signup_failed" });
   }
 });

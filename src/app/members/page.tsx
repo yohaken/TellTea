@@ -80,7 +80,7 @@ function MembersView() {
   const [pointsDelta, setPointsDelta] = useState("");
   const [pointsNote, setPointsNote] = useState("");
 
-  const [setEnabled, setSetEnabled] = useState(true);
+  const [setEnabled, setSetEnabled] = useState(false);
   const [setBaht, setSetBaht] = useState("25");
   const [setRedeem, setSetRedeem] = useState("1");
   const [setBonus, setSetBonus] = useState("0");
@@ -405,7 +405,7 @@ function MembersView() {
               />
             </label>
             <label className="field">
-              <span>เตรียม QR สมัครเอง (ยังไม่เปิดหน้าสาธารณะ)</span>
+              <span>เปิดสมัครผ่าน QR (หน้า /join)</span>
               <input
                 type="checkbox"
                 checked={setPublic}
@@ -413,6 +413,20 @@ function MembersView() {
                 onChange={(e) => setSetPublic(e.target.checked)}
               />
             </label>
+            {settings?.publicSignupEnabled && settings.publicSignupToken ? (
+              <p className="muted" style={{ gridColumn: "1 / -1" }}>
+                ลิงก์สมัคร:{" "}
+                <code style={{ wordBreak: "break-all" }}>
+                  {typeof window !== "undefined"
+                    ? `${window.location.origin}/join/?t=${settings.publicSignupToken}`
+                    : `/join/?t=${settings.publicSignupToken}`}
+                </code>
+              </p>
+            ) : (
+              <p className="muted" style={{ gridColumn: "1 / -1" }}>
+                เปิดช่องด้านบนแล้วกดบันทึก — ระบบจะสร้างโทเคนและลิงก์ให้
+              </p>
+            )}
             {canManage ? (
               <div>
                 <button type="submit" className="primary-btn" disabled={saving}>

@@ -407,6 +407,12 @@ export type PosSale = {
   change: number;
   /** Optional bank-slip ref for transfer tender */
   transferRef?: string;
+  /** Optional CRM — absent on bills without member */
+  memberId?: string;
+  memberPhone?: string;
+  pointsEarned?: number;
+  pointsRedeemed?: number;
+  redeemBaht?: number;
   ledgerEntryId?: string;
   createdAt: number;
   createdBy: string;

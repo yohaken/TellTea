@@ -28,7 +28,8 @@ export type MemberLedgerReason =
   | "earn_sale"
   | "redeem"
   | "adjust"
-  | "signup_bonus";
+  | "signup_bonus"
+  | "void_reverse";
 
 export type ShopMember = {
   /** phoneDigits จาก E.164 (เช่น 66812345678) */
@@ -83,7 +84,8 @@ export const MEMBER_LEDGER_COLLECTION = "memberLedger";
 export const MEMBER_SETTINGS_DOC = "memberSettings";
 
 export const DEFAULT_MEMBER_SETTINGS: MemberSettings = {
-  enabled: true,
+  /** ปิดจนกว่าเจ้าของเปิดเอง — กันกระทบเคาน์เตอร์ที่ยังไม่พร้อม */
+  enabled: false,
   bahtPerPoint: 25,
   pointsPerBahtRedeem: 1,
   signupBonusPoints: 0,
@@ -104,6 +106,7 @@ export const MEMBER_LEDGER_REASON_LABELS: Record<MemberLedgerReason, string> = {
   redeem: "แลกแต้ม",
   adjust: "ปรับมือ",
   signup_bonus: "โบนัสสมัคร",
+  void_reverse: "คืนแต้มจากยกเลิกบิล",
 };
 
 function membersCol() {
@@ -173,7 +176,8 @@ function mapLedger(snap: QueryDocumentSnapshot): MemberLedgerEntry {
     reason:
       reason === "earn_sale" ||
       reason === "redeem" ||
-      reason === "signup_bonus"
+      reason === "signup_bonus" ||
+      reason === "void_reverse"
         ? reason
         : "adjust",
     saleId: typeof d.saleId === "string" ? d.saleId : "",
@@ -190,7 +194,7 @@ function mapLedger(snap: QueryDocumentSnapshot): MemberLedgerEntry {
 function mapSettings(data: Partial<MemberSettings> | undefined): MemberSettings {
   if (!data) return { ...DEFAULT_MEMBER_SETTINGS };
   return {
-    enabled: data.enabled !== false,
+    enabled: data.enabled === true,
     bahtPerPoint:
       typeof data.bahtPerPoint === "number" && data.bahtPerPoint > 0
         ? data.bahtPerPoint
@@ -232,9 +236,25 @@ export async function saveMemberSettings(
   updatedBy: string,
 ): Promise<MemberSettings> {
   const current = await getMemberSettings();
+  let publicSignupToken =
+    typeof patch.publicSignupToken === "string"
+      ? patch.publicSignupToken
+      : current.publicSignupToken;
+  const publicSignupEnabled =
+    typeof patch.publicSignupEnabled === "boolean"
+      ? patch.publicSignupEnabled
+      : current.publicSignupEnabled;
+  if (publicSignupEnabled && !publicSignupToken) {
+    publicSignupToken =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID().replace(/-/g, "")
+        : `tt${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+  }
   const next: MemberSettings = {
     ...current,
     ...patch,
+    publicSignupEnabled,
+    publicSignupToken,
     bahtPerPoint:
       typeof patch.bahtPerPoint === "number" && patch.bahtPerPoint > 0
         ? patch.bahtPerPoint

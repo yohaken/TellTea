@@ -1,6 +1,15 @@
 # สมาชิก / สะสมแต้ม — เฟสและเช็กลิสต์
 
-บัตรสมาชิก + แต้ม · สาขาเดียว · หลังร้าน + หน้าร้าน · โครงเผื่อ QR สมัครเอง (M4)
+บัตรสมาชิก + แต้ม · สาขาเดียว · หลังร้าน + หน้าร้าน · QR สมัครเอง
+
+## ความปลอดภัยต่อระบบร้านที่ใช้อยู่
+
+- **ค่าเริ่มต้นระบบสมาชิก = ปิด** (`memberSettings.enabled` ต้องเปิดเองที่หลังร้าน)
+- บิลที่ไม่มี `memberId` = path ขายเดิมทุกประการ (เงินสด/โอน/ลำดับบิล/ปิดกะ)
+- สะสมแต้มทำ **หลัง** commit บิล — ล้มเหลวไม่ยกเลิกบิล
+- แลกแต้มทำงานเฉพาะเมื่อส่ง `pointsToRedeem > 0` เท่านั้น
+- APK เก่าไม่รู้จักฟิลด์สมาชิก → ขายต่อได้ตามเดิม
+- QR สมัครแยกหน้า `/join` + CF โทเคน — ไม่แตะเคาน์เตอร์
 
 ## สรุปเฟส
 
@@ -8,62 +17,57 @@
 |-----|--------|--------|
 | **M0 โครง** | ✅ | types, collections, rules, permissions, nav, `/members` |
 | **M1 CRM หลังร้าน** | ✅ | CRUD สมาชิก, ledger แต้ม, ตั้งค่าอัตราแต้ม |
-| **M2 POS** | ⬜ | ค้นหา/สมัครเร็ว/ผูกบิล, earn ตอนปิดบิล (nPos) |
-| **M3 แลกแต้ม** | ⬜ | redeem บนบิล + ใบเสร็จ |
-| **M4 QR สมัครเอง** | ⬜ | หน้า public + token + โบนัสสมัคร |
+| **M2 POS** | ✅ | ผูกสมาชิก optional + earn หลังขาย + lookup/สมัครเร็ว (เปิดเมื่อ enabled) |
+| **M3 แลกแต้ม** | ✅ | `pointsToRedeem` ในบิล · หักแต้มใน txn เดียวกับขาย |
+| **M4 QR สมัครเอง** | ✅ | `/join/?t=` + `publicMemberSignup` |
 
 ---
 
 ## M0 — โครงพื้นฐาน
 
-- [x] Types: `ShopMember`, `MemberLedgerEntry`, `MemberSettings`, sources
-- [x] Lib: `src/lib/members.ts` (CRUD, ledger txn, settings)
-- [x] Permissions: `membersView` · `membersManage` · `membersAdjustPoints`
-- [x] Firestore rules: `members`, `memberLedger` + `meta/memberSettings` write
-- [x] Index: `memberLedger` (`memberId` + `createdAt`)
-- [x] Nav: อื่นๆ → สมาชิก / แต้ม · `MORE_PREFIXES`
-- [x] หน้า `/members/` + bump `APP_BUILD`
-- [x] เอกสารเฟสนี้
+- [x] Types / lib / permissions / rules / index / nav / `/members`
 
 ## M1 — CRM หลังร้าน
 
-- [x] รายการ + ค้นหาเบอร์/ชื่อ/เลขบัตร
-- [x] สมัครสมาชิก (เบอร์ unique = doc id)
-- [x] แก้โปรไฟล์ / ระงับ–เปิดใช้
-- [x] ปรับแต้มมือ + เหตุผล → `memberLedger`
-- [x] ประวัติแต้มต่อสมาชิก
-- [x] ตั้งค่า: เปิดระบบ, อัตราแต้ม, โบนัสสมัคร, ธง `publicSignupEnabled` (ยังไม่เปิด UI สาธารณะ)
+- [x] รายการ · สมัคร · แก้ · ระงับ · ปรับแต้ม · ตั้งค่า
 
-## M2 — POS (ยังไม่ทำ)
+## M2 — POS (ปลอดภัย)
 
-- [ ] เปิดเมนูสมาชิกบน nPos (เลิกซ่อน)
-- [ ] ค้นหาเบอร์ / สมัครเร็วที่เคาน์เตอร์
-- [ ] ผูก `memberId` บน `posSales`
-- [ ] ปิดบิล → earn ตาม `memberSettings` + ledger (`earn_sale`)
-- [ ] rules: POS device อ่าน/เขียนตามที่ออกแบบ
+- [x] `PosSale.memberId?` + mapper
+- [x] `nposCompleteSale` รับ member แบบ optional
+- [x] earn หลัง commit (`tryEarnPointsForSale`) — ไม่บล็อกขาย
+- [x] void → คืนแต้ม best-effort (`void_reverse`)
+- [x] `nposMemberLookup` / `nposMemberQuickCreate` (Admin SDK)
+- [x] `nposShopSettings` ส่ง `membersEnabled` (default false)
+- [x] nPos ปุ่มสมาชิกบนขาย — **แสดงเมื่อเปิดระบบเท่านั้น**
+- [x] APK versionCode 138
 
 ## M3 — แลกแต้ม
 
-- [ ] คำนวณ redeem จาก settings
-- [ ] ledger `redeem` + แสดงบนใบเสร็จ
-- [ ] กันยอดติดลบ / สมาชิกระงับ
+- [x] `pointsToRedeem` → ส่วนลดใน sale txn + ledger `redeem`
+- [x] UI ใส่จำนวนแต้มแลกในไดอะล็อกสมาชิก
+- [x] บิลไม่มี redeem = คำนวณยอดเหมือนเดิม
 
 ## M4 — QR สมัครเอง
 
-- [ ] หน้า public แยกจาก staff auth
-- [ ] signup token จาก `memberSettings`
-- [ ] `source: qr_self` + โบนัสสมัครผ่าน ledger
-- [ ] ไม่อนุญาตให้โลกเขียน `members` ตรงๆ โดยไม่มี token
+- [x] หน้า `/join/?t=TOKEN` (ไม่ใช้ AuthGate)
+- [x] `publicMemberSignup` ตรวจโทเคน
+- [x] หลังร้านสร้างโทเคนเมื่อเปิด “สมัครผ่าน QR”
 
 ---
+
+## Deploy ที่ต้องระวัง
+
+1. Deploy **functions** (`nposCompleteSale`, member CFs, `publicMemberSignup`) ก่อนหรือคู่กับ hosting  
+2. Deploy **firestore rules + indexes**  
+3. Hosting หลังร้าน (`/members`, `/join`)  
+4. APK nPos **ไม่บังคับอัปเดตทันที** — อัปเมื่อพร้อมใช้สมาชิกที่เคาน์เตอร์  
+5. เปิดระบบที่ หลังร้าน → สมาชิก / แต้ม → ตั้งค่า → **เปิดระบบสมาชิก**
 
 ## ข้อมูลหลัก
 
 | Collection / doc | บทบาท |
 |------------------|--------|
-| `members/{phoneDigits}` | โปรไฟล์ + `pointsBalance` (cache) |
-| `memberLedger/{id}` | ความจริงของแต้มทุกครั้งที่เปลี่ยน |
-| `meta/memberSettings` | กฎร้าน + ธง QR อนาคต |
-
-**ตัวตน = เบอร์** (`normalizePhone` → digits เป็น doc id)  
-**อย่าปนกับ** `staff` / `/staff` (พนักงาน)
+| `members/{phoneDigits}` | โปรไฟล์ + `pointsBalance` |
+| `memberLedger/{id}` | ความจริงของแต้ม |
+| `meta/memberSettings` | กฎร้าน · ธง QR |
