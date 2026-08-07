@@ -7,7 +7,7 @@ const {
   planRedeemFromMemberSnap,
   writeRedeemInSaleTx,
   tryEarnPointsForSale,
-  tryReverseEarnForVoid,
+  tryReverseMemberPointsForVoid,
 } = require("./pos-members");
 
 function formatBillNo(dateMs, seq) {
@@ -106,8 +106,14 @@ async function completePosSaleAdmin(db, data, uid) {
 
   const paymentMethod = normalizePaymentMethod(data?.paymentMethod);
   const subtotal = Math.round(lines.reduce((sum, l) => sum + l.price * l.qty, 0) * 100) / 100;
-  let discountBaht = Math.round(Number(data?.discountBaht || 0) * 100) / 100;
-  if (!Number.isFinite(discountBaht) || discountBaht < 0) discountBaht = 0;
+
+  // Client may send manualDiscountBaht, or legacy discountBaht (= manual before redeem).
+  let manualDiscountBaht = Math.round(
+    Number(
+      data?.manualDiscountBaht != null ? data.manualDiscountBaht : data?.discountBaht || 0,
+    ) * 100,
+  ) / 100;
+  if (!Number.isFinite(manualDiscountBaht) || manualDiscountBaht < 0) manualDiscountBaht = 0;
 
   /** Optional CRM — omitted on almost all live bills; must not change cash path when 0. */
   const memberId = normalizeMemberId(data?.memberId);
@@ -123,10 +129,14 @@ async function completePosSaleAdmin(db, data, uid) {
     if (redeemBaht <= 0) {
       throw new HttpsError("invalid-argument", "จำนวนแต้มแลกไม่พอคิดเป็นส่วนลด");
     }
-    discountBaht = Math.round((discountBaht + redeemBaht) * 100) / 100;
   }
 
-  if (discountBaht > subtotal) discountBaht = subtotal;
+  if (manualDiscountBaht > subtotal) manualDiscountBaht = subtotal;
+  const maxRedeem = Math.round((subtotal - manualDiscountBaht) * 100) / 100;
+  if (redeemBaht > maxRedeem) {
+    throw new HttpsError("invalid-argument", "แลกแต้มเกินยอดบิลหลังส่วนลด");
+  }
+  const discountBaht = Math.round((manualDiscountBaht + redeemBaht) * 100) / 100;
   const total = Math.round((subtotal - discountBaht) * 100) / 100;
   if (total < 0) {
     throw new HttpsError("invalid-argument", "ยอดขายไม่ถูกต้อง");
@@ -186,6 +196,7 @@ async function completePosSaleAdmin(db, data, uid) {
     }
 
     tx.set(metaPosRef, { billDate: date, billSeq: seq, updatedAt: now }, { merge: true });
+    const saleRedeemBaht = redeemPlan?.redeemBaht || redeemBaht || 0;
     tx.set(saleRef, {
       billNo: nextBillNo,
       deviceId,
@@ -194,6 +205,7 @@ async function completePosSaleAdmin(db, data, uid) {
       shift: data.shift,
       lines,
       subtotal,
+      ...(manualDiscountBaht > 0 ? { manualDiscountBaht } : {}),
       discountBaht,
       total,
       paymentMethod,
@@ -214,7 +226,7 @@ async function completePosSaleAdmin(db, data, uid) {
           }
         : {}),
       ...(pointsRedeemed > 0
-        ? { pointsRedeemed, redeemBaht: redeemPlan?.redeemBaht || redeemBaht || 0 }
+        ? { pointsRedeemed, redeemBaht: saleRedeemBaht }
         : {}),
       createdAt: now,
       createdBy,
@@ -401,9 +413,9 @@ async function voidPosSaleAdmin(db, data, deviceId) {
     });
   }
 
-  // Best-effort reverse of earn_sale — never blocks void.
+  // Best-effort: restore redeem points + claw back earn — never blocks void.
   if (!outcome.alreadyVoided) {
-    await tryReverseEarnForVoid(db, {
+    await tryReverseMemberPointsForVoid(db, {
       saleId: outcome.saleId,
       actorId: `pos:${deviceId}`,
     });

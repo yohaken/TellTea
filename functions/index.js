@@ -244,3 +244,24 @@ exports.posCompleteSale = functions
       throw new functions.https.HttpsError("internal", `บันทึกการขายไม่สำเร็จ — ${detail.slice(0, 120)}`);
     }
   });
+
+/**
+ * Owner BOH: after voiding a sale, restore redeem + reverse earn (best-effort).
+ * Idempotent — safe to call twice.
+ */
+exports.posOwnerReverseSalePoints = functions
+  .region("asia-southeast1")
+  .https.onCall(async (data, context) => {
+    const { assertOwner } = require("./npos-owner-device");
+    const { tryReverseMemberPointsForVoid } = require("./pos-members");
+    const { actorId } = await assertOwner(context);
+    const saleId = typeof data?.saleId === "string" ? data.saleId.trim() : "";
+    if (!saleId) {
+      throw new functions.https.HttpsError("invalid-argument", "ระบุ saleId");
+    }
+    const result = await tryReverseMemberPointsForVoid(getFirestore(), {
+      saleId,
+      actorId: actorId || "owner",
+    });
+    return { ok: true, saleId, ...result };
+  });

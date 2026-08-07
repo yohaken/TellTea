@@ -28,6 +28,7 @@ export type MemberLedgerReason =
   | "earn_sale"
   | "earn_receipt_claim"
   | "redeem"
+  | "redeem_void_reverse"
   | "adjust"
   | "signup_bonus"
   | "void_reverse";
@@ -116,6 +117,7 @@ export const MEMBER_LEDGER_REASON_LABELS: Record<MemberLedgerReason, string> = {
   earn_sale: "สะสมจากบิล",
   earn_receipt_claim: "เคลมจากสลิป",
   redeem: "แลกแต้ม",
+  redeem_void_reverse: "คืนแต้มที่แลก (ยกเลิกบิล)",
   adjust: "ปรับมือ",
   signup_bonus: "โบนัสสมัคร",
   void_reverse: "คืนแต้มจากยกเลิกบิล",

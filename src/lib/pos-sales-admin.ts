@@ -57,6 +57,17 @@ function mapPosSale(id: string, data: Record<string, unknown>): PosSale {
     const inferred = Math.round((subtotal - total) * 100) / 100;
     if (inferred > 0.004) discountBaht = inferred;
   }
+  const redeemBaht =
+    typeof data.redeemBaht === "number" && data.redeemBaht > 0
+      ? Math.round(data.redeemBaht * 100) / 100
+      : 0;
+  let manualDiscountBaht =
+    typeof data.manualDiscountBaht === "number" && data.manualDiscountBaht > 0
+      ? Math.round(data.manualDiscountBaht * 100) / 100
+      : 0;
+  if (!manualDiscountBaht && discountBaht > redeemBaht) {
+    manualDiscountBaht = Math.round((discountBaht - redeemBaht) * 100) / 100;
+  }
   return {
     id,
     billNo: typeof data.billNo === "string" ? data.billNo : "—",
@@ -66,12 +77,26 @@ function mapPosSale(id: string, data: Record<string, unknown>): PosSale {
     shift: typeof data.shift === "string" ? data.shift : "",
     lines: Array.isArray(data.lines) ? (data.lines as PosSale["lines"]) : [],
     subtotal,
+    ...(manualDiscountBaht > 0 ? { manualDiscountBaht } : {}),
     ...(discountBaht > 0 ? { discountBaht } : {}),
     total,
     paymentMethod: normalizeAdminPaymentMethod(data.paymentMethod),
     cashReceived: typeof data.cashReceived === "number" ? data.cashReceived : 0,
     change: typeof data.change === "number" ? data.change : 0,
     ledgerEntryId: typeof data.ledgerEntryId === "string" ? data.ledgerEntryId : undefined,
+    ...(typeof data.memberId === "string" && data.memberId.trim()
+      ? { memberId: data.memberId.trim() }
+      : {}),
+    ...(typeof data.memberPhone === "string" && data.memberPhone.trim()
+      ? { memberPhone: data.memberPhone.trim() }
+      : {}),
+    ...(typeof data.pointsEarned === "number" && data.pointsEarned > 0
+      ? { pointsEarned: data.pointsEarned }
+      : {}),
+    ...(typeof data.pointsRedeemed === "number" && data.pointsRedeemed > 0
+      ? { pointsRedeemed: data.pointsRedeemed }
+      : {}),
+    ...(redeemBaht > 0 ? { redeemBaht } : {}),
     claimToken: typeof data.claimToken === "string" ? data.claimToken : undefined,
     claimTokenExpiresAt:
       typeof data.claimTokenExpiresAt === "number" ? data.claimTokenExpiresAt : undefined,
@@ -135,6 +160,16 @@ export async function voidPosSale(
     await adjustPosSessionTotalsAdmin(sale.sessionId, -sale.total, -1, sale.paymentMethod);
   } catch (err) {
     throw new Error(mapFirestoreError(err, "ยกเลิกบิล POS"));
+  }
+
+  // Best-effort: คืนแต้มที่แลก + ย้อนแต้มที่สะสม (idempotent CF)
+  try {
+    const { httpsCallable } = await import("firebase/functions");
+    const { getFirebaseFunctions } = await import("./firebase");
+    const fn = httpsCallable(getFirebaseFunctions(), "posOwnerReverseSalePoints");
+    await fn({ saleId });
+  } catch (err) {
+    console.warn("posOwnerReverseSalePoints", err);
   }
 }
 

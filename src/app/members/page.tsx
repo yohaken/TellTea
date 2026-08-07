@@ -573,7 +573,7 @@ function MembersView() {
               <span>เปิดระบบสมาชิก</span>
             </label>
             <label>
-              <span>ทุกกี่บาท = 1 แต้ม</span>
+              <span>สะสม: ทุกกี่บาทชำระ = 1 แต้ม</span>
               <input
                 type="number"
                 min={1}
@@ -584,8 +584,11 @@ function MembersView() {
                 required
               />
             </label>
+            <p className="muted members-slim-hint">
+              คิดจากยอดชำระหลังหักแลกแต้ม · เช่น 33 ≈ คืน ~3% เมื่อแลก 1:1
+            </p>
             <label>
-              <span>แต้มต่อ 1฿ ส่วนลด</span>
+              <span>แลก: กี่แต้ม = ส่วนลด 1฿</span>
               <input
                 type="number"
                 min={1}
@@ -596,6 +599,7 @@ function MembersView() {
                 required
               />
             </label>
+            <p className="muted members-slim-hint">ร้านใช้ 1 = แลก 1 แต้มลด 1 บาท</p>
             <label>
               <span>โบนัสสมัคร</span>
               <input
@@ -856,7 +860,8 @@ function MembersView() {
                               <td className="members-col-when muted">{formatWhen(row.createdAt)}</td>
                               <td className="members-col-reason">
                                 <span className="members-cell-clip">
-                                  {MEMBER_LEDGER_REASON_LABELS[row.reason]}
+                                  {MEMBER_LEDGER_REASON_LABELS[row.reason] || row.reason}
+                                  {row.saleId ? ` · ${row.saleId}` : ""}
                                   {row.note ? ` · ${row.note}` : ""}
                                 </span>
                               </td>

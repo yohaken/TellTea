@@ -399,7 +399,9 @@ export type PosSale = {
   shift: string;
   lines: PosSaleLine[];
   subtotal: number;
-  /** ส่วนลดท้ายบิล (บาท) */
+  /** ส่วนลดมือพนักงาน (ไม่รวมแลกแต้ม) */
+  manualDiscountBaht?: number;
+  /** ส่วนลดท้ายบิลรวม = มือ + แลกแต้ม (บาท) */
   discountBaht?: number;
   total: number;
   paymentMethod: PosSalePaymentMethod;

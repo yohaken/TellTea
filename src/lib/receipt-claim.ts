@@ -91,10 +91,8 @@ export async function issueReceiptClaimForSale(
   const total = typeof d.total === "number" ? d.total : 0;
   const billNo = typeof d.billNo === "string" ? d.billNo : id;
   const claimed = d.claimStatus === "claimed";
+  // A1: ออก QR ได้แม้ 0 แต้ม — สแกนแล้วไปหน้าสมาชิก
   const pointsPreview = pointsFromReceiptClaim(total, settings);
-  if (pointsPreview <= 0) {
-    throw new Error("ยอดบิลนี้ยังคิดแต้มไม่ได้ (ตรวจทุกกี่บาท=1แต้ม / ยอดสุทธิ)");
-  }
 
   const now = Date.now();
   const ttlMs = Math.max(1, settings.claimTokenTtlDays) * 24 * 60 * 60 * 1000;
@@ -302,7 +300,7 @@ export function claimErrorLabel(code: string | undefined): string {
     auth_mismatch: "บัญชีไม่ตรง",
     pdpa_required: "ต้องยินยอมนโยบายข้อมูลส่วนบุคคล",
     suspended: "บัตรสมาชิกระงับ",
-    zero_points: "บิลนี้ยังไม่มีแต้มให้เคลม",
+    zero_points: "บิลนี้ยังไม่มีแต้มให้เคลม — ดูแต้มได้ที่หน้าสมาชิก",
     missing_sale: "ไม่พบบิล",
     bad_body: "ข้อมูลไม่ครบ",
   };
