@@ -19,6 +19,7 @@ import {
   unifiedReceiptStyles,
 } from "./pos-printer/receipt-template";
 import { buildShiftReportHtml } from "./pos-printer/shift-snapshot-template";
+import { buildClaimUrl } from "./receipt-claim";
 
 export function saleToLocalReceipt(sale: PosSale): PosLocalReceipt {
   const extra = sale as PosSale & {
@@ -34,6 +35,8 @@ export function saleToLocalReceipt(sale: PosSale): PosLocalReceipt {
     (extra.customerName || "").trim() ||
     (memberPhone || sale.memberId ? "สมาชิก" : "") ||
     undefined;
+  const token = (sale.claimToken || "").trim();
+  const claimUrl = token ? buildClaimUrl(sale.id, token) : undefined;
   return {
     id: sale.id,
     billNo: sale.billNo,
@@ -59,6 +62,7 @@ export function saleToLocalReceipt(sale: PosSale): PosLocalReceipt {
     staffName: extra.staffName,
     vatBaht: extra.vatBaht,
     serviceChargeBaht: extra.serviceChargeBaht,
+    claimUrl,
   };
 }
 
