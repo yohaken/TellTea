@@ -53,7 +53,7 @@ const ledgerLabels = read("src/lib/members.ts");
 assert.match(ledgerLabels, /redeem_void_reverse/);
 
 const version = read("src/lib/version.ts");
-assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 738);
+assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 739);
 
 const phases = read("docs/members-round-phases.md");
 assert.match(phases, /P1/);

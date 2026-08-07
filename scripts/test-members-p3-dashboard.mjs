@@ -28,6 +28,6 @@ assert.match(sessions, /redeemTotal/);
 assert.match(sessions, /manualDiscountTotal/);
 
 const version = read("src/lib/version.ts");
-assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 738);
+assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 739);
 
 console.log("OK test-members-p3-dashboard");
