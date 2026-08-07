@@ -42,6 +42,6 @@ assert.match(report, /แลกแต้ม/);
 assert.match(report, /sale\.memberId/);
 
 const version = read("src/lib/version.ts");
-assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 743);
+assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 745);
 
 console.log("OK test-members-p2-boh-bill");

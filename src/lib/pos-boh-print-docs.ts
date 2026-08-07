@@ -25,16 +25,18 @@ export function saleToLocalReceipt(sale: PosSale): PosLocalReceipt {
   const extra = sale as PosSale & {
     customerName?: string;
     customerPhone?: string;
-    staffName?: string;
     vatBaht?: number;
     serviceChargeBaht?: number;
   };
-  const memberPhone = (sale.memberPhone || "").trim();
-  const customerPhone = (extra.customerPhone || memberPhone || "").trim() || undefined;
-  const customerName =
-    (extra.customerName || "").trim() ||
-    (memberPhone || sale.memberId ? "สมาชิก" : "") ||
+  const memberPhone =
+    (sale.memberPhoneDisplay || sale.memberPhone || "").trim() || undefined;
+  const memberName =
+    (sale.memberName || "").trim() ||
+    (sale.memberId || memberPhone ? "สมาชิก" : "") ||
     undefined;
+  // Customer is not the member — nPos prints member after tender as `สมาชิก:`.
+  const customerPhone = (extra.customerPhone || "").trim() || undefined;
+  const customerName = (extra.customerName || "").trim() || undefined;
   const token = (sale.claimToken || "").trim();
   const claimUrl = token ? buildClaimUrl(sale.id, token) : undefined;
   return {
@@ -59,7 +61,9 @@ export function saleToLocalReceipt(sale: PosSale): PosLocalReceipt {
     voidReason: sale.voidReason,
     customerName,
     customerPhone,
-    staffName: extra.staffName,
+    memberName: memberName && (sale.memberId || memberPhone) ? memberName : undefined,
+    memberPhone,
+    staffName: sale.staffName?.trim() || undefined,
     vatBaht: extra.vatBaht,
     serviceChargeBaht: extra.serviceChargeBaht,
     claimUrl,

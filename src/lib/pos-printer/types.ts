@@ -74,6 +74,9 @@ export type ReceiptPrintPayload = {
   customerName?: string;
   /** Optional — shown when present; sell flow does not capture yet. */
   customerPhone?: string;
+  /** Member line after tender — nPos `สมาชิก: name · phone` */
+  memberName?: string;
+  memberPhone?: string;
   externalOrderId?: string;
   staffName?: string;
   staffId?: string;
