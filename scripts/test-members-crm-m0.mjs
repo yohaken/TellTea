@@ -75,7 +75,7 @@ const picker = read("src/components/PermissionPicker.tsx");
 assert.match(picker, /OWNER_ONLY_PERMISSION_KEYS/);
 
 const version = read("src/lib/version.ts");
-assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 735);
+assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 736);
 
 const phases = read("docs/members-crm-phases.md");
 assert.match(phases, /หลังร้าน/);

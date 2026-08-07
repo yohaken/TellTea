@@ -23,11 +23,13 @@ type Step =
   | "confirm"
   | "done"
   | "used"
+  | "no_points"
   | "blocked";
 
 function isAlreadyUsedError(code: string | undefined): boolean {
   return code === "already_claimed" || code === "already_earned";
 }
+
 
 function ClaimForm() {
   const params = useSearchParams();
@@ -69,6 +71,11 @@ function ClaimForm() {
         if (cancelled) return;
         setPreview(data);
         if (!data.ok) {
+          if (data.error === "zero_points") {
+            setStep("no_points");
+            setError(null);
+            return;
+          }
           if (isAlreadyUsedError(data.error)) {
             setStep("used");
             setError(null);
@@ -111,6 +118,11 @@ function ClaimForm() {
       if (result.error === "phone_required") {
         setError(claimErrorLabel(result.error));
         setStep("link_phone");
+        return false;
+      }
+      if (result.error === "zero_points") {
+        setError(null);
+        setStep("no_points");
         return false;
       }
       if (isAlreadyUsedError(result.error)) {
@@ -254,11 +266,11 @@ function ClaimForm() {
         <h1>สะสมแต้มจากสลิป</h1>
         <p className="muted">สมัครง่าย · Google ก่อน · QR ใช้ได้ครั้งเดียว</p>
 
-        {preview?.ok || step === "used" ? (
+        {preview?.ok || step === "used" || step === "no_points" ? (
           <p className="muted" style={{ marginTop: "0.75rem" }}>
             บิล {preview?.billNo || "—"}
-            {typeof preview?.total === "number" ? ` · ยอด ${preview.total} บาท` : ""}
-            {typeof preview?.pointsPreview === "number" ? (
+            {typeof preview?.total === "number" ? ` · ยอดชำระ ${preview.total} บาท` : ""}
+            {typeof preview?.pointsPreview === "number" && step !== "no_points" ? (
               <>
                 {" "}
                 → <strong>{preview.pointsPreview}</strong> แต้ม
@@ -284,6 +296,23 @@ function ClaimForm() {
             </a>
             <p className="muted claim-me-hint">
               หรือเปิด{" "}
+              <a href="/me/">telltea-shop.web.app/me</a>
+            </p>
+          </div>
+        ) : null}
+
+        {step === "no_points" ? (
+          <div className="join-form claim-used">
+            <p className="claim-used-title">บิลนี้ยังไม่มีแต้มให้รับ</p>
+            <p className="muted">
+              ยอดชำระยังไม่ถึงเกณฑ์สะสม หรือจ่ายด้วยแต้มครบแล้ว · QR
+              ยังใช้เข้าดูบัญชีสมาชิกได้
+            </p>
+            <a className="primary-btn claim-used-cta" href="/me/">
+              ไปหน้าสมาชิก
+            </a>
+            <p className="muted claim-me-hint">
+              เข้าสู่ระบบที่{" "}
               <a href="/me/">telltea-shop.web.app/me</a>
             </p>
           </div>

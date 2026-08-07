@@ -497,3 +497,5 @@ exports.nposOwnerDeviceCommand = functions
     await ref.set(patch, { merge: true });
     return { ok: true, deviceId, action, at: now };
   });
+
+exports.assertOwner = assertOwner;

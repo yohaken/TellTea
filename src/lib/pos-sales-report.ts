@@ -112,6 +112,17 @@ function mapPosSale(id: string, data: Record<string, unknown>): PosSale {
   const subtotal = typeof data.subtotal === "number" ? data.subtotal : 0;
   const total = typeof data.total === "number" ? data.total : 0;
   const discountBaht = resolveSaleDiscountBaht(data, subtotal, total);
+  const redeemBaht =
+    typeof data.redeemBaht === "number" && data.redeemBaht > 0
+      ? Math.round(data.redeemBaht * 100) / 100
+      : 0;
+  let manualDiscountBaht =
+    typeof data.manualDiscountBaht === "number" && data.manualDiscountBaht > 0
+      ? Math.round(data.manualDiscountBaht * 100) / 100
+      : 0;
+  if (!manualDiscountBaht && discountBaht > redeemBaht) {
+    manualDiscountBaht = Math.round((discountBaht - redeemBaht) * 100) / 100;
+  }
   return {
     id,
     billNo: typeof data.billNo === "string" ? data.billNo : "—",
@@ -121,6 +132,7 @@ function mapPosSale(id: string, data: Record<string, unknown>): PosSale {
     shift: typeof data.shift === "string" ? data.shift : "",
     lines: Array.isArray(data.lines) ? (data.lines as PosSale["lines"]) : [],
     subtotal,
+    ...(manualDiscountBaht > 0 ? { manualDiscountBaht } : {}),
     ...(discountBaht > 0 ? { discountBaht } : {}),
     total,
     paymentMethod: normalizePaymentMethod(data.paymentMethod),
@@ -139,9 +151,7 @@ function mapPosSale(id: string, data: Record<string, unknown>): PosSale {
     ...(typeof data.pointsRedeemed === "number" && data.pointsRedeemed > 0
       ? { pointsRedeemed: data.pointsRedeemed }
       : {}),
-    ...(typeof data.redeemBaht === "number" && data.redeemBaht > 0
-      ? { redeemBaht: data.redeemBaht }
-      : {}),
+    ...(redeemBaht > 0 ? { redeemBaht } : {}),
     cashReceived: typeof data.cashReceived === "number" ? data.cashReceived : 0,
     change: typeof data.change === "number" ? data.change : 0,
     ledgerEntryId: typeof data.ledgerEntryId === "string" ? data.ledgerEntryId : undefined,

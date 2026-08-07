@@ -163,6 +163,61 @@ async function tryEarnPointsForSale(db, { saleId, memberId, total, actorId }) {
 }
 
 /**
+ * Restore points spent on redeem when a sale is voided — best-effort.
+ * Idempotent via reason redeem_void_reverse per saleId.
+ */
+async function tryReverseRedeemForVoid(db, { saleId, actorId }) {
+  try {
+    if (!saleId) return { ok: false, skipped: "no_sale" };
+    if (await ledgerExistsForSale(db, saleId, "redeem_void_reverse")) {
+      return { ok: true, skipped: "already_reversed" };
+    }
+    const redeemSnap = await db
+      .collection("memberLedger")
+      .where("saleId", "==", saleId)
+      .where("reason", "==", "redeem")
+      .limit(1)
+      .get();
+    if (redeemSnap.empty) return { ok: false, skipped: "no_redeem" };
+    const redeem = redeemSnap.docs[0].data() || {};
+    const mid = asString(redeem.memberId, 32);
+    const spent = Math.abs(Math.trunc(Number(redeem.delta) || 0));
+    if (!mid || spent <= 0) return { ok: false, skipped: "bad_redeem" };
+
+    const memberRef = db.collection("members").doc(mid);
+    const ledgerRef = db.collection("memberLedger").doc();
+    const now = Date.now();
+    await db.runTransaction(async (tx) => {
+      const mSnap = await tx.get(memberRef);
+      if (!mSnap.exists) return;
+      const m = mSnap.data() || {};
+      const balance = typeof m.pointsBalance === "number" ? m.pointsBalance : 0;
+      const balanceAfter = balance + spent;
+      tx.update(memberRef, {
+        pointsBalance: balanceAfter,
+        updatedAt: now,
+        updatedBy: actorId || "pos",
+      });
+      tx.set(ledgerRef, {
+        memberId: mid,
+        delta: spent,
+        balanceAfter,
+        reason: "redeem_void_reverse",
+        saleId,
+        note: "ยกเลิกบิล — คืนแต้มที่แลก",
+        actorType: "system",
+        actorId: actorId || "pos",
+        createdAt: now,
+      });
+    });
+    return { ok: true, points: spent };
+  } catch (err) {
+    console.error("tryReverseRedeemForVoid", err && err.message);
+    return { ok: false, error: String(err && err.message) };
+  }
+}
+
+/**
  * Reverse earn on void — best-effort, never blocks void response.
  */
 async function tryReverseEarnForVoid(db, { saleId, actorId }) {
@@ -200,8 +255,11 @@ async function tryReverseEarnForVoid(db, { saleId, actorId }) {
       const m = mSnap.data() || {};
       const balance = typeof m.pointsBalance === "number" ? m.pointsBalance : 0;
       const balanceAfter = Math.max(0, balance - points);
+      const lifetime =
+        typeof m.lifetimePointsEarned === "number" ? m.lifetimePointsEarned : 0;
       tx.update(memberRef, {
         pointsBalance: balanceAfter,
+        lifetimePointsEarned: Math.max(0, lifetime - points),
         updatedAt: now,
         updatedBy: actorId || "pos",
       });
@@ -222,6 +280,13 @@ async function tryReverseEarnForVoid(db, { saleId, actorId }) {
     console.error("tryReverseEarnForVoid", err && err.message);
     return { ok: false, error: String(err && err.message) };
   }
+}
+
+/** Void path: restore redeem first, then claw back earn — never throws to caller. */
+async function tryReverseMemberPointsForVoid(db, { saleId, actorId }) {
+  const redeem = await tryReverseRedeemForVoid(db, { saleId, actorId });
+  const earn = await tryReverseEarnForVoid(db, { saleId, actorId });
+  return { ok: true, redeem, earn };
 }
 
 /**
@@ -441,7 +506,12 @@ async function loadSaleForClaim(db, saleId, token) {
   if (await ledgerExistsForSale(db, id, "earn_receipt_claim")) {
     return { ok: false, error: "already_claimed", view: asSaleClaimView(id, data, settings) };
   }
-  return { ok: true, settings, saleId: id, data, view: asSaleClaimView(id, data, settings) };
+  const view = asSaleClaimView(id, data, settings);
+  // A1: QR ทุกใบแม้ 0 แต้ม — สแกนแล้วพาไปหน้าสมาชิก ไม่ตัน
+  if (!(view.pointsPreview > 0)) {
+    return { ok: false, error: "zero_points", view };
+  }
+  return { ok: true, settings, saleId: id, data, view };
 }
 
 async function previewReceiptClaim(db, { saleId, token }) {
@@ -737,6 +807,8 @@ module.exports = {
   redeemBahtFromPoints,
   tryEarnPointsForSale,
   tryReverseEarnForVoid,
+  tryReverseRedeemForVoid,
+  tryReverseMemberPointsForVoid,
   planRedeemFromMemberSnap,
   writeRedeemInSaleTx,
   lookupMember,
