@@ -205,7 +205,11 @@ public final class ReceiptFormBuilder {
     if (!claimUrl.isEmpty()) {
       sb.append('\n');
       sb.append(CLAIM_QR_MARKER).append('\n');
-      sb.append(center(CLAIM_QR_INVITE, width)).append('\n');
+      // Invite larger/bolder than body so staff/customer can read it at a glance.
+      sb.append(EscPos.BOLD_ON)
+          .append(center(CLAIM_QR_INVITE, width))
+          .append(EscPos.BOLD_OFF)
+          .append('\n');
     }
     sb.append('\n');
     sb.append(center(footerNote, width)).append('\n');

@@ -38,15 +38,15 @@ assert.match(nposSell, /manualDiscountBaht: body\.manualDiscountBaht/);
 
 const gradle = read("npos-telltea/app/build.gradle");
 const ver = gradle.match(/versionCode\s+(\d+)/);
-assert.ok(ver && Number(ver[1]) >= 140, "versionCode >= 140");
+assert.ok(ver && Number(ver[1]) >= 141, "versionCode >= 141");
 
 const apkPin = read("src/lib/npos-apk-release.ts");
 const pinCode = Number(apkPin.match(/NPOS_SYSTEM_VERSION_CODE = (\d+)/)?.[1] || 0);
-assert.ok(pinCode >= 140, "NPOS_SYSTEM_VERSION_CODE >= 140");
+assert.ok(pinCode >= 141, "NPOS_SYSTEM_VERSION_CODE >= 141");
 
 const whats = read("npos-telltea/app/src/main/java/app/telltea/npos/update/WhatsNewCatalog.java");
-assert.match(whats, /versionCode == 140/);
-assert.match(whats, /คอนเฟิร์มแต้มหลังใส่เบอร์/);
+assert.match(whats, /versionCode == 141/);
+assert.match(whats, /ปุ่มสมาชิกข้างชำระเงิน/);
 
 const strings = read("npos-telltea/app/src/main/res/values/strings.xml");
 assert.match(strings, /sell_hub_member/);
@@ -60,13 +60,21 @@ const layout = read("npos-telltea/app/src/main/res/layout/activity_sell.xml");
 assert.match(layout, /memberButton/);
 assert.match(layout, /redeemButton/);
 assert.match(layout, /memberStatusLabel/);
+const payBar = layout.slice(layout.indexOf("cartPayBar"));
+assert.match(payBar, /memberButton/);
+assert.ok(payBar.indexOf("memberButton") < payBar.indexOf("holdBillButton"));
+const actionRow = layout.slice(
+  layout.indexOf("cartActionRow"),
+  layout.indexOf("cartPayBar"),
+);
+assert.doesNotMatch(actionRow, /memberButton/);
 
 const phases = read("docs/members-round-phases.md");
 assert.match(phases, /P4/);
 
 const appBuild = Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)[1]);
-assert.ok(appBuild >= 744, "APP_BUILD >= 744");
+assert.ok(appBuild >= 746, "APP_BUILD >= 746");
 const posBuild = Number(read("src/lib/pos-version.ts").match(/POS_BUILD = (\d+)/)[1]);
-assert.ok(posBuild >= 190, "POS_BUILD >= 190");
+assert.ok(posBuild >= 194, "POS_BUILD >= 194");
 
 console.log("OK test-members-p4-npos");

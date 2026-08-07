@@ -118,7 +118,7 @@ public final class SunmiInnerPrinter {
         PrinterTransport.Result r = printTextOnce(svc, before.endsWith("\n") ? before : before + "\n");
         if (!r.ok) return r;
       }
-      Bitmap qr = QrBitmaps.encode(url, 240);
+      Bitmap qr = QrBitmaps.encode(url, 168);
       if (qr != null) {
         try {
           svc.setAlignment(1, null);

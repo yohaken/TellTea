@@ -321,16 +321,16 @@ export function unifiedReceiptStyles(layout: PrinterKindProfile, cutMode: PosPri
     .claim-qr img {
       display: block;
       margin: 0 auto;
-      width: ${layout.paperWidthMm === 58 ? 112 : 132}px;
-      height: ${layout.paperWidthMm === 58 ? 112 : 132}px;
+      width: ${layout.paperWidthMm === 58 ? 88 : 100}px;
+      height: ${layout.paperWidthMm === 58 ? 88 : 100}px;
       image-rendering: pixelated;
     }
     .claim-qr-invite {
-      margin-top: 4px;
-      font-size: ${layout.metaFontPx}px;
-      font-weight: 700;
-      color: #222;
-      letter-spacing: 0.02em;
+      margin-top: 6px;
+      font-size: ${layout.bodyFontPx + 2}px;
+      font-weight: 800;
+      color: #111;
+      letter-spacing: 0.03em;
     }
     ${cutHint}
     @media print { body { margin: 0; } }
@@ -423,7 +423,7 @@ export function buildUnifiedReceiptBody(data: ReceiptPrintPayload, layout: Print
       ? `<div class="claim-qr">
       ${
         claimQrSrc
-          ? `<img src="${escapeReceiptHtml(claimQrSrc)}" alt="QR สะสมแต้ม" width="${compact ? 112 : 132}" height="${compact ? 112 : 132}" />`
+          ? `<img src="${escapeReceiptHtml(claimQrSrc)}" alt="QR สะสมแต้ม" width="${compact ? 88 : 100}" height="${compact ? 88 : 100}" />`
           : ""
       }
       <div class="claim-qr-invite">สแกนสะสมแต้ม</div>
