@@ -7,6 +7,9 @@ import { POS_SALES_COL } from "./pos-sales";
 export const PUBLIC_RECEIPT_CLAIM_PREVIEW_URL =
   "https://asia-southeast1-mypeer-501909.cloudfunctions.net/publicReceiptClaimPreview";
 
+export const PUBLIC_RECEIPT_CLAIM_LOOKUP_URL =
+  "https://asia-southeast1-mypeer-501909.cloudfunctions.net/publicReceiptClaimLookup";
+
 export const PUBLIC_RECEIPT_CLAIM_URL =
   "https://asia-southeast1-mypeer-501909.cloudfunctions.net/publicReceiptClaim";
 
@@ -136,6 +139,22 @@ export async function fetchReceiptClaimPreview(
   return (await res.json()) as ReceiptClaimPreview;
 }
 
+export type ReceiptClaimLookup = {
+  ok: boolean;
+  error?: string;
+  found?: boolean;
+  phoneDisplay?: string;
+  billNo?: string;
+  total?: number;
+  pointsPreview?: number;
+  member?: {
+    id?: string;
+    displayName?: string;
+    cardNo?: string;
+    pointsBalance?: number;
+  };
+};
+
 export type ReceiptClaimResult = {
   ok: boolean;
   error?: string;
@@ -150,26 +169,68 @@ export type ReceiptClaimResult = {
   };
 };
 
-export async function submitReceiptClaim(input: {
+export async function lookupReceiptClaimMember(input: {
   saleId: string;
   token: string;
-  displayName?: string;
-  pdpaAccepted: boolean;
+  phone: string;
+}): Promise<ReceiptClaimLookup> {
+  const res = await fetch(PUBLIC_RECEIPT_CLAIM_LOOKUP_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      saleId: input.saleId,
+      token: input.token,
+      phone: input.phone,
+    }),
+  });
+  return (await res.json()) as ReceiptClaimLookup;
+}
+
+/** สมาชิกเดิม — ใส่เบอร์แล้วยืนยัน โดยไม่ OTP */
+export async function submitExistingReceiptClaim(input: {
+  saleId: string;
+  token: string;
+  phone: string;
 }): Promise<ReceiptClaimResult> {
-  const auth = getFirebaseAuth();
-  const user = auth.currentUser;
-  if (!user) throw new Error("ยืนยัน OTP ก่อนเคลม");
-  const idToken = await user.getIdToken();
   const res = await fetch(PUBLIC_RECEIPT_CLAIM_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       saleId: input.saleId,
       token: input.token,
-      displayName: input.displayName || "",
-      pdpaAccepted: input.pdpaAccepted === true,
-      idToken,
+      phone: input.phone,
+      confirmExisting: true,
     }),
+  });
+  return (await res.json()) as ReceiptClaimResult;
+}
+
+/** สมัครใหม่ + เคลม — ช่วงทดลองไม่บังคับ OTP (ส่ง phone + PDPA) */
+export async function submitReceiptClaim(input: {
+  saleId: string;
+  token: string;
+  phone?: string;
+  displayName?: string;
+  pdpaAccepted: boolean;
+}): Promise<ReceiptClaimResult> {
+  const body: Record<string, unknown> = {
+    saleId: input.saleId,
+    token: input.token,
+    phone: input.phone || "",
+    displayName: input.displayName || "",
+    pdpaAccepted: input.pdpaAccepted === true,
+  };
+  // Optional OTP if already signed in — not required for experiment
+  try {
+    const user = getFirebaseAuth().currentUser;
+    if (user) body.idToken = await user.getIdToken();
+  } catch {
+    /* ignore */
+  }
+  const res = await fetch(PUBLIC_RECEIPT_CLAIM_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
   });
   return (await res.json()) as ReceiptClaimResult;
 }
@@ -184,7 +245,8 @@ export function claimErrorLabel(code: string | undefined): string {
     already_claimed: "บิลนี้เคลมแต้มไปแล้ว",
     already_earned: "บิลนี้สะสมแต้มไปแล้ว",
     invalid_phone: "เบอร์โทรไม่ถูกต้อง",
-    auth_required: "ยืนยัน OTP ก่อน",
+    not_member: "ยังไม่เป็นสมาชิก — กดสมัครก่อน",
+    auth_required: "ต้องยืนยันตัวตนก่อน",
     auth_mismatch: "เบอร์ที่ยืนยัน OTP ไม่ตรง",
     pdpa_required: "ต้องยินยอมนโยบายข้อมูลส่วนบุคคล",
     suspended: "บัตรสมาชิกระงับ",

@@ -439,67 +439,65 @@ async function previewReceiptClaim(db, { saleId, token }) {
 }
 
 /**
- * Claim points from a sale-bound receipt QR after Firebase phone OTP.
- * idToken must be a Firebase Auth ID token with matching phone_number.
+ * Lookup member for a valid claim link — used to skip OTP for returning phones.
  */
-async function claimReceiptPoints(db, auth, {
-  saleId,
-  token,
-  displayName,
-  pdpaAccepted,
-  idToken,
-}) {
-  if (pdpaAccepted !== true) return { ok: false, error: "pdpa_required" };
-  const rawToken = asString(idToken, 4096);
-  if (!rawToken) return { ok: false, error: "auth_required" };
-
-  let decoded;
-  try {
-    decoded = await auth.verifyIdToken(rawToken);
-  } catch (err) {
-    console.error("claimReceiptPoints verifyIdToken", err && err.message);
-    return { ok: false, error: "auth_required" };
-  }
-  const phoneFromAuth = asString(decoded.phone_number, 32);
-  const digits = phoneDigitsFromInput(phoneFromAuth);
+async function lookupReceiptClaimMember(db, { saleId, token, phone }) {
+  const digits = phoneDigitsFromInput(phone);
   if (!digits) return { ok: false, error: "invalid_phone" };
-
   const loaded = await loadSaleForClaim(db, saleId, token);
   if (!loaded.ok) return { ok: false, error: loaded.error, ...(loaded.view || {}) };
+  const snap = await db.collection("members").doc(digits).get();
+  if (!snap.exists) {
+    return {
+      ok: true,
+      found: false,
+      phoneDigits: digits,
+      phoneDisplay: formatPhoneDisplay(digits),
+      ...loaded.view,
+    };
+  }
+  const m = snap.data() || {};
+  if (m.status === "suspended") return { ok: false, error: "suspended" };
+  return {
+    ok: true,
+    found: true,
+    phoneDigits: digits,
+    phoneDisplay: formatPhoneDisplay(digits),
+    member: {
+      id: snap.id,
+      displayName: asString(m.displayName, 80) || formatPhoneDisplay(digits),
+      cardNo: asString(m.cardNo, 24) || cardNoFromDigits(digits),
+      pointsBalance: typeof m.pointsBalance === "number" ? m.pointsBalance : 0,
+    },
+    ...loaded.view,
+  };
+}
 
+async function creditReceiptClaimToMember(db, {
+  loaded,
+  digits,
+  displayName,
+  isNew,
+  note,
+}) {
   const settings = loaded.settings;
   const points = pointsFromReceiptClaim(Number(loaded.data.total) || 0, settings);
   if (points <= 0) return { ok: false, error: "zero_points" };
 
   const memberRef = db.collection("members").doc(digits);
-  let isNew = false;
-  const existing = await memberRef.get();
-  if (!existing.exists) {
-    const created = await quickCreateMember(db, {
-      phone: phoneFromAuth || digits,
-      displayName,
-      actorId: "receipt_qr",
-      source: "receipt_qr",
-    });
-    if (!created.ok) return created;
-    isNew = true;
-  } else {
-    const m = existing.data() || {};
-    if (m.status === "suspended") return { ok: false, error: "suspended" };
-  }
-
   const saleRef = db.collection("posSales").doc(loaded.saleId);
   const ledgerRef = db.collection("memberLedger").doc();
   const now = Date.now();
+  const token = asString(loaded.data.claimToken, 128);
 
   try {
     const result = await db.runTransaction(async (tx) => {
       const [mSnap, sSnap] = await Promise.all([tx.get(memberRef), tx.get(saleRef)]);
-      if (!mSnap.exists) return { error: "invalid_phone" };
+      if (!mSnap.exists) return { error: "not_member" };
       if (!sSnap.exists) return { error: "missing_sale" };
       const sale = sSnap.data() || {};
       if (sale.status === "voided") return { error: "voided" };
-      if (asString(sale.claimToken, 128) !== asString(token, 128)) return { error: "bad_token" };
+      if (asString(sale.claimToken, 128) !== token) return { error: "bad_token" };
       const exp = typeof sale.claimTokenExpiresAt === "number" ? sale.claimTokenExpiresAt : 0;
       if (exp && exp < now) return { error: "expired" };
       if (sale.claimStatus === "claimed") return { error: "already_claimed" };
@@ -526,7 +524,7 @@ async function claimReceiptPoints(db, auth, {
         balanceAfter,
         reason: "earn_receipt_claim",
         saleId: loaded.saleId,
-        note: "เคลมจาก QR สลิป",
+        note: note || "เคลมจาก QR สลิป",
         channel: "receipt_qr",
         actorType: "customer",
         actorId: digits,
@@ -548,14 +546,15 @@ async function claimReceiptPoints(db, auth, {
       return {
         points,
         balanceAfter,
-        displayName: asString(memberPatch.displayName, 80) || asString(m.displayName, 80) || formatPhoneDisplay(digits),
+        displayName:
+          asString(memberPatch.displayName, 80) ||
+          asString(m.displayName, 80) ||
+          formatPhoneDisplay(digits),
         cardNo: asString(m.cardNo, 24) || cardNoFromDigits(digits),
       };
     });
 
     if (result.error) return { ok: false, error: result.error };
-
-    // Double-check race: if earn_sale landed concurrently, leave claim as-is (already written).
     return {
       ok: true,
       points: result.points,
@@ -565,13 +564,96 @@ async function claimReceiptPoints(db, auth, {
         displayName: result.displayName,
         cardNo: result.cardNo,
         pointsBalance: result.balanceAfter,
-        isNew,
+        isNew: isNew === true,
       },
     };
   } catch (err) {
-    console.error("claimReceiptPoints", err && err.message);
+    console.error("creditReceiptClaimToMember", err && err.message);
     return { ok: false, error: "claim_failed" };
   }
+}
+
+/**
+ * Claim points from a sale-bound receipt QR (experiment: no OTP).
+ * - Existing: phone + confirmExisting
+ * - New: phone + displayName + PDPA → create then claim
+ * One claim per sale QR — after success the link is dead.
+ * Optional idToken path kept for later if we re-enable OTP.
+ */
+async function claimReceiptPoints(db, auth, {
+  saleId,
+  token,
+  phone,
+  displayName,
+  pdpaAccepted,
+  idToken,
+  confirmExisting,
+}) {
+  const loaded = await loadSaleForClaim(db, saleId, token);
+  if (!loaded.ok) return { ok: false, error: loaded.error, ...(loaded.view || {}) };
+
+  // Returning member — phone + confirm only
+  if (confirmExisting === true) {
+    const digits = phoneDigitsFromInput(phone);
+    if (!digits) return { ok: false, error: "invalid_phone" };
+    const existing = await db.collection("members").doc(digits).get();
+    if (!existing.exists) return { ok: false, error: "not_member" };
+    const m = existing.data() || {};
+    if (m.status === "suspended") return { ok: false, error: "suspended" };
+    return creditReceiptClaimToMember(db, {
+      loaded,
+      digits,
+      displayName: "",
+      isNew: false,
+      note: "เคลมจาก QR สลิป (สมาชิกเดิม)",
+    });
+  }
+
+  // New signup without OTP (early experiment) — or OTP if idToken provided
+  const rawToken = asString(idToken, 4096);
+  let digits = "";
+  let phoneForCreate = "";
+
+  if (rawToken) {
+    let decoded;
+    try {
+      decoded = await auth.verifyIdToken(rawToken);
+    } catch (err) {
+      console.error("claimReceiptPoints verifyIdToken", err && err.message);
+      return { ok: false, error: "auth_required" };
+    }
+    phoneForCreate = asString(decoded.phone_number, 32);
+    digits = phoneDigitsFromInput(phoneForCreate);
+  } else {
+    digits = phoneDigitsFromInput(phone);
+    phoneForCreate = phone;
+  }
+  if (!digits) return { ok: false, error: "invalid_phone" };
+  if (pdpaAccepted !== true) return { ok: false, error: "pdpa_required" };
+
+  let isNew = false;
+  const existing = await db.collection("members").doc(digits).get();
+  if (!existing.exists) {
+    const created = await quickCreateMember(db, {
+      phone: phoneForCreate || digits,
+      displayName,
+      actorId: "receipt_qr",
+      source: "receipt_qr",
+    });
+    if (!created.ok) return created;
+    isNew = true;
+  } else {
+    const m = existing.data() || {};
+    if (m.status === "suspended") return { ok: false, error: "suspended" };
+  }
+
+  return creditReceiptClaimToMember(db, {
+    loaded,
+    digits,
+    displayName,
+    isNew,
+    note: isNew ? "สมัคร+เคลมจาก QR สลิป" : "เคลมจาก QR สลิป",
+  });
 }
 
 module.exports = {
@@ -589,6 +671,7 @@ module.exports = {
   quickCreateMember,
   publicSignup,
   previewReceiptClaim,
+  lookupReceiptClaimMember,
   claimReceiptPoints,
   formatPhoneDisplay,
   cardNoFromDigits,

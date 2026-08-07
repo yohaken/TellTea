@@ -13,6 +13,7 @@ const {
   quickCreateMember,
   publicSignup,
   previewReceiptClaim,
+  lookupReceiptClaimMember,
   claimReceiptPoints,
 } = require("./pos-members");
 
@@ -858,9 +859,43 @@ exports.publicReceiptClaimPreview = functions.region("asia-southeast1").https.on
   }
 });
 
+/** Public receipt-claim member lookup — phone on a valid claim link; no OTP. */
+exports.publicReceiptClaimLookup = functions.region("asia-southeast1").https.onRequest(async (req, res) => {
+  cors(res);
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
+  }
+  if (req.method !== "POST") {
+    res.status(405).json({ ok: false, error: "POST only" });
+    return;
+  }
+  const body = parseBody(req);
+  if (!body) {
+    res.status(400).json({ ok: false, error: "bad_body" });
+    return;
+  }
+  try {
+    const db = getFirestore();
+    const result = await lookupReceiptClaimMember(db, {
+      saleId: body.saleId || body.s,
+      token: body.token || body.t,
+      phone: body.phone,
+    });
+    const deny =
+      result.ok === false &&
+      (result.error === "bad_token" || result.error === "missing_sale");
+    res.status(deny ? 403 : 200).json(result);
+  } catch (err) {
+    console.error("publicReceiptClaimLookup", err);
+    res.status(500).json({ ok: false, error: "lookup_failed" });
+  }
+});
+
 /**
- * Public receipt-claim — Firebase phone OTP idToken required.
- * Does not touch POS complete-sale path.
+ * Public receipt-claim.
+ * Existing member: phone + confirmExisting (no OTP).
+ * New member: Firebase phone OTP idToken + PDPA.
  */
 exports.publicReceiptClaim = functions.region("asia-southeast1").https.onRequest(async (req, res) => {
   cors(res);
@@ -882,9 +917,11 @@ exports.publicReceiptClaim = functions.region("asia-southeast1").https.onRequest
     const result = await claimReceiptPoints(db, getAuth(), {
       saleId: body.saleId || body.s,
       token: body.token || body.t,
+      phone: body.phone,
       displayName: body.displayName,
       pdpaAccepted: body.pdpaAccepted === true,
       idToken: body.idToken,
+      confirmExisting: body.confirmExisting === true,
     });
     const deny =
       result.ok === false &&

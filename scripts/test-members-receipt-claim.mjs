@@ -21,9 +21,12 @@ assert.match(claimLib, /publicReceiptClaim/);
 assert.match(claimLib, /buildClaimPath/);
 
 const claimPage = read("src/app/claim/page.tsx");
-assert.match(claimPage, /sendPhoneOtp/);
+assert.match(claimPage, /lookupReceiptClaimMember/);
+assert.match(claimPage, /submitExistingReceiptClaim/);
 assert.match(claimPage, /pdpa/);
 assert.match(claimPage, /submitReceiptClaim/);
+assert.match(claimPage, /ยืนยันรับแต้ม/);
+assert.doesNotMatch(claimPage, /sendPhoneOtp/);
 
 const boh = read("src/app/members/page.tsx");
 assert.match(boh, /receiptClaimEnabled/);
@@ -38,22 +41,26 @@ const posMembers = read("functions/pos-members.js");
 assert.match(posMembers, /receiptClaimEnabled/);
 assert.match(posMembers, /pointsFromReceiptClaim/);
 assert.match(posMembers, /previewReceiptClaim/);
+assert.match(posMembers, /lookupReceiptClaimMember/);
+assert.match(posMembers, /confirmExisting/);
 assert.match(posMembers, /claimReceiptPoints/);
 assert.match(posMembers, /earn_receipt_claim/);
 
 const nposSell = read("functions/npos-sell.js");
 assert.match(nposSell, /publicReceiptClaimPreview/);
+assert.match(nposSell, /publicReceiptClaimLookup/);
 assert.match(nposSell, /publicReceiptClaim/);
 
 const index = read("functions/index.js");
 assert.match(index, /publicReceiptClaimPreview/);
+assert.match(index, /publicReceiptClaimLookup/);
 assert.match(index, /publicReceiptClaim/);
 
 const smoke = read("scripts/smoke-hosting-export.mjs");
 assert.match(smoke, /"claim"/);
 
 const version = read("src/lib/version.ts");
-assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 730);
+assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 731);
 
 // Must not ship nPos print / APK bump for R0–R2
 assert.equal(

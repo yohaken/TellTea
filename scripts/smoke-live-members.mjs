@@ -9,7 +9,7 @@ async function main() {
   const verRes = await fetch(`${BASE}/version.json`, { cache: "no-store" });
   assert.equal(verRes.status, 200, "version.json HTTP");
   const ver = await verRes.json();
-  assert.ok(Number(ver.build) >= 730, `build too old: ${ver.build}`);
+  assert.ok(Number(ver.build) >= 731, `build too old: ${ver.build}`);
 
   const res = await fetch(`${BASE}/members/`, { cache: "no-store" });
   assert.equal(res.status, 200, "/members/ HTTP");
