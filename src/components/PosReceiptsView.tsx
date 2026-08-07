@@ -10,6 +10,7 @@ import {
 } from "@/lib/pos-local-receipts";
 import { printSaleDocuments } from "@/lib/pos-printer/router";
 import { localReceiptToPrintPayload } from "@/lib/pos-receipt-view";
+import { claimQrDataUrl } from "@/lib/receipt-claim";
 import { getLocalPosShopSettings, subscribePosShopSettings, type PosShopSettings } from "@/lib/pos-settings";
 import { usePosApp } from "@/lib/pos-app-context";
 import { formatPlainNumber, startOfLocalDay } from "@/lib/utils";
@@ -77,7 +78,19 @@ export function PosReceiptsView() {
   const pendingCount = rows.filter((r) => r.pending && !r.voided).length;
 
   async function handlePrint(receipt: PosLocalReceipt) {
-    const payload = localReceiptToPrintPayload(receipt, shop);
+    const claimUrl = (receipt.claimUrl || "").trim();
+    let claimQr: string | undefined = receipt.claimQrDataUrl?.trim() || undefined;
+    if (claimUrl && !claimQr) {
+      try {
+        claimQr = await claimQrDataUrl(claimUrl);
+      } catch {
+        claimQr = undefined;
+      }
+    }
+    const payload = localReceiptToPrintPayload(
+      { ...receipt, claimUrl: claimUrl || undefined, claimQrDataUrl: claimQr },
+      shop,
+    );
     await printSaleDocuments(payload, { receiptOnly: true });
   }
 

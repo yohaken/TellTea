@@ -17,6 +17,8 @@ const DEFAULT_SHOP = {
 
 export const RECEIPT_TEXT_COLS_58 = 32;
 export const RECEIPT_TEXT_COLS_80 = 42;
+/** Parity marker with nPos ReceiptFormBuilder — HTML paper uses bitmap instead */
+export const CLAIM_QR_MARKER = "<<<CLAIM_QR>>>";
 
 function shopDisplayName(data: ReceiptPrintPayload): string {
   const en = (data.shopName || DEFAULT_SHOP.shopName).trim();
@@ -193,6 +195,12 @@ export function buildUnifiedReceiptText(
   if (data.orderNotes?.trim()) {
     out.push(rule(width));
     for (const part of wrap(data.orderNotes.trim(), width)) out.push(part);
+  }
+  const claimUrl = (data.claimUrl || "").trim();
+  if (claimUrl) {
+    out.push("");
+    out.push(CLAIM_QR_MARKER);
+    out.push(center("สแกนสะสมแต้ม", width));
   }
   out.push("");
   out.push(center(footerNote, width));

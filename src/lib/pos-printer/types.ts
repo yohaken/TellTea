@@ -82,6 +82,10 @@ export type ReceiptPrintPayload = {
   /** Optional display-only amounts — not computed in counter sell yet. */
   vatBaht?: number;
   serviceChargeBaht?: number;
+  /** Claim QR (A1 / P5) — same invite as nPos slip when set */
+  claimUrl?: string;
+  /** Pre-rendered PNG data URL for HTML paper / browser print */
+  claimQrDataUrl?: string;
 };
 
 export type KitchenTicketPrintPayload = {

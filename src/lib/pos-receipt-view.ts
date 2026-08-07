@@ -95,6 +95,8 @@ export function localReceiptToPrintPayload(
     receiptFooterNote: shop.receiptFooterNote,
     vatBaht: receipt.vatBaht,
     serviceChargeBaht: receipt.serviceChargeBaht,
+    claimUrl: receipt.claimUrl?.trim() || undefined,
+    claimQrDataUrl: receipt.claimQrDataUrl?.trim() || undefined,
   };
 }
 

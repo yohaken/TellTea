@@ -40,6 +40,9 @@ export type PosLocalReceipt = {
   staffName?: string;
   vatBaht?: number;
   serviceChargeBaht?: number;
+  /** Receipt claim QR — from sale.claimToken / nPos sync */
+  claimUrl?: string;
+  claimQrDataUrl?: string;
 };
 
 const KEY = "telltea-pos-local-receipts";
