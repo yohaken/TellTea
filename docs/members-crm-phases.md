@@ -16,10 +16,11 @@
 |-----|--------|--------|
 | **M0 โครง** | ✅ | types, collections, rules, permissions, `/members` |
 | **M1 CRM หลังร้าน** | ✅ | CRUD · ledger · ตั้งค่า · เจ้าของเท่านั้น |
-| **M2 POS เคาน์เตอร์** | ⬜ เลื่อน | UI ผูกสมาชิกบน nPos / APK — ทำทีหลังเมื่อพร้อม |
-| **M3 แลกแต้มเคาน์เตอร์** | ⬜ เลื่อน | รอ M2 |
+| **M2 POS เคาน์เตอร์** | ⬜ วางเฟสแล้ว | คีย์เบอร์ผูกสมาชิกบน nPos — ดู [members-redeem-phases.md](./members-redeem-phases.md) |
+| **M3 แลกแต้มเคาน์เตอร์** | ⬜ วางเฟสแล้ว | ใช้แต้มตอนคิดเงิน + ข้อมูลบนบิล/แดชบอร์ด — ดู [members-redeem-phases.md](./members-redeem-phases.md) (D0–D5) |
 | **M4 QR สมัครเอง** | ✅ โครง | `/join/?t=` + CF (เปิดใช้เมื่อตั้งค่า) |
 | **R0–R2 QR บนสลิป** | ✅ โค้ดทดลอง | ธง+`/claim`+ออก QR หลังร้าน — ดู [members-receipt-qr-phases.md](./members-receipt-qr-phases.md) · **ยังไม่ขายจริง / ไม่แตะ APK** |
+| **ใช้แต้ม + ข้อมูลบิล/แดชบอร์ด** | ⬜ D0 ล็อกสัญญา | [members-redeem-phases.md](./members-redeem-phases.md) — สัญญาฟิลด์ · สลิป · หลังร้าน · แดชบอร์ด · void |
 
 ## ลิงก์หลังร้าน
 
