@@ -3337,6 +3337,8 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
     final boolean crmOn = membersEnabled();
     final String mid = crmOn && hasMember() ? memberId : "";
     final String mPhone = crmOn && hasMember() ? memberPhone : "";
+    final String mName = crmOn && hasMember() ? memberName : "";
+    final String mPhoneDisp = crmOn && hasMember() ? memberPhoneDisplay : "";
     final int pts = crmOn && hasMember() ? pointsToRedeem : 0;
     final double changeForCustomer =
         PaymentMethods.isCash(method) ? Math.max(0, cashReceived - cartTotal()) : 0;
@@ -3352,6 +3354,8 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
         autoPrint,
         mid,
         mPhone,
+        mName,
+        mPhoneDisp,
         pts,
         new SaleSync.SaleCallback() {
           @Override

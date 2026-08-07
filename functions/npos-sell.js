@@ -295,11 +295,14 @@ exports.nposShopSettings = functions.region("asia-southeast1").https.onRequest(a
     let membersEnabled = false;
     let membersBahtPerPoint = 25;
     let membersPointsPerBahtRedeem = 1;
+    let membersReceiptClaimEnabled = false;
     try {
       const ms = await loadMemberSettings(db);
       membersEnabled = ms.enabled === true;
       membersBahtPerPoint = ms.bahtPerPoint;
       membersPointsPerBahtRedeem = ms.pointsPerBahtRedeem;
+      // Same BOH flag as «ทดลอง QR สลิป» — tablet defers paper until claim URL exists.
+      membersReceiptClaimEnabled = ms.receiptClaimEnabled === true;
     } catch (msErr) {
       console.warn("nposShopSettings members", msErr && msErr.message);
     }
@@ -338,6 +341,7 @@ exports.nposShopSettings = functions.region("asia-southeast1").https.onRequest(a
       membersEnabled,
       membersBahtPerPoint,
       membersPointsPerBahtRedeem,
+      membersReceiptClaimEnabled,
       updatedAt: typeof x.shopSettingsUpdatedAt === "number" ? x.shopSettingsUpdatedAt : 0,
     });
   } catch (err) {
@@ -637,6 +641,7 @@ exports.nposCompleteSale = functions.region("asia-southeast1").https.onRequest(a
       // Optional — absent on every current live bill.
       memberId: body.memberId,
       memberPhone: body.memberPhone,
+      memberName: body.memberName,
       pointsToRedeem: body.pointsToRedeem,
     };
     const result = await completePosSaleAdmin(db, payload, installId);
