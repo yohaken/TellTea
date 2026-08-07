@@ -133,6 +133,12 @@
     <string name="member_redeem_suffix_fmt"> · ใช้ %1$d (−฿%2$.0f)</string>
     <string name="member_need_net">ต้องมีเน็ตเพื่อค้นหาสมาชิก</string>
     <string name="member_looking_up">กำลังค้นหา…</string>
+    <string name="member_found_title">พบสมาชิก</string>
+    <string name="member_found_ask_fmt">คงเหลือ %1$d แต้ม\nบอกลูกค้าแล้วเลือกว่าจะใช้หรือไม่</string>
+    <string name="member_found_use">ใช้แต้ม</string>
+    <string name="member_found_skip">ไม่ใช้แต้ม</string>
+    <string name="member_found_attach">ติดบิล</string>
+    <string name="member_found_zero_fmt">คงเหลือ 0 แต้ม — ติดบิลเพื่อสะสมได้</string>
     <string name="redeem_title">ใช้แต้ม</string>
     <string name="redeem_hint">จำนวนแต้มที่จะใช้</string>
     <string name="redeem_balance_fmt">คงเหลือ %1$d แต้ม · ใช้ได้สูงสุด %2$d (−฿%3$.0f)</string>

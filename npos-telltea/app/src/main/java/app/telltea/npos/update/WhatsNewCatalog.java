@@ -16,6 +16,18 @@ public final class WhatsNewCatalog {
   private WhatsNewCatalog() {}
 
   public static List<WhatsNewSlide> slidesFor(int versionCode) {
+    if (versionCode == 140) {
+      List<WhatsNewSlide> slides = new ArrayList<>();
+      slides.add(
+          new WhatsNewSlide(
+              "คอนเฟิร์มแต้มหลังใส่เบอร์",
+              "ค้นหาสมาชิกแล้วโชว์คงเหลือ · บอกลูกค้าก่อน · เลือกใช้แต้มหรือไม่ใช้"));
+      slides.add(
+          new WhatsNewSlide(
+              "ใช้ทั้งหมดหรือบางส่วน",
+              "กดใช้แต้มแล้วเลือกจำนวน · ใช้สูงสุดทั้งบิล หรือคีย์บางส่วน"));
+      return slides;
+    }
     if (versionCode == 139) {
       List<WhatsNewSlide> slides = new ArrayList<>();
       slides.add(
