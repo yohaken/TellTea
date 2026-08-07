@@ -70,7 +70,7 @@ assert.match(smoke, /"claim"/);
 assert.match(smoke, /"me"/);
 
 const version = read("src/lib/version.ts");
-assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 733);
+assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 734);
 
 assert.equal(
   existsSync(join(root, "npos-telltea/app/src/main/java/app/telltea/npos/sell/MemberApi.java")),

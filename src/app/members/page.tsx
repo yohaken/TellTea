@@ -49,10 +49,12 @@ export default function MembersPage() {
 
 function formatWhen(ms: number) {
   if (!ms) return "—";
-  return new Intl.DateTimeFormat("th-TH", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(ms));
+  const d = new Date(ms);
+  const dd = d.getDate();
+  const mm = d.getMonth() + 1;
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mi = String(d.getMinutes()).padStart(2, "0");
+  return `${dd}/${mm} ${hh}:${mi}`;
 }
 
 function phoneLabel(m: ShopMember) {
@@ -488,34 +490,35 @@ function MembersView() {
           ) : null}
 
           <div className="table-wrap members-slim-table-wrap">
-            <table className="sheet-table sheet-table--dense members-slim-table">
+            <table className="sheet-table sheet-table--dense members-slim-table members-slim-table--claim">
               <thead>
                 <tr>
-                  <th>บิล</th>
-                  <th className="num">ยอด</th>
-                  <th>เวลา</th>
-                  <th></th>
+                  <th className="members-col-bill">บิล</th>
+                  <th className="members-col-status">สถานะ</th>
+                  <th className="num members-col-amt">ยอด</th>
+                  <th className="members-col-when">เวลา</th>
+                  <th className="members-col-act"></th>
                 </tr>
               </thead>
               <tbody>
                 {todaySales.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="muted">
+                    <td colSpan={5} className="muted">
                       ยังไม่มีบิลวันนี้
                     </td>
                   </tr>
                 ) : (
                   todaySales.slice(0, 40).map((s) => (
                     <tr key={s.id}>
-                      <td>
-                        <strong>{s.billNo}</strong>
-                        {s.claimStatus === "claimed" ? (
-                          <span className="muted"> · เคลมแล้ว</span>
-                        ) : null}
+                      <td className="members-col-bill">
+                        <span className="members-cell-strong">{s.billNo}</span>
                       </td>
-                      <td className="num">{s.total}</td>
-                      <td className="muted">{formatWhen(s.createdAt)}</td>
-                      <td className="num">
+                      <td className="members-col-status muted">
+                        {s.claimStatus === "claimed" ? "เคลมแล้ว" : "—"}
+                      </td>
+                      <td className="num members-col-amt">{s.total}</td>
+                      <td className="members-col-when muted">{formatWhen(s.createdAt)}</td>
+                      <td className="members-col-act">
                         <button
                           type="button"
                           className="ghost-btn staff-btn-sm"
@@ -530,7 +533,7 @@ function MembersView() {
                             void onIssueClaim(s.id);
                           }}
                         >
-                          {s.claimStatus === "claimed" ? "QR เดิม" : "QR"}
+                          {s.claimStatus === "claimed" ? "เดิม" : "QR"}
                         </button>
                       </td>
                     </tr>
@@ -687,12 +690,14 @@ function MembersView() {
                   <p className="muted">ยังไม่มีสมาชิก</p>
                 ) : (
                   <div className="table-wrap members-slim-table-wrap">
-                    <table className="sheet-table sheet-table--dense members-slim-table">
+                    <table className="sheet-table sheet-table--dense members-slim-table members-slim-table--list">
                       <thead>
                         <tr>
-                          <th>สมาชิก</th>
-                          <th className="num">แต้ม</th>
-                          <th></th>
+                          <th className="members-col-name">ชื่อ</th>
+                          <th className="members-col-phone">เบอร์</th>
+                          <th className="members-col-card">บัตร</th>
+                          <th className="num members-col-pts">แต้ม</th>
+                          <th className="members-col-status">สถานะ</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -706,15 +711,15 @@ function MembersView() {
                               setError(null);
                             }}
                           >
-                            <td>
-                              <strong>{m.displayName || "—"}</strong>
-                              <div className="muted members-slim-sub">
-                                {phoneLabel(m)}
-                                {m.status !== "active" ? " · ระงับ" : ""}
-                              </div>
+                            <td className="members-col-name">
+                              <span className="members-cell-strong">{m.displayName || "—"}</span>
                             </td>
-                            <td className="num">{m.pointsBalance}</td>
-                            <td className="muted members-slim-card">{m.cardNo}</td>
+                            <td className="members-col-phone muted">{phoneLabel(m)}</td>
+                            <td className="members-col-card muted">{m.cardNo}</td>
+                            <td className="num members-col-pts">{m.pointsBalance}</td>
+                            <td className="members-col-status muted">
+                              {m.status === "active" ? "ปกติ" : "ระงับ"}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -806,13 +811,13 @@ function MembersView() {
                   ) : null}
 
                   <div className="table-wrap members-slim-table-wrap">
-                    <table className="sheet-table sheet-table--dense members-slim-table">
+                    <table className="sheet-table sheet-table--dense members-slim-table members-slim-table--ledger">
                       <thead>
                         <tr>
-                          <th>เมื่อ</th>
-                          <th>รายการ</th>
-                          <th className="num">+/−</th>
-                          <th className="num">คงเหลือ</th>
+                          <th className="members-col-when">เมื่อ</th>
+                          <th className="members-col-reason">รายการ</th>
+                          <th className="num members-col-delta">+/−</th>
+                          <th className="num members-col-bal">คงเหลือ</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -831,20 +836,17 @@ function MembersView() {
                         ) : (
                           ledger.map((row) => (
                             <tr key={row.id}>
-                              <td className="muted">{formatWhen(row.createdAt)}</td>
-                              <td>
-                                {MEMBER_LEDGER_REASON_LABELS[row.reason]}
-                                {row.saleId ? (
-                                  <span className="muted members-slim-sub"> · {row.saleId}</span>
-                                ) : null}
-                                {row.note ? (
-                                  <div className="muted members-slim-sub">{row.note}</div>
-                                ) : null}
+                              <td className="members-col-when muted">{formatWhen(row.createdAt)}</td>
+                              <td className="members-col-reason">
+                                <span className="members-cell-clip">
+                                  {MEMBER_LEDGER_REASON_LABELS[row.reason]}
+                                  {row.note ? ` · ${row.note}` : ""}
+                                </span>
                               </td>
-                              <td className="num">
+                              <td className="num members-col-delta">
                                 {row.delta > 0 ? `+${row.delta}` : row.delta}
                               </td>
-                              <td className="num">{row.balanceAfter}</td>
+                              <td className="num members-col-bal">{row.balanceAfter}</td>
                             </tr>
                           ))
                         )}
