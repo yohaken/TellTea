@@ -20,7 +20,7 @@
 | **M3 แลกแต้มเคาน์เตอร์** | ⬜ วางเฟสแล้ว | ใช้แต้มตอนคิดเงิน + ข้อมูลบนบิล/แดชบอร์ด — ดู [members-redeem-phases.md](./members-redeem-phases.md) (D0–D5) |
 | **M4 QR สมัครเอง** | ✅ โครง | `/join/?t=` + CF (เปิดใช้เมื่อตั้งค่า) |
 | **R0–R2 QR บนสลิป** | ✅ โค้ดทดลอง | ธง+`/claim`+ออก QR หลังร้าน — ดู [members-receipt-qr-phases.md](./members-receipt-qr-phases.md) · **ยังไม่ขายจริง / ไม่แตะ APK** |
-| **ใช้แต้ม + ข้อมูลบิล/แดชบอร์ด** | ⬜ D0 ล็อกสัญญา | [members-redeem-phases.md](./members-redeem-phases.md) — สัญญาฟิลด์ · สลิป · หลังร้าน · แดชบอร์ด · void |
+| **ใช้แต้ม + ข้อมูลบิล/แดชบอร์ด** | ⬜ D0 ล็อกสัญญา | [members-redeem-phases.md](./members-redeem-phases.md) · เช็กลิสต์ยาว [members-redeem-checklist.md](./members-redeem-checklist.md) |
 
 ## ลิงก์หลังร้าน
 
