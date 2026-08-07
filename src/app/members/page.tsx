@@ -5,6 +5,7 @@ import {
   useDeferredValue,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
 } from "react";
@@ -106,6 +107,7 @@ function MembersView() {
   const [claimSaleId, setClaimSaleId] = useState("");
   const [claimIssue, setClaimIssue] = useState<ReceiptClaimIssue | null>(null);
   const [claimQr, setClaimQr] = useState<string | null>(null);
+  const claimQrPanelRef = useRef<HTMLDivElement | null>(null);
 
   const reload = useCallback(async () => {
     if (!canHub) return;
@@ -339,6 +341,10 @@ function MembersView() {
             ? "โทเคนเดิม"
             : "ออกใหม่";
       setMsg(`บิล ${issued.billNo} · ~${issued.pointsPreview} แต้ม · ${tag}`);
+      // ปุ่มในตารางอยู่ล่าง — เลื่อนขึ้นให้เห็น QR ชัด
+      requestAnimationFrame(() => {
+        claimQrPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
     } catch (err) {
       setError(mapFirestoreError(err, "ออก QR เคลม"));
     } finally {
@@ -435,7 +441,11 @@ function MembersView() {
           </form>
 
           {claimIssue ? (
-            <div className="members-claim-qr members-claim-qr--slim">
+            <div
+              ref={claimQrPanelRef}
+              id="members-claim-qr-panel"
+              className="members-claim-qr members-claim-qr--slim"
+            >
               <p className="members-slim-line">
                 {claimIssue.billNo} · {claimIssue.total}฿ → <strong>{claimIssue.pointsPreview}</strong>{" "}
                 แต้ม
@@ -444,7 +454,11 @@ function MembersView() {
                   <span className="muted"> · โทเคนเดิม</span>
                 ) : null}
               </p>
-              {claimQr ? <img src={claimQr} alt="QR เคลมแต้ม" /> : null}
+              {claimQr ? (
+                <img src={claimQr} alt="QR เคลมแต้ม" className="members-claim-qr-img" />
+              ) : (
+                <p className="muted members-slim-hint">กำลังสร้าง QR...</p>
+              )}
               <code className="members-slim-code">{claimIssue.claimUrl}</code>
               <div className="members-slim-actions">
                 <button
@@ -497,7 +511,7 @@ function MembersView() {
                   <th className="members-col-status">สถานะ</th>
                   <th className="num members-col-amt">ยอด</th>
                   <th className="members-col-when">เวลา</th>
-                  <th className="members-col-act"></th>
+                  <th className="members-col-act">QR</th>
                 </tr>
               </thead>
               <tbody>
@@ -509,7 +523,10 @@ function MembersView() {
                   </tr>
                 ) : (
                   todaySales.slice(0, 40).map((s) => (
-                    <tr key={s.id}>
+                    <tr
+                      key={s.id}
+                      className={claimIssue?.saleId === s.id ? "is-selected" : undefined}
+                    >
                       <td className="members-col-bill">
                         <span className="members-cell-strong">{s.billNo}</span>
                       </td>
@@ -521,7 +538,7 @@ function MembersView() {
                       <td className="members-col-act">
                         <button
                           type="button"
-                          className="ghost-btn staff-btn-sm"
+                          className="primary-btn staff-btn-sm members-claim-row-btn"
                           disabled={!canManage || saving}
                           title={
                             s.claimStatus === "claimed"
@@ -533,7 +550,7 @@ function MembersView() {
                             void onIssueClaim(s.id);
                           }}
                         >
-                          {s.claimStatus === "claimed" ? "เดิม" : "QR"}
+                          {s.claimStatus === "claimed" ? "ดู QR" : "QR"}
                         </button>
                       </td>
                     </tr>

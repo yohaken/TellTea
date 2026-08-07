@@ -1285,6 +1285,16 @@ body.modal-open .main-panel {
   line-height: 1.2;
   vertical-align: middle;
   white-space: nowrap;
+}
+
+/* ตัดข้อความเฉพาะคอลัมน์ข้อความ — อย่า overflow:hidden ทั้งแถว (ปุ่ม QR หาย) */
+.members-slim-table .members-col-name,
+.members-slim-table .members-col-phone,
+.members-slim-table .members-col-card,
+.members-slim-table .members-col-bill,
+.members-slim-table .members-col-reason,
+.members-slim-table .members-col-when,
+.members-slim-table .members-col-status {
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -1347,7 +1357,7 @@ body.modal-open .main-panel {
 }
 
 .members-slim-table--claim .members-col-bill {
-  width: 28%;
+  width: 24%;
 }
 
 .members-slim-table--claim .members-col-status {
@@ -1355,7 +1365,7 @@ body.modal-open .main-panel {
 }
 
 .members-slim-table--claim .members-col-amt {
-  width: 16%;
+  width: 14%;
 }
 
 .members-slim-table--claim .members-col-when {
@@ -1363,16 +1373,18 @@ body.modal-open .main-panel {
 }
 
 .members-slim-table--claim .members-col-act {
-  width: 18%;
+  width: 4.5rem;
+  min-width: 4.5rem;
   text-align: right;
   white-space: nowrap;
   overflow: visible;
 }
 
-.members-slim-table--claim .members-col-act .staff-btn-sm {
-  min-height: 1.55rem;
-  padding: 0.12rem 0.4rem;
-  font-size: 0.7rem;
+.members-slim-table--claim .members-col-act .members-claim-row-btn {
+  min-height: 1.7rem;
+  min-width: 3.4rem;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.72rem;
 }
 
 .members-slim-table--ledger .members-col-when {
@@ -1435,10 +1447,21 @@ body.modal-open .main-panel {
 .members-claim-qr--slim {
   gap: 0.4rem;
   margin: 0.4rem 0 0.65rem;
+  scroll-margin-top: 4.5rem;
+  padding: 0.55rem 0.6rem;
+  border: 1px solid rgba(47, 107, 79, 0.2);
+  border-radius: 0.45rem;
+  background: rgba(47, 107, 79, 0.04);
 }
 
+.members-claim-qr-img,
 .members-claim-qr--slim img {
-  width: min(100%, 200px);
+  display: block;
+  width: min(100%, 220px);
+  height: auto;
+  background: #fff;
+  border-radius: 0.4rem;
+  border: 1px solid rgba(47, 107, 79, 0.18);
 }
 
 @media (max-width: 720px) {

@@ -36,6 +36,9 @@ const membersPage = read("src/app/members/page.tsx");
 assert.match(membersPage, /แสดง QR/);
 assert.match(membersPage, /โทเคนใหม่ \(เทส\)/);
 assert.match(membersPage, /QR เดิม/);
+assert.match(membersPage, /members-claim-qr-panel|claimQrPanelRef/);
+assert.match(membersPage, /scrollIntoView/);
+assert.match(membersPage, /members-claim-row-btn/);
 assert.doesNotMatch(
   membersPage,
   /disabled=\{!canManage \|\| saving \|\| s\.claimStatus === "claimed"\}/,
@@ -70,7 +73,7 @@ assert.match(smoke, /"claim"/);
 assert.match(smoke, /"me"/);
 
 const version = read("src/lib/version.ts");
-assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 734);
+assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 735);
 
 assert.equal(
   existsSync(join(root, "npos-telltea/app/src/main/java/app/telltea/npos/sell/MemberApi.java")),
