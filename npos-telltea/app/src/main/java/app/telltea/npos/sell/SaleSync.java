@@ -569,7 +569,18 @@ public final class SaleSync {
             boolean autoPrint,
             SaleCallback callback) {
         enqueueSale(
-                context, lines, paymentMethod, cashReceived, discountBaht, "", shop, autoPrint, callback);
+                context,
+                lines,
+                paymentMethod,
+                cashReceived,
+                discountBaht,
+                "",
+                shop,
+                autoPrint,
+                "",
+                "",
+                0,
+                callback);
     }
 
     public void enqueueSale(
@@ -582,8 +593,43 @@ public final class SaleSync {
             JSONObject shop,
             boolean autoPrint,
             SaleCallback callback) {
+        enqueueSale(
+                context,
+                lines,
+                paymentMethod,
+                cashReceived,
+                discountBaht,
+                transferRef,
+                shop,
+                autoPrint,
+                "",
+                "",
+                0,
+                callback);
+    }
+
+    /**
+     * @param discountBaht manual bill discount only (not redeem)
+     * @param pointsToRedeem points to redeem at close; server converts to redeemBaht
+     */
+    public void enqueueSale(
+            Context context,
+            List<MenuModels.CartLine> lines,
+            String paymentMethod,
+            double cashReceived,
+            double discountBaht,
+            String transferRef,
+            JSONObject shop,
+            boolean autoPrint,
+            String memberId,
+            String memberPhone,
+            int pointsToRedeem,
+            SaleCallback callback) {
         Context app = context.getApplicationContext();
         final String method = PaymentMethods.normalize(paymentMethod);
+        final String mid = memberId == null ? "" : memberId.trim();
+        final String mPhone = memberPhone == null ? "" : memberPhone.trim();
+        final int pts = Math.max(0, pointsToRedeem);
         executor.execute(
                 () -> {
                     try {
@@ -604,7 +650,17 @@ public final class SaleSync {
                             lineArr.put(o);
                             subtotal += line.lineTotal();
                         }
-                        double total = Math.max(0, subtotal - discountBaht);
+                        double manual = Math.max(0, discountBaht);
+                        if (manual > subtotal) manual = subtotal;
+                        double rate =
+                                shop != null ? shop.optDouble("membersPointsPerBahtRedeem", 1) : 1;
+                        double redeemBaht =
+                                mid.isEmpty() || pts <= 0
+                                        ? 0
+                                        : MemberApi.redeemBahtFromPoints(pts, rate);
+                        double maxRedeem = Math.max(0, subtotal - manual);
+                        if (redeemBaht > maxRedeem) redeemBaht = maxRedeem;
+                        double total = Math.max(0, subtotal - manual - redeemBaht);
                         JSONObject payload = new JSONObject();
                         payload.put("clientMutationId", mutationId);
                         payload.put("installId", DeviceIdentity.getOrCreateInstallId(app));
@@ -619,7 +675,15 @@ public final class SaleSync {
                                 && !transferRef.trim().isEmpty()) {
                             payload.put("transferRef", transferRef.trim());
                         }
-                        payload.put("discountBaht", discountBaht);
+                        // Server: manualDiscountBaht preferred; discountBaht = manual legacy.
+                        payload.put("manualDiscountBaht", manual);
+                        payload.put("discountBaht", manual);
+                        if (redeemBaht > 0) payload.put("redeemBaht", redeemBaht);
+                        if (!mid.isEmpty()) {
+                            payload.put("memberId", mid);
+                            if (!mPhone.isEmpty()) payload.put("memberPhone", mPhone);
+                            if (pts > 0) payload.put("pointsToRedeem", pts);
+                        }
                         payload.put("subtotal", subtotal);
                         payload.put("localTotal", total);
                         payload.put("createdAt", System.currentTimeMillis());
@@ -634,7 +698,8 @@ public final class SaleSync {
                         pushQueue(app, payload);
                         // Same pending label as web formatPendingBillNo / printed provisional #.
                         rememberReceipt(app, payload, provisionalBillNo(mutationId));
-                        ShiftPrefs.recordSale(app, method, total, discountBaht);
+                        // Shift «ส่วนลด» = manual + redeem (combined baht off the bill).
+                        ShiftPrefs.recordSale(app, method, total, manual + redeemBaht);
                         BestsellerPrefs.recordLines(app, lineArr);
                         if (callback != null) callback.onLocalSaved(mutationId, total);
 
@@ -1483,6 +1548,8 @@ public final class SaleSync {
         body.remove("receiptPrinted");
         body.remove("receiptFooterNote");
         body.remove("staffName");
+        // Local-only preview; server recomputes redeem from pointsToRedeem.
+        body.remove("redeemBaht");
         return body;
     }
 
@@ -1496,7 +1563,10 @@ public final class SaleSync {
         row.put("billNo", billNo);
         row.put("saleId", "");
         row.put("total", payload.optDouble("localTotal"));
-        row.put("discountBaht", payload.optDouble("discountBaht", 0));
+        // Combined off-bill for local receipt list (manual + redeem).
+        row.put(
+                "discountBaht",
+                payload.optDouble("discountBaht", 0) + payload.optDouble("redeemBaht", 0));
         row.put("subtotal", payload.optDouble("subtotal", 0));
         row.put("cashReceived", payload.optDouble("cashReceived", 0));
         row.put("change", payload.optDouble("change", 0));

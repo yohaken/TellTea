@@ -15,6 +15,10 @@ public final class HoldCart {
   private static final String KEY_CART = "cartJson";
   private static final String KEY_DISC = "discountBaht";
   private static final String KEY_AT = "heldAt";
+  private static final String KEY_MEMBER_ID = "memberId";
+  private static final String KEY_MEMBER_PHONE = "memberPhone";
+  private static final String KEY_MEMBER_PHONE_DISPLAY = "memberPhoneDisplay";
+  private static final String KEY_MEMBER_NAME = "memberName";
 
   private HoldCart() {}
 
@@ -24,6 +28,22 @@ public final class HoldCart {
   }
 
   public static void save(Context context, List<MenuModels.CartLine> cart, double discountBaht)
+      throws Exception {
+    save(context, cart, discountBaht, "", "", "", "");
+  }
+
+  /**
+   * Persist cart + manual discount + member identity. Selected redeem points are NOT held —
+   * staff re-selects after restore (points may change while on hold).
+   */
+  public static void save(
+      Context context,
+      List<MenuModels.CartLine> cart,
+      double discountBaht,
+      String memberId,
+      String memberPhone,
+      String memberPhoneDisplay,
+      String memberName)
       throws Exception {
     JSONArray arr = new JSONArray();
     for (MenuModels.CartLine line : cart) {
@@ -41,6 +61,10 @@ public final class HoldCart {
         .putString(KEY_CART, arr.toString())
         .putLong(KEY_DISC, Double.doubleToRawLongBits(discountBaht))
         .putLong(KEY_AT, System.currentTimeMillis())
+        .putString(KEY_MEMBER_ID, memberId == null ? "" : memberId)
+        .putString(KEY_MEMBER_PHONE, memberPhone == null ? "" : memberPhone)
+        .putString(KEY_MEMBER_PHONE_DISPLAY, memberPhoneDisplay == null ? "" : memberPhoneDisplay)
+        .putString(KEY_MEMBER_NAME, memberName == null ? "" : memberName)
         .apply();
   }
 
@@ -61,8 +85,16 @@ public final class HoldCart {
               o.optJSONArray("options")));
     }
     double disc = Double.longBitsToDouble(prefs.getLong(KEY_DISC, 0L));
+    Held held =
+        new Held(
+            lines,
+            disc,
+            prefs.getString(KEY_MEMBER_ID, ""),
+            prefs.getString(KEY_MEMBER_PHONE, ""),
+            prefs.getString(KEY_MEMBER_PHONE_DISPLAY, ""),
+            prefs.getString(KEY_MEMBER_NAME, ""));
     clear(context);
-    return new Held(lines, disc);
+    return held;
   }
 
   public static void clear(Context context) {
@@ -72,10 +104,32 @@ public final class HoldCart {
   public static final class Held {
     public final List<MenuModels.CartLine> lines;
     public final double discountBaht;
+    public final String memberId;
+    public final String memberPhone;
+    public final String memberPhoneDisplay;
+    public final String memberName;
 
     public Held(List<MenuModels.CartLine> lines, double discountBaht) {
+      this(lines, discountBaht, "", "", "", "");
+    }
+
+    public Held(
+        List<MenuModels.CartLine> lines,
+        double discountBaht,
+        String memberId,
+        String memberPhone,
+        String memberPhoneDisplay,
+        String memberName) {
       this.lines = lines;
       this.discountBaht = discountBaht;
+      this.memberId = memberId == null ? "" : memberId;
+      this.memberPhone = memberPhone == null ? "" : memberPhone;
+      this.memberPhoneDisplay = memberPhoneDisplay == null ? "" : memberPhoneDisplay;
+      this.memberName = memberName == null ? "" : memberName;
+    }
+
+    public boolean hasMember() {
+      return memberId != null && !memberId.isEmpty();
     }
   }
 }

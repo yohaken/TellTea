@@ -16,6 +16,18 @@ public final class WhatsNewCatalog {
   private WhatsNewCatalog() {}
 
   public static List<WhatsNewSlide> slidesFor(int versionCode) {
+    if (versionCode == 138) {
+      List<WhatsNewSlide> slides = new ArrayList<>();
+      slides.add(
+          new WhatsNewSlide(
+              "สมาชิกและใช้แต้มบนจอขาย",
+              "ใส่เบอร์สมาชิก · ใช้แต้มก่อนคิดเงินสด/โอน · แลกครบยอดปิดบิลได้โดยไม่รับเงิน"));
+      slides.add(
+          new WhatsNewSlide(
+              "พักบิลพกสมาชิก",
+              "พักบิลแล้วดึงกลับยังมีสมาชิกเดิม · แต้มรีเฟรชใหม่ · จำนวนแต้มที่เคยเลือกไม่ค้าง"));
+      return slides;
+    }
     if (versionCode == 137) {
       List<WhatsNewSlide> slides = new ArrayList<>();
       slides.add(
