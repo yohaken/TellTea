@@ -2772,22 +2772,17 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
                   @Override
                   public void onResult(JSONObject res) {
                     lookupBtn.setEnabled(true);
-                    applyMemberFromJson(res.optJSONObject("member"));
-                    if (!hasMember()) {
+                    JSONObject member = res.optJSONObject("member");
+                    if (member == null || member.optString("id", "").isEmpty()) {
                       status.setText(R.string.member_not_found);
                       return;
                     }
+                    if ("suspended".equals(member.optString("status", ""))) {
+                      status.setText(R.string.member_suspended);
+                      return;
+                    }
                     if (holder[0] != null) holder[0].dismiss();
-                    renderCart();
-                    Toast.makeText(
-                            SellActivity.this,
-                            getString(
-                                R.string.member_attached_fmt,
-                                memberName,
-                                memberPhoneDisplay,
-                                memberPointsBalance),
-                            Toast.LENGTH_SHORT)
-                        .show();
+                    offerMemberAfterLookup(member);
                   }
 
                   @Override
@@ -2812,22 +2807,17 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
                     status.setText(R.string.member_not_found);
                     return;
                   }
-                  applyMemberFromJson(res.optJSONObject("member"));
-                  if (!hasMember()) {
+                  JSONObject member = res.optJSONObject("member");
+                  if (member == null || member.optString("id", "").isEmpty()) {
+                    status.setText(R.string.member_not_found);
+                    return;
+                  }
+                  if ("suspended".equals(member.optString("status", ""))) {
                     status.setText(R.string.member_suspended);
                     return;
                   }
                   if (holder[0] != null) holder[0].dismiss();
-                  renderCart();
-                  Toast.makeText(
-                          SellActivity.this,
-                          getString(
-                              R.string.member_attached_fmt,
-                              memberName,
-                              memberPhoneDisplay,
-                              memberPointsBalance),
-                          Toast.LENGTH_SHORT)
-                      .show();
+                  offerMemberAfterLookup(member);
                 }
 
                 @Override
@@ -2844,6 +2834,125 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
             .setNegativeButton(android.R.string.cancel, null)
             .create();
     holder[0].show();
+  }
+
+  /**
+   * After phone lookup/create: show balance so staff can tell the customer, then choose
+   * attach-only or open redeem amount picker (all / partial). Cancel leaves cart unchanged.
+   */
+  private void offerMemberAfterLookup(JSONObject member) {
+    if (member == null || member.optString("id", "").isEmpty()) return;
+    if (uiScale == null) uiScale = UiScale.from(this);
+
+    String phoneDisp = member.optString("phoneDisplay", member.optString("phone", ""));
+    String name = member.optString("displayName", "");
+    if (name == null || name.trim().isEmpty()) name = phoneDisp;
+    int bal = Math.max(0, member.optInt("pointsBalance", 0));
+    final JSONObject memberRef = member;
+
+    LinearLayout box = new LinearLayout(this);
+    box.setOrientation(LinearLayout.VERTICAL);
+    int pad = uiScale.dp(12);
+    box.setPadding(pad, pad, pad, pad);
+
+    TextView who =
+        NposUi.body(
+            this, getString(R.string.member_attached_fmt, name, phoneDisp, bal));
+    who.setPadding(0, 0, 0, uiScale.dp(8));
+    box.addView(who);
+
+    TextView ask =
+        NposUi.caption(
+            this,
+            bal > 0
+                ? getString(R.string.member_found_ask_fmt, bal)
+                : getString(R.string.member_found_zero_fmt));
+    ask.setPadding(0, 0, 0, uiScale.dp(10));
+    box.addView(ask);
+
+    final AlertDialog[] holder = new AlertDialog[1];
+    boolean canRedeem = bal > 0 && !cart.isEmpty();
+
+    if (canRedeem) {
+      TextView useBtn = NposUi.primary(this, getString(R.string.member_found_use));
+      useBtn.setMaxWidth(Integer.MAX_VALUE);
+      LinearLayout.LayoutParams useLp =
+          new LinearLayout.LayoutParams(
+              LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+      useLp.bottomMargin = uiScale.dp(8);
+      useBtn.setLayoutParams(useLp);
+      useBtn.setOnClickListener(
+          v -> {
+            if (holder[0] != null) holder[0].dismiss();
+            applyMemberFromJson(memberRef);
+            if (!hasMember()) return;
+            renderCart();
+            showRedeemDialog();
+          });
+      box.addView(useBtn);
+
+      TextView skipBtn = NposUi.secondary(this, getString(R.string.member_found_skip));
+      skipBtn.setMaxWidth(Integer.MAX_VALUE);
+      LinearLayout.LayoutParams skipLp =
+          new LinearLayout.LayoutParams(
+              LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+      skipLp.bottomMargin = uiScale.dp(8);
+      skipBtn.setLayoutParams(skipLp);
+      skipBtn.setOnClickListener(
+          v -> {
+            if (holder[0] != null) holder[0].dismiss();
+            applyMemberFromJson(memberRef);
+            if (!hasMember()) return;
+            pointsToRedeem = 0;
+            renderCart();
+          });
+      box.addView(skipBtn);
+    } else {
+      TextView attachBtn = NposUi.primary(this, getString(R.string.member_found_attach));
+      attachBtn.setMaxWidth(Integer.MAX_VALUE);
+      LinearLayout.LayoutParams attachLp =
+          new LinearLayout.LayoutParams(
+              LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+      attachLp.bottomMargin = uiScale.dp(8);
+      attachBtn.setLayoutParams(attachLp);
+      attachBtn.setOnClickListener(
+          v -> {
+            if (holder[0] != null) holder[0].dismiss();
+            applyMemberFromJson(memberRef);
+            if (!hasMember()) return;
+            pointsToRedeem = 0;
+            renderCart();
+          });
+      box.addView(attachBtn);
+    }
+
+    TextView cancel = NposUi.ghost(this, getString(android.R.string.cancel));
+    cancel.setMaxWidth(Integer.MAX_VALUE);
+    cancel.setLayoutParams(
+        new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+    cancel.setOnClickListener(
+        v -> {
+          if (holder[0] != null) holder[0].dismiss();
+        });
+    box.addView(cancel);
+
+    holder[0] =
+        new AlertDialog.Builder(this)
+            .setTitle(R.string.member_found_title)
+            .setView(box)
+            .setCancelable(true)
+            .create();
+    holder[0].show();
+    if (holder[0].getWindow() != null) {
+      int w =
+          Math.min(
+              (int) (getResources().getDisplayMetrics().widthPixels * 0.42f), uiScale.dp(420));
+      w = Math.max(w, uiScale.dp(320));
+      holder[0]
+          .getWindow()
+          .setLayout(w, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+    }
   }
 
   private void showRedeemDialog() {

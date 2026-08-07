@@ -27,6 +27,7 @@ assert.doesNotMatch(hold, /pointsToRedeem/);
 
 const sell = read("npos-telltea/app/src/main/java/app/telltea/npos/SellActivity.java");
 assert.match(sell, /showMemberDialog/);
+assert.match(sell, /offerMemberAfterLookup/);
 assert.match(sell, /showRedeemDialog/);
 assert.match(sell, /pay_zero_title/);
 assert.match(sell, /pointsToRedeem/);
@@ -37,19 +38,22 @@ assert.match(nposSell, /manualDiscountBaht: body\.manualDiscountBaht/);
 
 const gradle = read("npos-telltea/app/build.gradle");
 const ver = gradle.match(/versionCode\s+(\d+)/);
-assert.ok(ver && Number(ver[1]) >= 138, "versionCode >= 138");
+assert.ok(ver && Number(ver[1]) >= 140, "versionCode >= 140");
 
 const apkPin = read("src/lib/npos-apk-release.ts");
 const pinCode = Number(apkPin.match(/NPOS_SYSTEM_VERSION_CODE = (\d+)/)?.[1] || 0);
-assert.ok(pinCode >= 138, "NPOS_SYSTEM_VERSION_CODE >= 138");
+assert.ok(pinCode >= 140, "NPOS_SYSTEM_VERSION_CODE >= 140");
 
 const whats = read("npos-telltea/app/src/main/java/app/telltea/npos/update/WhatsNewCatalog.java");
-assert.match(whats, /versionCode == 138/);
-assert.match(whats, /สมาชิกและใช้แต้ม/);
+assert.match(whats, /versionCode == 140/);
+assert.match(whats, /คอนเฟิร์มแต้มหลังใส่เบอร์/);
 
 const strings = read("npos-telltea/app/src/main/res/values/strings.xml");
 assert.match(strings, /sell_hub_member/);
 assert.match(strings, /sell_hub_redeem/);
+assert.match(strings, /member_found_title/);
+assert.match(strings, /member_found_use/);
+assert.match(strings, /member_found_skip/);
 assert.match(strings, /pay_zero_confirm/);
 
 const layout = read("npos-telltea/app/src/main/res/layout/activity_sell.xml");
@@ -61,7 +65,7 @@ const phases = read("docs/members-round-phases.md");
 assert.match(phases, /P4/);
 
 const appBuild = Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)[1]);
-assert.ok(appBuild >= 740, "APP_BUILD >= 740");
+assert.ok(appBuild >= 744, "APP_BUILD >= 744");
 const posBuild = Number(read("src/lib/pos-version.ts").match(/POS_BUILD = (\d+)/)[1]);
 assert.ok(posBuild >= 190, "POS_BUILD >= 190");
 
