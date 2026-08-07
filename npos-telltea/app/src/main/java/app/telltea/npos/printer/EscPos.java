@@ -58,16 +58,70 @@ public final class EscPos {
    * ShiftReportFormBuilder}). No extra brand header.
    */
   public static byte[] documentReceipt(String body) {
+    return documentReceipt(body, null);
+  }
+
+  /**
+   * Full document with optional claim QR. When {@code claimUrl} is set and body contains {@link
+   * ReceiptFormBuilder#CLAIM_QR_MARKER}, emits Esc/POS QR (model 2) at the marker.
+   */
+  public static byte[] documentReceipt(String body, String claimUrl) {
     List<byte[]> parts = new ArrayList<>();
     parts.add(new byte[] {0x1B, 0x40}); // init
     parts.add(new byte[] {0x1B, 0x61, 0x00}); // left (builder centers with spaces)
-    // Final safety net: every paper doc (sale / X / Z / reprint) — no TIS "?" glyphs.
     String safe = ThermalSafe.ascii(body == null ? "" : body);
-    appendTextWithBold(parts, safe);
+    String url = claimUrl == null ? "" : claimUrl.trim();
+    String marker = ReceiptFormBuilder.CLAIM_QR_MARKER;
+    int idx = url.isEmpty() ? -1 : safe.indexOf(marker);
+    if (idx < 0) {
+      // Strip leftover marker if URL missing (offline fallback).
+      safe = safe.replace(marker + "\n", "").replace(marker, "");
+      appendTextWithBold(parts, safe);
+    } else {
+      String before = safe.substring(0, idx);
+      String after = safe.substring(idx + marker.length());
+      if (after.startsWith("\n")) after = after.substring(1);
+      appendTextWithBold(parts, before);
+      appendClaimQr(parts, url);
+      appendTextWithBold(parts, after);
+    }
     if (!safe.endsWith("\n")) parts.add(text("\n"));
     parts.add(text("\n\n"));
     parts.add(new byte[] {0x1D, 0x56, 0x00}); // full cut
     return concat(parts);
+  }
+
+  /** Esc/POS QR Code: Model 2 · module size 5 · ECC M — medium footprint on 58mm. */
+  static void appendClaimQr(List<byte[]> parts, String data) {
+    if (data == null || data.isEmpty()) return;
+    byte[] raw = data.getBytes(StandardCharsets.UTF_8);
+    // Center QR block.
+    parts.add(new byte[] {0x1B, 0x61, 0x01});
+    // GS ( k 4 0 49 65 50 0 — model 2
+    parts.add(new byte[] {0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00});
+    // GS ( k 3 0 49 67 n — module size (3–16); 5 ≈ medium
+    parts.add(new byte[] {0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x05});
+    // GS ( k 3 0 49 69 n — error correction M (49)
+    parts.add(new byte[] {0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x31});
+    // Store: GS ( k pL pH 49 80 48 + data
+    int storeLen = raw.length + 3;
+    parts.add(
+        new byte[] {
+          0x1D,
+          0x28,
+          0x6B,
+          (byte) (storeLen & 0xFF),
+          (byte) ((storeLen >> 8) & 0xFF),
+          0x31,
+          0x50,
+          0x30
+        });
+    parts.add(raw);
+    // Print: GS ( k 3 0 49 81 48
+    parts.add(new byte[] {0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30});
+    parts.add(text("\n"));
+    // Back to left for invite / footer.
+    parts.add(new byte[] {0x1B, 0x61, 0x00});
   }
 
   /** Remove inline bold markers (for one-shot print paths that cannot toggle ESC E). */

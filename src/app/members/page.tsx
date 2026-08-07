@@ -619,7 +619,7 @@ function MembersView() {
                 disabled={!canManage || saving}
                 onChange={(e) => setSetReceiptClaim(e.target.checked)}
               />
-              <span>ทดลอง QR สลิป (ใช้สูตรบาท/แต้มด้านบน)</span>
+              <span>ทดลอง QR สลิป — เปิดแล้วเครื่องพิมพ์ QR ทุกใบ (ใช้สูตรบาท/แต้มด้านบน · ค่าเริ่มปิด)</span>
             </label>
             <label>
               <span>อายุลิงก์เคลม (วัน)</span>

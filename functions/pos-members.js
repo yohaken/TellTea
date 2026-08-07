@@ -798,6 +798,73 @@ async function claimReceiptPoints(db, auth, {
   });
 }
 
+function randomClaimToken() {
+  try {
+    const { randomUUID } = require("crypto");
+    return randomUUID().replace(/-/g, "");
+  } catch {
+    return `tt${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;
+  }
+}
+
+function buildPublicClaimUrl(saleId, token) {
+  const s = encodeURIComponent(String(saleId || ""));
+  const t = encodeURIComponent(String(token || ""));
+  return `https://telltea-shop.web.app/claim/?s=${s}&t=${t}`;
+}
+
+/**
+ * Issue / reuse claim token on a completed sale for slip QR (A1 — even 0 points).
+ * No-op when members or receiptClaim flag is off. Never throws to sale path.
+ */
+async function tryIssueReceiptClaimForSale(db, { saleId, total, actorId }) {
+  try {
+    const id = asString(saleId, 80);
+    if (!id) return null;
+    const settings = await loadMemberSettings(db);
+    if (!settings.enabled || !settings.receiptClaimEnabled) return null;
+
+    const ref = db.collection("posSales").doc(id);
+    const snap = await ref.get();
+    if (!snap.exists) return null;
+    const data = snap.data() || {};
+    if (data.status === "voided") return null;
+
+    const now = Date.now();
+    const ttlMs = Math.max(1, settings.claimTokenTtlDays) * 24 * 60 * 60 * 1000;
+    const existingToken = asString(data.claimToken, 128);
+    const existingExp =
+      typeof data.claimTokenExpiresAt === "number" ? data.claimTokenExpiresAt : 0;
+    const claimed = data.claimStatus === "claimed";
+    const canReuse =
+      existingToken.length >= 16 && (claimed || existingExp > now + 60_000);
+
+    const token = canReuse ? existingToken : randomClaimToken();
+    const expiresAt = canReuse && existingExp > now ? existingExp : now + ttlMs;
+
+    if (!canReuse || !claimed) {
+      const patch = {
+        claimToken: token,
+        claimTokenExpiresAt: expiresAt,
+        claimIssuedAt: now,
+        claimIssuedBy: actorId || "pos",
+      };
+      if (!claimed) patch.claimStatus = "open";
+      await ref.set(patch, { merge: true });
+    }
+
+    return {
+      claimToken: token,
+      claimUrl: buildPublicClaimUrl(id, token),
+      claimExpiresAt: expiresAt,
+      claimPointsPreview: pointsFromReceiptClaim(Number(total) || 0, settings),
+    };
+  } catch (err) {
+    console.error("tryIssueReceiptClaimForSale", err && err.message);
+    return null;
+  }
+}
+
 module.exports = {
   phoneDigitsFromInput,
   normalizeMemberId,
@@ -811,6 +878,8 @@ module.exports = {
   tryReverseMemberPointsForVoid,
   planRedeemFromMemberSnap,
   writeRedeemInSaleTx,
+  tryIssueReceiptClaimForSale,
+  buildPublicClaimUrl,
   lookupMember,
   quickCreateMember,
   publicSignup,

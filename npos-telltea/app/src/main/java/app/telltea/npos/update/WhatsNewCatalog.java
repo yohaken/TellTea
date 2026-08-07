@@ -16,6 +16,18 @@ public final class WhatsNewCatalog {
   private WhatsNewCatalog() {}
 
   public static List<WhatsNewSlide> slidesFor(int versionCode) {
+    if (versionCode == 139) {
+      List<WhatsNewSlide> slides = new ArrayList<>();
+      slides.add(
+          new WhatsNewSlide(
+              "สลิปแสดงสมาชิกและแลกแต้ม",
+              "ใบเสร็จแยกส่วนลดมือ · แลกแต้ม · ชื่อและเบอร์สมาชิกเมื่อติดบิล"));
+      slides.add(
+          new WhatsNewSlide(
+              "QR สะสมแต้มท้ายสลิป",
+              "เมื่อเปิดทดลอง QR สลิปหลังร้าน เครื่องพิมพ์ QR ทุกใบ (รวมยอด 0) · สแกนสะสมแต้ม"));
+      return slides;
+    }
     if (versionCode == 138) {
       List<WhatsNewSlide> slides = new ArrayList<>();
       slides.add(
