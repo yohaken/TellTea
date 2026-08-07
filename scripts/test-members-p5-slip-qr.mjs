@@ -20,6 +20,7 @@ assert.match(form, /redeemBaht/);
 const esc = read("npos-telltea/app/src/main/java/app/telltea/npos/printer/EscPos.java");
 assert.match(esc, /appendClaimQr/);
 assert.match(esc, /documentReceipt\(String body, String claimUrl\)/);
+assert.match(esc, /0x31, 0x43, 0x04/);
 assert.match(esc, /0x1D, 0x28, 0x6B/);
 
 const sunmi = read("npos-telltea/app/src/main/java/app/telltea/npos/printer/SunmiInnerPrinter.java");
@@ -50,23 +51,23 @@ assert.match(nposSell, /memberName: body\.memberName/);
 
 const gradle = read("npos-telltea/app/build.gradle");
 const ver = gradle.match(/versionCode\s+(\d+)/);
-assert.ok(ver && Number(ver[1]) >= 139, "versionCode >= 139");
+assert.ok(ver && Number(ver[1]) >= 141, "versionCode >= 141");
 
 const apkPin = read("src/lib/npos-apk-release.ts");
-assert.match(apkPin, /NPOS_SYSTEM_VERSION_CODE = 139/);
+assert.ok(Number(apkPin.match(/NPOS_SYSTEM_VERSION_CODE = (\d+)/)[1]) >= 141);
 
 const whats = read("npos-telltea/app/src/main/java/app/telltea/npos/update/WhatsNewCatalog.java");
-assert.match(whats, /versionCode == 139/);
+assert.match(whats, /versionCode == 141/);
 
 const checklist = read("docs/npos-whats-new-checklist.md");
-assert.match(checklist, /139/);
+assert.match(checklist, /141/);
 
 const phases = read("docs/members-round-phases.md");
 assert.match(phases, /P5/);
 
 const appBuild = Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)[1]);
-assert.ok(appBuild >= 741, "APP_BUILD >= 741");
+assert.ok(appBuild >= 746, "APP_BUILD >= 746");
 const posBuild = Number(read("src/lib/pos-version.ts").match(/POS_BUILD = (\d+)/)[1]);
-assert.ok(posBuild >= 191, "POS_BUILD >= 191");
+assert.ok(posBuild >= 194, "POS_BUILD >= 194");
 
 console.log("OK test-members-p5-slip-qr");

@@ -309,7 +309,7 @@
                             android:textSize="13sp" />
                     </LinearLayout>
 
-                    <!-- Cart tools: one text row · same size as line names · clear = orange -->
+                    <!-- Cart tools: redeem / discount / hold restore / clear · สมาชิก is beside pay -->
                     <LinearLayout
                         android:id="@+id/cartActionRow"
                         android:layout_width="match_parent"
@@ -318,22 +318,6 @@
                         android:orientation="horizontal"
                         android:paddingTop="2dp"
                         android:paddingBottom="6dp">
-
-                        <TextView
-                            android:id="@+id/memberButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="@font/prompt_regular"
-                            android:gravity="center"
-                            android:minHeight="36dp"
-                            android:paddingLeft="8dp"
-                            android:paddingRight="8dp"
-                            android:paddingTop="4dp"
-                            android:paddingBottom="4dp"
-                            android:text="@string/sell_hub_member"
-                            android:textColor="@color/npos_ink"
-                            android:textSize="13sp"
-                            android:visibility="gone" />
 
                         <TextView
                             android:id="@+id/redeemButton"
@@ -447,7 +431,7 @@
                             android:text="@string/cart_total_zero" />
                     </LinearLayout>
 
-                    <!-- Footer: ชำระทั้งหมด (~85% X) + บันทึก · ~18% of cart Y -->
+                    <!-- Footer: ชำระทั้งหมด | สมาชิก (เมื่อเปิด CRM) | บันทึก -->
                     <LinearLayout
                         android:id="@+id/cartPayBar"
                         android:layout_width="match_parent"
@@ -462,7 +446,7 @@
                             android:layout_width="0dp"
                             android:layout_height="match_parent"
                             android:layout_marginEnd="6dp"
-                            android:layout_weight="85"
+                            android:layout_weight="70"
                             android:background="@drawable/npos_touch_primary"
                             android:gravity="center"
                             android:orientation="vertical"
@@ -508,6 +492,24 @@
                                 android:textSize="12sp"
                                 android:visibility="gone" />
                         </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/memberButton"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_marginEnd="6dp"
+                            android:layout_weight="15"
+                            android:background="@drawable/npos_touch_secondary"
+                            android:ellipsize="end"
+                            android:fontFamily="@font/prompt_semibold"
+                            android:gravity="center"
+                            android:maxLines="2"
+                            android:paddingLeft="4dp"
+                            android:paddingRight="4dp"
+                            android:text="@string/sell_hub_member"
+                            android:textColor="@color/npos_orange"
+                            android:textSize="13sp"
+                            android:visibility="gone" />
 
                         <TextView
                             android:id="@+id/holdBillButton"
