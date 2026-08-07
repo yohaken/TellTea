@@ -1,5 +1,10 @@
 import QRCode from "qrcode";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
+import {
+  GoogleAuthProvider,
+  signInWithPopup,
+  type User,
+} from "firebase/auth";
 import { getDb, getFirebaseAuth } from "./firebase";
 import { getMemberSettings, pointsFromReceiptClaim } from "./members";
 import { POS_SALES_COL } from "./pos-sales";
@@ -12,6 +17,9 @@ export const PUBLIC_RECEIPT_CLAIM_LOOKUP_URL =
 
 export const PUBLIC_RECEIPT_CLAIM_URL =
   "https://asia-southeast1-mypeer-501909.cloudfunctions.net/publicReceiptClaim";
+
+export const PUBLIC_MEMBER_ME_URL =
+  "https://asia-southeast1-mypeer-501909.cloudfunctions.net/publicMemberMe";
 
 export type ReceiptClaimIssue = {
   saleId: string;
@@ -54,7 +62,7 @@ export async function claimQrDataUrl(claimUrl: string): Promise<string> {
   });
 }
 
-/** ออก/ต่ออายุ claimToken บนบิล — เจ้าของเขียน posSales โดยตรง (ไม่แตะ path ปิดบิล) */
+/** ออก/ต่ออายุ claimToken บนบิล — เจ้าของเขียน posSales โดยตรง */
 export async function issueReceiptClaimForSale(
   saleId: string,
   actorId: string,
@@ -79,7 +87,7 @@ export async function issueReceiptClaimForSale(
   const billNo = typeof d.billNo === "string" ? d.billNo : id;
   const pointsPreview = pointsFromReceiptClaim(total, settings);
   if (pointsPreview <= 0) {
-    throw new Error("ยอดบิลนี้ยังคิดแต้มไม่ได้ (ตรวจ % สะสม / ยอดสุทธิ)");
+    throw new Error("ยอดบิลนี้ยังคิดแต้มไม่ได้ (ตรวจทุกกี่บาท=1แต้ม / ยอดสุทธิ)");
   }
 
   const now = Date.now();
@@ -124,7 +132,6 @@ export type ReceiptClaimPreview = {
   bahtPerPoint?: number;
   expiresAt?: number;
   claimStatus?: string;
-  alreadyMemberHint?: boolean;
 };
 
 export async function fetchReceiptClaimPreview(
@@ -139,13 +146,13 @@ export async function fetchReceiptClaimPreview(
   return (await res.json()) as ReceiptClaimPreview;
 }
 
-export type ReceiptClaimLookup = {
+export type ReceiptClaimAuthLookup = {
   ok: boolean;
   error?: string;
   found?: boolean;
-  phoneDisplay?: string;
-  billNo?: string;
-  total?: number;
+  needsPhone?: boolean;
+  provider?: string;
+  email?: string;
   pointsPreview?: number;
   member?: {
     id?: string;
@@ -169,70 +176,82 @@ export type ReceiptClaimResult = {
   };
 };
 
-export async function lookupReceiptClaimMember(input: {
+export type MemberMeResult = {
+  ok: boolean;
+  error?: string;
+  found?: boolean;
+  member?: {
+    id?: string;
+    displayName?: string;
+    cardNo?: string;
+    phoneDisplay?: string;
+    pointsBalance?: number;
+    lifetimePointsEarned?: number;
+    email?: string;
+  };
+};
+
+async function currentIdToken(): Promise<string> {
+  const user = getFirebaseAuth().currentUser;
+  if (!user) throw new Error("ต้องเข้าสู่ระบบก่อน");
+  return user.getIdToken(true);
+}
+
+export async function signInMemberWithGoogle(): Promise<User> {
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
+  const cred = await signInWithPopup(getFirebaseAuth(), provider);
+  return cred.user;
+}
+
+export async function lookupReceiptClaimAuth(input: {
   saleId: string;
   token: string;
-  phone: string;
-}): Promise<ReceiptClaimLookup> {
+}): Promise<ReceiptClaimAuthLookup> {
+  const idToken = await currentIdToken();
   const res = await fetch(PUBLIC_RECEIPT_CLAIM_LOOKUP_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       saleId: input.saleId,
       token: input.token,
-      phone: input.phone,
+      idToken,
     }),
   });
-  return (await res.json()) as ReceiptClaimLookup;
+  return (await res.json()) as ReceiptClaimAuthLookup;
 }
 
-/** สมาชิกเดิม — ใส่เบอร์แล้วยืนยัน โดยไม่ OTP */
-export async function submitExistingReceiptClaim(input: {
+export async function submitReceiptClaim(input: {
   saleId: string;
   token: string;
-  phone: string;
+  phone?: string;
+  displayName?: string;
+  pdpaAccepted?: boolean;
 }): Promise<ReceiptClaimResult> {
+  const idToken = await currentIdToken();
   const res = await fetch(PUBLIC_RECEIPT_CLAIM_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       saleId: input.saleId,
       token: input.token,
-      phone: input.phone,
-      confirmExisting: true,
+      phone: input.phone || "",
+      displayName: input.displayName || "",
+      pdpaAccepted: input.pdpaAccepted === true,
+      idToken,
     }),
   });
   return (await res.json()) as ReceiptClaimResult;
 }
 
-/** สมัครใหม่ + เคลม — ช่วงทดลองไม่บังคับ OTP (ส่ง phone + PDPA) */
-export async function submitReceiptClaim(input: {
-  saleId: string;
-  token: string;
-  phone?: string;
-  displayName?: string;
-  pdpaAccepted: boolean;
-}): Promise<ReceiptClaimResult> {
-  const body: Record<string, unknown> = {
-    saleId: input.saleId,
-    token: input.token,
-    phone: input.phone || "",
-    displayName: input.displayName || "",
-    pdpaAccepted: input.pdpaAccepted === true,
-  };
-  // Optional OTP if already signed in — not required for experiment
-  try {
-    const user = getFirebaseAuth().currentUser;
-    if (user) body.idToken = await user.getIdToken();
-  } catch {
-    /* ignore */
-  }
-  const res = await fetch(PUBLIC_RECEIPT_CLAIM_URL, {
+export async function fetchMemberMe(): Promise<MemberMeResult> {
+  const idToken = await currentIdToken();
+  const res = await fetch(PUBLIC_MEMBER_ME_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ idToken }),
   });
-  return (await res.json()) as ReceiptClaimResult;
+  return (await res.json()) as MemberMeResult;
 }
 
 export function claimErrorLabel(code: string | undefined): string {
@@ -245,9 +264,10 @@ export function claimErrorLabel(code: string | undefined): string {
     already_claimed: "บิลนี้เคลมแต้มไปแล้ว",
     already_earned: "บิลนี้สะสมแต้มไปแล้ว",
     invalid_phone: "เบอร์โทรไม่ถูกต้อง",
-    not_member: "ยังไม่เป็นสมาชิก — กดสมัครก่อน",
-    auth_required: "ต้องยืนยันตัวตนก่อน",
-    auth_mismatch: "เบอร์ที่ยืนยัน OTP ไม่ตรง",
+    phone_required: "กรอกเบอร์โทรเพื่อผูกสมาชิก",
+    not_member: "ยังไม่เป็นสมาชิก",
+    auth_required: "เข้าสู่ระบบก่อน (Google หรือเบอร์)",
+    auth_mismatch: "บัญชีไม่ตรง",
     pdpa_required: "ต้องยินยอมนโยบายข้อมูลส่วนบุคคล",
     suspended: "บัตรสมาชิกระงับ",
     zero_points: "บิลนี้ยังไม่มีแต้มให้เคลม",

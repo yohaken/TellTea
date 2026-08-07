@@ -298,12 +298,29 @@ async function lookupMember(db, phoneInput) {
   };
 }
 
-async function quickCreateMember(db, { phone, displayName, actorId, source }) {
+async function findMemberByGoogleUid(db, googleUid) {
+  const uid = asString(googleUid, 128);
+  if (!uid) return null;
+  const snap = await db.collection("members").where("googleUid", "==", uid).limit(1).get();
+  if (snap.empty) return null;
+  return snap.docs[0];
+}
+
+async function quickCreateMember(db, { phone, displayName, actorId, source, googleUid, email }) {
   const digits = phoneDigitsFromInput(phone);
   if (!digits) return { ok: false, error: "invalid_phone" };
   const ref = db.collection("members").doc(digits);
   const existing = await ref.get();
   if (existing.exists) {
+    const patch = {};
+    const g = asString(googleUid, 128);
+    const em = asString(email, 120).toLowerCase();
+    if (g && !asString(existing.get("googleUid"), 128)) patch.googleUid = g;
+    if (em && !asString(existing.get("email"), 120)) patch.email = em;
+    if (Object.keys(patch).length) {
+      patch.updatedAt = Date.now();
+      await ref.set(patch, { merge: true });
+    }
     return lookupMember(db, digits);
   }
   const settings = await loadMemberSettings(db);
@@ -320,6 +337,8 @@ async function quickCreateMember(db, { phone, displayName, actorId, source }) {
     lifetimePointsEarned: 0,
     birthday: "",
     note: "",
+    googleUid: asString(googleUid, 128),
+    email: asString(email, 120).toLowerCase(),
     source:
       source === "qr_self"
         ? "qr_self"
@@ -439,37 +458,92 @@ async function previewReceiptClaim(db, { saleId, token }) {
 }
 
 /**
- * Lookup member for a valid claim link — used to skip OTP for returning phones.
+ * Auth session probe for claim page — does this Firebase user already have a member?
+ * Never returns another person's data without matching token identity.
  */
-async function lookupReceiptClaimMember(db, { saleId, token, phone }) {
-  const digits = phoneDigitsFromInput(phone);
-  if (!digits) return { ok: false, error: "invalid_phone" };
+async function lookupReceiptClaimAuth(db, auth, { saleId, token, idToken }) {
   const loaded = await loadSaleForClaim(db, saleId, token);
   if (!loaded.ok) return { ok: false, error: loaded.error, ...(loaded.view || {}) };
-  const snap = await db.collection("members").doc(digits).get();
-  if (!snap.exists) {
+  const rawToken = asString(idToken, 4096);
+  if (!rawToken) return { ok: false, error: "auth_required" };
+  let decoded;
+  try {
+    decoded = await auth.verifyIdToken(rawToken);
+  } catch (err) {
+    return { ok: false, error: "auth_required" };
+  }
+  const uid = asString(decoded.uid, 128);
+  const phoneDigits = phoneDigitsFromInput(decoded.phone_number);
+  let docSnap = null;
+  if (phoneDigits) {
+    const s = await db.collection("members").doc(phoneDigits).get();
+    if (s.exists) docSnap = s;
+  }
+  if (!docSnap && uid) {
+    docSnap = await findMemberByGoogleUid(db, uid);
+  }
+  if (!docSnap || !docSnap.exists) {
     return {
       ok: true,
       found: false,
-      phoneDigits: digits,
-      phoneDisplay: formatPhoneDisplay(digits),
+      needsPhone: !phoneDigits,
+      provider: asString(decoded.firebase && decoded.firebase.sign_in_provider, 40),
+      email: asString(decoded.email, 120).toLowerCase(),
       ...loaded.view,
     };
   }
-  const m = snap.data() || {};
+  const m = docSnap.data() || {};
   if (m.status === "suspended") return { ok: false, error: "suspended" };
   return {
     ok: true,
     found: true,
-    phoneDigits: digits,
-    phoneDisplay: formatPhoneDisplay(digits),
+    needsPhone: false,
+    provider: asString(decoded.firebase && decoded.firebase.sign_in_provider, 40),
     member: {
-      id: snap.id,
-      displayName: asString(m.displayName, 80) || formatPhoneDisplay(digits),
-      cardNo: asString(m.cardNo, 24) || cardNoFromDigits(digits),
+      id: docSnap.id,
+      displayName: asString(m.displayName, 80) || formatPhoneDisplay(docSnap.id),
+      cardNo: asString(m.cardNo, 24) || cardNoFromDigits(docSnap.id),
+      // balance only for the authenticated owner of this session
       pointsBalance: typeof m.pointsBalance === "number" ? m.pointsBalance : 0,
     },
     ...loaded.view,
+  };
+}
+
+/** View own member card — requires Firebase idToken (Google or phone OTP). */
+async function getMyMember(db, auth, { idToken }) {
+  const rawToken = asString(idToken, 4096);
+  if (!rawToken) return { ok: false, error: "auth_required" };
+  let decoded;
+  try {
+    decoded = await auth.verifyIdToken(rawToken);
+  } catch {
+    return { ok: false, error: "auth_required" };
+  }
+  const uid = asString(decoded.uid, 128);
+  const phoneDigits = phoneDigitsFromInput(decoded.phone_number);
+  let docSnap = null;
+  if (phoneDigits) {
+    const s = await db.collection("members").doc(phoneDigits).get();
+    if (s.exists) docSnap = s;
+  }
+  if (!docSnap && uid) docSnap = await findMemberByGoogleUid(db, uid);
+  if (!docSnap || !docSnap.exists) return { ok: true, found: false };
+  const m = docSnap.data() || {};
+  if (m.status === "suspended") return { ok: false, error: "suspended" };
+  return {
+    ok: true,
+    found: true,
+    member: {
+      id: docSnap.id,
+      displayName: asString(m.displayName, 80) || formatPhoneDisplay(docSnap.id),
+      cardNo: asString(m.cardNo, 24) || cardNoFromDigits(docSnap.id),
+      phoneDisplay: formatPhoneDisplay(docSnap.id),
+      pointsBalance: typeof m.pointsBalance === "number" ? m.pointsBalance : 0,
+      lifetimePointsEarned:
+        typeof m.lifetimePointsEarned === "number" ? m.lifetimePointsEarned : 0,
+      email: asString(m.email, 120),
+    },
   };
 }
 
@@ -574,11 +648,9 @@ async function creditReceiptClaimToMember(db, {
 }
 
 /**
- * Claim points from a sale-bound receipt QR (experiment: no OTP).
- * - Existing: phone + confirmExisting
- * - New: phone + displayName + PDPA → create then claim
- * One claim per sale QR — after success the link is dead.
- * Optional idToken path kept for later if we re-enable OTP.
+ * Claim points — requires Firebase Auth (Google or phone OTP).
+ * New Google users must supply phone + PDPA once to create members/{phone}.
+ * One claim per sale QR.
  */
 async function claimReceiptPoints(db, auth, {
   saleId,
@@ -587,64 +659,62 @@ async function claimReceiptPoints(db, auth, {
   displayName,
   pdpaAccepted,
   idToken,
-  confirmExisting,
 }) {
   const loaded = await loadSaleForClaim(db, saleId, token);
   if (!loaded.ok) return { ok: false, error: loaded.error, ...(loaded.view || {}) };
 
-  // Returning member — phone + confirm only
-  if (confirmExisting === true) {
-    const digits = phoneDigitsFromInput(phone);
-    if (!digits) return { ok: false, error: "invalid_phone" };
-    const existing = await db.collection("members").doc(digits).get();
-    if (!existing.exists) return { ok: false, error: "not_member" };
-    const m = existing.data() || {};
-    if (m.status === "suspended") return { ok: false, error: "suspended" };
-    return creditReceiptClaimToMember(db, {
-      loaded,
-      digits,
-      displayName: "",
-      isNew: false,
-      note: "เคลมจาก QR สลิป (สมาชิกเดิม)",
-    });
-  }
-
-  // New signup without OTP (early experiment) — or OTP if idToken provided
   const rawToken = asString(idToken, 4096);
-  let digits = "";
-  let phoneForCreate = "";
-
-  if (rawToken) {
-    let decoded;
-    try {
-      decoded = await auth.verifyIdToken(rawToken);
-    } catch (err) {
-      console.error("claimReceiptPoints verifyIdToken", err && err.message);
-      return { ok: false, error: "auth_required" };
-    }
-    phoneForCreate = asString(decoded.phone_number, 32);
-    digits = phoneDigitsFromInput(phoneForCreate);
-  } else {
-    digits = phoneDigitsFromInput(phone);
-    phoneForCreate = phone;
+  if (!rawToken) return { ok: false, error: "auth_required" };
+  let decoded;
+  try {
+    decoded = await auth.verifyIdToken(rawToken);
+  } catch (err) {
+    console.error("claimReceiptPoints verifyIdToken", err && err.message);
+    return { ok: false, error: "auth_required" };
   }
-  if (!digits) return { ok: false, error: "invalid_phone" };
-  if (pdpaAccepted !== true) return { ok: false, error: "pdpa_required" };
+
+  const uid = asString(decoded.uid, 128);
+  const email = asString(decoded.email, 120).toLowerCase();
+  const phoneFromAuth = asString(decoded.phone_number, 32);
+  let digits = phoneDigitsFromInput(phoneFromAuth);
+  let existingDoc = null;
+
+  if (digits) {
+    const s = await db.collection("members").doc(digits).get();
+    if (s.exists) existingDoc = s;
+  }
+  if (!existingDoc && uid) {
+    existingDoc = await findMemberByGoogleUid(db, uid);
+    if (existingDoc) digits = existingDoc.id;
+  }
 
   let isNew = false;
-  const existing = await db.collection("members").doc(digits).get();
-  if (!existing.exists) {
+  if (!existingDoc || !existingDoc.exists) {
+    digits = phoneDigitsFromInput(phone) || digits;
+    if (!digits) return { ok: false, error: "phone_required" };
+    if (pdpaAccepted !== true) return { ok: false, error: "pdpa_required" };
+    const beforeCreate = await db.collection("members").doc(digits).get();
     const created = await quickCreateMember(db, {
-      phone: phoneForCreate || digits,
-      displayName,
+      phone: phoneFromAuth || phone || digits,
+      displayName: displayName || (email ? email.split("@")[0] : ""),
       actorId: "receipt_qr",
       source: "receipt_qr",
+      googleUid: uid,
+      email,
     });
     if (!created.ok) return created;
-    isNew = true;
+    isNew = !beforeCreate.exists;
   } else {
-    const m = existing.data() || {};
+    const m = existingDoc.data() || {};
     if (m.status === "suspended") return { ok: false, error: "suspended" };
+    digits = existingDoc.id;
+    const patch = {};
+    if (uid && !asString(m.googleUid, 128)) patch.googleUid = uid;
+    if (email && !asString(m.email, 120)) patch.email = email;
+    if (Object.keys(patch).length) {
+      patch.updatedAt = Date.now();
+      await existingDoc.ref.set(patch, { merge: true });
+    }
   }
 
   return creditReceiptClaimToMember(db, {
@@ -671,7 +741,8 @@ module.exports = {
   quickCreateMember,
   publicSignup,
   previewReceiptClaim,
-  lookupReceiptClaimMember,
+  lookupReceiptClaimAuth,
+  getMyMember,
   claimReceiptPoints,
   formatPhoneDisplay,
   cardNoFromDigits,

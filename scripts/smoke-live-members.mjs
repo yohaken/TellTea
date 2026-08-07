@@ -9,7 +9,7 @@ async function main() {
   const verRes = await fetch(`${BASE}/version.json`, { cache: "no-store" });
   assert.equal(verRes.status, 200, "version.json HTTP");
   const ver = await verRes.json();
-  assert.ok(Number(ver.build) >= 731, `build too old: ${ver.build}`);
+  assert.ok(Number(ver.build) >= 732, `build too old: ${ver.build}`);
 
   const res = await fetch(`${BASE}/members/`, { cache: "no-store" });
   assert.equal(res.status, 200, "/members/ HTTP");
@@ -24,7 +24,13 @@ async function main() {
   assert.match(claimHtml, /app\/claim\/page-/, "missing claim page chunk");
   assert.doesNotMatch(claimHtml, /<title>404:/, "claim soft/hard 404 title");
 
-  console.log(`OK smoke-live-members · ${BASE}/members/ + /claim/ · build ${ver.build}`);
+  const meRes = await fetch(`${BASE}/me/`, { cache: "no-store" });
+  assert.equal(meRes.status, 200, "/me/ HTTP");
+  const meHtml = await meRes.text();
+  assert.match(meHtml, /app\/me\/page-/, "missing me page chunk");
+  assert.doesNotMatch(meHtml, /<title>404:/, "me soft/hard 404 title");
+
+  console.log(`OK smoke-live-members · ${BASE}/members/ + /claim/ + /me/ · build ${ver.build}`);
 }
 
 main().catch((err) => {

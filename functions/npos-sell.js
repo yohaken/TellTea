@@ -13,7 +13,8 @@ const {
   quickCreateMember,
   publicSignup,
   previewReceiptClaim,
-  lookupReceiptClaimMember,
+  lookupReceiptClaimAuth,
+  getMyMember,
   claimReceiptPoints,
 } = require("./pos-members");
 
@@ -859,7 +860,7 @@ exports.publicReceiptClaimPreview = functions.region("asia-southeast1").https.on
   }
 });
 
-/** Public receipt-claim member lookup — phone on a valid claim link; no OTP. */
+/** Auth probe for claim page — Google/phone session already signed in. */
 exports.publicReceiptClaimLookup = functions.region("asia-southeast1").https.onRequest(async (req, res) => {
   cors(res);
   if (req.method === "OPTIONS") {
@@ -877,14 +878,16 @@ exports.publicReceiptClaimLookup = functions.region("asia-southeast1").https.onR
   }
   try {
     const db = getFirestore();
-    const result = await lookupReceiptClaimMember(db, {
+    const result = await lookupReceiptClaimAuth(db, getAuth(), {
       saleId: body.saleId || body.s,
       token: body.token || body.t,
-      phone: body.phone,
+      idToken: body.idToken,
     });
     const deny =
       result.ok === false &&
-      (result.error === "bad_token" || result.error === "missing_sale");
+      (result.error === "bad_token" ||
+        result.error === "missing_sale" ||
+        result.error === "auth_required");
     res.status(deny ? 403 : 200).json(result);
   } catch (err) {
     console.error("publicReceiptClaimLookup", err);
@@ -892,11 +895,7 @@ exports.publicReceiptClaimLookup = functions.region("asia-southeast1").https.onR
   }
 });
 
-/**
- * Public receipt-claim.
- * Existing member: phone + confirmExisting (no OTP).
- * New member: Firebase phone OTP idToken + PDPA.
- */
+/** Public receipt-claim — Firebase Auth required (Google or phone OTP). */
 exports.publicReceiptClaim = functions.region("asia-southeast1").https.onRequest(async (req, res) => {
   cors(res);
   if (req.method === "OPTIONS") {
@@ -921,7 +920,6 @@ exports.publicReceiptClaim = functions.region("asia-southeast1").https.onRequest
       displayName: body.displayName,
       pdpaAccepted: body.pdpaAccepted === true,
       idToken: body.idToken,
-      confirmExisting: body.confirmExisting === true,
     });
     const deny =
       result.ok === false &&
@@ -932,5 +930,31 @@ exports.publicReceiptClaim = functions.region("asia-southeast1").https.onRequest
   } catch (err) {
     console.error("publicReceiptClaim", err);
     res.status(500).json({ ok: false, error: "claim_failed" });
+  }
+});
+
+/** View own member points — Firebase Auth required. */
+exports.publicMemberMe = functions.region("asia-southeast1").https.onRequest(async (req, res) => {
+  cors(res);
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
+  }
+  if (req.method !== "POST") {
+    res.status(405).json({ ok: false, error: "POST only" });
+    return;
+  }
+  const body = parseBody(req);
+  if (!body) {
+    res.status(400).json({ ok: false, error: "bad_body" });
+    return;
+  }
+  try {
+    const result = await getMyMember(getFirestore(), getAuth(), { idToken: body.idToken });
+    const deny = result.ok === false && result.error === "auth_required";
+    res.status(deny ? 403 : 200).json(result);
+  } catch (err) {
+    console.error("publicMemberMe", err);
+    res.status(500).json({ ok: false, error: "me_failed" });
   }
 });

@@ -21,6 +21,7 @@ const BACK_OFFICE_ROUTES = [
   "members",
   "join",
   "claim",
+  "me",
   "tasks",
   "bonus",
   "production",

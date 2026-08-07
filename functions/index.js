@@ -39,6 +39,7 @@ exports.publicMemberSignup = nposSell.publicMemberSignup;
 exports.publicReceiptClaimPreview = nposSell.publicReceiptClaimPreview;
 exports.publicReceiptClaimLookup = nposSell.publicReceiptClaimLookup;
 exports.publicReceiptClaim = nposSell.publicReceiptClaim;
+exports.publicMemberMe = nposSell.publicMemberMe;
 const nposMenuAdmin = require("./npos-menu-admin");
 exports.nposMenuAdminSnapshot = nposMenuAdmin.nposMenuAdminSnapshot;
 exports.nposMenuMutate = nposMenuAdmin.nposMenuMutate;
