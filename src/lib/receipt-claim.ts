@@ -295,6 +295,8 @@ export function claimErrorLabel(code: string | undefined): string {
     already_earned: "บิลนี้สะสมแต้มไปแล้ว",
     invalid_phone: "เบอร์โทรไม่ถูกต้อง",
     phone_required: "กรอกเบอร์โทรเพื่อผูกสมาชิก",
+    phone_otp_required: "ยืนยันเบอร์ด้วย OTP ก่อนสมัครครั้งแรก",
+    phone_mismatch: "เบอร์ไม่ตรงกับที่ยืนยัน OTP",
     not_member: "ยังไม่เป็นสมาชิก",
     auth_required: "เข้าสู่ระบบก่อน (Google หรือเบอร์)",
     auth_mismatch: "บัญชีไม่ตรง",

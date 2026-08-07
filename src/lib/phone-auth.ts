@@ -1,5 +1,6 @@
 import {
   RecaptchaVerifier,
+  linkWithPhoneNumber,
   signInWithPhoneNumber,
   type ConfirmationResult,
 } from "firebase/auth";
@@ -28,6 +29,7 @@ export function ensurePhoneRecaptcha(containerId: string): RecaptchaVerifier {
   return recaptchaVerifier;
 }
 
+/** Phone-only sign-in (secondary path on /claim). */
 export async function sendPhoneOtp(
   phoneInput: string,
   containerId: string,
@@ -35,6 +37,22 @@ export async function sendPhoneOtp(
   const phone = normalizePhone(phoneInput);
   const verifier = ensurePhoneRecaptcha(containerId);
   return signInWithPhoneNumber(getFirebaseAuth(), phone, verifier);
+}
+
+/**
+ * Link phone to the current Google session via OTP (first-time signup).
+ * Keeps Google uid/email on the same Auth user.
+ */
+export async function sendLinkPhoneOtp(
+  phoneInput: string,
+  containerId: string,
+): Promise<ConfirmationResult> {
+  const auth = getFirebaseAuth();
+  const user = auth.currentUser;
+  if (!user) throw new Error("เข้าสู่ระบบก่อน");
+  const phone = normalizePhone(phoneInput);
+  const verifier = ensurePhoneRecaptcha(containerId);
+  return linkWithPhoneNumber(user, phone, verifier);
 }
 
 export async function confirmPhoneOtp(
@@ -45,4 +63,9 @@ export async function confirmPhoneOtp(
   if (trimmed.length < 4) throw new Error("รหัส OTP ไม่ถูกต้อง");
   await confirmation.confirm(trimmed);
   resetPhoneRecaptcha();
+}
+
+export function currentAuthHasVerifiedPhone(): boolean {
+  const phone = getFirebaseAuth().currentUser?.phoneNumber || "";
+  return phone.replace(/\D/g, "").length >= 9;
 }
