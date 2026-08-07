@@ -14,6 +14,7 @@ import { formatPosSessionClock } from "@/lib/pos-session";
 import { PosReceiptPaper } from "@/components/PosReceiptPaper";
 import { printSaleDocuments } from "@/lib/pos-printer/router";
 import { localReceiptToPrintPayload } from "@/lib/pos-receipt-view";
+import { claimQrDataUrl } from "@/lib/receipt-claim";
 import { getLocalPosShopSettings, subscribePosShopSettings, type PosShopSettings } from "@/lib/pos-settings";
 import { formatPlainNumber } from "@/lib/utils";
 import { buildShiftReportPayload } from "@/lib/pos-shift-report";
@@ -377,8 +378,17 @@ export function PosShiftView() {
   }
 
   async function handlePrintReceipt(receipt: PosLocalReceipt) {
+    const claimUrl = (receipt.claimUrl || "").trim();
+    let claimQr: string | undefined = receipt.claimQrDataUrl?.trim() || undefined;
+    if (claimUrl && !claimQr) {
+      try {
+        claimQr = await claimQrDataUrl(claimUrl);
+      } catch {
+        claimQr = undefined;
+      }
+    }
     const payload = localReceiptToPrintPayload(
-      receipt,
+      { ...receipt, claimUrl: claimUrl || undefined, claimQrDataUrl: claimQr },
       shop,
       device?.pairingCode || device?.id.slice(-6).toUpperCase(),
     );

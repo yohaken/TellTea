@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Printer, Trash2 } from "lucide-react";
 import type { PosLocalReceipt } from "@/lib/pos-local-receipts";
 import { localReceiptToPrintPayload } from "@/lib/pos-receipt-view";
@@ -13,6 +13,7 @@ import {
   getLocalPosShopSettings,
   type PosShopSettings,
 } from "@/lib/pos-settings";
+import { claimQrDataUrl } from "@/lib/receipt-claim";
 import { PosPrintDocFrame } from "@/components/PosPrintDocFrame";
 
 /**
@@ -46,9 +47,40 @@ export function PosReceiptPaper({
   const voided = receipt.voided === true;
   const showActions = Boolean(onPrint || onVoid);
   const shopSettings = shop ?? getLocalPosShopSettings();
+  const claimUrl = (receipt.claimUrl || "").trim();
+  const [qrDataUrl, setQrDataUrl] = useState<string | undefined>(
+    () => receipt.claimQrDataUrl?.trim() || undefined,
+  );
+
+  useEffect(() => {
+    const preset = receipt.claimQrDataUrl?.trim();
+    if (preset) {
+      setQrDataUrl(preset);
+      return;
+    }
+    if (!claimUrl) {
+      setQrDataUrl(undefined);
+      return;
+    }
+    let cancelled = false;
+    setQrDataUrl(undefined);
+    void claimQrDataUrl(claimUrl)
+      .then((url) => {
+        if (!cancelled) setQrDataUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setQrDataUrl(undefined);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [claimUrl, receipt.claimQrDataUrl, receipt.id]);
 
   const previewHtml = useMemo(() => {
-    const payload = localReceiptToPrintPayload(receipt, shopSettings);
+    const payload = localReceiptToPrintPayload(
+      { ...receipt, claimUrl: claimUrl || undefined, claimQrDataUrl: qrDataUrl },
+      shopSettings,
+    );
     const layout = getKindProfile(compact ? "mobile_58" : "builtin_80");
     const body = buildUnifiedReceiptBody(payload, layout);
     const css = unifiedReceiptStyles(layout, "auto");
@@ -69,7 +101,7 @@ export function PosReceiptPaper({
       body{margin:0;background:#fff;}
       .pos-receipt-preview-shell{padding:8px 4px 12px;}
     </style></head><body><div class="pos-receipt-preview-shell">${voidBanner}${pendingBanner}${body}${voidReason}</div></body></html>`;
-  }, [compact, receipt, shopSettings, voided]);
+  }, [claimUrl, compact, qrDataUrl, receipt, shopSettings, voided]);
 
   return (
     <div className={`pos-receipt-paper-wrap ${compact ? "pos-receipt-paper-wrap--compact" : ""}`}>

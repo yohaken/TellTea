@@ -30,16 +30,18 @@ const html = read("src/lib/pos-printer/receipt-template.ts");
 assert.match(html, /receiptDiscountRowsHtml/);
 assert.match(html, /แลกแต้ม/);
 assert.match(html, /แต้มที่ได้/);
+assert.match(html, /สแกนสะสมแต้ม/);
 
 const text = read("src/lib/pos-printer/receipt-text-form.ts");
 assert.match(text, /แลกแต้ม/);
 assert.match(text, /แต้มที่ได้/);
+assert.match(text, /CLAIM_QR_MARKER/);
 
 const report = read("src/components/PosSalesReport.tsx");
 assert.match(report, /แลกแต้ม/);
 assert.match(report, /sale\.memberId/);
 
 const version = read("src/lib/version.ts");
-assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 739);
+assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 743);
 
 console.log("OK test-members-p2-boh-bill");

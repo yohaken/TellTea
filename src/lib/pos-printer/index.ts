@@ -40,6 +40,7 @@ export {
 } from "./receipt-template";
 export {
   buildUnifiedReceiptText,
+  CLAIM_QR_MARKER,
   RECEIPT_TEXT_COLS_58,
   RECEIPT_TEXT_COLS_80,
 } from "./receipt-text-form";

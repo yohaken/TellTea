@@ -308,6 +308,24 @@ export function unifiedReceiptStyles(layout: PrinterKindProfile, cutMode: PosPri
       font-size: ${layout.metaFontPx}px;
       color: #555;
     }
+    .claim-qr {
+      margin-top: 10px;
+      text-align: center;
+    }
+    .claim-qr img {
+      display: block;
+      margin: 0 auto;
+      width: ${layout.paperWidthMm === 58 ? 112 : 132}px;
+      height: ${layout.paperWidthMm === 58 ? 112 : 132}px;
+      image-rendering: pixelated;
+    }
+    .claim-qr-invite {
+      margin-top: 4px;
+      font-size: ${layout.metaFontPx}px;
+      font-weight: 700;
+      color: #222;
+      letter-spacing: 0.02em;
+    }
     ${cutHint}
     @media print { body { margin: 0; } }
   `;
@@ -382,6 +400,20 @@ export function buildUnifiedReceiptBody(data: ReceiptPrintPayload, layout: Print
 
   const footerNote = (data.receiptFooterNote || "ขอบคุณที่อุดหนุน").trim();
 
+  const claimQrSrc = (data.claimQrDataUrl || "").trim();
+  const claimUrl = (data.claimUrl || "").trim();
+  const claimBlock =
+    claimQrSrc || claimUrl
+      ? `<div class="claim-qr">
+      ${
+        claimQrSrc
+          ? `<img src="${escapeReceiptHtml(claimQrSrc)}" alt="QR สะสมแต้ม" width="${compact ? 112 : 132}" height="${compact ? 112 : 132}" />`
+          : `<div class="claim-qr-invite">${escapeReceiptHtml(claimUrl)}</div>`
+      }
+      <div class="claim-qr-invite">สแกนสะสมแต้ม</div>
+    </div>`
+      : "";
+
   return `
   <div class="receipt">
     <div class="bill-no">${escapeReceiptHtml(billDisplay)}</div>
@@ -417,6 +449,7 @@ export function buildUnifiedReceiptBody(data: ReceiptPrintPayload, layout: Print
       }
     </div>
     ${notesBlock}
+    ${claimBlock}
     <div class="footer">${escapeReceiptHtml(footerNote)}</div>
   </div>`;
 }
