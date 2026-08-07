@@ -12,6 +12,7 @@
     "test:permissions-resolve": "node scripts/test-permissions-resolve.mjs",
     "test:members-crm": "node scripts/test-members-crm-m0.mjs",
     "test:members-receipt-claim": "node scripts/test-members-receipt-claim.mjs",
+    "test:members-p4-npos": "node scripts/test-members-p4-npos.mjs",
     "test:production-staff-month": "node scripts/test-production-staff-month.mjs",
     "test:preview-staff-identity": "node scripts/test-preview-staff-identity.mjs",
     "test:vat-p1-p4": "npx --yes tsx scripts/test-vat-p1-p4.ts",
