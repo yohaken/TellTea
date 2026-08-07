@@ -403,6 +403,12 @@ export function PosSalesReport({
                       <span role="cell" className="npos-slim-strong">
                         #{(sale.billNo || "—").replace(/^#/, "")}
                         {voided ? <span className="muted"> · ยกเลิก</span> : null}
+                        {!voided && sale.memberId ? (
+                          <span className="muted"> · สมาชิก</span>
+                        ) : null}
+                        {!voided && (sale.redeemBaht || 0) > 0 ? (
+                          <span className="muted"> · แลกแต้ม</span>
+                        ) : null}
                       </span>
                       <span role="cell" className="muted">
                         {formatTime(sale.createdAt)}

@@ -20,8 +20,13 @@ export type PosLocalReceipt = {
   paymentMethod: PosSalePaymentMethod;
   linePreview: string;
   lines?: PosLocalReceiptLine[];
-  /** ส่วนลดท้ายบิล (บาท) — เก็บเพื่อสรุปปิดกะ */
+  /** ส่วนลดท้ายบิลรวม (บาท) — เก็บเพื่อสรุปปิดกะ */
   discountBaht?: number;
+  /** ส่วนลดมือ (ไม่รวมแลกแต้ม) */
+  manualDiscountBaht?: number;
+  redeemBaht?: number;
+  pointsRedeemed?: number;
+  pointsEarned?: number;
   cashReceived?: number;
   change?: number;
   createdAt: number;

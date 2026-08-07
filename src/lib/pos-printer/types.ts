@@ -62,6 +62,10 @@ export type ReceiptPrintPayload = {
   total: number;
   subtotal?: number;
   discountBaht?: number;
+  manualDiscountBaht?: number;
+  redeemBaht?: number;
+  pointsRedeemed?: number;
+  pointsEarned?: number;
   paymentMethod: PosSalePaymentMethod;
   cashReceived?: number;
   change?: number;
