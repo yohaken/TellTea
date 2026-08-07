@@ -1241,6 +1241,42 @@ body.modal-open .main-panel {
   max-width: 22rem;
 }
 
+.members-gate {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border, #e5e5e5);
+  max-width: 28rem;
+}
+
+.members-gate-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.members-gate-status {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.members-gate-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--muted, #666);
+}
+
+.members-gate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
 .members-slim-settings label {
   display: grid;
   gap: 0.2rem;

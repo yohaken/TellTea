@@ -404,7 +404,7 @@ function MembersView() {
       {tab === "claim" ? (
         <section className="staff-hub-panel members-slim-panel">
           <p className="members-slim-hint muted">
-            ทดลอง · ออก QR จากบิล → สแกนเอง · ยังไม่พิมพ์ที่เครื่องขาย
+            ออก QR จากบิลเพื่อเทสสแกน · เมื่อเปิดธง QR สลิป เครื่องขายพิมพ์ QR ทุกใบเอง
             {!settings?.enabled || !settings.receiptClaimEnabled
               ? " · เปิดธงที่ตั้งค่าก่อน"
               : ""}
@@ -562,6 +562,48 @@ function MembersView() {
         </section>
       ) : tab === "settings" ? (
         <section className="staff-hub-panel members-slim-panel">
+          <div className="members-gate">
+            <p className="members-gate-title">เกตเปิดใช้หน้าร้าน (P6)</p>
+            <p className="members-gate-status">
+              สมาชิก:{" "}
+              <strong>{setEnabled ? "เปิด" : "ปิด"}</strong>
+              {" · "}
+              QR สลิป:{" "}
+              <strong>{setReceiptClaim ? "เปิด (พิมพ์ทุกใบ)" : "ปิด"}</strong>
+            </p>
+            <ul className="members-gate-list">
+              <li>เทสเครื่องครบก่อนเปิด — ดู docs/members-p6-gate.md</li>
+              <li>พนักงานอ่านคู่มือ 1 หน้า — docs/members-staff-guide.md</li>
+              <li>
+                ฉุกเฉิน: ปิด «เปิดระบบสมาชิก» แล้วบันทึก — ขายปกติทันที · ปิดแค่ QR ได้ถ้าปัญหาอยู่ที่สลิป
+              </li>
+            </ul>
+            {canManage ? (
+              <div className="members-gate-actions">
+                <button
+                  type="button"
+                  className="ghost-btn staff-btn-sm"
+                  disabled={saving}
+                  onClick={() => setSetBaht("33")}
+                >
+                  ใช้เรทแนะนำ 33฿=1 แต้ม
+                </button>
+                {setEnabled ? (
+                  <button
+                    type="button"
+                    className="ghost-btn staff-btn-sm"
+                    disabled={saving}
+                    onClick={() => {
+                      setSetEnabled(false);
+                      setMsg("ติ๊กปิดแล้ว — กดบันทึกเพื่อปิดธงฉุกเฉิน");
+                    }}
+                  >
+                    เตรียมปิดฉุกเฉิน
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
           <form className="members-slim-settings" onSubmit={onSaveSettings}>
             <label className="members-slim-check">
               <input
@@ -570,7 +612,7 @@ function MembersView() {
                 disabled={!canManage || saving}
                 onChange={(e) => setSetEnabled(e.target.checked)}
               />
-              <span>เปิดระบบสมาชิก</span>
+              <span>เปิดระบบสมาชิก (หน้าร้าน + แลกแต้ม)</span>
             </label>
             <label>
               <span>สะสม: ทุกกี่บาทชำระ = 1 แต้ม</span>
@@ -585,7 +627,7 @@ function MembersView() {
               />
             </label>
             <p className="muted members-slim-hint">
-              คิดจากยอดชำระหลังหักแลกแต้ม · เช่น 33 ≈ คืน ~3% เมื่อแลก 1:1
+              คิดจากยอดชำระหลังหักแลกแต้ม · แนะนำเริ่ม 33 ≈ คืน ~3% เมื่อแลก 1:1
             </p>
             <label>
               <span>แลก: กี่แต้ม = ส่วนลด 1฿</span>
