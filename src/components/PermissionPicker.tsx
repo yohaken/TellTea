@@ -2,6 +2,7 @@
 
 import {
   ELEVATED_PERMISSION_KEYS,
+  OWNER_ONLY_PERMISSION_KEYS,
   PERMISSION_GROUPS,
   PERMISSION_LABELS,
   type PermissionKey,
@@ -34,12 +35,15 @@ export function PermissionPicker({
   }
 
   const elevated = new Set<PermissionKey>(ELEVATED_PERMISSION_KEYS);
+  const ownerOnly = new Set<PermissionKey>(OWNER_ONLY_PERMISSION_KEYS);
 
   return (
     <div className={`permission-picker${compact ? " is-compact" : ""}`}>
       {PERMISSION_GROUPS.map((group) => {
         const keys = group.keys.filter((key) => {
           if (key === "assignTasks") return false;
+          // สมาชิก/แต้ม = role เจ้าของเท่านั้น — ไม่ให้ติ๊กมอบในแผนที่พนักงาน
+          if (ownerOnly.has(key)) return false;
           if (hideElevated && elevated.has(key)) return false;
           return true;
         });

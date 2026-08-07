@@ -14,6 +14,8 @@ assert.match(perms, /membersView/);
 assert.match(perms, /membersManage/);
 assert.match(perms, /membersAdjustPoints/);
 assert.match(perms, /canAccessMembersHub/);
+assert.match(perms, /OWNER_ONLY_PERMISSION_KEYS/);
+assert.match(perms, /member\?\.role === "owner"/);
 
 const members = read("src/lib/members.ts");
 assert.match(members, /MEMBERS_COLLECTION/);
@@ -85,8 +87,11 @@ assert.match(saleSync, /pointsToRedeem/);
 const gradle = read("npos-telltea/app/build.gradle");
 assert.match(gradle, /versionCode 138/);
 
+const picker = read("src/components/PermissionPicker.tsx");
+assert.match(picker, /OWNER_ONLY_PERMISSION_KEYS/);
+
 const version = read("src/lib/version.ts");
-assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 724);
+assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 725);
 const posVersion = read("src/lib/pos-version.ts");
 assert.ok(Number(posVersion.match(/POS_BUILD = (\d+)/)[1]) >= 186);
 

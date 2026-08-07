@@ -46,9 +46,7 @@ const OWNER_ASSIST_PERMISSIONS: StaffPermissions = {
   exportData: true,
   staffManage: true,
   payrollPay: true,
-  membersView: true,
-  membersManage: true,
-  membersAdjustPoints: true,
+  // สมาชิก / แต้ม = เจ้าของร้านเท่านั้น (ไม่ให้ผู้ช่วย)
 };
 
 /**

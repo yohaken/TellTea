@@ -57,22 +57,17 @@ service cloud.firestore {
       return isOwner() || hasPerm('staffManage') || isOwnerEmail();
     }
 
-    /** CRM สมาชิก / แต้ม — หลังร้าน + (เฟสถัดไป) หน้าร้าน */
+    /** CRM สมาชิก / แต้ม หลังร้าน — เจ้าของร้านเท่านั้น (เคาน์เตอร์ใช้ Admin CF) */
     function membersHubView() {
-      return isOwner() || isOwnerEmail()
-        || hasPerm('membersView')
-        || hasPerm('membersManage')
-        || hasPerm('membersAdjustPoints');
+      return isOwner() || isOwnerEmail();
     }
 
     function membersHubManage() {
-      return isOwner() || isOwnerEmail() || hasPerm('membersManage');
+      return isOwner() || isOwnerEmail();
     }
 
     function membersHubAdjustPoints() {
-      return isOwner() || isOwnerEmail()
-        || hasPerm('membersAdjustPoints')
-        || hasPerm('membersManage');
+      return isOwner() || isOwnerEmail();
     }
 
     function actorId() {
@@ -118,6 +113,9 @@ service cloud.firestore {
           || data.permissions.exportData == true
           || data.permissions.staffManage == true
           || data.permissions.payrollPay == true
+          || data.permissions.membersView == true
+          || data.permissions.membersManage == true
+          || data.permissions.membersAdjustPoints == true
         );
     }
 
@@ -127,7 +125,10 @@ service cloud.firestore {
         || perms.transferIn == true
         || perms.exportData == true
         || perms.staffManage == true
-        || perms.payrollPay == true;
+        || perms.payrollPay == true
+        || perms.membersView == true
+        || perms.membersManage == true
+        || perms.membersAdjustPoints == true;
     }
 
     function isSeedPermissionLevelId(levelId) {
@@ -1192,7 +1193,7 @@ service cloud.firestore {
         || (hasPerm('ownerBooks') && docId == 'ownerBooks')
         || (hasPerm('ownerBooks') && docId == 'capitalBooks')
         || (isOwner() && docId == 'otSettings')
-        || (hasPerm('membersManage') && docId == 'memberSettings')
+        || ((isOwner() || isOwnerEmail()) && docId == 'memberSettings')
         || (isPosDeviceAuth() && docId == 'pos' && posMetaBillWrite());
     }
 

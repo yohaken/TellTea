@@ -37,9 +37,9 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   exportData: "ส่งออกข้อมูล",
   staffManage: "จัดการพนักงาน",
   payrollPay: "จ่ายเงินเดือนทั้งร้าน",
-  membersView: "ดูสมาชิก / แต้ม",
-  membersManage: "จัดการสมาชิก",
-  membersAdjustPoints: "ปรับแต้มสมาชิก",
+  membersView: "ดูสมาชิก / แต้ม (เจ้าของเท่านั้น)",
+  membersManage: "จัดการสมาชิก (เจ้าของเท่านั้น)",
+  membersAdjustPoints: "ปรับแต้มสมาชิก (เจ้าของเท่านั้น)",
 };
 
 /** สิทธิ์ระดับเจ้าของ — คนมี staffManage ธรรมดามอบให้คนอื่นไม่ได้ */
@@ -50,6 +50,16 @@ export const ELEVATED_PERMISSION_KEYS: PermissionKey[] = [
   "exportData",
   "staffManage",
   "payrollPay",
+  "membersView",
+  "membersManage",
+  "membersAdjustPoints",
+];
+
+/** CRM สมาชิก — ไม่มอบให้พนักงาน / ผู้ช่วย; หน้าหลังร้านใช้ role owner เท่านั้น */
+export const OWNER_ONLY_PERMISSION_KEYS: PermissionKey[] = [
+  "membersView",
+  "membersManage",
+  "membersAdjustPoints",
 ];
 
 /** จัดกลุ่มสิทธิ์ให้เลือกใน UI ศูนย์พนักงาน */
@@ -62,17 +72,12 @@ export const PERMISSION_GROUPS: { title: string; hint?: string; keys: Permission
   {
     title: "อื่นๆ — เครื่องมือเพิ่ม",
     hint: "แสดงแท็บ อื่นๆ เมื่อเปิดอย่างน้อย 1 สิทธิในกลุ่มนี้",
-    keys: [
-      "ownerBooks",
-      "pnl",
-      "transferIn",
-      "exportData",
-      "staffManage",
-      "payrollPay",
-      "membersView",
-      "membersManage",
-      "membersAdjustPoints",
-    ],
+    keys: ["ownerBooks", "pnl", "transferIn", "exportData", "staffManage", "payrollPay"],
+  },
+  {
+    title: "เจ้าของร้านเท่านั้น",
+    hint: "สมาชิก / แต้ม — มอบให้พนักงานไม่ได้ · เห็นเฉพาะบัญชี role เจ้าของ",
+    keys: ["membersView", "membersManage", "membersAdjustPoints"],
   },
 ];
 
@@ -274,15 +279,11 @@ export function hasAnyExtraPermission(member: StaffMember | null | undefined): b
   );
 }
 
-/** เข้าหน้าสมาชิกหลังร้าน / เครื่องมือสมาชิก */
+/** เข้าหน้าสมาชิกหลังร้าน — เฉพาะ role เจ้าของ (ไม่ใช้สิทธิ์พนักงาน) */
 export function canAccessMembersHub(
   member: StaffMember | null | undefined,
 ): boolean {
-  return (
-    can(member, "membersView") ||
-    can(member, "membersManage") ||
-    can(member, "membersAdjustPoints")
-  );
+  return member?.role === "owner";
 }
 
 export function permissionsEqual(a: StaffPermissions, b: StaffPermissions): boolean {
