@@ -18,6 +18,8 @@ const BACK_OFFICE_ROUTES = [
   "stock",
   "check",
   "staff",
+  "members",
+  "join",
   "tasks",
   "bonus",
   "production",

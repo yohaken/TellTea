@@ -165,6 +165,7 @@
     "check:npos-devices": "node scripts/check-npos-devices-live.mjs",
     "smoke:pos-install-live": "node scripts/smoke-pos-install-live.mjs",
     "smoke:live-version": "node scripts/smoke-live-version.mjs",
+    "smoke:live-members": "node scripts/smoke-live-members.mjs",
     "test:app-build-bump": "node scripts/assert-app-build-bump.mjs",
     "publish:pos-apk": "node scripts/publish-pos-apk.mjs",
     "cap:sync": "npx cap sync android",
