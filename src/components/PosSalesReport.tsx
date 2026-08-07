@@ -512,7 +512,31 @@ export function PosSalesReport({
               </span>
             </div>
           ))}
-          {summary.discountTotal > 0 ? (
+          {summary.manualDiscountTotal > 0 ? (
+            <div className="npos-slim-row npos-slim-row--compact" role="row">
+              <span role="cell">ส่วนลดมือ</span>
+              <span role="cell" className="npos-slim-num">
+                —
+              </span>
+              <span role="cell" className="npos-slim-num">
+                -{formatPlainNumber(summary.manualDiscountTotal)}
+              </span>
+            </div>
+          ) : null}
+          {summary.redeemTotal > 0 ? (
+            <div className="npos-slim-row npos-slim-row--compact" role="row">
+              <span role="cell">แลกแต้ม</span>
+              <span role="cell" className="npos-slim-num">
+                {summary.redeemBillCount || "—"}
+              </span>
+              <span role="cell" className="npos-slim-num">
+                -{formatPlainNumber(summary.redeemTotal)}
+              </span>
+            </div>
+          ) : null}
+          {summary.discountTotal > 0 &&
+          summary.manualDiscountTotal <= 0 &&
+          summary.redeemTotal <= 0 ? (
             <div className="npos-slim-row npos-slim-row--compact" role="row">
               <span role="cell">ส่วนลด</span>
               <span role="cell" className="npos-slim-num">

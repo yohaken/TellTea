@@ -63,6 +63,14 @@ export type PosSalesDetailedSummary = {
   grossTotal: number;
   discountTotal: number;
   discountCount: number;
+  /** ส่วนลดมือ (ไม่รวมแลกแต้ม) */
+  manualDiscountTotal: number;
+  /** บาทที่ลดจากแลกแต้ม */
+  redeemTotal: number;
+  redeemBillCount: number;
+  /** รวมแต้มที่ตัด / ที่ให้ ในช่วง (บิล completed) */
+  pointsRedeemedTotal: number;
+  pointsEarnedTotal: number;
   cashTotal: number;
   cashCount: number;
   promptpayTotal: number;
@@ -485,6 +493,28 @@ export function summarizePosSalesDetailed(
     active.reduce((sum, s) => sum + Math.max(0, s.discountBaht || 0), 0) * 100,
   ) / 100;
   const discountCount = active.filter((s) => (s.discountBaht || 0) > 0).length;
+  const redeemTotal = Math.round(
+    active.reduce((sum, s) => sum + Math.max(0, s.redeemBaht || 0), 0) * 100,
+  ) / 100;
+  const redeemBillCount = active.filter((s) => (s.redeemBaht || 0) > 0).length;
+  const manualDiscountTotal = Math.round(
+    active.reduce((sum, s) => {
+      const redeem = Math.max(0, s.redeemBaht || 0);
+      const manual =
+        typeof s.manualDiscountBaht === "number" && s.manualDiscountBaht > 0
+          ? s.manualDiscountBaht
+          : Math.max(0, (s.discountBaht || 0) - redeem);
+      return sum + manual;
+    }, 0) * 100,
+  ) / 100;
+  const pointsRedeemedTotal = active.reduce(
+    (sum, s) => sum + Math.max(0, Math.trunc(s.pointsRedeemed || 0)),
+    0,
+  );
+  const pointsEarnedTotal = active.reduce(
+    (sum, s) => sum + Math.max(0, Math.trunc(s.pointsEarned || 0)),
+    0,
+  );
   const netTotal = active.reduce((sum, s) => sum + s.total, 0);
   const grossTotal = Math.round((netTotal + discountTotal) * 100) / 100;
 
@@ -496,6 +526,11 @@ export function summarizePosSalesDetailed(
     grossTotal,
     discountTotal,
     discountCount,
+    manualDiscountTotal,
+    redeemTotal,
+    redeemBillCount,
+    pointsRedeemedTotal,
+    pointsEarnedTotal,
     cashTotal: cashSales.reduce((sum, s) => sum + s.total, 0),
     cashCount: cashSales.length,
     promptpayTotal: ppSales.reduce((sum, s) => sum + s.total, 0),
