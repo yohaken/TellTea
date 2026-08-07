@@ -53,6 +53,7 @@ const MORE_PREFIXES = [
   "/in",
   "/export",
   "/staff",
+  "/members",
   "/profile",
   "/tasks",
   "/utility",

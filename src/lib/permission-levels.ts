@@ -46,6 +46,9 @@ const OWNER_ASSIST_PERMISSIONS: StaffPermissions = {
   exportData: true,
   staffManage: true,
   payrollPay: true,
+  membersView: true,
+  membersManage: true,
+  membersAdjustPoints: true,
 };
 
 /**

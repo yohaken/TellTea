@@ -41,6 +41,8 @@ const REQUIRED_MATCHES = [
   "stockCosts",
   "employees",
   "employeePay",
+  "members",
+  "memberLedger",
   "payrollItems",
   "bonusLivePool",
   "bonusMonthCloses",

@@ -14,6 +14,9 @@ export const PERMISSION_KEYS = [
   "exportData",
   "staffManage",
   "payrollPay",
+  "membersView",
+  "membersManage",
+  "membersAdjustPoints",
 ] as const;
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number];
@@ -34,6 +37,9 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   exportData: "ส่งออกข้อมูล",
   staffManage: "จัดการพนักงาน",
   payrollPay: "จ่ายเงินเดือนทั้งร้าน",
+  membersView: "ดูสมาชิก / แต้ม",
+  membersManage: "จัดการสมาชิก",
+  membersAdjustPoints: "ปรับแต้มสมาชิก",
 };
 
 /** สิทธิ์ระดับเจ้าของ — คนมี staffManage ธรรมดามอบให้คนอื่นไม่ได้ */
@@ -56,7 +62,17 @@ export const PERMISSION_GROUPS: { title: string; hint?: string; keys: Permission
   {
     title: "อื่นๆ — เครื่องมือเพิ่ม",
     hint: "แสดงแท็บ อื่นๆ เมื่อเปิดอย่างน้อย 1 สิทธิในกลุ่มนี้",
-    keys: ["ownerBooks", "pnl", "transferIn", "exportData", "staffManage", "payrollPay"],
+    keys: [
+      "ownerBooks",
+      "pnl",
+      "transferIn",
+      "exportData",
+      "staffManage",
+      "payrollPay",
+      "membersView",
+      "membersManage",
+      "membersAdjustPoints",
+    ],
   },
 ];
 
@@ -75,6 +91,9 @@ export const EMPTY_STAFF_PERMISSIONS: StaffPermissions = {
   exportData: false,
   staffManage: false,
   payrollPay: false,
+  membersView: false,
+  membersManage: false,
+  membersAdjustPoints: false,
 };
 
 /**
@@ -95,6 +114,9 @@ export const DEFAULT_STAFF_PERMISSIONS: StaffPermissions = {
   exportData: false,
   staffManage: false,
   payrollPay: false,
+  membersView: false,
+  membersManage: false,
+  membersAdjustPoints: false,
 };
 
 /** หัวหน้ากะ — เปิดบัญชี+คลังเพิ่มจากพื้นร้าน */
@@ -118,6 +140,9 @@ export const OWNER_PERMISSIONS: StaffPermissions = {
   exportData: true,
   staffManage: true,
   payrollPay: true,
+  membersView: true,
+  membersManage: true,
+  membersAdjustPoints: true,
 };
 
 /**
@@ -242,7 +267,21 @@ export function hasAnyExtraPermission(member: StaffMember | null | undefined): b
     p.transferIn ||
     p.exportData ||
     p.staffManage ||
-    p.payrollPay
+    p.payrollPay ||
+    p.membersView ||
+    p.membersManage ||
+    p.membersAdjustPoints
+  );
+}
+
+/** เข้าหน้าสมาชิกหลังร้าน / เครื่องมือสมาชิก */
+export function canAccessMembersHub(
+  member: StaffMember | null | undefined,
+): boolean {
+  return (
+    can(member, "membersView") ||
+    can(member, "membersManage") ||
+    can(member, "membersAdjustPoints")
   );
 }
 

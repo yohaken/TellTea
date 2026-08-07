@@ -57,6 +57,24 @@ service cloud.firestore {
       return isOwner() || hasPerm('staffManage') || isOwnerEmail();
     }
 
+    /** CRM สมาชิก / แต้ม — หลังร้าน + (เฟสถัดไป) หน้าร้าน */
+    function membersHubView() {
+      return isOwner() || isOwnerEmail()
+        || hasPerm('membersView')
+        || hasPerm('membersManage')
+        || hasPerm('membersAdjustPoints');
+    }
+
+    function membersHubManage() {
+      return isOwner() || isOwnerEmail() || hasPerm('membersManage');
+    }
+
+    function membersHubAdjustPoints() {
+      return isOwner() || isOwnerEmail()
+        || hasPerm('membersAdjustPoints')
+        || hasPerm('membersManage');
+    }
+
     function actorId() {
       return hasEmail() ? authEmail() : authPhone();
     }
@@ -877,6 +895,47 @@ service cloud.firestore {
     }
 
     /**
+     * ลูกค้าสมาชิก (บัตร + แต้ม) — คนละโดเมนกับ staff/employees
+     * doc id = phoneDigits (E.164 ไม่มี +)
+     */
+    match /members/{memberId} {
+      allow read: if membersHubView();
+      allow create: if membersHubManage()
+        && request.resource.data.keys().hasAll([
+          'phone', 'phoneDigits', 'displayName', 'cardNo', 'status',
+          'pointsBalance', 'lifetimePointsEarned', 'source',
+          'createdAt', 'updatedAt', 'createdBy', 'updatedBy'
+        ])
+        && request.resource.data.phoneDigits == memberId
+        && request.resource.data.pointsBalance is number
+        && request.resource.data.pointsBalance >= 0;
+      allow update: if membersHubManage()
+        || (membersHubAdjustPoints()
+            && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['pointsBalance', 'lifetimePointsEarned', 'updatedAt', 'updatedBy'])
+            && request.resource.data.pointsBalance is number
+            && request.resource.data.pointsBalance >= 0
+            && request.resource.data.phoneDigits == resource.data.phoneDigits
+            && request.resource.data.createdAt == resource.data.createdAt);
+      allow delete: if isOwner() || isOwnerEmail();
+    }
+
+    match /memberLedger/{entryId} {
+      allow read: if membersHubView();
+      allow create: if membersHubAdjustPoints()
+        && request.resource.data.keys().hasAll([
+          'memberId', 'delta', 'balanceAfter', 'reason',
+          'actorType', 'actorId', 'createdAt'
+        ])
+        && request.resource.data.delta is number
+        && request.resource.data.delta != 0
+        && request.resource.data.balanceAfter is number
+        && request.resource.data.balanceAfter >= 0
+        && request.resource.data.actorId == actorId();
+      allow update, delete: if false;
+    }
+
+    /**
      * เงินเดือน / บัญชีรับโอน / เบิกค้าง — แยกจากรายชื่อร้าน
      * อ่าน: เจ้าของ · payrollPay · ของตัวเอง · เขียน: เจ้าของ / payrollPay / staffManage (ตั้งค่า)
      */
@@ -1133,6 +1192,7 @@ service cloud.firestore {
         || (hasPerm('ownerBooks') && docId == 'ownerBooks')
         || (hasPerm('ownerBooks') && docId == 'capitalBooks')
         || (isOwner() && docId == 'otSettings')
+        || (hasPerm('membersManage') && docId == 'memberSettings')
         || (isPosDeviceAuth() && docId == 'pos' && posMetaBillWrite());
     }
 

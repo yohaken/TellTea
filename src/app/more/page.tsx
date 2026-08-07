@@ -19,6 +19,7 @@ import {
   Sparkles,
   StickyNote,
   UserCircle,
+  CreditCard,
   Users,
   UtensilsCrossed,
 } from "lucide-react";
@@ -32,7 +33,12 @@ import {
   type NavUiSettings,
 } from "@/lib/nav-menu";
 import { needsPersonalProfileSetup, needsProfileSetup, personalProfileLabel } from "@/lib/profile";
-import { can, hasAnyExtraPermission, type PermissionKey } from "@/lib/permissions";
+import {
+  can,
+  canAccessMembersHub,
+  hasAnyExtraPermission,
+  type PermissionKey,
+} from "@/lib/permissions";
 import type { NavModuleKey } from "@/lib/nav-menu";
 
 const MODULE_ICONS: Record<NavModuleKey, typeof BookOpen> = {
@@ -145,7 +151,17 @@ function MoreView() {
     },
   ];
 
-  const extraTools = tools.filter((t) => can(staff, t.perm));
+  const membersTool = {
+    href: "/members/",
+    title: "สมาชิก / แต้ม",
+    desc: "บัตรสมาชิก · สะสมแต้ม · ตั้งค่า",
+    icon: CreditCard,
+  };
+
+  const extraTools = [
+    ...tools.filter((t) => can(staff, t.perm)),
+    ...(canAccessMembersHub(staff) ? [membersTool] : []),
+  ];
   const profileIncomplete = needsProfileSetup(staff);
   const personalIncomplete = needsPersonalProfileSetup(staff);
   const hasExtras = hasAnyExtraPermission(staff);

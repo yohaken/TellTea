@@ -114,7 +114,7 @@ Wongnai POS Android
 
 ---
 
-## 6. CRM สมาชิก (TellTea ไม่ใช้ — มี TellTea บัญชี/โบนัสแล้ว)
+## 6. CRM สมาชิก (กำลังทำ — ดู `docs/members-crm-phases.md`)
 
 | ID | ฟังก์ชัน |
 |----|---------|

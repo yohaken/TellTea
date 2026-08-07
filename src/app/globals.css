@@ -967,6 +967,21 @@ body.modal-open .main-panel {
   max-width: 42rem;
 }
 
+/* สมาชิก / แต้ม — กว้างกว่าศูนย์พนักงานเล็กน้อย */
+.staff-hub.members-hub {
+  max-width: 56rem;
+}
+
+.members-hub-layout {
+  align-items: start;
+}
+
+@media (max-width: 720px) {
+  .members-hub-layout {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 .staff-hub-head {
   display: flex;
   align-items: flex-start;
