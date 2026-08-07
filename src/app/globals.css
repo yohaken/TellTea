@@ -1063,6 +1063,26 @@ body.modal-open .main-panel {
   color: #2f6b4f;
 }
 
+.claim-used {
+  margin-top: 1rem;
+}
+
+.claim-used-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #2f4a3c;
+}
+
+.claim-used-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
 .claim-success-overlay {
   position: fixed;
   inset: 0;

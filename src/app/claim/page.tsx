@@ -22,7 +22,12 @@ type Step =
   | "link_phone"
   | "confirm"
   | "done"
+  | "used"
   | "blocked";
+
+function isAlreadyUsedError(code: string | undefined): boolean {
+  return code === "already_claimed" || code === "already_earned";
+}
 
 function ClaimForm() {
   const params = useSearchParams();
@@ -64,6 +69,11 @@ function ClaimForm() {
         if (cancelled) return;
         setPreview(data);
         if (!data.ok) {
+          if (isAlreadyUsedError(data.error)) {
+            setStep("used");
+            setError(null);
+            return;
+          }
           setStep("blocked");
           setError(claimErrorLabel(data.error));
           return;
@@ -98,14 +108,17 @@ function ClaimForm() {
     };
   }) {
     if (!result.ok) {
-      setError(claimErrorLabel(result.error));
       if (result.error === "phone_required") {
+        setError(claimErrorLabel(result.error));
         setStep("link_phone");
         return false;
       }
-      if (result.error === "already_claimed" || result.error === "already_earned") {
-        setStep("blocked");
+      if (isAlreadyUsedError(result.error)) {
+        setError(null);
+        setStep("used");
+        return false;
       }
+      setError(claimErrorLabel(result.error));
       return false;
     }
     setDone({
@@ -241,10 +254,16 @@ function ClaimForm() {
         <h1>สะสมแต้มจากสลิป</h1>
         <p className="muted">สมัครง่าย · Google ก่อน · QR ใช้ได้ครั้งเดียว</p>
 
-        {preview?.ok ? (
+        {preview?.ok || step === "used" ? (
           <p className="muted" style={{ marginTop: "0.75rem" }}>
-            บิล {preview.billNo} · ยอด {preview.total} บาท →{" "}
-            <strong>{preview.pointsPreview}</strong> แต้ม
+            บิล {preview?.billNo || "—"}
+            {typeof preview?.total === "number" ? ` · ยอด ${preview.total} บาท` : ""}
+            {typeof preview?.pointsPreview === "number" ? (
+              <>
+                {" "}
+                → <strong>{preview.pointsPreview}</strong> แต้ม
+              </>
+            ) : null}
           </p>
         ) : null}
 
@@ -252,6 +271,22 @@ function ClaimForm() {
           <p className="muted" style={{ marginTop: "1rem" }}>
             กำลังตรวจสอบลิงก์...
           </p>
+        ) : null}
+
+        {step === "used" ? (
+          <div className="join-form claim-used">
+            <p className="claim-used-title">แต้มบิลนี้ใช้แล้ว</p>
+            <p className="muted">
+              QR ใบนี้รับแต้มไปแล้ว · สแกนซ้ำไม่ได้ · ดูยอดแต้มของคุณได้หลังเข้าสู่ระบบ
+            </p>
+            <a className="primary-btn claim-used-cta" href="/me/">
+              ดูแต้มของฉัน
+            </a>
+            <p className="muted claim-me-hint">
+              หรือเปิด{" "}
+              <a href="/me/">telltea-shop.web.app/me</a>
+            </p>
+          </div>
         ) : null}
 
         {step === "blocked" ? (

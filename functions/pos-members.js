@@ -432,12 +432,14 @@ async function loadSaleForClaim(db, saleId, token) {
   if (data.status === "voided") return { ok: false, error: "voided" };
   const exp = typeof data.claimTokenExpiresAt === "number" ? data.claimTokenExpiresAt : 0;
   if (exp && exp < Date.now()) return { ok: false, error: "expired" };
-  if (data.claimStatus === "claimed") return { ok: false, error: "already_claimed", view: asSaleClaimView(id, data, settings) };
+  if (data.claimStatus === "claimed") {
+    return { ok: false, error: "already_claimed", view: asSaleClaimView(id, data, settings) };
+  }
   if (await ledgerExistsForSale(db, id, "earn_sale")) {
-    return { ok: false, error: "already_earned" };
+    return { ok: false, error: "already_earned", view: asSaleClaimView(id, data, settings) };
   }
   if (await ledgerExistsForSale(db, id, "earn_receipt_claim")) {
-    return { ok: false, error: "already_claimed" };
+    return { ok: false, error: "already_claimed", view: asSaleClaimView(id, data, settings) };
   }
   return { ok: true, settings, saleId: id, data, view: asSaleClaimView(id, data, settings) };
 }

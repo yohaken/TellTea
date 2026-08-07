@@ -18,6 +18,8 @@ assert.match(claimLib, /signInMemberWithGoogle/);
 assert.match(claimLib, /submitReceiptClaim/);
 assert.match(claimLib, /fetchMemberMe/);
 assert.match(claimLib, /publicMemberMe/);
+assert.match(claimLib, /claimed && !opts\?\.forceNewToken/);
+assert.match(claimLib, /โทเคนใหม่ \(เทส\)/);
 assert.doesNotMatch(claimLib, /confirmExisting/);
 
 const claimPage = read("src/app/claim/page.tsx");
@@ -26,6 +28,18 @@ assert.match(claimPage, /ดำเนินการต่อด้วย Google
 assert.match(claimPage, /ใช้เบอร์โทรแทน/);
 assert.match(claimPage, /claim-success-popup|claim-success-overlay/);
 assert.match(claimPage, /sendPhoneOtp/);
+assert.match(claimPage, /แต้มบิลนี้ใช้แล้ว/);
+assert.match(claimPage, /ดูแต้มของฉัน/);
+assert.match(claimPage, /"used"/);
+
+const membersPage = read("src/app/members/page.tsx");
+assert.match(membersPage, /แสดง QR/);
+assert.match(membersPage, /โทเคนใหม่ \(เทส\)/);
+assert.match(membersPage, /QR เดิม/);
+assert.doesNotMatch(
+  membersPage,
+  /disabled=\{!canManage \|\| saving \|\| s\.claimStatus === "claimed"\}/,
+);
 
 const mePage = read("src/app/me/page.tsx");
 assert.match(mePage, /fetchMemberMe/);
@@ -56,7 +70,7 @@ assert.match(smoke, /"claim"/);
 assert.match(smoke, /"me"/);
 
 const version = read("src/lib/version.ts");
-assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 732);
+assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 733);
 
 assert.equal(
   existsSync(join(root, "npos-telltea/app/src/main/java/app/telltea/npos/sell/MemberApi.java")),

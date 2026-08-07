@@ -329,7 +329,14 @@ function MembersView() {
       setClaimSaleId(issued.saleId);
       setClaimIssue(issued);
       setClaimQr(await claimQrDataUrl(issued.claimUrl));
-      setMsg(`บิล ${issued.billNo} · ~${issued.pointsPreview} แต้ม`);
+      const tag = forceNew
+        ? "โทเคนใหม่"
+        : issued.claimed
+          ? "QR เดิม (เคลมแล้ว)"
+          : issued.reused
+            ? "โทเคนเดิม"
+            : "ออกใหม่";
+      setMsg(`บิล ${issued.billNo} · ~${issued.pointsPreview} แต้ม · ${tag}`);
     } catch (err) {
       setError(mapFirestoreError(err, "ออก QR เคลม"));
     } finally {
@@ -409,9 +416,19 @@ function MembersView() {
               disabled={!canManage || saving}
             />
             {canManage ? (
-              <button type="submit" className="primary-btn staff-btn-sm" disabled={saving}>
-                ออก QR
-              </button>
+              <>
+                <button type="submit" className="primary-btn staff-btn-sm" disabled={saving}>
+                  แสดง QR
+                </button>
+                <button
+                  type="button"
+                  className="ghost-btn staff-btn-sm"
+                  disabled={saving || !claimSaleId.trim()}
+                  onClick={() => void onIssueClaim(claimSaleId, true)}
+                >
+                  โทเคนใหม่ (เทส)
+                </button>
+              </>
             ) : null}
           </form>
 
@@ -420,6 +437,10 @@ function MembersView() {
               <p className="members-slim-line">
                 {claimIssue.billNo} · {claimIssue.total}฿ → <strong>{claimIssue.pointsPreview}</strong>{" "}
                 แต้ม
+                {claimIssue.claimed ? <span className="muted"> · เคลมแล้ว (QR เดิม)</span> : null}
+                {!claimIssue.claimed && claimIssue.reused ? (
+                  <span className="muted"> · โทเคนเดิม</span>
+                ) : null}
               </p>
               {claimQr ? <img src={claimQr} alt="QR เคลมแต้ม" /> : null}
               <code className="members-slim-code">{claimIssue.claimUrl}</code>
@@ -450,9 +471,17 @@ function MembersView() {
                   type="button"
                   className="ghost-btn staff-btn-sm"
                   disabled={saving}
+                  onClick={() => void onIssueClaim(claimIssue.saleId, false)}
+                >
+                  QR เดิม
+                </button>
+                <button
+                  type="button"
+                  className="ghost-btn staff-btn-sm"
+                  disabled={saving}
                   onClick={() => void onIssueClaim(claimIssue.saleId, true)}
                 >
-                  โทเคนใหม่
+                  โทเคนใหม่ (เทส)
                 </button>
               </div>
             </div>
@@ -490,13 +519,18 @@ function MembersView() {
                         <button
                           type="button"
                           className="ghost-btn staff-btn-sm"
-                          disabled={!canManage || saving || s.claimStatus === "claimed"}
+                          disabled={!canManage || saving}
+                          title={
+                            s.claimStatus === "claimed"
+                              ? "แสดง QR เดิม (เคลมแล้ว)"
+                              : "แสดง / ออก QR"
+                          }
                           onClick={() => {
                             setClaimSaleId(s.id);
                             void onIssueClaim(s.id);
                           }}
                         >
-                          QR
+                          {s.claimStatus === "claimed" ? "QR เดิม" : "QR"}
                         </button>
                       </td>
                     </tr>

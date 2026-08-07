@@ -30,6 +30,8 @@ export type ReceiptClaimIssue = {
   expiresAt: number;
   claimUrl: string;
   reused: boolean;
+  /** บิลเคลมแล้ว — โชว์ QR/ลิงก์เดิมเพื่อเทสหน้า «ใช้แล้ว» */
+  claimed: boolean;
 };
 
 function randomToken(): string {
@@ -62,7 +64,11 @@ export async function claimQrDataUrl(claimUrl: string): Promise<string> {
   });
 }
 
-/** ออก/ต่ออายุ claimToken บนบิล — เจ้าของเขียน posSales โดยตรง */
+/**
+ * ออก/โชว์ claimToken บนบิล — เจ้าของเขียน posSales โดยตรง
+ * - ปกติ: จำโทเคนเดิมถ้ายังไม่หมดอายุ (รวมบิลที่เคลมแล้ว → โชว์ QR เดิม)
+ * - forceNewToken: เจนโทเคนใหม่จาก saleId เดิม (เทส) · บิลที่เคลมแล้วยังคง claimed
+ */
 export async function issueReceiptClaimForSale(
   saleId: string,
   actorId: string,
@@ -81,10 +87,10 @@ export async function issueReceiptClaimForSale(
   if (!snap.exists()) throw new Error("ไม่พบบิลนี้");
   const d = snap.data() as Record<string, unknown>;
   if (d.status === "voided") throw new Error("บิลนี้ยกเลิกแล้ว — ออก QR ไม่ได้");
-  if (d.claimStatus === "claimed") throw new Error("บิลนี้เคลมแต้มไปแล้ว");
 
   const total = typeof d.total === "number" ? d.total : 0;
   const billNo = typeof d.billNo === "string" ? d.billNo : id;
+  const claimed = d.claimStatus === "claimed";
   const pointsPreview = pointsFromReceiptClaim(total, settings);
   if (pointsPreview <= 0) {
     throw new Error("ยอดบิลนี้ยังคิดแต้มไม่ได้ (ตรวจทุกกี่บาท=1แต้ม / ยอดสุทธิ)");
@@ -95,21 +101,46 @@ export async function issueReceiptClaimForSale(
   const existingToken = typeof d.claimToken === "string" ? d.claimToken.trim() : "";
   const existingExp =
     typeof d.claimTokenExpiresAt === "number" ? d.claimTokenExpiresAt : 0;
+
+  // บิลเคลมแล้ว + ไม่บังคับโทเคนใหม่ → โชว์ QR/ลิงก์เดิม (ไม่เขียนทับสถานะ)
+  if (claimed && !opts?.forceNewToken) {
+    if (existingToken.length < 16) {
+      throw new Error("บิลเคลมแล้ว แต่ไม่มีโทเคนเดิม — กด «โทเคนใหม่ (เทส)» ได้");
+    }
+    return {
+      saleId: id,
+      billNo,
+      total,
+      pointsPreview,
+      token: existingToken,
+      expiresAt: existingExp || now + ttlMs,
+      claimUrl: buildClaimUrl(id, existingToken),
+      reused: true,
+      claimed: true,
+    };
+  }
+
   const canReuse =
     !opts?.forceNewToken &&
+    !claimed &&
     existingToken.length >= 16 &&
     existingExp > now + 60_000;
 
   const token = canReuse ? existingToken : randomToken();
   const expiresAt = canReuse ? existingExp : now + ttlMs;
 
-  await updateDoc(ref, {
+  const patch: Record<string, unknown> = {
     claimToken: token,
     claimTokenExpiresAt: expiresAt,
     claimIssuedAt: now,
     claimIssuedBy: actorId || "owner",
-    claimStatus: "open",
-  });
+  };
+  // บิลที่ยังไม่เคลม → คง/เปิดสถานะ open · บิลเคลมแล้ว + โทเคนใหม่ → คง claimed
+  if (!claimed) {
+    patch.claimStatus = "open";
+  }
+
+  await updateDoc(ref, patch);
 
   return {
     saleId: id,
@@ -120,6 +151,7 @@ export async function issueReceiptClaimForSale(
     expiresAt,
     claimUrl: buildClaimUrl(id, token),
     reused: canReuse,
+    claimed,
   };
 }
 
