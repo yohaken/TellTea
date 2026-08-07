@@ -25,7 +25,15 @@ assert.match(members, /enabled: false/);
 
 const page = read("src/app/members/page.tsx");
 assert.match(page, /canAccessMembersHub/);
-assert.match(page, /สมัครสมาชิก/);
+assert.match(page, /สมัคร/);
+assert.match(page, /members-slim-table--list/);
+assert.match(page, /members-col-name/);
+assert.match(page, /members-col-phone/);
+assert.match(page, /members-col-card/);
+
+const css = read("src/app/globals.css");
+assert.match(css, /members-slim-table--list/);
+assert.match(css, /table-layout:\s*fixed/);
 
 const joinPage = read("src/app/join/page.tsx");
 assert.match(joinPage, /publicMemberSignup/);
@@ -67,7 +75,7 @@ const picker = read("src/components/PermissionPicker.tsx");
 assert.match(picker, /OWNER_ONLY_PERMISSION_KEYS/);
 
 const version = read("src/lib/version.ts");
-assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 726);
+assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 734);
 
 const phases = read("docs/members-crm-phases.md");
 assert.match(phases, /หลังร้าน/);

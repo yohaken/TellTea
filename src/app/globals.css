@@ -1269,41 +1269,130 @@ body.modal-open .main-panel {
 
 .members-slim-table-wrap {
   margin: 0;
+  overflow-x: auto;
 }
 
 .members-slim-table {
   width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
 }
 
 .members-slim-table th,
 .members-slim-table td {
-  padding: 0.28rem 0.4rem !important;
-  font-size: 0.84rem !important;
-  line-height: 1.25;
+  padding: 0.22rem 0.35rem !important;
+  font-size: 0.76rem !important;
+  line-height: 1.2;
   vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .members-slim-table th {
   font-weight: 600;
+  font-size: 0.7rem !important;
+  letter-spacing: 0.01em;
+  color: #5a6b62;
 }
 
 .members-slim-table .num {
   text-align: right;
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+  font-feature-settings: "tnum" 1;
 }
 
 .members-slim-table tbody tr {
   cursor: pointer;
 }
 
+.members-slim-table--claim tbody tr,
+.members-slim-table--ledger tbody tr {
+  cursor: default;
+}
+
 .members-slim-table tbody tr.is-selected td {
   background: rgba(47, 107, 79, 0.08);
 }
 
-.members-slim-sub,
-.members-slim-card {
-  font-size: 0.75rem !important;
+.members-cell-strong {
+  font-weight: 600;
+}
+
+.members-cell-clip {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.members-slim-table--list .members-col-name {
+  width: 28%;
+}
+
+.members-slim-table--list .members-col-phone {
+  width: 26%;
+}
+
+.members-slim-table--list .members-col-card {
+  width: 18%;
+}
+
+.members-slim-table--list .members-col-pts {
+  width: 14%;
+}
+
+.members-slim-table--list .members-col-status {
+  width: 14%;
+}
+
+.members-slim-table--claim .members-col-bill {
+  width: 28%;
+}
+
+.members-slim-table--claim .members-col-status {
+  width: 16%;
+}
+
+.members-slim-table--claim .members-col-amt {
+  width: 16%;
+}
+
+.members-slim-table--claim .members-col-when {
+  width: 22%;
+}
+
+.members-slim-table--claim .members-col-act {
+  width: 18%;
+  text-align: right;
+  white-space: nowrap;
+  overflow: visible;
+}
+
+.members-slim-table--claim .members-col-act .staff-btn-sm {
+  min-height: 1.55rem;
+  padding: 0.12rem 0.4rem;
+  font-size: 0.7rem;
+}
+
+.members-slim-table--ledger .members-col-when {
+  width: 22%;
+}
+
+.members-slim-table--ledger .members-col-reason {
+  width: 42%;
+}
+
+.members-slim-table--ledger .members-col-delta {
+  width: 16%;
+}
+
+.members-slim-table--ledger .members-col-bal {
+  width: 20%;
+}
+
+.members-slim-sub {
+  font-size: 0.72rem !important;
 }
 
 .members-slim-layout.is-split {
