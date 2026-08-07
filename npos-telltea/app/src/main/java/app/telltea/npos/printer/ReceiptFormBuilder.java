@@ -25,6 +25,14 @@ public final class ReceiptFormBuilder {
   /** Typical 80mm printable columns. */
   public static final int COLS_80 = 42;
 
+  /**
+   * Placeholder line replaced by printer layer with a claim QR (USB EscPos / SUNMI bitmap).
+   * Must stay ASCII so {@link ThermalSafe} keeps it.
+   */
+  public static final String CLAIM_QR_MARKER = "<<<CLAIM_QR>>>";
+
+  public static final String CLAIM_QR_INVITE = "สแกนสะสมแต้ม";
+
   /** Our shop fallback when settings are empty — not a third-party POS brand. */
   private static final String DEFAULT_SHOP_EN = "TELL TEA";
   private static final String DEFAULT_SHOP_TH = "เทล ที";
@@ -54,11 +62,24 @@ public final class ReceiptFormBuilder {
     String staffId = opt(payload, "staffId");
 
     String pay = payload != null ? payload.optString("paymentMethod", "") : "";
-    double discount = payload != null ? payload.optDouble("discountBaht", 0) : 0;
+    double manualDisc =
+        payload != null && payload.has("manualDiscountBaht")
+            ? payload.optDouble("manualDiscountBaht", 0)
+            : 0;
+    double redeem =
+        payload != null && payload.has("redeemBaht") ? payload.optDouble("redeemBaht", 0) : 0;
+    int pointsRedeemed =
+        payload != null ? Math.max(0, payload.optInt("pointsToRedeem", payload.optInt("pointsRedeemed", 0))) : 0;
+    double discountLegacy = payload != null ? payload.optDouble("discountBaht", 0) : 0;
+    // When split fields missing, treat legacy discountBaht as manual-only total.
+    if (manualDisc <= 0 && redeem <= 0 && discountLegacy > 0) {
+      manualDisc = discountLegacy;
+    }
+    double offTotal = Math.max(0, manualDisc) + Math.max(0, redeem);
     double subtotal =
         payload != null && payload.has("subtotal")
             ? payload.optDouble("subtotal", total)
-            : inferSubtotal(payload, total, discount);
+            : inferSubtotal(payload, total, offTotal);
     double cashReceived = payload != null ? payload.optDouble("cashReceived", 0) : 0;
     double change =
         payload != null && payload.has("change")
@@ -69,6 +90,15 @@ public final class ReceiptFormBuilder {
             ? payload.optLong("createdAt", System.currentTimeMillis())
             : System.currentTimeMillis();
     String customerName = payload != null ? payload.optString("customerName", "").trim() : "";
+    String memberName = payload != null ? payload.optString("memberName", "").trim() : "";
+    String memberPhone =
+        payload != null
+            ? firstNonEmpty(
+                payload.optString("memberPhoneDisplay", ""),
+                payload.optString("memberPhone", ""))
+            : "";
+    String claimUrl = payload != null ? payload.optString("claimUrl", "").trim() : "";
+    int pointsEarned = payload != null ? Math.max(0, payload.optInt("pointsEarned", 0)) : 0;
     String externalOrderId =
         payload != null ? payload.optString("externalOrderId", "").trim() : "";
     String orderNotes = payload != null ? payload.optString("orderNotes", "").trim() : "";
@@ -132,8 +162,13 @@ public final class ReceiptFormBuilder {
     sb.append(rule(width)).append('\n');
     sb.append(moneyRow("จำนวน:", String.valueOf(itemCount), width)).append('\n');
     sb.append(moneyRow("รวม:", formatMoney(subtotal), width)).append('\n');
-    if (discount > 0.0001) {
-      sb.append(moneyRow("ส่วนลด", "-" + formatMoney(discount), width)).append('\n');
+    if (manualDisc > 0.0001) {
+      sb.append(moneyRow("ส่วนลด", "-" + formatMoney(manualDisc), width)).append('\n');
+    }
+    if (redeem > 0.0001) {
+      String redeemLabel =
+          pointsRedeemed > 0 ? ("แลกแต้ม (" + pointsRedeemed + ")") : "แลกแต้ม";
+      sb.append(moneyRow(redeemLabel, "-" + formatMoney(redeem), width)).append('\n');
     }
     sb.append(doubleRule(width)).append('\n');
     sb.append(EscPos.BOLD_ON)
@@ -141,16 +176,36 @@ public final class ReceiptFormBuilder {
         .append(EscPos.BOLD_OFF)
         .append('\n');
     sb.append(doubleRule(width)).append('\n');
-    sb.append(moneyRow("ชำระ", paymentLabel(pay), width)).append('\n');
-    if ("cash".equals(pay)) {
-      sb.append(moneyRow("เงินสด", formatMoney(cashReceived), width)).append('\n');
-      sb.append(moneyRow("เงินทอน", formatMoney(change), width)).append('\n');
+    // Skip tender lines when net is 0 (full redeem) — still a valid closed bill.
+    if (total > 0.009) {
+      sb.append(moneyRow("ชำระ", paymentLabel(pay), width)).append('\n');
+      if ("cash".equals(pay)) {
+        sb.append(moneyRow("เงินสด", formatMoney(cashReceived), width)).append('\n');
+        sb.append(moneyRow("เงินทอน", formatMoney(change), width)).append('\n');
+      }
+    }
+    if (pointsEarned > 0) {
+      sb.append(moneyRow("แต้มที่ได้", "+" + pointsEarned, width)).append('\n');
+    }
+    if (!memberName.isEmpty() || !memberPhone.isEmpty()) {
+      String mem =
+          "สมาชิก: "
+              + firstNonEmpty(memberName, "สมาชิก")
+              + (memberPhone.isEmpty() ? "" : (" · " + memberPhone));
+      for (String part : wrap(mem, width)) {
+        sb.append(part).append('\n');
+      }
     }
     if (!orderNotes.isEmpty()) {
       sb.append(rule(width)).append('\n');
       for (String part : wrap(orderNotes, width)) {
         sb.append(part).append('\n');
       }
+    }
+    if (!claimUrl.isEmpty()) {
+      sb.append('\n');
+      sb.append(CLAIM_QR_MARKER).append('\n');
+      sb.append(center(CLAIM_QR_INVITE, width)).append('\n');
     }
     sb.append('\n');
     sb.append(center(footerNote, width)).append('\n');

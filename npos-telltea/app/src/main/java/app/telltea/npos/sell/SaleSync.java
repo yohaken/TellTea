@@ -22,6 +22,7 @@ import app.telltea.npos.printer.PrinterPrefs;
 import app.telltea.npos.printer.PrinterTransport;
 import app.telltea.npos.printer.ReceiptFormBuilder;
 import app.telltea.npos.printer.ShiftReportFormBuilder;
+import app.telltea.npos.printer.SunmiInnerPrinter;
 import app.telltea.npos.shift.BlindCloseReport;
 import app.telltea.npos.shift.SessionHistory;
 import app.telltea.npos.shift.ShiftPrefs;
@@ -625,10 +626,47 @@ public final class SaleSync {
             String memberPhone,
             int pointsToRedeem,
             SaleCallback callback) {
+        enqueueSale(
+                context,
+                lines,
+                paymentMethod,
+                cashReceived,
+                discountBaht,
+                transferRef,
+                shop,
+                autoPrint,
+                memberId,
+                memberPhone,
+                "",
+                "",
+                pointsToRedeem,
+                callback);
+    }
+
+    public void enqueueSale(
+            Context context,
+            List<MenuModels.CartLine> lines,
+            String paymentMethod,
+            double cashReceived,
+            double discountBaht,
+            String transferRef,
+            JSONObject shop,
+            boolean autoPrint,
+            String memberId,
+            String memberPhone,
+            String memberName,
+            String memberPhoneDisplay,
+            int pointsToRedeem,
+            SaleCallback callback) {
         Context app = context.getApplicationContext();
         final String method = PaymentMethods.normalize(paymentMethod);
         final String mid = memberId == null ? "" : memberId.trim();
         final String mPhone = memberPhone == null ? "" : memberPhone.trim();
+        final String mName = memberName == null ? "" : memberName.trim();
+        final String mPhoneDisp =
+                memberPhoneDisplay == null || memberPhoneDisplay.trim().isEmpty()
+                        ? mPhone
+                        : memberPhoneDisplay.trim();
         final int pts = Math.max(0, pointsToRedeem);
         executor.execute(
                 () -> {
@@ -682,6 +720,8 @@ public final class SaleSync {
                         if (!mid.isEmpty()) {
                             payload.put("memberId", mid);
                             if (!mPhone.isEmpty()) payload.put("memberPhone", mPhone);
+                            if (!mName.isEmpty()) payload.put("memberName", mName);
+                            if (!mPhoneDisp.isEmpty()) payload.put("memberPhoneDisplay", mPhoneDisp);
                             if (pts > 0) payload.put("pointsToRedeem", pts);
                         }
                         payload.put("subtotal", subtotal);
@@ -705,28 +745,37 @@ public final class SaleSync {
 
                         boolean print = autoPrint;
                         if (shop != null) print = shop.optBoolean("autoPrintReceipt", true);
+                        // When slip-QR experiment is on, defer paper until sync returns claimUrl.
+                        // Still kick the cash drawer immediately so change is not blocked.
+                        boolean deferPaperForQr =
+                                shop != null && shop.optBoolean("membersReceiptClaimEnabled", false);
 
-                        // Fast path: drawer (+ paper) as soon as the sale is local.
-                        // HTTP sync runs on syncExecutor so the next cash keypad sale is not blocked.
                         if (print && !isReceiptPrinted(app, mutationId)) {
-                            maybePrintAndKick(
-                                    app,
-                                    shop,
-                                    payload,
-                                    provisionalBillNo(mutationId),
-                                    total,
-                                    method,
-                                    CashDrawerPolicy.shouldKickAfterSale(method));
-                            markReceiptPrinted(app, mutationId);
-                            try {
-                                payload.put("receiptPrinted", true);
-                            } catch (Exception ignored) {
-                                /* ignore */
+                            if (deferPaperForQr) {
+                                if (CashDrawerPolicy.shouldKickAfterSale(method)) {
+                                    kickDrawerOnly(app, method);
+                                }
+                            } else {
+                                maybePrintAndKick(
+                                        app,
+                                        shop,
+                                        payload,
+                                        provisionalBillNo(mutationId),
+                                        total,
+                                        method,
+                                        CashDrawerPolicy.shouldKickAfterSale(method));
+                                markReceiptPrinted(app, mutationId);
+                                try {
+                                    payload.put("receiptPrinted", true);
+                                } catch (Exception ignored) {
+                                    /* ignore */
+                                }
                             }
                         }
 
                         final boolean printFlag = print;
                         final String payMethod = method;
+                        final boolean deferQr = deferPaperForQr;
                         syncExecutor.execute(
                                 () -> {
                                     try {
@@ -746,7 +795,7 @@ public final class SaleSync {
                                             /* queue mark best-effort */
                                         }
                                         OpsLogger.warn(app, "sync", "ซิงก์บิลค้างในคิว", msg);
-                                        // Offline / sync fail — paper already attempted above when autoPrint.
+                                        // Offline / sync fail — print without QR so staff still get paper.
                                         if (printFlag && !isReceiptPrinted(app, mutationId)) {
                                             maybePrintAndKick(
                                                     app,
@@ -755,7 +804,10 @@ public final class SaleSync {
                                                     provisionalBillNo(mutationId),
                                                     total,
                                                     payMethod,
-                                                    CashDrawerPolicy.shouldKickAfterSale(payMethod));
+                                                    // Drawer already kicked on defer path.
+                                                    !deferQr
+                                                            && CashDrawerPolicy.shouldKickAfterSale(
+                                                                    payMethod));
                                             markReceiptPrinted(app, mutationId);
                                             try {
                                                 payload.put("receiptPrinted", true);
@@ -958,6 +1010,22 @@ public final class SaleSync {
                             payload.put("paymentMethod", pay);
                             payload.put("localTotal", total);
                             payload.put("discountBaht", receiptRow.optDouble("discountBaht", 0));
+                            payload.put(
+                                    "manualDiscountBaht",
+                                    receiptRow.optDouble(
+                                            "manualDiscountBaht",
+                                            receiptRow.optDouble("discountBaht", 0)
+                                                    - receiptRow.optDouble("redeemBaht", 0)));
+                            if (receiptRow.optDouble("redeemBaht", 0) > 0) {
+                                payload.put("redeemBaht", receiptRow.optDouble("redeemBaht", 0));
+                            }
+                            if (receiptRow.optInt("pointsToRedeem", 0) > 0) {
+                                payload.put(
+                                        "pointsToRedeem", receiptRow.optInt("pointsToRedeem", 0));
+                            }
+                            if (receiptRow.optInt("pointsEarned", 0) > 0) {
+                                payload.put("pointsEarned", receiptRow.optInt("pointsEarned", 0));
+                            }
                             payload.put("subtotal", receiptRow.optDouble("subtotal", 0));
                             payload.put("cashReceived", receiptRow.optDouble("cashReceived", 0));
                             payload.put("change", receiptRow.optDouble("change", 0));
@@ -968,6 +1036,20 @@ public final class SaleSync {
                             payload.put(
                                     "receiptFooterNote",
                                     receiptRow.optString("receiptFooterNote", ""));
+                            if (!receiptRow.optString("memberName", "").isEmpty()) {
+                                payload.put("memberName", receiptRow.optString("memberName"));
+                            }
+                            if (!receiptRow.optString("memberPhone", "").isEmpty()) {
+                                payload.put("memberPhone", receiptRow.optString("memberPhone"));
+                            }
+                            if (!receiptRow.optString("memberPhoneDisplay", "").isEmpty()) {
+                                payload.put(
+                                        "memberPhoneDisplay",
+                                        receiptRow.optString("memberPhoneDisplay"));
+                            }
+                            if (!receiptRow.optString("claimUrl", "").isEmpty()) {
+                                payload.put("claimUrl", receiptRow.optString("claimUrl"));
+                            }
                             JSONObject shop = loadShopJson(app);
                             // Reprint: paper only — never open drawer again.
                             maybePrintAndKick(
@@ -1202,8 +1284,28 @@ public final class SaleSync {
         String saleId = res.optString("saleId", "");
         double change = res.optDouble("change", 0);
         double total = res.optDouble("total", payload.optDouble("localTotal", 0));
+        String claimUrl = res.optString("claimUrl", "").trim();
+        String claimToken = res.optString("claimToken", "").trim();
+        int pointsEarned = Math.max(0, res.optInt("pointsEarned", 0));
+        try {
+            if (!claimUrl.isEmpty()) payload.put("claimUrl", claimUrl);
+            if (!claimToken.isEmpty()) payload.put("claimToken", claimToken);
+            if (pointsEarned > 0) payload.put("pointsEarned", pointsEarned);
+            payload.put("change", change);
+            if (!saleId.isEmpty()) payload.put("saleId", saleId);
+        } catch (Exception ignored) {
+            /* ignore */
+        }
         removeFromQueue(app, payload.optString("clientMutationId"));
-        updateReceiptBill(app, payload.optString("clientMutationId"), billNo, saleId, change);
+        updateReceiptBill(
+                app,
+                payload.optString("clientMutationId"),
+                billNo,
+                saleId,
+                change,
+                claimUrl,
+                claimToken,
+                pointsEarned);
         OpsLogger.info(app, "sync", "ซิงก์บิลแล้ว", billNo + " · " + total);
         if (callback != null) callback.onSynced(billNo, change, total);
 
@@ -1218,11 +1320,13 @@ public final class SaleSync {
             print = print && shopJson.optBoolean("autoPrintReceipt", true);
         }
         if (print) {
-            try {
-                payload.put("change", change);
-            } catch (Exception ignored) {
-                /* ignore */
-            }
+            // Defer path already kicked drawer — paper only here.
+            boolean kick =
+                    !shopJson.optBoolean("membersReceiptClaimEnabled", false)
+                            && CashDrawerPolicy.shouldKickAfterSale(
+                                    paymentMethod == null
+                                            ? payload.optString("paymentMethod")
+                                            : paymentMethod);
             maybePrintAndKick(
                     app,
                     shopJson,
@@ -1230,10 +1334,7 @@ public final class SaleSync {
                     billNo,
                     total,
                     paymentMethod == null ? payload.optString("paymentMethod") : paymentMethod,
-                    CashDrawerPolicy.shouldKickAfterSale(
-                            paymentMethod == null
-                                    ? payload.optString("paymentMethod")
-                                    : paymentMethod));
+                    kick);
             markReceiptPrinted(app, payload.optString("clientMutationId"));
             try {
                 payload.put("receiptPrinted", true);
@@ -1311,6 +1412,23 @@ public final class SaleSync {
         }
     }
 
+    private void kickDrawerOnly(Context app, String paymentMethod) {
+        if (!CashDrawerPolicy.shouldKickAfterSale(paymentMethod)) return;
+        PrinterEndpoint ep = PrinterPrefs.savedOrNull(app);
+        if (ep == null) return;
+        transport.send(
+                app,
+                ep,
+                EscPos.drawerKick(),
+                kick ->
+                        OpsLogger.result(
+                                app,
+                                "drawer",
+                                kick.ok ? "เปิดลิ้นชักหลังขาย" : "ลิ้นชักไม่เปิด",
+                                kick.message,
+                                kick.ok));
+    }
+
     private void maybePrintAndKick(
             Context app,
             JSONObject shop,
@@ -1348,8 +1466,25 @@ public final class SaleSync {
                                     kick.message,
                                     kick.ok));
         }
-        String body = ReceiptFormBuilder.build(shopJson, payload, billNo, total, PrinterPrefs.receiptCols(app));
-        byte[] receipt = EscPos.documentReceipt(body);
+        String body =
+                ReceiptFormBuilder.build(
+                        shopJson, payload, billNo, total, PrinterPrefs.receiptCols(app));
+        String claimUrl = payload != null ? payload.optString("claimUrl", "").trim() : "";
+        if (!claimUrl.isEmpty() && ep.kind == PrinterEndpoint.Kind.SUNMI) {
+            // InnerPrinter: UTF text + bitmap QR (Esc/POS QR bytes are stripped on plain path).
+            executor.execute(
+                    () -> {
+                        PrinterTransport.Result result =
+                                SunmiInnerPrinter.printPlainWithClaimQr(app, body, claimUrl);
+                        if (result.ok) {
+                            OpsLogger.result(app, "printer", "พิมพ์ใบเสร็จแล้ว", billNo, true);
+                        } else {
+                            OpsLogger.error(app, "printer", "พิมพ์ใบเสร็จไม่สำเร็จ", result.message);
+                        }
+                    });
+            return;
+        }
+        byte[] receipt = EscPos.documentReceipt(body, claimUrl);
         transport.send(
                 app,
                 ep,
@@ -1548,8 +1683,13 @@ public final class SaleSync {
         body.remove("receiptPrinted");
         body.remove("receiptFooterNote");
         body.remove("staffName");
-        // Local-only preview; server recomputes redeem from pointsToRedeem.
+        // Local-only preview / slip helpers — server recomputes redeem & claim.
         body.remove("redeemBaht");
+        body.remove("memberPhoneDisplay");
+        body.remove("claimUrl");
+        body.remove("claimToken");
+        body.remove("pointsEarned");
+        body.remove("saleId");
         return body;
     }
 
@@ -1563,10 +1703,15 @@ public final class SaleSync {
         row.put("billNo", billNo);
         row.put("saleId", "");
         row.put("total", payload.optDouble("localTotal"));
-        // Combined off-bill for local receipt list (manual + redeem).
-        row.put(
-                "discountBaht",
-                payload.optDouble("discountBaht", 0) + payload.optDouble("redeemBaht", 0));
+        double manual = payload.optDouble("manualDiscountBaht", payload.optDouble("discountBaht", 0));
+        double redeem = payload.optDouble("redeemBaht", 0);
+        // Combined off-bill for shift/list; keep splits for reprint.
+        row.put("discountBaht", manual + redeem);
+        row.put("manualDiscountBaht", manual);
+        if (redeem > 0) row.put("redeemBaht", redeem);
+        if (payload.optInt("pointsToRedeem", 0) > 0) {
+            row.put("pointsToRedeem", payload.optInt("pointsToRedeem", 0));
+        }
         row.put("subtotal", payload.optDouble("subtotal", 0));
         row.put("cashReceived", payload.optDouble("cashReceived", 0));
         row.put("change", payload.optDouble("change", 0));
@@ -1574,6 +1719,15 @@ public final class SaleSync {
         row.put("sessionId", payload.optString("sessionId", ""));
         row.put("staffName", payload.optString("staffName", ""));
         row.put("receiptFooterNote", payload.optString("receiptFooterNote", ""));
+        if (!payload.optString("memberName", "").isEmpty()) {
+            row.put("memberName", payload.optString("memberName"));
+        }
+        if (!payload.optString("memberPhone", "").isEmpty()) {
+            row.put("memberPhone", payload.optString("memberPhone"));
+        }
+        if (!payload.optString("memberPhoneDisplay", "").isEmpty()) {
+            row.put("memberPhoneDisplay", payload.optString("memberPhoneDisplay"));
+        }
         row.put("lines", payload.optJSONArray("lines"));
         row.put("voided", false);
         row.put("printed", false);
@@ -1653,7 +1807,14 @@ public final class SaleSync {
     }
 
     private static void updateReceiptBill(
-            Context app, String mutationId, String billNo, String saleId, double change)
+            Context app,
+            String mutationId,
+            String billNo,
+            String saleId,
+            double change,
+            String claimUrl,
+            String claimToken,
+            int pointsEarned)
             throws Exception {
         JSONArray arr =
                 new JSONArray(
@@ -1664,6 +1825,9 @@ public final class SaleSync {
                 o.put("billNo", billNo);
                 o.put("change", change);
                 if (saleId != null && !saleId.isEmpty()) o.put("saleId", saleId);
+                if (claimUrl != null && !claimUrl.isEmpty()) o.put("claimUrl", claimUrl);
+                if (claimToken != null && !claimToken.isEmpty()) o.put("claimToken", claimToken);
+                if (pointsEarned > 0) o.put("pointsEarned", pointsEarned);
             }
         }
         app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)

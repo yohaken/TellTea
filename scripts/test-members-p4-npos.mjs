@@ -40,7 +40,8 @@ const ver = gradle.match(/versionCode\s+(\d+)/);
 assert.ok(ver && Number(ver[1]) >= 138, "versionCode >= 138");
 
 const apkPin = read("src/lib/npos-apk-release.ts");
-assert.match(apkPin, /NPOS_SYSTEM_VERSION_CODE = 138/);
+const pinCode = Number(apkPin.match(/NPOS_SYSTEM_VERSION_CODE = (\d+)/)?.[1] || 0);
+assert.ok(pinCode >= 138, "NPOS_SYSTEM_VERSION_CODE >= 138");
 
 const whats = read("npos-telltea/app/src/main/java/app/telltea/npos/update/WhatsNewCatalog.java");
 assert.match(whats, /versionCode == 138/);

@@ -1,6 +1,7 @@
 package app.telltea.npos.printer;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.os.Build;
 
 import com.sunmi.peripheral.printer.InnerPrinterCallback;
@@ -8,6 +9,8 @@ import com.sunmi.peripheral.printer.InnerPrinterException;
 import com.sunmi.peripheral.printer.InnerPrinterManager;
 import com.sunmi.peripheral.printer.InnerResultCallback;
 import com.sunmi.peripheral.printer.SunmiPrinterService;
+
+import app.telltea.npos.sell.QrBitmaps;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -78,6 +81,93 @@ public final class SunmiInnerPrinter {
       return printPlain(context, plain);
     }
     return sendRawBytes(context, payload);
+  }
+
+  /**
+   * Sale slip with claim QR — text → bitmap QR → rest. Esc/POS QR bytes are not used on InnerPrinter
+   * (plain UTF path strips them).
+   */
+  public static PrinterTransport.Result printPlainWithClaimQr(
+      Context context, String body, String claimUrl) {
+    String safe = body == null ? "" : body;
+    String url = claimUrl == null ? "" : claimUrl.trim();
+    String marker = ReceiptFormBuilder.CLAIM_QR_MARKER;
+    int idx = url.isEmpty() ? -1 : safe.indexOf(marker);
+    if (idx < 0) {
+      safe = safe.replace(marker + "\n", "").replace(marker, "");
+      return printPlain(context, EscPos.stripBoldMarkers(safe));
+    }
+    String before = EscPos.stripBoldMarkers(safe.substring(0, idx));
+    String after = EscPos.stripBoldMarkers(safe.substring(idx + marker.length()));
+    if (after.startsWith("\n")) after = after.substring(1);
+    try {
+      SunmiPrinterService svc = ensureService(context);
+      if (svc == null) {
+        return new PrinterTransport.Result(
+            false, "ไม่พบบริการปริ้น SUNMI — เครื่องนี้มี InnerPrinter หรือยัง?");
+      }
+      if (!InnerPrinterManager.getInstance().hasPrinter(svc)) {
+        return new PrinterTransport.Result(false, "เครื่องนี้ไม่มีปริ้นในตัว");
+      }
+      try {
+        svc.setAlignment(0, null);
+      } catch (Exception ignored) {
+        /* optional */
+      }
+      if (!before.isEmpty()) {
+        PrinterTransport.Result r = printTextOnce(svc, before.endsWith("\n") ? before : before + "\n");
+        if (!r.ok) return r;
+      }
+      Bitmap qr = QrBitmaps.encode(url, 240);
+      if (qr != null) {
+        try {
+          svc.setAlignment(1, null);
+        } catch (Exception ignored) {
+          /* optional */
+        }
+        PrinterTransport.Result qrRes = printBitmapOnce(svc, qr);
+        try {
+          svc.setAlignment(0, null);
+        } catch (Exception ignored) {
+          /* optional */
+        }
+        if (!qrRes.ok) return qrRes;
+      }
+      if (!after.isEmpty()) {
+        PrinterTransport.Result r = printTextOnce(svc, after.endsWith("\n") ? after : after + "\n");
+        if (!r.ok) return r;
+      }
+      try {
+        svc.lineWrap(2, null);
+      } catch (Exception ignored) {
+        /* optional */
+      }
+      return cutPaperBestEffort(svc, "SUNMI พิมพ์ใบเสร็จ+QR แล้ว");
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new PrinterTransport.Result(false, "interrupted");
+    } catch (Exception e) {
+      String msg = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+      return new PrinterTransport.Result(false, msg);
+    }
+  }
+
+  private static PrinterTransport.Result printBitmapOnce(SunmiPrinterService svc, Bitmap bmp)
+      throws Exception {
+    CountDownLatch done = new CountDownLatch(1);
+    AtomicReference<PrinterTransport.Result> out = new AtomicReference<>();
+    svc.printBitmap(
+        bmp,
+        latchCallback(
+            out,
+            done,
+            new PrinterTransport.Result(true, "ok"),
+            new PrinterTransport.Result(false, "SUNMI printBitmap ไม่สำเร็จ")));
+    if (!done.await(20, TimeUnit.SECONDS)) {
+      return new PrinterTransport.Result(false, "SUNMI timeout (printBitmap)");
+    }
+    PrinterTransport.Result r = out.get();
+    return r != null ? r : new PrinterTransport.Result(false, "SUNMI ไม่ตอบ");
   }
 
   /**

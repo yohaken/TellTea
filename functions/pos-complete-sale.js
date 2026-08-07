@@ -7,6 +7,7 @@ const {
   planRedeemFromMemberSnap,
   writeRedeemInSaleTx,
   tryEarnPointsForSale,
+  tryIssueReceiptClaimForSale,
   tryReverseMemberPointsForVoid,
 } = require("./pos-members");
 
@@ -223,6 +224,9 @@ async function completePosSaleAdmin(db, data, uid) {
             ...(redeemPlan?.memberPhone && !data?.memberPhone
               ? { memberPhone: redeemPlan.memberPhone }
               : {}),
+            ...(typeof data?.memberName === "string" && data.memberName.trim()
+              ? { memberName: data.memberName.trim().slice(0, 80) }
+              : {}),
           }
         : {}),
       ...(pointsRedeemed > 0
@@ -249,25 +253,37 @@ async function completePosSaleAdmin(db, data, uid) {
 
   if (txResult.replay) {
     const m = txResult.replay;
+    const replaySaleId = typeof m.saleId === "string" ? m.saleId : saleRef.id;
+    const replayTotal = Number(m.total) || total;
+    const claim = await tryIssueReceiptClaimForSale(db, {
+      saleId: replaySaleId,
+      total: replayTotal,
+      actorId: createdBy,
+    });
     return {
-      saleId: typeof m.saleId === "string" ? m.saleId : saleRef.id,
+      saleId: replaySaleId,
       billNo: typeof m.billNo === "string" ? m.billNo : "—",
       change: Number(m.change) || 0,
-      total: Number(m.total) || total,
+      total: replayTotal,
       replayed: true,
+      ...(claim || {}),
     };
   }
 
   const billNo = txResult.billNo;
 
   // Earn after commit — failure must not undo/fail the sale.
+  let pointsEarned = 0;
   if (memberId) {
-    await tryEarnPointsForSale(db, {
+    const earned = await tryEarnPointsForSale(db, {
       saleId: saleRef.id,
       memberId,
       total,
       actorId: createdBy,
     });
+    if (earned && earned.ok && typeof earned.points === "number") {
+      pointsEarned = earned.points;
+    }
   }
 
   const sessionRef = db.doc(`posSessions/${data.sessionId}`);
@@ -302,7 +318,21 @@ async function completePosSaleAdmin(db, data, uid) {
     tx.set(sessionRef, patch, { merge: true });
   });
 
-  return { saleId: saleRef.id, billNo, change, total };
+  // Slip QR (A1) — every bill when receiptClaimEnabled; 0 points still get a link.
+  const claim = await tryIssueReceiptClaimForSale(db, {
+    saleId: saleRef.id,
+    total,
+    actorId: createdBy,
+  });
+
+  return {
+    saleId: saleRef.id,
+    billNo,
+    change,
+    total,
+    ...(pointsEarned > 0 ? { pointsEarned } : {}),
+    ...(claim || {}),
+  };
 }
 
 /**
