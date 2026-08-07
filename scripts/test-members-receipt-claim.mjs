@@ -28,6 +28,8 @@ assert.match(claimPage, /ดำเนินการต่อด้วย Google
 assert.match(claimPage, /ใช้เบอร์โทรแทน/);
 assert.match(claimPage, /claim-success-popup|claim-success-overlay/);
 assert.match(claimPage, /sendPhoneOtp/);
+assert.match(claimPage, /sendLinkPhoneOtp/);
+assert.match(claimPage, /ส่ง OTP ยืนยันเบอร์/);
 assert.match(claimPage, /แต้มบิลนี้ใช้แล้ว/);
 assert.match(claimPage, /ดูแต้มของฉัน/);
 assert.match(claimPage, /"used"/);
@@ -57,7 +59,8 @@ const posMembers = read("functions/pos-members.js");
 assert.match(posMembers, /lookupReceiptClaimAuth/);
 assert.match(posMembers, /getMyMember/);
 assert.match(posMembers, /googleUid/);
-assert.match(posMembers, /phone_required/);
+assert.match(posMembers, /phone_otp_required/);
+assert.match(posMembers, /phone_mismatch/);
 assert.doesNotMatch(posMembers, /confirmExisting === true/);
 
 const nposSell = read("functions/npos-sell.js");
@@ -73,13 +76,13 @@ assert.match(smoke, /"claim"/);
 assert.match(smoke, /"me"/);
 
 const version = read("src/lib/version.ts");
-assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 739);
+assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 747);
 
 assert.equal(
   existsSync(join(root, "npos-telltea/app/src/main/java/app/telltea/npos/sell/MemberApi.java")),
-  false,
+  true,
 );
 const gradle = read("npos-telltea/app/build.gradle");
-assert.match(gradle, /versionCode 137/);
+assert.ok(Number(gradle.match(/versionCode\s+(\d+)/)[1]) >= 141);
 
 console.log("OK test-members-receipt-claim");

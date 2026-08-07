@@ -3,7 +3,13 @@
 import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { ConfirmationResult } from "firebase/auth";
-import { confirmPhoneOtp, resetPhoneRecaptcha, sendPhoneOtp } from "@/lib/phone-auth";
+import {
+  confirmPhoneOtp,
+  currentAuthHasVerifiedPhone,
+  resetPhoneRecaptcha,
+  sendLinkPhoneOtp,
+  sendPhoneOtp,
+} from "@/lib/phone-auth";
 import {
   claimErrorLabel,
   fetchReceiptClaimPreview,
@@ -47,6 +53,8 @@ function ClaimForm() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPhoneAlt, setShowPhoneAlt] = useState(false);
+  /** auth = phone-only login · link_claim = first-time Google→phone OTP then claim */
+  const [otpPurpose, setOtpPurpose] = useState<"auth" | "link_claim">("auth");
   const [popupOpen, setPopupOpen] = useState(false);
   const [done, setDone] = useState<{
     displayName: string;
@@ -196,9 +204,45 @@ function ClaimForm() {
     try {
       const conf = await sendPhoneOtp(phone, "claim-recaptcha");
       setConfirmation(conf);
+      setOtpPurpose("auth");
+      setOtp("");
       setStep("otp");
     } catch (err) {
       setError(err instanceof Error ? err.message : "ส่ง OTP ไม่สำเร็จ");
+      resetPhoneRecaptcha();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onSendLinkPhoneOtp(e: FormEvent) {
+    e.preventDefault();
+    if (!pdpa) {
+      setError("กรุณายินยอมนโยบายข้อมูลส่วนบุคคล");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      // First-time Google signup: OTP must verify phone before create member.
+      if (!currentAuthHasVerifiedPhone()) {
+        const conf = await sendLinkPhoneOtp(phone, "claim-recaptcha");
+        setConfirmation(conf);
+        setOtpPurpose("link_claim");
+        setOtp("");
+        setStep("otp");
+        return;
+      }
+      const result = await submitReceiptClaim({
+        saleId,
+        token,
+        phone,
+        displayName: name,
+        pdpaAccepted: true,
+      });
+      applyDone(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "ส่ง OTP / สมัครไม่สำเร็จ");
       resetPhoneRecaptcha();
     } finally {
       setBusy(false);
@@ -212,10 +256,22 @@ function ClaimForm() {
     setError(null);
     try {
       await confirmPhoneOtp(confirmation, otp);
+      if (otpPurpose === "link_claim") {
+        const result = await submitReceiptClaim({
+          saleId,
+          token,
+          phone,
+          displayName: name,
+          pdpaAccepted: true,
+        });
+        applyDone(result);
+        return;
+      }
       await afterSignedIn();
     } catch (err) {
       setError(err instanceof Error ? err.message : "ยืนยัน OTP ไม่สำเร็จ");
       resetPhoneRecaptcha();
+    } finally {
       setBusy(false);
     }
   }
@@ -233,30 +289,6 @@ function ClaimForm() {
     }
   }
 
-  async function onLinkAndClaim(e: FormEvent) {
-    e.preventDefault();
-    if (!pdpa) {
-      setError("กรุณายินยอมนโยบายข้อมูลส่วนบุคคล");
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    try {
-      const result = await submitReceiptClaim({
-        saleId,
-        token,
-        phone,
-        displayName: name,
-        pdpaAccepted: true,
-      });
-      applyDone(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "สมัคร/เคลมไม่สำเร็จ");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   const pointsLabel = preview?.pointsPreview;
 
   return (
@@ -264,7 +296,7 @@ function ClaimForm() {
       <div className="join-card">
         <p className="join-brand">TellTea</p>
         <h1>สะสมแต้มจากสลิป</h1>
-        <p className="muted">สมัครง่าย · Google ก่อน · QR ใช้ได้ครั้งเดียว</p>
+        <p className="muted">Google ก่อน · ยืนยันเบอร์ด้วย OTP ครั้งแรก · QR ใช้ได้ครั้งเดียว</p>
 
         {preview?.ok || step === "used" || step === "no_points" ? (
           <p className="muted" style={{ marginTop: "0.75rem" }}>
@@ -372,7 +404,11 @@ function ClaimForm() {
 
         {step === "otp" ? (
           <form onSubmit={onConfirmOtp} className="join-form">
-            <p className="muted">ส่งรหัสไปที่ {phone}</p>
+            <p className="muted">
+              {otpPurpose === "link_claim"
+                ? `ยืนยันเบอร์ครั้งแรก · ส่งรหัสไปที่ ${phone}`
+                : `ส่งรหัสไปที่ ${phone}`}
+            </p>
             <label>
               <span>รหัส OTP</span>
               <input
@@ -388,7 +424,11 @@ function ClaimForm() {
             </label>
             {error ? <p className="join-error">{error}</p> : null}
             <button type="submit" className="primary-btn" disabled={busy}>
-              {busy ? "กำลังตรวจ..." : "ยืนยัน OTP"}
+              {busy
+                ? "กำลังตรวจ..."
+                : otpPurpose === "link_claim"
+                  ? "ยืนยัน OTP แล้วสมัคร"
+                  : "ยืนยัน OTP"}
             </button>
           </form>
         ) : null}
@@ -415,11 +455,11 @@ function ClaimForm() {
         ) : null}
 
         {step === "link_phone" ? (
-          <form onSubmit={onLinkAndClaim} className="join-form">
+          <form onSubmit={onSendLinkPhoneOtp} className="join-form">
             <p className="muted">
               {authInfo?.email
-                ? `บัญชี ${authInfo.email} · กรอกเบอร์เพื่อผูกสมาชิกครั้งแรก`
-                : "กรอกเบอร์เพื่อสมัครสมาชิกครั้งแรก"}
+                ? `บัญชี ${authInfo.email} · กรอกเบอร์แล้วยืนยัน OTP ครั้งแรก`
+                : "กรอกเบอร์แล้วยืนยัน OTP เพื่อสมัครครั้งแรก"}
             </p>
             <label>
               <span>เบอร์โทร *</span>
@@ -454,7 +494,11 @@ function ClaimForm() {
             </label>
             {error ? <p className="join-error">{error}</p> : null}
             <button type="submit" className="primary-btn" disabled={busy || !pdpa}>
-              {busy ? "กำลังสมัคร..." : `สมัครและรับ ${pointsLabel ?? ""} แต้ม`}
+              {busy
+                ? "กำลังส่ง..."
+                : currentAuthHasVerifiedPhone()
+                  ? `สมัครและรับ ${pointsLabel ?? ""} แต้ม`
+                  : "ส่ง OTP ยืนยันเบอร์"}
             </button>
           </form>
         ) : null}

@@ -762,8 +762,14 @@ async function claimReceiptPoints(db, auth, {
 
   let isNew = false;
   if (!existingDoc || !existingDoc.exists) {
-    digits = phoneDigitsFromInput(phone) || digits;
-    if (!digits) return { ok: false, error: "phone_required" };
+    // First-time signup: phone must be OTP-verified on the Auth token
+    // (Google path links phone; phone-only path signs in with OTP).
+    digits = phoneDigitsFromInput(phoneFromAuth);
+    if (!digits) return { ok: false, error: "phone_otp_required" };
+    const bodyDigits = phoneDigitsFromInput(phone);
+    if (bodyDigits && bodyDigits !== digits) {
+      return { ok: false, error: "phone_mismatch" };
+    }
     if (pdpaAccepted !== true) return { ok: false, error: "pdpa_required" };
     const beforeCreate = await db.collection("members").doc(digits).get();
     const created = await quickCreateMember(db, {
