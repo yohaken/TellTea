@@ -53,6 +53,7 @@ import app.telltea.npos.diagnose.ForegroundHeartbeat;
 import app.telltea.npos.diagnose.StoreClaimPrefs;
 import app.telltea.npos.sell.HoldCart;
 import app.telltea.npos.sell.ImageLoader;
+import app.telltea.npos.sell.MemberApi;
 import app.telltea.npos.sell.MenuModels;
 import app.telltea.npos.sell.MenuRepository;
 import app.telltea.npos.sell.MenuSyncCoordinator;
@@ -98,6 +99,9 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
   private int changeHoldSecondsLeft;
   private TextView flushSyncButton;
   private TextView restoreHoldButton;
+  private TextView memberButton;
+  private TextView redeemButton;
+  private TextView memberStatusLabel;
   private View payAllButton;
   private TextView payAllAmount;
   private TextView payAllDiscount;
@@ -118,6 +122,14 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
   private boolean searchOpen = false;
   private final List<MenuModels.CartLine> cart = new ArrayList<>();
   private double discountBaht = 0;
+  /** Attached member for this cart (cleared after sale / clear). */
+  private String memberId = "";
+  private String memberPhone = "";
+  private String memberPhoneDisplay = "";
+  private String memberName = "";
+  private int memberPointsBalance = 0;
+  /** Selected redeem points — cleared on hold restore / remove member. */
+  private int pointsToRedeem = 0;
   /** Short draft code shown after ตะกร้า until cart clears / sale commits. */
   private String draftCartCode = "";
   private CustomerDisplayController customerDisplay;
@@ -259,6 +271,15 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
       payPpBtn.setVisibility(View.GONE);
       payPpBtn.setOnClickListener(null);
     }
+    memberButton = findViewById(R.id.memberButton);
+    if (memberButton != null) {
+      memberButton.setOnClickListener(v -> showMemberDialog());
+    }
+    redeemButton = findViewById(R.id.redeemButton);
+    if (redeemButton != null) {
+      redeemButton.setOnClickListener(v -> showRedeemDialog());
+    }
+    memberStatusLabel = findViewById(R.id.memberStatusLabel);
     View discountBtn = findViewById(R.id.discountButton);
     if (discountBtn != null) {
       discountBtn.setOnClickListener(v -> showDiscountDialog());
@@ -306,6 +327,7 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
                   shop = s;
                   applyShopToCustomerDisplay();
                   applyBrandChrome();
+                  updateMemberChrome();
                   syncCustomerDisplay();
                 }));
     reloadMenu(false);
@@ -747,7 +769,14 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
   private void persistWorkBeforeUpdate() {
     try {
       if (!cart.isEmpty()) {
-        HoldCart.save(this, cart, discountBaht);
+        HoldCart.save(
+            this,
+            cart,
+            discountBaht,
+            memberId,
+            memberPhone,
+            memberPhoneDisplay,
+            memberName);
         ResumePrefs.markRestoreHoldAfterUpdate(this);
         OpsLogger.info(this, "update", "พักบิลก่อนอัปเดต", cart.size() + " รายการ");
       }
@@ -769,6 +798,7 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
         () -> {
           cart.clear();
           discountBaht = 0;
+          clearMemberState();
           draftCartCode = "";
           renderCart();
           maybeSettleRemoteClosed();
@@ -828,9 +858,11 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
       return;
     }
     try {
-      HoldCart.save(this, cart, discountBaht);
+      HoldCart.save(
+          this, cart, discountBaht, memberId, memberPhone, memberPhoneDisplay, memberName);
       cart.clear();
       discountBaht = 0;
+      clearMemberState();
       draftCartCode = "";
       renderCart();
       updateHoldRestoreButton();
@@ -872,6 +904,18 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
       }
       cart.addAll(held.lines);
       discountBaht = held.discountBaht;
+      // Keep member identity; clear selected redeem (re-pick after balance refresh).
+      pointsToRedeem = 0;
+      if (held.hasMember()) {
+        memberId = held.memberId;
+        memberPhone = held.memberPhone;
+        memberPhoneDisplay = held.memberPhoneDisplay;
+        memberName = held.memberName;
+        memberPointsBalance = 0;
+        refreshMemberBalanceAfterRestore();
+      } else {
+        clearMemberState();
+      }
       ensureDraftCartCode();
       renderCart();
       updateHoldRestoreButton();
@@ -879,6 +923,35 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
     } catch (Exception e) {
       Toast.makeText(this, R.string.hold_fail, Toast.LENGTH_SHORT).show();
     }
+  }
+
+  private void refreshMemberBalanceAfterRestore() {
+    if (!hasMember() || memberPhone.isEmpty() && memberId.isEmpty()) return;
+    String phone = !memberPhone.isEmpty() ? memberPhone : memberId;
+    MemberApi.lookup(
+        this,
+        phone,
+        new MemberApi.Callback() {
+          @Override
+          public void onResult(JSONObject res) {
+            if (!res.optBoolean("found", false)) {
+              clearMemberState();
+              renderCart();
+              Toast.makeText(SellActivity.this, R.string.member_not_found, Toast.LENGTH_SHORT)
+                  .show();
+              return;
+            }
+            applyMemberFromJson(res.optJSONObject("member"));
+            renderCart();
+          }
+
+          @Override
+          public void onError(String message) {
+            // Keep held member identity; balance stays 0 until next lookup.
+            Toast.makeText(SellActivity.this, message, Toast.LENGTH_SHORT).show();
+            renderCart();
+          }
+        });
   }
 
   private void updateHoldRestoreButton() {
@@ -1144,6 +1217,7 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
                     shop = s;
                     applyShopToCustomerDisplay();
                     applyBrandChrome();
+                    updateMemberChrome();
                     syncCustomerDisplay();
                   }));
     }
@@ -2425,7 +2499,9 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
       cartList.addView(block);
     }
 
+    clampRedeemToBill();
     double sub = cartSubtotal();
+    double redeem = redeemBaht();
     double total = cartTotal();
     if (cartSubtotalView != null) {
       cartSubtotalView.setText(getString(R.string.cart_money_fmt, sub));
@@ -2434,8 +2510,9 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
       cartTotalView.setText(getString(R.string.cart_total_fmt, total));
     }
     if (discountLabel != null) {
-      if (discountBaht > 0) {
-        discountLabel.setText(getString(R.string.cart_discount_fmt, discountBaht));
+      double off = discountBaht + redeem;
+      if (off > 0) {
+        discountLabel.setText(getString(R.string.cart_discount_fmt, off));
         discountLabel.setTextColor(NposUi.color(this, R.color.npos_orange));
       } else {
         discountLabel.setText(R.string.cart_discount_none);
@@ -2446,14 +2523,24 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
       payAllAmount.setText(getString(R.string.cart_total_fmt, total));
     }
     if (payAllDiscount != null) {
-      if (discountBaht > 0) {
+      if (discountBaht > 0 || redeem > 0) {
         payAllDiscount.setVisibility(View.VISIBLE);
-        payAllDiscount.setText(getString(R.string.pay_all_discount_fmt, discountBaht));
+        if (discountBaht > 0 && redeem > 0) {
+          payAllDiscount.setText(
+              getString(R.string.pay_all_discount_fmt, discountBaht)
+                  + " · "
+                  + getString(R.string.pay_all_redeem_fmt, redeem));
+        } else if (redeem > 0) {
+          payAllDiscount.setText(getString(R.string.pay_all_redeem_fmt, redeem));
+        } else {
+          payAllDiscount.setText(getString(R.string.pay_all_discount_fmt, discountBaht));
+        }
       } else {
         payAllDiscount.setVisibility(View.GONE);
         payAllDiscount.setText(R.string.pay_all_discount_none);
       }
     }
+    updateMemberChrome();
     TextView cartTitle = findViewById(R.id.cartTitle);
     if (cart.isEmpty()) {
       draftCartCode = "";
@@ -2503,7 +2590,8 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
               line.name, line.qty, line.unitPrice, line.lineTotal(), detail));
     }
     double sub = cartSubtotal();
-    customerDisplay.showSelecting(lines, sub, discountBaht, Math.max(0, sub - discountBaht));
+    double off = discountBaht + redeemBaht();
+    customerDisplay.showSelecting(lines, sub, off, Math.max(0, sub - off));
   }
 
   private double cartSubtotal() {
@@ -2512,8 +2600,365 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
     return t;
   }
 
+  private boolean membersEnabled() {
+    return shop != null && shop.optBoolean("membersEnabled", false);
+  }
+
+  private boolean hasMember() {
+    return memberId != null && !memberId.isEmpty();
+  }
+
+  private double pointsPerBahtRedeem() {
+    double r = shop != null ? shop.optDouble("membersPointsPerBahtRedeem", 1) : 1;
+    return r > 0 ? r : 1;
+  }
+
+  private double redeemBaht() {
+    if (!hasMember() || pointsToRedeem <= 0) return 0;
+    return MemberApi.redeemBahtFromPoints(pointsToRedeem, pointsPerBahtRedeem());
+  }
+
+  private int maxRedeemablePoints() {
+    if (!hasMember()) return 0;
+    double maxBaht = Math.max(0, cartSubtotal() - discountBaht);
+    double rate = pointsPerBahtRedeem();
+    int max = Math.min(memberPointsBalance, (int) Math.floor(maxBaht * rate + 1e-6));
+    while (max > 0 && MemberApi.redeemBahtFromPoints(max, rate) > maxBaht + 1e-6) {
+      max--;
+    }
+    return Math.max(0, max);
+  }
+
+  private void clampRedeemToBill() {
+    if (pointsToRedeem <= 0) return;
+    int max = maxRedeemablePoints();
+    if (pointsToRedeem > max) pointsToRedeem = max;
+  }
+
+  private void clearMemberState() {
+    memberId = "";
+    memberPhone = "";
+    memberPhoneDisplay = "";
+    memberName = "";
+    memberPointsBalance = 0;
+    pointsToRedeem = 0;
+  }
+
+  private void applyMemberFromJson(JSONObject m) {
+    if (m == null) {
+      clearMemberState();
+      return;
+    }
+    memberId = m.optString("id", "");
+    memberPhone = m.optString("phone", "");
+    memberPhoneDisplay = m.optString("phoneDisplay", memberPhone);
+    memberName = m.optString("displayName", memberPhoneDisplay);
+    memberPointsBalance = Math.max(0, m.optInt("pointsBalance", 0));
+    pointsToRedeem = 0;
+    if ("suspended".equals(m.optString("status", ""))) {
+      Toast.makeText(this, R.string.member_suspended, Toast.LENGTH_LONG).show();
+      clearMemberState();
+    }
+  }
+
+  private void updateMemberChrome() {
+    boolean on = membersEnabled();
+    if (memberButton != null) {
+      memberButton.setVisibility(on ? View.VISIBLE : View.GONE);
+      if (on) {
+        memberButton.setText(hasMember() ? R.string.member_remove : R.string.sell_hub_member);
+      }
+    }
+    if (redeemButton != null) {
+      boolean showRedeem = on && hasMember() && memberPointsBalance > 0 && !cart.isEmpty();
+      redeemButton.setVisibility(showRedeem ? View.VISIBLE : View.GONE);
+      if (showRedeem && pointsToRedeem > 0) {
+        redeemButton.setText(
+            getString(R.string.sell_hub_redeem) + " " + pointsToRedeem);
+      } else if (showRedeem) {
+        redeemButton.setText(R.string.sell_hub_redeem);
+      }
+    }
+    if (memberStatusLabel != null) {
+      if (on && hasMember()) {
+        String redeemSuffix = "";
+        if (pointsToRedeem > 0) {
+          redeemSuffix =
+              getString(
+                  R.string.member_redeem_suffix_fmt, pointsToRedeem, redeemBaht());
+        }
+        memberStatusLabel.setVisibility(View.VISIBLE);
+        memberStatusLabel.setText(
+            getString(
+                R.string.member_status_fmt,
+                memberName.isEmpty() ? memberPhoneDisplay : memberName,
+                memberPointsBalance,
+                redeemSuffix));
+      } else {
+        memberStatusLabel.setVisibility(View.GONE);
+        memberStatusLabel.setText("");
+      }
+    }
+  }
+
   private double cartTotal() {
-    return Math.max(0, cartSubtotal() - discountBaht);
+    return Math.max(0, cartSubtotal() - discountBaht - redeemBaht());
+  }
+
+  private void showMemberDialog() {
+    if (!membersEnabled()) return;
+    if (hasMember()) {
+      NposConfirmDialog.confirm(
+          this,
+          getString(R.string.member_title),
+          getString(
+              R.string.member_attached_fmt,
+              memberName,
+              memberPhoneDisplay,
+              memberPointsBalance),
+          getString(R.string.member_remove),
+          () -> {
+            clearMemberState();
+            renderCart();
+          });
+      return;
+    }
+    if (uiScale == null) uiScale = UiScale.from(this);
+    LinearLayout root = new LinearLayout(this);
+    root.setOrientation(LinearLayout.VERTICAL);
+    int pad = uiScale.dp(12);
+    root.setPadding(pad, pad, pad, pad);
+
+    EditText phoneIn = new EditText(this);
+    phoneIn.setInputType(InputType.TYPE_CLASS_PHONE);
+    phoneIn.setHint(R.string.member_phone_hint);
+    root.addView(phoneIn);
+
+    EditText nameIn = new EditText(this);
+    nameIn.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+    nameIn.setHint(R.string.member_create_name_hint);
+    nameIn.setVisibility(View.GONE);
+    root.addView(nameIn);
+
+    TextView status = NposUi.caption(this, "");
+    status.setPadding(0, uiScale.dp(8), 0, 0);
+    root.addView(status);
+
+    final AlertDialog[] holder = new AlertDialog[1];
+    final boolean[] createMode = {false};
+
+    TextView lookupBtn = NposUi.primary(this, getString(R.string.member_lookup));
+    lookupBtn.setMaxWidth(Integer.MAX_VALUE);
+    LinearLayout.LayoutParams lp =
+        new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+    lp.topMargin = uiScale.dp(10);
+    lookupBtn.setLayoutParams(lp);
+    lookupBtn.setOnClickListener(
+        v -> {
+          String phone = phoneIn.getText().toString().trim();
+          if (phone.isEmpty()) {
+            status.setText(R.string.member_phone_hint);
+            return;
+          }
+          status.setText(R.string.member_looking_up);
+          lookupBtn.setEnabled(false);
+          if (createMode[0]) {
+            MemberApi.quickCreate(
+                this,
+                phone,
+                nameIn.getText().toString().trim(),
+                new MemberApi.Callback() {
+                  @Override
+                  public void onResult(JSONObject res) {
+                    lookupBtn.setEnabled(true);
+                    applyMemberFromJson(res.optJSONObject("member"));
+                    if (!hasMember()) {
+                      status.setText(R.string.member_not_found);
+                      return;
+                    }
+                    if (holder[0] != null) holder[0].dismiss();
+                    renderCart();
+                    Toast.makeText(
+                            SellActivity.this,
+                            getString(
+                                R.string.member_attached_fmt,
+                                memberName,
+                                memberPhoneDisplay,
+                                memberPointsBalance),
+                            Toast.LENGTH_SHORT)
+                        .show();
+                  }
+
+                  @Override
+                  public void onError(String message) {
+                    lookupBtn.setEnabled(true);
+                    status.setText(message);
+                  }
+                });
+            return;
+          }
+          MemberApi.lookup(
+              this,
+              phone,
+              new MemberApi.Callback() {
+                @Override
+                public void onResult(JSONObject res) {
+                  lookupBtn.setEnabled(true);
+                  if (!res.optBoolean("found", false)) {
+                    createMode[0] = true;
+                    nameIn.setVisibility(View.VISIBLE);
+                    lookupBtn.setText(R.string.member_create);
+                    status.setText(R.string.member_not_found);
+                    return;
+                  }
+                  applyMemberFromJson(res.optJSONObject("member"));
+                  if (!hasMember()) {
+                    status.setText(R.string.member_suspended);
+                    return;
+                  }
+                  if (holder[0] != null) holder[0].dismiss();
+                  renderCart();
+                  Toast.makeText(
+                          SellActivity.this,
+                          getString(
+                              R.string.member_attached_fmt,
+                              memberName,
+                              memberPhoneDisplay,
+                              memberPointsBalance),
+                          Toast.LENGTH_SHORT)
+                      .show();
+                }
+
+                @Override
+                public void onError(String message) {
+                  lookupBtn.setEnabled(true);
+                  status.setText(message);
+                }
+              });
+        });
+    root.addView(lookupBtn);
+
+    holder[0] =
+        new AlertDialog.Builder(this).setTitle(R.string.member_title).setView(root)
+            .setNegativeButton(android.R.string.cancel, null)
+            .create();
+    holder[0].show();
+  }
+
+  private void showRedeemDialog() {
+    if (!membersEnabled()) return;
+    if (!hasMember()) {
+      Toast.makeText(this, R.string.redeem_need_member, Toast.LENGTH_SHORT).show();
+      return;
+    }
+    if (cart.isEmpty()) {
+      Toast.makeText(this, R.string.cart_empty, Toast.LENGTH_SHORT).show();
+      return;
+    }
+    // Refresh balance then open picker.
+    String phone = !memberPhone.isEmpty() ? memberPhone : memberId;
+    Toast.makeText(this, R.string.member_looking_up, Toast.LENGTH_SHORT).show();
+    MemberApi.lookup(
+        this,
+        phone,
+        new MemberApi.Callback() {
+          @Override
+          public void onResult(JSONObject res) {
+            if (!res.optBoolean("found", false)) {
+              clearMemberState();
+              renderCart();
+              Toast.makeText(SellActivity.this, R.string.member_not_found, Toast.LENGTH_SHORT)
+                  .show();
+              return;
+            }
+            JSONObject m = res.optJSONObject("member");
+            if (m != null) {
+              memberPointsBalance = Math.max(0, m.optInt("pointsBalance", 0));
+              memberName = m.optString("displayName", memberName);
+              memberPhoneDisplay = m.optString("phoneDisplay", memberPhoneDisplay);
+              if ("suspended".equals(m.optString("status", ""))) {
+                Toast.makeText(SellActivity.this, R.string.member_suspended, Toast.LENGTH_LONG)
+                    .show();
+                clearMemberState();
+                renderCart();
+                return;
+              }
+            }
+            openRedeemPicker();
+          }
+
+          @Override
+          public void onError(String message) {
+            // Fall back to cached balance.
+            openRedeemPicker();
+            Toast.makeText(SellActivity.this, message, Toast.LENGTH_SHORT).show();
+          }
+        });
+  }
+
+  private void openRedeemPicker() {
+    int maxPts = maxRedeemablePoints();
+    if (memberPointsBalance <= 0 || maxPts <= 0) {
+      Toast.makeText(this, R.string.redeem_no_points, Toast.LENGTH_SHORT).show();
+      pointsToRedeem = 0;
+      renderCart();
+      return;
+    }
+    if (uiScale == null) uiScale = UiScale.from(this);
+    LinearLayout root = new LinearLayout(this);
+    root.setOrientation(LinearLayout.VERTICAL);
+    int pad = uiScale.dp(12);
+    root.setPadding(pad, pad, pad, pad);
+
+    double maxBaht = MemberApi.redeemBahtFromPoints(maxPts, pointsPerBahtRedeem());
+    TextView bal =
+        NposUi.caption(
+            this, getString(R.string.redeem_balance_fmt, memberPointsBalance, maxPts, maxBaht));
+    bal.setPadding(0, 0, 0, uiScale.dp(8));
+    root.addView(bal);
+
+    EditText input = new EditText(this);
+    input.setInputType(InputType.TYPE_CLASS_NUMBER);
+    input.setHint(R.string.redeem_hint);
+    if (pointsToRedeem > 0) {
+      input.setText(String.valueOf(pointsToRedeem));
+    } else {
+      input.setText(String.valueOf(maxPts));
+    }
+    root.addView(input);
+
+    TextView useMax = NposUi.chip(this, "");
+    useMax.setText(getString(R.string.redeem_use_max_fmt, maxPts, maxBaht));
+    useMax.setAllCaps(false);
+    useMax.setOnClickListener(v -> input.setText(String.valueOf(maxPts)));
+    root.addView(useMax);
+
+    new AlertDialog.Builder(this)
+        .setTitle(R.string.redeem_title)
+        .setView(root)
+        .setPositiveButton(
+            android.R.string.ok,
+            (d, w) -> {
+              int pts = 0;
+              try {
+                pts = Integer.parseInt(input.getText().toString().trim());
+              } catch (Exception e) {
+                pts = 0;
+              }
+              if (pts < 0) pts = 0;
+              if (pts > maxPts) pts = maxPts;
+              pointsToRedeem = pts;
+              renderCart();
+            })
+        .setNeutralButton(
+            R.string.redeem_clear,
+            (d, w) -> {
+              pointsToRedeem = 0;
+              renderCart();
+            })
+        .setNegativeButton(android.R.string.cancel, null)
+        .show();
   }
 
   private void showDiscountDialog() {
@@ -2560,12 +3005,14 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
               }
               if (discountBaht < 0) discountBaht = 0;
               if (discountBaht > sub) discountBaht = sub;
+              clampRedeemToBill();
               renderCart();
             })
         .setNeutralButton(
             R.string.discount_clear,
             (d, w) -> {
               discountBaht = 0;
+              clampRedeemToBill();
               renderCart();
             })
         .setNegativeButton(android.R.string.cancel, null)
@@ -2577,6 +3024,18 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
       Toast.makeText(this, R.string.cart_empty, Toast.LENGTH_SHORT).show();
       return;
     }
+    clampRedeemToBill();
+    double total = cartTotal();
+    // Full redeem / discount → close without cash/transfer tender.
+    if (total <= 0.009) {
+      NposConfirmDialog.confirm(
+          this,
+          getString(R.string.pay_zero_title),
+          getString(R.string.pay_zero_msg),
+          getString(R.string.pay_zero_confirm),
+          () -> commitSale(PaymentMethods.TRANSFER, 0, ""));
+      return;
+    }
     if (uiScale == null) uiScale = UiScale.from(this);
 
     LinearLayout box = new LinearLayout(this);
@@ -2585,10 +3044,45 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
     box.setPadding(pad, pad, pad, pad);
 
     TextView hint = NposUi.caption(this, getString(R.string.pay_choose_hint));
-    hint.setPadding(0, 0, 0, uiScale.dp(12));
+    hint.setPadding(0, 0, 0, uiScale.dp(8));
     box.addView(hint);
 
     final AlertDialog[] holder = new AlertDialog[1];
+
+    if (membersEnabled()) {
+      TextView memHint = NposUi.caption(this, getString(R.string.pay_choose_member_hint));
+      memHint.setPadding(0, 0, 0, uiScale.dp(6));
+      box.addView(memHint);
+      if (!hasMember()) {
+        TextView addMem = NposUi.secondary(this, getString(R.string.sell_hub_member));
+        addMem.setMaxWidth(Integer.MAX_VALUE);
+        LinearLayout.LayoutParams mlp =
+            new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        mlp.bottomMargin = uiScale.dp(8);
+        addMem.setLayoutParams(mlp);
+        addMem.setOnClickListener(
+            v -> {
+              if (holder[0] != null) holder[0].dismiss();
+              showMemberDialog();
+            });
+        box.addView(addMem);
+      } else if (memberPointsBalance > 0 && pointsToRedeem <= 0) {
+        TextView usePts = NposUi.secondary(this, getString(R.string.sell_hub_redeem));
+        usePts.setMaxWidth(Integer.MAX_VALUE);
+        LinearLayout.LayoutParams rlp =
+            new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        rlp.bottomMargin = uiScale.dp(8);
+        usePts.setLayoutParams(rlp);
+        usePts.setOnClickListener(
+            v -> {
+              if (holder[0] != null) holder[0].dismiss();
+              showRedeemDialog();
+            });
+        box.addView(usePts);
+      }
+    }
 
     TextView cash = NposUi.primary(this, getString(R.string.btn_pay_cash));
     cash.setMaxWidth(Integer.MAX_VALUE);
@@ -2838,7 +3332,12 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
   private void commitSale(String method, double cashReceived, String transferRef) {
     sellSyncStatus.setText(R.string.sell_saving);
     List<MenuModels.CartLine> snapshot = new ArrayList<>(cart);
+    clampRedeemToBill();
     double disc = discountBaht;
+    final boolean crmOn = membersEnabled();
+    final String mid = crmOn && hasMember() ? memberId : "";
+    final String mPhone = crmOn && hasMember() ? memberPhone : "";
+    final int pts = crmOn && hasMember() ? pointsToRedeem : 0;
     final double changeForCustomer =
         PaymentMethods.isCash(method) ? Math.max(0, cashReceived - cartTotal()) : 0;
     boolean autoPrint = shop == null || shop.optBoolean("autoPrintReceipt", true);
@@ -2851,6 +3350,9 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
         transferRef,
         shop,
         autoPrint,
+        mid,
+        mPhone,
+        pts,
         new SaleSync.SaleCallback() {
           @Override
                     public void onLocalSaved(String localId, double total) {
@@ -2872,6 +3374,7 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
                             }
                             cart.clear();
                             discountBaht = 0;
+                            clearMemberState();
                             draftCartCode = "";
                             renderCartViewsOnly();
                             if (menu != null) renderMenu();

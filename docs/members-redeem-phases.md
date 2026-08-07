@@ -263,7 +263,7 @@
 |------|--------|
 | CF lookup / redeem ใน complete-sale / memberLedger `redeem` | ✅ มี |
 | earn หลังขาย · claim QR · `/me` | ✅ ทดลอง |
-| UI nPos คีย์เบอร์ · แลกแต้ม · ส่งฟิลด์ | ❌ M2/M3 |
+| UI nPos คีย์เบอร์ · แลกแต้ม · ส่งฟิลด์ | ✅ P4 (APK 138) |
 | แยก `manualDiscountBaht` · void คืน redeem | ❌ D1 |
 | บิลหลังร้าน/แดชบอร์ดโชว์แลกแต้มแยก | ❌ D2/D3 |
 | สลิปพิมพ์บรรทัดแลกแต้ม | ❌ D4 |

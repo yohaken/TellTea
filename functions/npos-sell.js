@@ -630,7 +630,9 @@ exports.nposCompleteSale = functions.region("asia-southeast1").https.onRequest(a
       lines: body.lines,
       paymentMethod: body.paymentMethod,
       cashReceived: body.cashReceived,
+      // Prefer manualDiscountBaht when client splits redeem; discountBaht = manual legacy.
       discountBaht: body.discountBaht,
+      manualDiscountBaht: body.manualDiscountBaht,
       transferRef: body.transferRef,
       // Optional — absent on every current live bill.
       memberId: body.memberId,
