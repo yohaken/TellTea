@@ -116,16 +116,6 @@
     <string name="btn_pay_transfer">โอนเงิน</string>
     <string name="btn_pay_promptpay">📱 ชำระ PromptPay</string>
     <string name="sell_hub_discount">ส่วนลด</string>
-    <string name="sell_hub_member">สมาชิก</string>
-    <string name="sell_member_title">บัตรสมาชิก</string>
-    <string name="sell_member_phone_hint">เบอร์โทร</string>
-    <string name="sell_member_name_hint">ชื่อเรียก (สมัครใหม่)</string>
-    <string name="sell_member_lookup">ค้นหา</string>
-    <string name="sell_member_create">สมัครใหม่</string>
-    <string name="sell_member_clear">ถอดสมาชิก</string>
-    <string name="sell_member_redeem">แลกแต้มเป็นส่วนลด</string>
-    <string name="sell_member_attached">สมาชิก: %1$s · %2$d แต้ม</string>
-    <string name="sell_member_not_found">ไม่พบสมาชิก — สมัครใหม่ได้</string>
     <string name="sell_hub_restore_hold">ดึงบิลพัก</string>
     <string name="sell_hub_clear_cart">ล้างตะกร้า</string>
     <string name="btn_refresh_menu">รีเฟรช</string>

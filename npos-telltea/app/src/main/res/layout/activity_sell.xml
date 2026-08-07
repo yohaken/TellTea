@@ -335,22 +335,6 @@
                             android:textSize="13sp" />
 
                         <TextView
-                            android:id="@+id/memberButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="@font/prompt_regular"
-                            android:gravity="center"
-                            android:minHeight="36dp"
-                            android:paddingLeft="8dp"
-                            android:paddingRight="8dp"
-                            android:paddingTop="4dp"
-                            android:paddingBottom="4dp"
-                            android:text="@string/sell_hub_member"
-                            android:textColor="@color/npos_ink"
-                            android:textSize="13sp"
-                            android:visibility="gone" />
-
-                        <TextView
                             android:id="@+id/restoreHoldButton"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"

@@ -8,8 +8,8 @@ export function PosMembersView() {
       <div className="pos-module-content pos-module-empty">
         <CreditCard size={48} aria-hidden />
         <h2>บัตรสมาชิก</h2>
-        <p className="muted">จัดการสมาชิก/แต้มอยู่ที่หลังร้านแล้ว (อื่นๆ → สมาชิก / แต้ม)</p>
-        <p className="muted">ผูกบิลและสะสมแต้มบนเคาน์เตอร์ — เฟส M2</p>
+        <p className="muted">ระบบสะสมแต้ม — กำลังพัฒนา</p>
+        <p className="muted">เพิ่มบัตรสะสมคะแนนจะอยู่ที่หน้าขายเมื่อพร้อมใช้งาน</p>
       </div>
     </div>
   );

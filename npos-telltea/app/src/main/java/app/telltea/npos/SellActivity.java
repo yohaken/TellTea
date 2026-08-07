@@ -53,7 +53,6 @@ import app.telltea.npos.diagnose.ForegroundHeartbeat;
 import app.telltea.npos.diagnose.StoreClaimPrefs;
 import app.telltea.npos.sell.HoldCart;
 import app.telltea.npos.sell.ImageLoader;
-import app.telltea.npos.sell.MemberApi;
 import app.telltea.npos.sell.MenuModels;
 import app.telltea.npos.sell.MenuRepository;
 import app.telltea.npos.sell.MenuSyncCoordinator;
@@ -119,13 +118,6 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
   private boolean searchOpen = false;
   private final List<MenuModels.CartLine> cart = new ArrayList<>();
   private double discountBaht = 0;
-  /** Optional CRM attach — empty = normal sale path (live shop default). */
-  private String attachedMemberId = "";
-  private String attachedMemberPhone = "";
-  private String attachedMemberName = "";
-  private int attachedMemberPoints = 0;
-  private int pointsToRedeem = 0;
-  private TextView memberButton;
   /** Short draft code shown after ตะกร้า until cart clears / sale commits. */
   private String draftCartCode = "";
   private CustomerDisplayController customerDisplay;
@@ -272,11 +264,6 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
       discountBtn.setOnClickListener(v -> showDiscountDialog());
       discountBtn.setVisibility(View.VISIBLE);
     }
-    memberButton = findViewById(R.id.memberButton);
-    if (memberButton != null) {
-      memberButton.setOnClickListener(v -> showMemberDialog());
-      memberButton.setVisibility(View.GONE);
-    }
     View clearCart = findViewById(R.id.clearCartButton);
     if (clearCart != null) {
       clearCart.setOnClickListener(v -> confirmClearCart());
@@ -319,7 +306,6 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
                   shop = s;
                   applyShopToCustomerDisplay();
                   applyBrandChrome();
-                  updateMemberButtonVisibility();
                   syncCustomerDisplay();
                 }));
     reloadMenu(false);
@@ -783,7 +769,6 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
         () -> {
           cart.clear();
           discountBaht = 0;
-          clearAttachedMember();
           draftCartCode = "";
           renderCart();
           maybeSettleRemoteClosed();
@@ -2518,8 +2503,7 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
               line.name, line.qty, line.unitPrice, line.lineTotal(), detail));
     }
     double sub = cartSubtotal();
-    double discShow = discountBaht + redeemBahtPreview();
-    customerDisplay.showSelecting(lines, sub, discShow, Math.max(0, sub - discShow));
+    customerDisplay.showSelecting(lines, sub, discountBaht, Math.max(0, sub - discountBaht));
   }
 
   private double cartSubtotal() {
@@ -2529,230 +2513,7 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
   }
 
   private double cartTotal() {
-    return Math.max(0, cartSubtotal() - discountBaht - redeemBahtPreview());
-  }
-
-  private double redeemBahtPreview() {
-    if (pointsToRedeem <= 0 || attachedMemberId.isEmpty()) return 0;
-    int per = shop != null ? shop.optInt("membersPointsPerBahtRedeem", 1) : 1;
-    if (per <= 0) return 0;
-    return Math.floor(pointsToRedeem / (double) per);
-  }
-
-  private void clearAttachedMember() {
-    attachedMemberId = "";
-    attachedMemberPhone = "";
-    attachedMemberName = "";
-    attachedMemberPoints = 0;
-    pointsToRedeem = 0;
-    updateMemberButtonVisibility();
-  }
-
-  private void updateMemberButtonVisibility() {
-    if (memberButton == null) return;
-    boolean enabled = shop != null && shop.optBoolean("membersEnabled", false);
-    if (!enabled) {
-      memberButton.setVisibility(View.GONE);
-      return;
-    }
-    memberButton.setVisibility(View.VISIBLE);
-    if (attachedMemberId.isEmpty()) {
-      memberButton.setText(R.string.sell_hub_member);
-    } else {
-      memberButton.setText(
-          getString(
-              R.string.sell_member_attached,
-              attachedMemberName.isEmpty() ? attachedMemberPhone : attachedMemberName,
-              attachedMemberPoints));
-    }
-  }
-
-  private void showMemberDialog() {
-    if (shop == null || !shop.optBoolean("membersEnabled", false)) {
-      Toast.makeText(this, "ระบบสมาชิกยังไม่เปิด", Toast.LENGTH_SHORT).show();
-      return;
-    }
-    LinearLayout root = new LinearLayout(this);
-    root.setOrientation(LinearLayout.VERTICAL);
-    int pad = Math.round(12 * getResources().getDisplayMetrics().density);
-    root.setPadding(pad, pad, pad, pad);
-
-    EditText phone = new EditText(this);
-    phone.setInputType(InputType.TYPE_CLASS_PHONE);
-    phone.setHint(R.string.sell_member_phone_hint);
-    if (!attachedMemberPhone.isEmpty()) phone.setText(attachedMemberPhone);
-    phone.setTypeface(NposFonts.regular(this));
-    root.addView(phone);
-
-    EditText name = new EditText(this);
-    name.setHint(R.string.sell_member_name_hint);
-    if (!attachedMemberName.isEmpty()) name.setText(attachedMemberName);
-    name.setTypeface(NposFonts.regular(this));
-    root.addView(name);
-
-    EditText redeem = new EditText(this);
-    redeem.setInputType(InputType.TYPE_CLASS_NUMBER);
-    redeem.setHint(R.string.sell_member_redeem);
-    if (pointsToRedeem > 0) redeem.setText(String.valueOf(pointsToRedeem));
-    redeem.setTypeface(NposFonts.regular(this));
-    root.addView(redeem);
-
-    TextView status = NposUi.caption(this, "");
-    if (!attachedMemberId.isEmpty()) {
-      status.setText(
-          getString(
-              R.string.sell_member_attached,
-              attachedMemberName.isEmpty() ? attachedMemberPhone : attachedMemberName,
-              attachedMemberPoints));
-    }
-    root.addView(status);
-
-    TextView lookupBtn = NposUi.secondary(this, getString(R.string.sell_member_lookup));
-    lookupBtn.setOnClickListener(
-        v -> {
-          String p = phone.getText().toString().trim();
-          if (p.isEmpty()) {
-            Toast.makeText(this, R.string.sell_member_phone_hint, Toast.LENGTH_SHORT).show();
-            return;
-          }
-          status.setText("กำลังค้นหา...");
-          MemberApi.lookup(
-              this,
-              p,
-              new MemberApi.Callback() {
-                @Override
-                public void onResult(JSONObject res) {
-                  runOnUiThread(
-                      () -> {
-                        if (res == null || !res.optBoolean("ok", false)) {
-                          status.setText("ค้นหาไม่สำเร็จ");
-                          return;
-                        }
-                        if (!res.optBoolean("found", false)) {
-                          status.setText(R.string.sell_member_not_found);
-                          return;
-                        }
-                        JSONObject m = res.optJSONObject("member");
-                        if (m == null) {
-                          status.setText(R.string.sell_member_not_found);
-                          return;
-                        }
-                        if ("suspended".equals(m.optString("status"))) {
-                          status.setText("บัตรระงับ — ใช้ไม่ได้");
-                          return;
-                        }
-                        attachedMemberId = m.optString("id", "");
-                        attachedMemberPhone = m.optString("phoneDisplay", m.optString("phone", p));
-                        attachedMemberName = m.optString("displayName", attachedMemberPhone);
-                        attachedMemberPoints = m.optInt("pointsBalance", 0);
-                        phone.setText(attachedMemberPhone);
-                        name.setText(attachedMemberName);
-                        status.setText(
-                            getString(
-                                R.string.sell_member_attached,
-                                attachedMemberName,
-                                attachedMemberPoints));
-                        updateMemberButtonVisibility();
-                        renderCartViewsOnly();
-                      });
-                }
-
-                @Override
-                public void onError(String message) {
-                  runOnUiThread(() -> status.setText(message == null ? "error" : message));
-                }
-              });
-        });
-    root.addView(lookupBtn);
-
-    TextView createBtn = NposUi.secondary(this, getString(R.string.sell_member_create));
-    createBtn.setOnClickListener(
-        v -> {
-          String p = phone.getText().toString().trim();
-          if (p.isEmpty()) {
-            Toast.makeText(this, R.string.sell_member_phone_hint, Toast.LENGTH_SHORT).show();
-            return;
-          }
-          status.setText("กำลังสมัคร...");
-          MemberApi.quickCreate(
-              this,
-              p,
-              name.getText().toString().trim(),
-              new MemberApi.Callback() {
-                @Override
-                public void onResult(JSONObject res) {
-                  runOnUiThread(
-                      () -> {
-                        if (res == null || !res.optBoolean("ok", false) || !res.optBoolean("found", false)) {
-                          status.setText(res != null ? res.optString("error", "สมัครไม่สำเร็จ") : "สมัครไม่สำเร็จ");
-                          return;
-                        }
-                        JSONObject m = res.optJSONObject("member");
-                        if (m == null) {
-                          status.setText("สมัครไม่สำเร็จ");
-                          return;
-                        }
-                        attachedMemberId = m.optString("id", "");
-                        attachedMemberPhone = m.optString("phoneDisplay", m.optString("phone", p));
-                        attachedMemberName = m.optString("displayName", attachedMemberPhone);
-                        attachedMemberPoints = m.optInt("pointsBalance", 0);
-                        status.setText(
-                            getString(
-                                R.string.sell_member_attached,
-                                attachedMemberName,
-                                attachedMemberPoints));
-                        updateMemberButtonVisibility();
-                        renderCartViewsOnly();
-                      });
-                }
-
-                @Override
-                public void onError(String message) {
-                  runOnUiThread(() -> status.setText(message == null ? "error" : message));
-                }
-              });
-        });
-    root.addView(createBtn);
-
-    TextView clearBtn = NposUi.ghost(this, getString(R.string.sell_member_clear));
-    root.addView(clearBtn);
-    final AlertDialog[] memberDialog = new AlertDialog[1];
-    clearBtn.setOnClickListener(
-        v -> {
-          clearAttachedMember();
-          renderCart();
-          if (memberDialog[0] != null) memberDialog[0].dismiss();
-        });
-
-    memberDialog[0] =
-        NposConfirmDialog.custom(
-            this,
-            getString(R.string.sell_member_title),
-            attachedMemberId.isEmpty()
-                ? "ค้นหาเบอร์เพื่อผูกบิล — ไม่บังคับ ขายปกติได้เหมือนเดิม"
-                : null,
-            root,
-            getString(android.R.string.ok),
-            getString(android.R.string.cancel),
-            true,
-            () -> {
-              String raw = redeem.getText().toString().trim();
-              int pts = 0;
-              if (!raw.isEmpty()) {
-                try {
-                  pts = Integer.parseInt(raw.replaceAll("[^0-9]", ""));
-                } catch (Exception ignored) {
-                  pts = 0;
-                }
-              }
-              if (pts > attachedMemberPoints) pts = attachedMemberPoints;
-              if (pts < 0) pts = 0;
-              pointsToRedeem = attachedMemberId.isEmpty() ? 0 : pts;
-              updateMemberButtonVisibility();
-              renderCart();
-              return true;
-            },
-            null);
+    return Math.max(0, cartSubtotal() - discountBaht);
   }
 
   private void showDiscountDialog() {
@@ -3081,9 +2842,6 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
     final double changeForCustomer =
         PaymentMethods.isCash(method) ? Math.max(0, cashReceived - cartTotal()) : 0;
     boolean autoPrint = shop == null || shop.optBoolean("autoPrintReceipt", true);
-    final String memberIdSnap = attachedMemberId;
-    final String memberPhoneSnap = attachedMemberPhone;
-    final int redeemSnap = pointsToRedeem;
     saleSync.enqueueSale(
         this,
         snapshot,
@@ -3091,9 +2849,6 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
         cashReceived,
         disc,
         transferRef,
-        memberIdSnap,
-        memberPhoneSnap,
-        redeemSnap,
         shop,
         autoPrint,
         new SaleSync.SaleCallback() {
@@ -3117,7 +2872,6 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
                             }
                             cart.clear();
                             discountBaht = 0;
-                            clearAttachedMember();
                             draftCartCode = "";
                             renderCartViewsOnly();
                             if (menu != null) renderMenu();

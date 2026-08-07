@@ -582,34 +582,6 @@ public final class SaleSync {
             JSONObject shop,
             boolean autoPrint,
             SaleCallback callback) {
-        enqueueSale(
-                context,
-                lines,
-                paymentMethod,
-                cashReceived,
-                discountBaht,
-                transferRef,
-                "",
-                "",
-                0,
-                shop,
-                autoPrint,
-                callback);
-    }
-
-    public void enqueueSale(
-            Context context,
-            List<MenuModels.CartLine> lines,
-            String paymentMethod,
-            double cashReceived,
-            double discountBaht,
-            String transferRef,
-            String memberId,
-            String memberPhone,
-            int pointsToRedeem,
-            JSONObject shop,
-            boolean autoPrint,
-            SaleCallback callback) {
         Context app = context.getApplicationContext();
         final String method = PaymentMethods.normalize(paymentMethod);
         executor.execute(
@@ -632,14 +604,7 @@ public final class SaleSync {
                             lineArr.put(o);
                             subtotal += line.lineTotal();
                         }
-                        // Redeem baht is applied server-side from pointsToRedeem (not in discountBaht).
-                        double redeemExtra = 0;
-                        if (pointsToRedeem > 0 && memberId != null && !memberId.trim().isEmpty()) {
-                            int per =
-                                    shop != null ? shop.optInt("membersPointsPerBahtRedeem", 1) : 1;
-                            if (per > 0) redeemExtra = Math.floor(pointsToRedeem / (double) per);
-                        }
-                        double total = Math.max(0, subtotal - discountBaht - redeemExtra);
+                        double total = Math.max(0, subtotal - discountBaht);
                         JSONObject payload = new JSONObject();
                         payload.put("clientMutationId", mutationId);
                         payload.put("installId", DeviceIdentity.getOrCreateInstallId(app));
@@ -653,15 +618,6 @@ public final class SaleSync {
                                 && transferRef != null
                                 && !transferRef.trim().isEmpty()) {
                             payload.put("transferRef", transferRef.trim());
-                        }
-                        if (memberId != null && !memberId.trim().isEmpty()) {
-                            payload.put("memberId", memberId.trim());
-                            if (memberPhone != null && !memberPhone.trim().isEmpty()) {
-                                payload.put("memberPhone", memberPhone.trim());
-                            }
-                            if (pointsToRedeem > 0) {
-                                payload.put("pointsToRedeem", pointsToRedeem);
-                            }
                         }
                         payload.put("discountBaht", discountBaht);
                         payload.put("subtotal", subtotal);
