@@ -1093,6 +1093,18 @@ body.modal-open .main-panel {
   color: #4a6356;
 }
 
+.claim-value-note-steps {
+  margin: 0.4rem 0 0;
+  padding: 0 0 0 1.15rem;
+  font-size: 0.86rem;
+  color: #4a6356;
+  line-height: 1.45;
+}
+
+.claim-value-note-steps li {
+  margin: 0.1rem 0;
+}
+
 .claim-value-note strong {
   color: #2f6b4f;
   font-weight: 700;
