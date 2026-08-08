@@ -1,18 +1,11 @@
 import QRCode from "qrcode";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import {
-  GoogleAuthProvider,
-  signInWithPopup,
-  type User,
-} from "firebase/auth";
-import {
-  mapFirebaseAuthError,
-  shouldUseGoogleAuthBridge,
-  startGoogleAuthBridge,
-} from "./auth";
 import { getDb, getFirebaseAuth } from "./firebase";
+import { signInMemberWithGoogle } from "./member-auth";
 import { getMemberSettings, pointsFromReceiptClaim } from "./members";
 import { POS_SALES_COL } from "./pos-sales";
+
+export { signInMemberWithGoogle };
 
 export const PUBLIC_RECEIPT_CLAIM_PREVIEW_URL =
   "https://asia-southeast1-mypeer-501909.cloudfunctions.net/publicReceiptClaimPreview";
@@ -230,34 +223,6 @@ async function currentIdToken(): Promise<string> {
   const user = getFirebaseAuth().currentUser;
   if (!user) throw new Error("ต้องเข้าสู่ระบบก่อน");
   return user.getIdToken(true);
-}
-
-/**
- * Google for /claim and /me.
- * On production hosts: redirect through firebaseapp auth bridge (popup fails in LINE/WebView
- * with auth/argument-error). Returns null when navigating away.
- */
-function memberGoogleReturnUrl(): string {
-  if (typeof window === "undefined") return "https://telltea-shop.web.app/me/";
-  const url = new URL(window.location.href);
-  url.hash = "";
-  url.searchParams.delete("ticket");
-  return url.toString();
-}
-
-export async function signInMemberWithGoogle(): Promise<User | null> {
-  if (shouldUseGoogleAuthBridge()) {
-    startGoogleAuthBridge(memberGoogleReturnUrl());
-    return null;
-  }
-  try {
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: "select_account" });
-    const cred = await signInWithPopup(getFirebaseAuth(), provider);
-    return cred.user;
-  } catch (err) {
-    throw new Error(mapFirebaseAuthError(err));
-  }
 }
 
 export async function lookupReceiptClaimAuth(input: {

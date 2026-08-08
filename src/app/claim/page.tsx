@@ -10,13 +10,16 @@ import {
   sendLinkPhoneOtp,
   sendPhoneOtp,
 } from "@/lib/phone-auth";
-import { completeGoogleAuthBridgeFromUrl, mapFirebaseAuthError } from "@/lib/auth";
+import {
+  completeMemberGoogleRedirect,
+  mapFirebaseAuthError,
+  signInMemberWithGoogle,
+} from "@/lib/member-auth";
 import {
   claimBlockedTitle,
   claimErrorLabel,
   fetchReceiptClaimPreview,
   lookupReceiptClaimAuth,
-  signInMemberWithGoogle,
   submitReceiptClaim,
   type ReceiptClaimAuthLookup,
   type ReceiptClaimPreview,
@@ -53,7 +56,7 @@ function ClaimForm() {
   const [confirmation, setConfirmation] = useState<ConfirmationResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showPhoneAlt, setShowPhoneAlt] = useState(false);
+  const [showPhoneAlt, setShowPhoneAlt] = useState(true);
   /** auth = phone-only login · link_claim = first-time Google→phone OTP then claim */
   const [otpPurpose, setOtpPurpose] = useState<"auth" | "link_claim">("auth");
   const [popupOpen, setPopupOpen] = useState(false);
@@ -78,11 +81,11 @@ function ClaimForm() {
       setBusy(true);
       setError(null);
       try {
-        // Return from Google auth bridge (?ticket=) — finish session before UI.
+        // Same-origin Google redirect result (TellTea-owned — not P-Note bridge).
         try {
-          const bridged = await completeGoogleAuthBridgeFromUrl();
+          const redirected = await completeMemberGoogleRedirect();
           if (cancelled) return;
-          if (bridged) {
+          if (redirected) {
             const data = await fetchReceiptClaimPreview(saleId, token);
             if (cancelled) return;
             setPreview(data);
@@ -262,7 +265,7 @@ function ClaimForm() {
     setError(null);
     try {
       const user = await signInMemberWithGoogle();
-      if (!user) return; // redirected to auth bridge
+      if (!user) return; // redirected (same-origin Google)
       await afterSignedIn();
     } catch (err) {
       setError(mapFirebaseAuthError(err));
@@ -427,32 +430,16 @@ function ClaimForm() {
         {step === "auth" ? (
           <div className="join-form">
             <p className="muted" style={{ marginTop: 0 }}>
-              สมาชิกอยู่แล้วหรือสมัครใหม่ — เข้าแล้วรับแต้มจากบิลนี้ได้
+              ใช้เบอร์มือถือไทยรับรหัส — หรือเข้าด้วย Google (เปิดใน Chrome/Safari)
             </p>
-            <button
-              type="button"
-              className="primary-btn claim-google-btn"
-              disabled={busy}
-              onClick={() => void onGoogle()}
-            >
-              {busy ? "แป๊บหนึ่ง..." : "เข้าด้วย Google"}
-            </button>
-            {!showPhoneAlt ? (
-              <button
-                type="button"
-                className="claim-phone-link"
-                disabled={busy}
-                onClick={() => setShowPhoneAlt(true)}
-              >
-                ใช้เบอร์แทน
-              </button>
-            ) : (
+            {showPhoneAlt ? (
               <form onSubmit={onSendOtp} className="join-form" style={{ marginTop: 0 }}>
                 <label>
-                  <span>เบอร์โทร</span>
+                  <span>เบอร์มือถือ (06 / 08 / 09)</span>
                   <input
                     type="tel"
                     inputMode="tel"
+                    autoComplete="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     required
@@ -460,11 +447,27 @@ function ClaimForm() {
                     placeholder="08x-xxx-xxxx"
                   />
                 </label>
-                <button type="submit" className="ghost-btn" disabled={busy}>
-                  {busy ? "กำลังส่ง..." : "ส่งรหัส"}
+                <button type="submit" className="primary-btn" disabled={busy}>
+                  {busy ? "กำลังส่ง..." : "ส่งรหัสไปเบอร์นี้"}
                 </button>
               </form>
-            )}
+            ) : null}
+            <button
+              type="button"
+              className={showPhoneAlt ? "ghost-btn" : "primary-btn claim-google-btn"}
+              disabled={busy}
+              onClick={() => void onGoogle()}
+            >
+              {busy ? "แป๊บหนึ่ง..." : "เข้าด้วย Google"}
+            </button>
+            <button
+              type="button"
+              className="claim-phone-link"
+              disabled={busy}
+              onClick={() => setShowPhoneAlt((v) => !v)}
+            >
+              {showPhoneAlt ? "ซ่อนฟอร์มเบอร์" : "ใช้เบอร์แทน"}
+            </button>
             {error ? <p className="join-error">{error}</p> : null}
           </div>
         ) : null}

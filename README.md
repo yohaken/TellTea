@@ -31,15 +31,18 @@
 
 ## ล็อกอินมือถือ
 
-TellTea ใช้ **auth bridge** ถาวรบน  
-`https://mypeer-501909.firebaseapp.com/telltea-auth.html`
+### สมาชิก (`/claim`, `/me`) — TellTea เอง
+- **เบอร์มือถือไทย + OTP** เป็นทางหลัก (06/08/09)
+- **Google** ใช้ Firebase `signInWithRedirect` บน `telltea-shop.web.app` (same-origin)
+- **ไม่พึ่ง** P-Note / `telltea-auth.html` / `loginTickets` สำหรับสมาชิก
+- โค้ด: `src/lib/member-auth.ts` · `src/lib/phone-auth.ts`
 
-OAuth จบที่ firebaseapp.com (redirect URI ที่ Google รับอยู่แล้ว) แล้วส่ง **ticket สั้นๆ**
-กลับมา TellTea — ไม่ยัด Google ID token ยาวๆ ใน URL (มือถือตัด hash บ่อย)
+เปิดด้วย **Safari / Chrome** — LINE / Facebook in-app browser มักพัง OAuth/reCAPTCHA
 
-เปิดด้วย **Safari / Chrome** โดยตรง — หลีกเลี่ยง LINE / Facebook in-app browser
-
-ไฟล์ bridge อยู่ใน repo P-Note (`frontend/telltea-auth.html`)
+### พนักงาน (หลังร้าน `/login`)
+ยังใช้ **auth bridge** บน  
+`https://mypeer-501909.firebaseapp.com/telltea-auth.html`  
+(ไฟล์อยู่ใน repo P-Note `frontend/telltea-auth.html` — คนละเส้นกับสมาชิก)
 
 ### โปรเจกต์ร่วม (TaxTag ฯลฯ)
 
