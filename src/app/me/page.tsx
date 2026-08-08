@@ -2,14 +2,13 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import type { ConfirmationResult } from "firebase/auth";
-import { completeGoogleAuthBridgeFromUrl, mapFirebaseAuthError } from "@/lib/auth";
-import { confirmPhoneOtp, resetPhoneRecaptcha, sendPhoneOtp } from "@/lib/phone-auth";
 import {
-  claimErrorLabel,
-  fetchMemberMe,
+  completeMemberGoogleRedirect,
+  mapFirebaseAuthError,
   signInMemberWithGoogle,
-  type MemberMeResult,
-} from "@/lib/receipt-claim";
+} from "@/lib/member-auth";
+import { confirmPhoneOtp, resetPhoneRecaptcha, sendPhoneOtp } from "@/lib/phone-auth";
+import { claimErrorLabel, fetchMemberMe, type MemberMeResult } from "@/lib/receipt-claim";
 
 type Step = "auth" | "phone" | "otp" | "card";
 
@@ -48,8 +47,8 @@ export default function MemberMePage() {
     let cancelled = false;
     (async () => {
       try {
-        const bridged = await completeGoogleAuthBridgeFromUrl();
-        if (cancelled || !bridged) return;
+        const redirected = await completeMemberGoogleRedirect();
+        if (cancelled || !redirected) return;
         await loadMe();
       } catch (err) {
         if (!cancelled) setError(mapFirebaseAuthError(err));
@@ -109,25 +108,25 @@ export default function MemberMePage() {
       <div className="join-card">
         <p className="join-brand">TellTea</p>
         <h1>แต้มของฉัน</h1>
-        <p className="muted">เข้าด้วย Google หรือเบอร์ก็ได้</p>
+        <p className="muted">ใช้เบอร์มือถือไทย หรือ Google (Chrome/Safari)</p>
 
         {step === "auth" ? (
           <div className="join-form">
             <button
               type="button"
-              className="primary-btn claim-google-btn"
+              className="primary-btn"
+              disabled={busy}
+              onClick={() => setStep("phone")}
+            >
+              เข้าด้วยเบอร์
+            </button>
+            <button
+              type="button"
+              className="ghost-btn claim-google-btn"
               disabled={busy}
               onClick={() => void onGoogle()}
             >
               {busy ? "แป๊บหนึ่ง..." : "เข้าด้วย Google"}
-            </button>
-            <button
-              type="button"
-              className="claim-phone-link"
-              disabled={busy}
-              onClick={() => setStep("phone")}
-            >
-              ใช้เบอร์แทน
             </button>
             {error ? <p className="join-error">{error}</p> : null}
           </div>
@@ -136,10 +135,11 @@ export default function MemberMePage() {
         {step === "phone" ? (
           <form onSubmit={onSendOtp} className="join-form">
             <label>
-              <span>เบอร์โทร</span>
+              <span>เบอร์มือถือ (06 / 08 / 09)</span>
               <input
                 type="tel"
                 inputMode="tel"
+                autoComplete="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 required
@@ -153,7 +153,7 @@ export default function MemberMePage() {
             </button>
             <button
               type="button"
-              className="ghost-btn"
+              className="claim-phone-link"
               disabled={busy}
               onClick={() => setStep("auth")}
             >
@@ -190,13 +190,9 @@ export default function MemberMePage() {
             <p>
               สวัสดี <strong>{me.member.displayName}</strong>
             </p>
-            <p className="muted">{me.member.phoneDisplay}</p>
-            <p className="claim-success-points" style={{ marginTop: "0.75rem" }}>
-              <strong>{me.member.pointsBalance}</strong>
-            </p>
-            <p className="muted">แต้มที่มี</p>
-            <p className="muted" style={{ marginTop: "0.5rem" }}>
-              สะสมมาแล้ว {me.member.lifetimePointsEarned ?? 0}
+            <p className="muted">บัตร {me.member.cardNo}</p>
+            <p>
+              แต้มคงเหลือ <strong>{me.member.pointsBalance}</strong>
             </p>
           </div>
         ) : null}
