@@ -108,7 +108,7 @@ public final class SunmiInnerPrinter {
     String afterRaw = safe.substring(idx + marker.length());
     if (afterRaw.startsWith("\n")) afterRaw = afterRaw.substring(1);
     // Peel invite (bold markers + space-padded center) out of after — print centered separately.
-    String afterRest = peelClaimInviteLine(afterRaw);
+    String afterRest = EscPos.peelClaimInviteLine(afterRaw);
     String after = EscPos.stripBoldMarkers(afterRest);
     try {
       SunmiPrinterService svc = ensureService(context);
@@ -137,11 +137,18 @@ public final class SunmiInnerPrinter {
         }
         PrinterTransport.Result qrRes = printBitmapOnce(svc, qr);
         if (!qrRes.ok) return qrRes;
-        // Advance past the bitmap band before any invite/footer text.
+        // Advance past the bitmap band. printBitmap leaves the cursor on the same band —
+        // without a wrap, the next printText sits to the right of the QR (real slip bug).
+        boolean wrapped = false;
         try {
           svc.lineWrap(1, null);
+          wrapped = true;
         } catch (Exception ignored) {
-          /* optional */
+          /* fall through to printText feed */
+        }
+        if (!wrapped) {
+          PrinterTransport.Result feed = printTextOnce(svc, "\n");
+          if (!feed.ok) return feed;
         }
       }
       // Invite: separate centered call (not space-padded beside QR). Bold best-effort.
@@ -177,22 +184,6 @@ public final class SunmiInnerPrinter {
       String msg = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
       return new PrinterTransport.Result(false, msg);
     }
-  }
-
-  /**
-   * Drop the first body line that contains {@link ReceiptFormBuilder#CLAIM_QR_INVITE} (and its
-   * trailing newline) so Sunmi can print the invite via centered {@code printText} instead of
-   * reusing space-padded {@link ReceiptFormBuilder#center} text from {@code after}.
-   */
-  static String peelClaimInviteLine(String after) {
-    if (after == null || after.isEmpty()) return "";
-    String invite = ReceiptFormBuilder.CLAIM_QR_INVITE;
-    int nl = after.indexOf('\n');
-    String first = nl < 0 ? after : after.substring(0, nl);
-    if (EscPos.stripBoldMarkers(first).contains(invite)) {
-      return nl < 0 ? "" : after.substring(nl + 1);
-    }
-    return after;
   }
 
   private static PrinterTransport.Result printBitmapOnce(SunmiPrinterService svc, Bitmap bmp)

@@ -83,12 +83,37 @@ public final class EscPos {
       if (after.startsWith("\n")) after = after.substring(1);
       appendTextWithBold(parts, before);
       appendClaimQr(parts, url);
+      // Native Esc/POS QR advances the band; space-padded invite in after stacks under it.
       appendTextWithBold(parts, after);
     }
     if (!safe.endsWith("\n")) parts.add(text("\n"));
     parts.add(text("\n\n"));
     parts.add(new byte[] {0x1D, 0x56, 0x00}); // full cut
     return concat(parts);
+  }
+
+  /**
+   * Drop the first body line that contains {@link ReceiptFormBuilder#CLAIM_QR_INVITE} so the
+   * invite can be re-emitted centered under the QR (not as space-padded text beside it).
+   */
+  static String peelClaimInviteLine(String after) {
+    if (after == null || after.isEmpty()) return "";
+    String invite = ReceiptFormBuilder.CLAIM_QR_INVITE;
+    int pos = 0;
+    while (pos < after.length()) {
+      int nl = after.indexOf('\n', pos);
+      String line = nl < 0 ? after.substring(pos) : after.substring(pos, nl);
+      String plain = stripBoldMarkers(line).trim();
+      if (plain.isEmpty()) {
+        pos = nl < 0 ? after.length() : nl + 1;
+        continue;
+      }
+      if (plain.contains(invite)) {
+        return nl < 0 ? "" : after.substring(nl + 1);
+      }
+      return after;
+    }
+    return "";
   }
 
   /** Esc/POS QR Code: Model 2 · module size 4 · ECC M — compact on 58mm. */

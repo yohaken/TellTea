@@ -22,6 +22,9 @@ assert.match(esc, /appendClaimQr/);
 assert.match(esc, /documentReceipt\(String body, String claimUrl\)/);
 assert.match(esc, /0x31, 0x43, 0x04/);
 assert.match(esc, /0x1D, 0x28, 0x6B/);
+assert.match(esc, /static String peelClaimInviteLine/);
+// Esc/POS QR already advances paper — keep invite in `after` (no double print).
+assert.match(esc, /appendClaimQr\(parts, url\);[\s\S]{0,120}appendTextWithBold\(parts, after\)/);
 
 const sunmi = read("npos-telltea/app/src/main/java/app/telltea/npos/printer/SunmiInnerPrinter.java");
 assert.match(sunmi, /printPlainWithClaimQr/);
@@ -29,8 +32,9 @@ assert.match(sunmi, /printBitmap/);
 assert.match(sunmi, /QrBitmaps/);
 // Bitmap must lineWrap before invite — otherwise Thai sits beside QR on the same band.
 assert.match(sunmi, /printBitmapOnce[\s\S]*lineWrap\(1/);
-assert.match(sunmi, /peelClaimInviteLine/);
+assert.match(sunmi, /EscPos\.peelClaimInviteLine/);
 assert.match(sunmi, /CLAIM_QR_INVITE \+ "\\n"/);
+assert.match(sunmi, /printTextOnce\(svc, "\\n"\)/);
 
 const saleSync = read("npos-telltea/app/src/main/java/app/telltea/npos/sell/SaleSync.java");
 assert.match(saleSync, /membersReceiptClaimEnabled/);
