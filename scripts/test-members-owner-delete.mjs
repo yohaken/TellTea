@@ -35,6 +35,6 @@ const claim = read("src/lib/receipt-claim.ts");
 assert.match(claim, /deleted:\s*"สมาชิกนี้ถูกลบแล้ว"/);
 
 const version = read("src/lib/version.ts");
-assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 758);
+assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 759);
 
 console.log("OK test-members-owner-delete");
