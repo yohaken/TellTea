@@ -84,8 +84,15 @@ public final class SunmiInnerPrinter {
   }
 
   /**
-   * Sale slip with claim QR — text → bitmap QR → rest. Esc/POS QR bytes are not used on InnerPrinter
-   * (plain UTF path strips them).
+   * Sale slip with claim QR — text → bitmap QR → lineWrap → invite → rest.
+   *
+   * <p>Esc/POS QR bytes are not used on InnerPrinter (plain UTF path strips them).
+   *
+   * <p><b>Layout:</b> {@code printBitmap} does not advance the paper band. Printing the
+   * space-padded invite from {@link ReceiptFormBuilder} immediately after the bitmap puts Thai
+   * text on the <em>same</em> vertical band (QR left, invite right) and makes the centering
+   * margin look like a large blank before the QR. Always {@code lineWrap} after the bitmap, then
+   * print invite as its own centered {@code printText} (not as padded {@code after}).
    */
   public static PrinterTransport.Result printPlainWithClaimQr(
       Context context, String body, String claimUrl) {
@@ -98,8 +105,11 @@ public final class SunmiInnerPrinter {
       return printPlain(context, EscPos.stripBoldMarkers(safe));
     }
     String before = EscPos.stripBoldMarkers(safe.substring(0, idx));
-    String after = EscPos.stripBoldMarkers(safe.substring(idx + marker.length()));
-    if (after.startsWith("\n")) after = after.substring(1);
+    String afterRaw = safe.substring(idx + marker.length());
+    if (afterRaw.startsWith("\n")) afterRaw = afterRaw.substring(1);
+    // Peel invite (bold markers + space-padded center) out of after — print centered separately.
+    String afterRest = peelClaimInviteLine(afterRaw);
+    String after = EscPos.stripBoldMarkers(afterRest);
     try {
       SunmiPrinterService svc = ensureService(context);
       if (svc == null) {
@@ -126,12 +136,29 @@ public final class SunmiInnerPrinter {
           /* optional */
         }
         PrinterTransport.Result qrRes = printBitmapOnce(svc, qr);
+        if (!qrRes.ok) return qrRes;
+        // Advance past the bitmap band before any invite/footer text.
         try {
-          svc.setAlignment(0, null);
+          svc.lineWrap(1, null);
         } catch (Exception ignored) {
           /* optional */
         }
-        if (!qrRes.ok) return qrRes;
+      }
+      // Invite: separate centered call (not space-padded beside QR). Bold best-effort.
+      try {
+        svc.setAlignment(1, null);
+      } catch (Exception ignored) {
+        /* optional */
+      }
+      sendEscE(svc, true);
+      PrinterTransport.Result inviteRes =
+          printTextOnce(svc, ReceiptFormBuilder.CLAIM_QR_INVITE + "\n");
+      sendEscE(svc, false);
+      if (!inviteRes.ok) return inviteRes;
+      try {
+        svc.setAlignment(0, null);
+      } catch (Exception ignored) {
+        /* optional */
       }
       if (!after.isEmpty()) {
         PrinterTransport.Result r = printTextOnce(svc, after.endsWith("\n") ? after : after + "\n");
@@ -150,6 +177,22 @@ public final class SunmiInnerPrinter {
       String msg = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
       return new PrinterTransport.Result(false, msg);
     }
+  }
+
+  /**
+   * Drop the first body line that contains {@link ReceiptFormBuilder#CLAIM_QR_INVITE} (and its
+   * trailing newline) so Sunmi can print the invite via centered {@code printText} instead of
+   * reusing space-padded {@link ReceiptFormBuilder#center} text from {@code after}.
+   */
+  static String peelClaimInviteLine(String after) {
+    if (after == null || after.isEmpty()) return "";
+    String invite = ReceiptFormBuilder.CLAIM_QR_INVITE;
+    int nl = after.indexOf('\n');
+    String first = nl < 0 ? after : after.substring(0, nl);
+    if (EscPos.stripBoldMarkers(first).contains(invite)) {
+      return nl < 0 ? "" : after.substring(nl + 1);
+    }
+    return after;
   }
 
   private static PrinterTransport.Result printBitmapOnce(SunmiPrinterService svc, Bitmap bmp)
