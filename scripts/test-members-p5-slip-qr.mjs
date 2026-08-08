@@ -27,19 +27,18 @@ assert.match(esc, /static String peelClaimInviteLine/);
 assert.match(esc, /appendClaimQr\(parts, url\);[\s\S]{0,120}appendTextWithBold\(parts, after\)/);
 
 const sunmi = read("npos-telltea/app/src/main/java/app/telltea/npos/printer/SunmiInnerPrinter.java");
-assert.match(sunmi, /printPlainWithClaimQr/);
+assert.match(sunmi, /printSlip/);
+assert.match(sunmi, /printColumnsString/);
 assert.match(sunmi, /printBitmap/);
 assert.match(sunmi, /QrBitmaps/);
-// Bitmap must lineWrap before invite — otherwise Thai sits beside QR on the same band.
 assert.match(sunmi, /printBitmapOnce[\s\S]*lineWrap\(1/);
-assert.match(sunmi, /EscPos\.peelClaimInviteLine/);
-assert.match(sunmi, /CLAIM_QR_INVITE \+ "\\n"/);
-assert.match(sunmi, /printTextOnce\(svc, "\\n"\)/);
 
 const saleSync = read("npos-telltea/app/src/main/java/app/telltea/npos/sell/SaleSync.java");
 assert.match(saleSync, /membersReceiptClaimEnabled/);
 assert.match(saleSync, /deferPaperForQr|deferQr/);
 assert.match(saleSync, /claimUrl/);
+assert.match(saleSync, /SunmiInnerPrinter\.printSlip/);
+assert.match(saleSync, /ReceiptFormBuilder\.buildLines/);
 assert.match(saleSync, /kickDrawerOnly/);
 assert.match(saleSync, /memberName/);
 
@@ -59,23 +58,23 @@ assert.match(nposSell, /memberName: body\.memberName/);
 
 const gradle = read("npos-telltea/app/build.gradle");
 const ver = gradle.match(/versionCode\s+(\d+)/);
-assert.ok(ver && Number(ver[1]) >= 142, "versionCode >= 142");
+assert.ok(ver && Number(ver[1]) >= 143, "versionCode >= 143");
 
 const apkPin = read("src/lib/npos-apk-release.ts");
-assert.ok(Number(apkPin.match(/NPOS_SYSTEM_VERSION_CODE = (\d+)/)[1]) >= 142);
+assert.ok(Number(apkPin.match(/NPOS_SYSTEM_VERSION_CODE = (\d+)/)[1]) >= 143);
 
 const whats = read("npos-telltea/app/src/main/java/app/telltea/npos/update/WhatsNewCatalog.java");
-assert.match(whats, /versionCode == 142/);
+assert.match(whats, /versionCode == 143/);
 
 const checklist = read("docs/npos-whats-new-checklist.md");
-assert.match(checklist, /142/);
+assert.match(checklist, /143/);
 
 const phases = read("docs/members-round-phases.md");
 assert.match(phases, /P5/);
 
 const appBuild = Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)[1]);
-assert.ok(appBuild >= 748, "APP_BUILD >= 748");
+assert.ok(appBuild >= 751, "APP_BUILD >= 751");
 const posBuild = Number(read("src/lib/pos-version.ts").match(/POS_BUILD = (\d+)/)[1]);
-assert.ok(posBuild >= 195, "POS_BUILD >= 195");
+assert.ok(posBuild >= 196, "POS_BUILD >= 196");
 
 console.log("OK test-members-p5-slip-qr");

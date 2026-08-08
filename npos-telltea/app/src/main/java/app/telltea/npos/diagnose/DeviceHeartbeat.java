@@ -192,6 +192,8 @@ public final class DeviceHeartbeat {
         body.put("printerReady", printerReady);
         body.put("drawerReady", printerReady);
         body.put("printerLabel", PrinterPrefs.label(context));
+        body.put("paperWidthMm", PrinterPrefs.getPaperWidthMm(context));
+        body.put("receiptCols", PrinterPrefs.receiptCols(context));
         body.put("permissionsOk", PermissionBootstrap.allCriticalGranted(context));
         body.put("permissionsStatus", PermissionBootstrap.statusLine(context));
         int[] outbox = app.telltea.npos.sell.SaleSync.outboxCounts(context);

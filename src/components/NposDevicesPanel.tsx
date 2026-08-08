@@ -175,6 +175,8 @@ function DeviceCard({
       <p className="muted npos-diagnose-id" title={equip.title}>
         อุปกรณ์ {equip.short}
         {d.printerLabel ? ` · ${d.printerLabel}` : ""}
+        {d.paperWidthMm ? ` · กระดาษ ${d.paperWidthMm} มม.` : ""}
+        {d.receiptCols ? ` (${d.receiptCols} คอลัมน์)` : ""}
         {" · จอลูกค้า "}
         {d.customerDisplay || "—"} · แคป{" "}
         {d.lastCaptureAt ? formatSeen(d.lastCaptureAt) : "ยังไม่มี"}
