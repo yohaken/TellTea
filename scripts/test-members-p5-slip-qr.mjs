@@ -58,23 +58,23 @@ assert.match(nposSell, /memberName: body\.memberName/);
 
 const gradle = read("npos-telltea/app/build.gradle");
 const ver = gradle.match(/versionCode\s+(\d+)/);
-assert.ok(ver && Number(ver[1]) >= 144, "versionCode >= 144");
+assert.ok(ver && Number(ver[1]) >= 145, "versionCode >= 145");
 
 const apkPin = read("src/lib/npos-apk-release.ts");
-assert.ok(Number(apkPin.match(/NPOS_SYSTEM_VERSION_CODE = (\d+)/)[1]) >= 144);
+assert.ok(Number(apkPin.match(/NPOS_SYSTEM_VERSION_CODE = (\d+)/)[1]) >= 145);
 
 const whats = read("npos-telltea/app/src/main/java/app/telltea/npos/update/WhatsNewCatalog.java");
-assert.match(whats, /versionCode == 144/);
+assert.match(whats, /versionCode == 145/);
 
 const checklist = read("docs/npos-whats-new-checklist.md");
-assert.match(checklist, /144/);
+assert.match(checklist, /145/);
 
 const phases = read("docs/members-round-phases.md");
 assert.match(phases, /P5/);
 
 const appBuild = Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)[1]);
-assert.ok(appBuild >= 752, "APP_BUILD >= 752");
+assert.ok(appBuild >= 753, "APP_BUILD >= 753");
 const posBuild = Number(read("src/lib/pos-version.ts").match(/POS_BUILD = (\d+)/)[1]);
-assert.ok(posBuild >= 197, "POS_BUILD >= 197");
+assert.ok(posBuild >= 198, "POS_BUILD >= 198");
 
 console.log("OK test-members-p5-slip-qr");

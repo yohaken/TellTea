@@ -212,6 +212,7 @@
     "test:npos-sunmi-inner-printer": "node scripts/test-npos-sunmi-inner-printer.mjs",
     "test:npos-sunmi-fullwidth-slip": "node scripts/test-npos-sunmi-fullwidth-slip.mjs",
     "test:npos-sunmi-printer-release": "node scripts/test-npos-sunmi-printer-release.mjs",
+    "test:npos-sunmi-bitmap-slip": "node scripts/test-npos-sunmi-bitmap-slip.mjs",
     "test:npos-equip-status": "node scripts/test-npos-equip-status.mjs",
     "test:npos-bo-sessions-bulk-delete": "node scripts/test-npos-bo-sessions-bulk-delete.mjs"
   },

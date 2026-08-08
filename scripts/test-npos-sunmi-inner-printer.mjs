@@ -30,6 +30,8 @@ assert.match(bridge, /sendRAWData/);
 assert.match(bridge, /printText/);
 assert.match(bridge, /printPlain/);
 assert.match(bridge, /printSlip/);
+assert.match(bridge, /SunmiSlipBitmap/);
+assert.match(bridge, /printBitmapBands/);
 assert.match(bridge, /printPlainWithClaimQr/);
 assert.match(bridge, /printColumnsString/);
 assert.match(bridge, /syncPaperWidthFromPrinter/);

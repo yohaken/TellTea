@@ -16,6 +16,14 @@ public final class WhatsNewCatalog {
   private WhatsNewCatalog() {}
 
   public static List<WhatsNewSlide> slidesFor(int versionCode) {
+    if (versionCode == 145) {
+      List<WhatsNewSlide> slides = new ArrayList<>();
+      slides.add(
+          new WhatsNewSlide(
+              "สลิปเต็มความกว้างกระดาษจริง",
+              "พิมพ์เป็นภาพเต็มแผ่น 80mm · ราคาชิดขอบ · ไม่กระทบ LINE MAN"));
+      return slides;
+    }
     if (versionCode == 144) {
       List<WhatsNewSlide> slides = new ArrayList<>();
       slides.add(

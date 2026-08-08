@@ -88,14 +88,11 @@ public final class SunmiInnerPrinter {
   }
 
   /**
-   * Sale slip on InnerPrinter — full paper width via {@code printColumnsString} / alignment.
+   * Sale slip on InnerPrinter — full paper width via bitmap (384/576 px).
    *
-   * <p><b>Why not space-padded {@code printText}:</b> Sunmi UTF fonts are proportional. ASCII
-   * spaces and {@code -} are ~half a Thai glyph, so Esc/POS-style {@code pairRow}/{@code rule}
-   * leave a large empty right margin on D2s 80mm paper. Structured rows fix that.
-   *
-   * <p>Also syncs paper width from {@code getPrinterPaper()} (0=80mm, 1=58mm) and sizes claim QR
-   * to the printable pixel width (384 / 576).
+   * <p>Text+columns still leave a right gap on D2s because Sunmi fonts are proportional. Painting
+   * the slip onto the printable pixel width then {@code printBitmap} fills the band. Path is
+   * Sunmi-sale only; USB Esc/POS unchanged. Still {@link #releaseService} so LINE MAN is unaffected.
    */
   public static PrinterTransport.Result printSlip(
       Context context, java.util.List<ReceiptSlipLine> lines, String claimUrl) {
@@ -111,14 +108,21 @@ public final class SunmiInnerPrinter {
       }
       resetPrinterDefaults(svc);
       int paperMm = syncPaperWidthFromPrinter(context, svc);
-      int qrPx = paperMm == PrinterPrefs.PAPER_58 ? 220 : 300;
-      int ruleChars = paperMm == PrinterPrefs.PAPER_58 ? 22 : 32;
 
-      if (lines != null) {
-        for (ReceiptSlipLine line : lines) {
-          if (line == null) continue;
-          PrinterTransport.Result row = printSlipLine(svc, line, url, qrPx, ruleChars);
-          if (!row.ok) return row;
+      Bitmap slip = SunmiSlipBitmap.render(lines, url, paperMm);
+      if (slip != null) {
+        PrinterTransport.Result bmpRes = printBitmapBands(svc, slip);
+        if (!bmpRes.ok) return bmpRes;
+      } else {
+        // Fallback: structured columns (better than space-padded printText).
+        int qrPx = SunmiSlipBitmap.claimQrPx(paperMm);
+        int ruleChars = paperMm == PrinterPrefs.PAPER_58 ? 22 : 32;
+        if (lines != null) {
+          for (ReceiptSlipLine line : lines) {
+            if (line == null) continue;
+            PrinterTransport.Result row = printSlipLine(svc, line, url, qrPx, ruleChars);
+            if (!row.ok) return row;
+          }
         }
       }
 
@@ -139,6 +143,46 @@ public final class SunmiInnerPrinter {
     } finally {
       releaseService();
     }
+  }
+
+  /** Print tall slip as horizontal bands (Sunmi image size limits). */
+  private static PrinterTransport.Result printBitmapBands(SunmiPrinterService svc, Bitmap full)
+      throws Exception {
+    if (full == null) return new PrinterTransport.Result(true, "ok");
+    try {
+      svc.setAlignment(1, null);
+    } catch (Exception ignored) {
+      /* optional — full-width bitmap is already paper-wide */
+    }
+    final int maxBand = 1600;
+    int h = full.getHeight();
+    int w = full.getWidth();
+    int y = 0;
+    while (y < h) {
+      int bandH = Math.min(maxBand, h - y);
+      Bitmap band = bandH == h ? full : Bitmap.createBitmap(full, 0, y, w, bandH);
+      PrinterTransport.Result r = printBitmapOnce(svc, band);
+      if (band != full) band.recycle();
+      if (!r.ok) return r;
+      boolean wrapped = false;
+      try {
+        svc.lineWrap(1, null);
+        wrapped = true;
+      } catch (Exception ignored) {
+        /* optional */
+      }
+      if (!wrapped) {
+        PrinterTransport.Result feed = printTextOnce(svc, "\n");
+        if (!feed.ok) return feed;
+      }
+      y += bandH;
+    }
+    try {
+      svc.setAlignment(0, null);
+    } catch (Exception ignored) {
+      /* optional */
+    }
+    return new PrinterTransport.Result(true, "ok");
   }
 
   /**
