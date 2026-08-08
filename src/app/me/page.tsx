@@ -32,12 +32,12 @@ export default function MemberMePage() {
         return;
       }
       if (!data.found) {
-        setError("ยังไม่พบสมาชิกในเบอร์/บัญชีนี้ — สะสมแต้มจากสลิปก่อน");
+        setError("ยังไม่เจอสมาชิก · สแกน QR จากสลิปก่อนนะ");
         return;
       }
       setStep("card");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "โหลดไม่สำเร็จ");
+      setError(err instanceof Error ? err.message : "โหลดไม่สำเร็จ ลองใหม่นะ");
     } finally {
       setBusy(false);
     }
@@ -50,7 +50,7 @@ export default function MemberMePage() {
       await signInMemberWithGoogle();
       await loadMe();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "เข้า Google ไม่สำเร็จ");
+      setError(err instanceof Error ? err.message : "เข้า Google ไม่สำเร็จ ลองใหม่นะ");
       setBusy(false);
     }
   }
@@ -64,7 +64,7 @@ export default function MemberMePage() {
       setConfirmation(conf);
       setStep("otp");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "ส่ง OTP ไม่สำเร็จ");
+      setError(err instanceof Error ? err.message : "ส่งรหัสไม่สำเร็จ ลองใหม่นะ");
       resetPhoneRecaptcha();
     } finally {
       setBusy(false);
@@ -80,7 +80,7 @@ export default function MemberMePage() {
       await confirmPhoneOtp(confirmation, otp);
       await loadMe();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "ยืนยัน OTP ไม่สำเร็จ");
+      setError(err instanceof Error ? err.message : "รหัสไม่ถูก ลองใหม่นะ");
       resetPhoneRecaptcha();
       setBusy(false);
     }
@@ -90,8 +90,8 @@ export default function MemberMePage() {
     <main className="join-page">
       <div className="join-card">
         <p className="join-brand">TellTea</p>
-        <h1>ดูแต้มสมาชิก</h1>
-        <p className="muted">ต้องเข้าสู่ระบบ — ไม่แสดงแต้มจากเบอร์เปล่าๆ</p>
+        <h1>แต้มของฉัน</h1>
+        <p className="muted">เข้าด้วย Google หรือเบอร์ก็ได้</p>
 
         {step === "auth" ? (
           <div className="join-form">
@@ -101,7 +101,7 @@ export default function MemberMePage() {
               disabled={busy}
               onClick={() => void onGoogle()}
             >
-              {busy ? "กำลังเข้าสู่ระบบ..." : "เข้าด้วย Google"}
+              {busy ? "แป๊บหนึ่ง..." : "เข้าด้วย Google"}
             </button>
             <button
               type="button"
@@ -109,7 +109,7 @@ export default function MemberMePage() {
               disabled={busy}
               onClick={() => setStep("phone")}
             >
-              ใช้เบอร์ + OTP
+              ใช้เบอร์แทน
             </button>
             {error ? <p className="join-error">{error}</p> : null}
           </div>
@@ -131,7 +131,7 @@ export default function MemberMePage() {
             </label>
             {error ? <p className="join-error">{error}</p> : null}
             <button type="submit" className="primary-btn" disabled={busy}>
-              {busy ? "กำลังส่ง..." : "ส่ง OTP"}
+              {busy ? "กำลังส่ง..." : "ส่งรหัส"}
             </button>
             <button
               type="button"
@@ -146,9 +146,9 @@ export default function MemberMePage() {
 
         {step === "otp" ? (
           <form onSubmit={onConfirmOtp} className="join-form">
-            <p className="muted">ส่งรหัสไปที่ {phone}</p>
+            <p className="muted">ส่งรหัสไปที่ {phone} แล้ว</p>
             <label>
-              <span>รหัส OTP</span>
+              <span>รหัส 6 หลัก</span>
               <input
                 type="text"
                 inputMode="numeric"
@@ -157,11 +157,12 @@ export default function MemberMePage() {
                 onChange={(e) => setOtp(e.target.value)}
                 required
                 disabled={busy}
+                placeholder="••••••"
               />
             </label>
             {error ? <p className="join-error">{error}</p> : null}
             <button type="submit" className="primary-btn" disabled={busy}>
-              {busy ? "กำลังตรวจ..." : "ดูแต้ม"}
+              {busy ? "แป๊บหนึ่ง..." : "ดูแต้ม"}
             </button>
           </form>
         ) : null}
@@ -169,17 +170,15 @@ export default function MemberMePage() {
         {step === "card" && me?.member ? (
           <div className="join-done">
             <p>
-              <strong>{me.member.displayName}</strong>
+              สวัสดี <strong>{me.member.displayName}</strong>
             </p>
-            <p className="muted">
-              {me.member.phoneDisplay} · บัตร {me.member.cardNo}
-            </p>
+            <p className="muted">{me.member.phoneDisplay}</p>
             <p className="claim-success-points" style={{ marginTop: "0.75rem" }}>
               <strong>{me.member.pointsBalance}</strong>
             </p>
-            <p className="muted">แต้มคงเหลือ</p>
+            <p className="muted">แต้มที่มี</p>
             <p className="muted" style={{ marginTop: "0.5rem" }}>
-              สะสมรวม {me.member.lifetimePointsEarned ?? 0}
+              สะสมมาแล้ว {me.member.lifetimePointsEarned ?? 0}
             </p>
           </div>
         ) : null}

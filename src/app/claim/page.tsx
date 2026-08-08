@@ -36,7 +36,6 @@ function isAlreadyUsedError(code: string | undefined): boolean {
   return code === "already_claimed" || code === "already_earned";
 }
 
-
 function ClaimForm() {
   const params = useSearchParams();
   const saleId = useMemo(() => (params.get("s") || params.get("saleId") || "").trim(), [params]);
@@ -69,7 +68,7 @@ function ClaimForm() {
     async function load() {
       if (!saleId || !token) {
         setStep("blocked");
-        setError("ลิงก์ไม่ครบ — สแกน QR จากสลิปอีกครั้ง");
+        setError("ลิงก์ไม่ครบ สแกน QR จากสลิปอีกครั้งนะ");
         return;
       }
       setBusy(true);
@@ -97,7 +96,7 @@ function ClaimForm() {
       } catch {
         if (!cancelled) {
           setStep("blocked");
-          setError("เชื่อมต่อไม่ได้ ลองใหม่");
+          setError("เน็ตหลุด ลองใหม่นะ");
         }
       } finally {
         if (!cancelled) setBusy(false);
@@ -142,7 +141,7 @@ function ClaimForm() {
       return false;
     }
     setDone({
-      displayName: result.member?.displayName || name || phone || "สมาชิก",
+      displayName: result.member?.displayName || name || phone || "เพื่อน TellTea",
       cardNo: result.member?.cardNo || "—",
       points: typeof result.points === "number" ? result.points : 0,
       balance:
@@ -179,7 +178,7 @@ function ClaimForm() {
       // phone auth already on token but no member yet
       setStep("link_phone");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "ตรวจบัญชีไม่สำเร็จ");
+      setError(err instanceof Error ? err.message : "เช็คบัญชีไม่สำเร็จ ลองใหม่นะ");
     } finally {
       setBusy(false);
     }
@@ -192,7 +191,7 @@ function ClaimForm() {
       await signInMemberWithGoogle();
       await afterSignedIn();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "เข้า Google ไม่สำเร็จ");
+      setError(err instanceof Error ? err.message : "เข้า Google ไม่สำเร็จ ลองใหม่นะ");
       setBusy(false);
     }
   }
@@ -208,7 +207,7 @@ function ClaimForm() {
       setOtp("");
       setStep("otp");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "ส่ง OTP ไม่สำเร็จ");
+      setError(err instanceof Error ? err.message : "ส่งรหัสไม่สำเร็จ ลองใหม่นะ");
       resetPhoneRecaptcha();
     } finally {
       setBusy(false);
@@ -218,7 +217,7 @@ function ClaimForm() {
   async function onSendLinkPhoneOtp(e: FormEvent) {
     e.preventDefault();
     if (!pdpa) {
-      setError("กรุณายินยอมนโยบายข้อมูลส่วนบุคคล");
+      setError("กดยอมรับก่อนนะ");
       return;
     }
     setBusy(true);
@@ -242,7 +241,7 @@ function ClaimForm() {
       });
       applyDone(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "ส่ง OTP / สมัครไม่สำเร็จ");
+      setError(err instanceof Error ? err.message : "ส่งรหัสไม่สำเร็จ ลองใหม่นะ");
       resetPhoneRecaptcha();
     } finally {
       setBusy(false);
@@ -269,7 +268,7 @@ function ClaimForm() {
       }
       await afterSignedIn();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "ยืนยัน OTP ไม่สำเร็จ");
+      setError(err instanceof Error ? err.message : "รหัสไม่ถูก ลองใหม่นะ");
       resetPhoneRecaptcha();
     } finally {
       setBusy(false);
@@ -283,76 +282,67 @@ function ClaimForm() {
       const result = await submitReceiptClaim({ saleId, token });
       applyDone(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "เคลมไม่สำเร็จ");
+      setError(err instanceof Error ? err.message : "รับแต้มไม่สำเร็จ ลองใหม่นะ");
     } finally {
       setBusy(false);
     }
   }
 
   const pointsLabel = preview?.pointsPreview;
+  const showBillMeta = preview?.ok || step === "used" || step === "no_points";
 
   return (
     <main className="join-page">
       <div className="join-card">
         <p className="join-brand">TellTea</p>
-        <h1>สะสมแต้มจากสลิป</h1>
-        <p className="muted">Google ก่อน · ยืนยันเบอร์ด้วย OTP ครั้งแรก · QR ใช้ได้ครั้งเดียว</p>
-
-        {preview?.ok || step === "used" || step === "no_points" ? (
-          <p className="muted" style={{ marginTop: "0.75rem" }}>
-            บิล {preview?.billNo || "—"}
-            {typeof preview?.total === "number" ? ` · ยอดชำระ ${preview.total} บาท` : ""}
+        <h1>ได้แต้มจากบิลนี้</h1>
+        {showBillMeta ? (
+          <p className="muted claim-bill-meta">
             {typeof preview?.pointsPreview === "number" && step !== "no_points" ? (
               <>
-                {" "}
-                → <strong>{preview.pointsPreview}</strong> แต้ม
+                ได้ <strong>{preview.pointsPreview}</strong> แต้ม
+                {preview?.billNo ? ` · บิล ${preview.billNo}` : ""}
               </>
-            ) : null}
+            ) : (
+              <>
+                {preview?.billNo ? `บิล ${preview.billNo}` : "บิลนี้"}
+                {typeof preview?.total === "number" ? ` · ${preview.total} บาท` : ""}
+              </>
+            )}
           </p>
-        ) : null}
+        ) : (
+          <p className="muted">สแกนจากสลิป TellTea</p>
+        )}
 
         {step === "load" ? (
           <p className="muted" style={{ marginTop: "1rem" }}>
-            กำลังตรวจสอบลิงก์...
+            แป๊บหนึ่ง...
           </p>
         ) : null}
 
         {step === "used" ? (
           <div className="join-form claim-used">
-            <p className="claim-used-title">แต้มบิลนี้ใช้แล้ว</p>
-            <p className="muted">
-              QR ใบนี้รับแต้มไปแล้ว · สแกนซ้ำไม่ได้ · ดูยอดแต้มของคุณได้หลังเข้าสู่ระบบ
-            </p>
+            <p className="claim-used-title">ได้แต้มจากบิลนี้ไปแล้ว</p>
+            <p className="muted">QR ใบนี้ใช้แล้ว · ดูแต้มได้ทุกเมื่อ</p>
             <a className="primary-btn claim-used-cta" href="/me/">
               ดูแต้มของฉัน
             </a>
-            <p className="muted claim-me-hint">
-              หรือเปิด{" "}
-              <a href="/me/">telltea-shop.web.app/me</a>
-            </p>
           </div>
         ) : null}
 
         {step === "no_points" ? (
           <div className="join-form claim-used">
-            <p className="claim-used-title">บิลนี้ยังไม่มีแต้มให้รับ</p>
-            <p className="muted">
-              ยอดชำระยังไม่ถึงเกณฑ์สะสม หรือจ่ายด้วยแต้มครบแล้ว · QR
-              ยังใช้เข้าดูบัญชีสมาชิกได้
-            </p>
+            <p className="claim-used-title">บิลนี้ยังไม่มีแต้ม</p>
+            <p className="muted">อาจยังไม่ถึงยอดสะสม หรือใช้แต้มจ่ายไปแล้ว</p>
             <a className="primary-btn claim-used-cta" href="/me/">
-              ไปหน้าสมาชิก
+              ดูแต้มของฉัน
             </a>
-            <p className="muted claim-me-hint">
-              เข้าสู่ระบบที่{" "}
-              <a href="/me/">telltea-shop.web.app/me</a>
-            </p>
           </div>
         ) : null}
 
         {step === "blocked" ? (
           <p className="join-error" style={{ marginTop: "1rem" }}>
-            {error || "ลิงก์ใช้ไม่ได้"}
+            {error || "ลิงก์ใช้ไม่ได้แล้ว"}
           </p>
         ) : null}
 
@@ -364,7 +354,7 @@ function ClaimForm() {
               disabled={busy}
               onClick={() => void onGoogle()}
             >
-              {busy ? "กำลังเข้าสู่ระบบ..." : "ดำเนินการต่อด้วย Google"}
+              {busy ? "แป๊บหนึ่ง..." : "เข้าด้วย Google"}
             </button>
             {!showPhoneAlt ? (
               <button
@@ -373,7 +363,7 @@ function ClaimForm() {
                 disabled={busy}
                 onClick={() => setShowPhoneAlt(true)}
               >
-                ใช้เบอร์โทรแทน
+                ใช้เบอร์แทน
               </button>
             ) : (
               <form onSubmit={onSendOtp} className="join-form" style={{ marginTop: 0 }}>
@@ -390,27 +380,19 @@ function ClaimForm() {
                   />
                 </label>
                 <button type="submit" className="ghost-btn" disabled={busy}>
-                  {busy ? "กำลังส่ง..." : "ส่ง OTP"}
+                  {busy ? "กำลังส่ง..." : "ส่งรหัส"}
                 </button>
               </form>
             )}
             {error ? <p className="join-error">{error}</p> : null}
-            <p className="muted claim-me-hint">
-              ดูแต้มทีหลังที่{" "}
-              <a href="/me/">telltea-shop.web.app/me</a> (ต้องเข้าสู่ระบบ)
-            </p>
           </div>
         ) : null}
 
         {step === "otp" ? (
           <form onSubmit={onConfirmOtp} className="join-form">
-            <p className="muted">
-              {otpPurpose === "link_claim"
-                ? `ยืนยันเบอร์ครั้งแรก · ส่งรหัสไปที่ ${phone}`
-                : `ส่งรหัสไปที่ ${phone}`}
-            </p>
+            <p className="muted">ส่งรหัสไปที่ {phone} แล้ว</p>
             <label>
-              <span>รหัส OTP</span>
+              <span>รหัส 6 หลัก</span>
               <input
                 type="text"
                 inputMode="numeric"
@@ -419,16 +401,16 @@ function ClaimForm() {
                 onChange={(e) => setOtp(e.target.value)}
                 required
                 disabled={busy}
-                placeholder="6 หลัก"
+                placeholder="••••••"
               />
             </label>
             {error ? <p className="join-error">{error}</p> : null}
             <button type="submit" className="primary-btn" disabled={busy}>
               {busy
-                ? "กำลังตรวจ..."
+                ? "แป๊บหนึ่ง..."
                 : otpPurpose === "link_claim"
-                  ? "ยืนยัน OTP แล้วสมัคร"
-                  : "ยืนยัน OTP"}
+                  ? "รับแต้มเลย"
+                  : "ต่อไป"}
             </button>
           </form>
         ) : null}
@@ -436,12 +418,11 @@ function ClaimForm() {
         {step === "confirm" && authInfo?.member ? (
           <div className="join-form">
             <p>
-              รับ <strong>{pointsLabel ?? "—"}</strong> แต้ม เข้า
+              สวัสดี <strong>{authInfo.member.displayName}</strong>
             </p>
             <p>
-              <strong>{authInfo.member.displayName}</strong>
+              ได้ <strong>+{pointsLabel ?? "—"}</strong> แต้ม
             </p>
-            <p className="muted">บัตร {authInfo.member.cardNo}</p>
             {error ? <p className="join-error">{error}</p> : null}
             <button
               type="button"
@@ -449,7 +430,7 @@ function ClaimForm() {
               disabled={busy}
               onClick={() => void onClaimExisting()}
             >
-              {busy ? "กำลังเคลม..." : "ยืนยันรับแต้ม"}
+              {busy ? "แป๊บหนึ่ง..." : "รับแต้มเลย"}
             </button>
           </div>
         ) : null}
@@ -457,12 +438,11 @@ function ClaimForm() {
         {step === "link_phone" ? (
           <form onSubmit={onSendLinkPhoneOtp} className="join-form">
             <p className="muted">
-              {authInfo?.email
-                ? `บัญชี ${authInfo.email} · กรอกเบอร์แล้วยืนยัน OTP ครั้งแรก`
-                : "กรอกเบอร์แล้วยืนยัน OTP เพื่อสมัครครั้งแรก"}
+              {authInfo?.email ? `สวัสดี ${authInfo.email}` : "อีกนิดเดียว"}
+              {" · "}ใส่เบอร์เพื่อรับแต้ม
             </p>
             <label>
-              <span>เบอร์โทร *</span>
+              <span>เบอร์โทร</span>
               <input
                 type="tel"
                 inputMode="tel"
@@ -474,13 +454,13 @@ function ClaimForm() {
               />
             </label>
             <label>
-              <span>ชื่อเรียก</span>
+              <span>ชื่อเล่น (ไม่บังคับ)</span>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 disabled={busy}
-                placeholder="ชื่อเล่น"
+                placeholder="เรียกยังไงดี"
               />
             </label>
             <label className="claim-pdpa">
@@ -490,15 +470,15 @@ function ClaimForm() {
                 disabled={busy}
                 onChange={(e) => setPdpa(e.target.checked)}
               />
-              <span>ยินยอมให้ร้านเก็บเบอร์/ชื่อ/อีเมลเพื่อสะสมแต้ม</span>
+              <span>โอเค ให้ร้านเก็บเบอร์·ชื่อ·อีเมล เพื่อสะสมแต้ม</span>
             </label>
             {error ? <p className="join-error">{error}</p> : null}
             <button type="submit" className="primary-btn" disabled={busy || !pdpa}>
               {busy
                 ? "กำลังส่ง..."
                 : currentAuthHasVerifiedPhone()
-                  ? `สมัครและรับ ${pointsLabel ?? ""} แต้ม`
-                  : "ส่ง OTP ยืนยันเบอร์"}
+                  ? `รับ ${pointsLabel ?? ""} แต้มเลย`
+                  : "ส่งรหัสยืนยันเบอร์"}
             </button>
           </form>
         ) : null}
@@ -508,9 +488,11 @@ function ClaimForm() {
 
       {step === "done" && done && !popupOpen ? (
         <div className="join-done" style={{ marginTop: "1rem" }}>
-          <p>รับแต้มแล้ว · รวม <strong>{done.balance}</strong></p>
+          <p>
+            ได้แต้มแล้ว · รวม <strong>{done.balance}</strong>
+          </p>
           <p className="muted">
-            ดูแต้มทีหลังที่ <a href="/me/">/me</a>
+            <a href="/me/">ดูแต้มของฉัน</a>
           </p>
         </div>
       ) : null}
@@ -520,25 +502,28 @@ function ClaimForm() {
           <div className="claim-success-popup">
             <p className="claim-success-brand">TellTea</p>
             <p className="claim-success-title">
-              {done.isNew ? "สมัครและรับแต้มแล้ว" : "รับแต้มแล้ว"}
+              {done.isNew ? "สมัครแล้ว ได้แต้มเลย!" : "เย้ ได้แต้มแล้ว!"}
             </p>
             <p className="claim-success-points">
               +<strong>{done.points}</strong>
             </p>
-            <p className="muted">แต้มในบิลนี้</p>
             <p style={{ marginTop: "0.75rem" }}>
               รวมตอนนี้ <strong>{done.balance}</strong> แต้ม
             </p>
             <p className="muted" style={{ marginTop: "0.35rem" }}>
-              {done.displayName} · บัตร {done.cardNo}
+              {done.displayName}
             </p>
-            <p className="muted" style={{ marginTop: "0.75rem", fontSize: "0.85rem" }}>
-              QR ใบนี้ใช้แล้ว · ดูแต้มทีหลังที่ <a href="/me/">/me</a>
-            </p>
+            <a
+              className="primary-btn claim-used-cta"
+              href="/me/"
+              style={{ marginTop: "1rem" }}
+            >
+              ดูแต้มของฉัน
+            </a>
             <button
               type="button"
-              className="primary-btn"
-              style={{ marginTop: "1rem", width: "100%" }}
+              className="claim-phone-link"
+              style={{ marginTop: "0.35rem" }}
               onClick={() => setPopupOpen(false)}
             >
               ปิด
@@ -555,7 +540,7 @@ export default function ClaimPage() {
     <Suspense
       fallback={
         <main className="join-page">
-          <p className="muted">กำลังโหลด...</p>
+          <p className="muted">แป๊บหนึ่ง...</p>
         </main>
       }
     >

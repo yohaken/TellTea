@@ -24,15 +24,20 @@ assert.doesNotMatch(claimLib, /confirmExisting/);
 
 const claimPage = read("src/app/claim/page.tsx");
 assert.match(claimPage, /signInMemberWithGoogle|onGoogle/);
-assert.match(claimPage, /ดำเนินการต่อด้วย Google/);
-assert.match(claimPage, /ใช้เบอร์โทรแทน/);
+assert.match(claimPage, /เข้าด้วย Google/);
+assert.match(claimPage, /ใช้เบอร์แทน/);
+assert.match(claimPage, /ได้แต้มจากบิลนี้/);
+assert.match(claimPage, /รับแต้มเลย/);
+assert.match(claimPage, /เย้ ได้แต้มแล้ว|สมัครแล้ว ได้แต้มเลย/);
 assert.match(claimPage, /claim-success-popup|claim-success-overlay/);
 assert.match(claimPage, /sendPhoneOtp/);
 assert.match(claimPage, /sendLinkPhoneOtp/);
-assert.match(claimPage, /ส่ง OTP ยืนยันเบอร์/);
-assert.match(claimPage, /แต้มบิลนี้ใช้แล้ว/);
+assert.match(claimPage, /ส่งรหัสยืนยันเบอร์/);
+assert.match(claimPage, /ได้แต้มจากบิลนี้ไปแล้ว/);
 assert.match(claimPage, /ดูแต้มของฉัน/);
 assert.match(claimPage, /"used"/);
+assert.doesNotMatch(claimPage, /ดำเนินการต่อด้วย Google/);
+assert.doesNotMatch(claimPage, /นโยบายข้อมูลส่วนบุคคล/);
 
 const membersPage = read("src/app/members/page.tsx");
 assert.match(membersPage, /แสดง QR/);
@@ -49,7 +54,8 @@ assert.doesNotMatch(
 const mePage = read("src/app/me/page.tsx");
 assert.match(mePage, /fetchMemberMe/);
 assert.match(mePage, /เข้าด้วย Google/);
-assert.match(mePage, /OTP/);
+assert.match(mePage, /แต้มของฉัน/);
+assert.match(mePage, /ส่งรหัส|รหัส 6 หลัก/);
 
 const providers = read("src/components/AppRootProviders.tsx");
 assert.match(providers, /isPublicClaim/);
@@ -76,7 +82,9 @@ assert.match(smoke, /"claim"/);
 assert.match(smoke, /"me"/);
 
 const version = read("src/lib/version.ts");
-assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 747);
+assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 750);
+assert.match(claimLib, /ลองใหม่อีกครั้งนะ/);
+assert.match(claimLib, /ได้แต้มจากบิลนี้ไปแล้ว/);
 
 assert.equal(
   existsSync(join(root, "npos-telltea/app/src/main/java/app/telltea/npos/sell/MemberApi.java")),

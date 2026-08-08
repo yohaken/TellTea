@@ -18,8 +18,8 @@ const claimPage = read("src/app/claim/page.tsx");
 assert.match(claimPage, /sendLinkPhoneOtp/);
 assert.match(claimPage, /otpPurpose/);
 assert.match(claimPage, /link_claim/);
-assert.match(claimPage, /ส่ง OTP ยืนยันเบอร์/);
-assert.match(claimPage, /ยืนยัน OTP แล้วสมัคร/);
+assert.match(claimPage, /ส่งรหัสยืนยันเบอร์/);
+assert.match(claimPage, /รับแต้มเลย/);
 assert.doesNotMatch(claimPage, /onLinkAndClaim/);
 
 const claimLib = read("src/lib/receipt-claim.ts");
@@ -32,6 +32,6 @@ assert.match(server, /phoneDigitsFromInput\(phoneFromAuth\)/);
 assert.match(server, /phone_mismatch/);
 
 const version = read("src/lib/version.ts");
-assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 747);
+assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 750);
 
 console.log("OK test-members-claim-google-phone-otp");

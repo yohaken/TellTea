@@ -286,25 +286,25 @@ export async function fetchMemberMe(): Promise<MemberMeResult> {
 
 export function claimErrorLabel(code: string | undefined): string {
   const map: Record<string, string> = {
-    disabled: "ระบบสมาชิกปิดอยู่",
-    receipt_off: "โหมดทดลองเคลมจากสลิปยังปิดอยู่",
-    bad_token: "ลิงก์หมดอายุหรือไม่ถูกต้อง",
-    expired: "ลิงก์เคลมหมดอายุแล้ว — ขอ QR ใหม่จากร้าน",
-    voided: "บิลนี้ยกเลิกแล้ว เคลมไม่ได้",
-    already_claimed: "บิลนี้เคลมแต้มไปแล้ว",
-    already_earned: "บิลนี้สะสมแต้มไปแล้ว",
-    invalid_phone: "เบอร์โทรไม่ถูกต้อง",
-    phone_required: "กรอกเบอร์โทรเพื่อผูกสมาชิก",
-    phone_otp_required: "ยืนยันเบอร์ด้วย OTP ก่อนสมัครครั้งแรก",
-    phone_mismatch: "เบอร์ไม่ตรงกับที่ยืนยัน OTP",
-    not_member: "ยังไม่เป็นสมาชิก",
-    auth_required: "เข้าสู่ระบบก่อน (Google หรือเบอร์)",
+    disabled: "ยังเปิดสะสมแต้มไม่ได้ตอนนี้",
+    receipt_off: "ยังเปิดรับแต้มจากสลิปไม่ได้",
+    bad_token: "ลิงก์ใช้ไม่ได้แล้ว สแกนจากสลิปใหม่นะ",
+    expired: "ลิงก์หมดอายุแล้ว ขอบิลใหม่ที่ร้านนะ",
+    voided: "บิลนี้ยกเลิกแล้ว รับแต้มไม่ได้",
+    already_claimed: "ได้แต้มจากบิลนี้ไปแล้ว",
+    already_earned: "ได้แต้มจากบิลนี้ไปแล้ว",
+    invalid_phone: "เบอร์นี้ใช้ไม่ได้",
+    phone_required: "ใส่เบอร์ก่อนนะ",
+    phone_otp_required: "ยืนยันเบอร์ด้วยรหัสก่อนนะ",
+    phone_mismatch: "เบอร์ไม่ตรงกับที่รับรหัส",
+    not_member: "ยังไม่เจอสมาชิก",
+    auth_required: "เข้าด้วย Google หรือเบอร์ก่อนนะ",
     auth_mismatch: "บัญชีไม่ตรง",
-    pdpa_required: "ต้องยินยอมนโยบายข้อมูลส่วนบุคคล",
-    suspended: "บัตรสมาชิกระงับ",
-    zero_points: "บิลนี้ยังไม่มีแต้มให้เคลม — ดูแต้มได้ที่หน้าสมาชิก",
-    missing_sale: "ไม่พบบิล",
+    pdpa_required: "กดยอมรับก่อนนะ",
+    suspended: "บัตรนี้ใช้ไม่ได้ชั่วคราว",
+    zero_points: "บิลนี้ยังไม่มีแต้ม",
+    missing_sale: "ไม่เจอบิลนี้",
     bad_body: "ข้อมูลไม่ครบ",
   };
-  return map[code || ""] || code || "ทำรายการไม่สำเร็จ";
+  return map[code || ""] || code || "ลองใหม่อีกครั้งนะ";
 }
