@@ -1,7 +1,8 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import type { ConfirmationResult } from "firebase/auth";
+import { completeGoogleAuthBridgeFromUrl, mapFirebaseAuthError } from "@/lib/auth";
 import { confirmPhoneOtp, resetPhoneRecaptcha, sendPhoneOtp } from "@/lib/phone-auth";
 import {
   claimErrorLabel,
@@ -37,20 +38,37 @@ export default function MemberMePage() {
       }
       setStep("card");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "โหลดไม่สำเร็จ ลองใหม่นะ");
+      setError(mapFirebaseAuthError(err));
     } finally {
       setBusy(false);
     }
   }
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const bridged = await completeGoogleAuthBridgeFromUrl();
+        if (cancelled || !bridged) return;
+        await loadMe();
+      } catch (err) {
+        if (!cancelled) setError(mapFirebaseAuthError(err));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   async function onGoogle() {
     setBusy(true);
     setError(null);
     try {
-      await signInMemberWithGoogle();
+      const user = await signInMemberWithGoogle();
+      if (!user) return;
       await loadMe();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "เข้า Google ไม่สำเร็จ ลองใหม่นะ");
+      setError(mapFirebaseAuthError(err));
       setBusy(false);
     }
   }
@@ -64,7 +82,7 @@ export default function MemberMePage() {
       setConfirmation(conf);
       setStep("otp");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "ส่งรหัสไม่สำเร็จ ลองใหม่นะ");
+      setError(mapFirebaseAuthError(err));
       resetPhoneRecaptcha();
     } finally {
       setBusy(false);
@@ -80,7 +98,7 @@ export default function MemberMePage() {
       await confirmPhoneOtp(confirmation, otp);
       await loadMe();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "รหัสไม่ถูก ลองใหม่นะ");
+      setError(mapFirebaseAuthError(err));
       resetPhoneRecaptcha();
       setBusy(false);
     }

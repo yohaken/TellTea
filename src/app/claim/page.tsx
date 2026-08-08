@@ -10,7 +10,9 @@ import {
   sendLinkPhoneOtp,
   sendPhoneOtp,
 } from "@/lib/phone-auth";
+import { completeGoogleAuthBridgeFromUrl, mapFirebaseAuthError } from "@/lib/auth";
 import {
+  claimBlockedTitle,
   claimErrorLabel,
   fetchReceiptClaimPreview,
   lookupReceiptClaimAuth,
@@ -55,6 +57,7 @@ function ClaimForm() {
   /** auth = phone-only login · link_claim = first-time Google→phone OTP then claim */
   const [otpPurpose, setOtpPurpose] = useState<"auth" | "link_claim">("auth");
   const [popupOpen, setPopupOpen] = useState(false);
+  const [blockedCode, setBlockedCode] = useState<string | undefined>(undefined);
   const [done, setDone] = useState<{
     displayName: string;
     cardNo: string;
@@ -68,12 +71,70 @@ function ClaimForm() {
     async function load() {
       if (!saleId || !token) {
         setStep("blocked");
+        setBlockedCode("bad_token");
         setError("ลิงก์ไม่ครบ สแกน QR จากสลิปอีกครั้งนะ");
         return;
       }
       setBusy(true);
       setError(null);
       try {
+        // Return from Google auth bridge (?ticket=) — finish session before UI.
+        try {
+          const bridged = await completeGoogleAuthBridgeFromUrl();
+          if (cancelled) return;
+          if (bridged) {
+            const data = await fetchReceiptClaimPreview(saleId, token);
+            if (cancelled) return;
+            setPreview(data);
+            if (!data.ok) {
+              if (data.error === "zero_points") {
+                setStep("no_points");
+                setError(null);
+                return;
+              }
+              if (isAlreadyUsedError(data.error)) {
+                setStep("used");
+                setError(null);
+                return;
+              }
+              setStep("blocked");
+              setBlockedCode(data.error);
+              setError(claimErrorLabel(data.error));
+              return;
+            }
+            setStep("auth");
+            setBusy(true);
+            const info = await lookupReceiptClaimAuth({ saleId, token });
+            if (cancelled) return;
+            setAuthInfo(info);
+            if (!info.ok) {
+              if (isAlreadyUsedError(info.error)) {
+                setStep("used");
+                setError(null);
+                return;
+              }
+              if (info.error === "zero_points") {
+                setStep("no_points");
+                setError(null);
+                return;
+              }
+              setError(claimErrorLabel(info.error));
+              return;
+            }
+            if (info.found) {
+              setStep("confirm");
+              return;
+            }
+            setStep("link_phone");
+            return;
+          }
+        } catch (err) {
+          if (!cancelled) {
+            setError(mapFirebaseAuthError(err));
+            setStep("auth");
+          }
+        }
+
         const data = await fetchReceiptClaimPreview(saleId, token);
         if (cancelled) return;
         setPreview(data);
@@ -89,6 +150,7 @@ function ClaimForm() {
             return;
           }
           setStep("blocked");
+          setBlockedCode(data.error);
           setError(claimErrorLabel(data.error));
           return;
         }
@@ -96,6 +158,7 @@ function ClaimForm() {
       } catch {
         if (!cancelled) {
           setStep("blocked");
+          setBlockedCode(undefined);
           setError("เน็ตหลุด ลองใหม่นะ");
         }
       } finally {
@@ -164,6 +227,16 @@ function ClaimForm() {
       const info = await lookupReceiptClaimAuth({ saleId, token });
       setAuthInfo(info);
       if (!info.ok) {
+        if (isAlreadyUsedError(info.error)) {
+          setStep("used");
+          setError(null);
+          return;
+        }
+        if (info.error === "zero_points") {
+          setStep("no_points");
+          setError(null);
+          return;
+        }
         setError(claimErrorLabel(info.error));
         return;
       }
@@ -178,7 +251,7 @@ function ClaimForm() {
       // phone auth already on token but no member yet
       setStep("link_phone");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "เช็คบัญชีไม่สำเร็จ ลองใหม่นะ");
+      setError(mapFirebaseAuthError(err));
     } finally {
       setBusy(false);
     }
@@ -188,10 +261,11 @@ function ClaimForm() {
     setBusy(true);
     setError(null);
     try {
-      await signInMemberWithGoogle();
+      const user = await signInMemberWithGoogle();
+      if (!user) return; // redirected to auth bridge
       await afterSignedIn();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "เข้า Google ไม่สำเร็จ ลองใหม่นะ");
+      setError(mapFirebaseAuthError(err));
       setBusy(false);
     }
   }
@@ -207,7 +281,7 @@ function ClaimForm() {
       setOtp("");
       setStep("otp");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "ส่งรหัสไม่สำเร็จ ลองใหม่นะ");
+      setError(mapFirebaseAuthError(err));
       resetPhoneRecaptcha();
     } finally {
       setBusy(false);
@@ -241,7 +315,7 @@ function ClaimForm() {
       });
       applyDone(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "ส่งรหัสไม่สำเร็จ ลองใหม่นะ");
+      setError(mapFirebaseAuthError(err));
       resetPhoneRecaptcha();
     } finally {
       setBusy(false);
@@ -268,7 +342,7 @@ function ClaimForm() {
       }
       await afterSignedIn();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "รหัสไม่ถูก ลองใหม่นะ");
+      setError(mapFirebaseAuthError(err));
       resetPhoneRecaptcha();
     } finally {
       setBusy(false);
@@ -341,13 +415,20 @@ function ClaimForm() {
         ) : null}
 
         {step === "blocked" ? (
-          <p className="join-error" style={{ marginTop: "1rem" }}>
-            {error || "ลิงก์ใช้ไม่ได้แล้ว"}
-          </p>
+          <div className="join-form claim-used">
+            <p className="claim-used-title">{claimBlockedTitle(blockedCode)}</p>
+            <p className="muted">{error || "สแกน QR จากสลิปใหม่ได้ หรือดูแต้มที่มีอยู่"}</p>
+            <a className="primary-btn claim-used-cta" href="/me/">
+              ดูแต้มของฉัน
+            </a>
+          </div>
         ) : null}
 
         {step === "auth" ? (
           <div className="join-form">
+            <p className="muted" style={{ marginTop: 0 }}>
+              สมาชิกอยู่แล้วหรือสมัครใหม่ — เข้าแล้วรับแต้มจากบิลนี้ได้
+            </p>
             <button
               type="button"
               className="primary-btn claim-google-btn"

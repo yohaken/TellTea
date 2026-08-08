@@ -83,7 +83,8 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export const TELLTEA_AUTH_BRIDGE =
   "https://mypeer-501909.firebaseapp.com/telltea-auth.html";
 
-function mapAuthError(error: unknown) {
+/** Map Firebase Auth errors to short Thai — never surface raw `Firebase: Error (...)`. */
+export function mapFirebaseAuthError(error: unknown): string {
   const code = (error as { code?: string })?.code || "";
   const message = (error as Error)?.message || "";
   if (code === "auth/popup-closed-by-user" || code === "auth/redirect-cancelled-by-user") {
@@ -94,6 +95,13 @@ function mapAuthError(error: unknown) {
   }
   if (code === "auth/unauthorized-domain") {
     return "โดเมนนี้ยังไม่อนุญาตใน Firebase Auth";
+  }
+  if (
+    code === "auth/argument-error" ||
+    code === "auth/internal-error" ||
+    code === "auth/network-request-failed"
+  ) {
+    return "เข้า Google ไม่สำเร็จ — เปิดใน Chrome/Safari แล้วลองใหม่ หรือใช้เบอร์แทน";
   }
   if (
     code === "auth/configuration-not-found" ||
@@ -114,13 +122,49 @@ function mapAuthError(error: unknown) {
   if (code === "auth/too-many-requests") {
     return "ลองบ่อยเกินไป — รอสักครู่แล้วลองใหม่";
   }
-  if (code === "auth/captcha-check-failed") {
+  if (code === "auth/captcha-check-failed" || code === "auth/invalid-app-credential") {
     return "ยืนยันตัวตนไม่ผ่าน — รีเฟรชหน้าแล้วลองใหม่";
   }
   if (code === "permission-denied") {
     return "อ่านสิทธิ์พนักงานไม่ได้ — ลองออกแล้วเข้าใหม่";
   }
+  if (/Firebase:\s*Error|auth\/[a-z0-9-]+/i.test(message)) {
+    return "เข้าสู่ระบบไม่สำเร็จ — ลองใหม่ หรือใช้เบอร์แทน";
+  }
   return message || "การล็อกอินล้มเหลว";
+}
+
+function mapAuthError(error: unknown) {
+  return mapFirebaseAuthError(error);
+}
+
+/** Production hosts use the firebaseapp OAuth bridge (popup breaks in LINE/WebView). */
+export function shouldUseGoogleAuthBridge(): boolean {
+  if (typeof window === "undefined") return true;
+  const host = window.location.hostname;
+  return !(host === "localhost" || host === "127.0.0.1");
+}
+
+export function startGoogleAuthBridge(returnUrl: string) {
+  const ret = (returnUrl || "").trim() || (typeof window !== "undefined" ? window.location.href : "");
+  window.location.assign(
+    `${TELLTEA_AUTH_BRIDGE}?return=${encodeURIComponent(ret)}`,
+  );
+}
+
+/**
+ * If URL has `?ticket=` from the auth bridge, exchange it for a Google session.
+ * @returns true when a ticket was present (success or throw).
+ */
+export async function completeGoogleAuthBridgeFromUrl(): Promise<boolean> {
+  const ticket = takeTicketFromUrl();
+  if (!ticket) return false;
+  const idToken = await idTokenFromTicket(ticket);
+  await signInWithCredential(
+    getFirebaseAuth(),
+    GoogleAuthProvider.credential(idToken),
+  );
+  return true;
 }
 
 function emailFromUser(user: User) {
@@ -201,9 +245,7 @@ async function idTokenFromTicket(ticket: string): Promise<string> {
 }
 
 function shouldUseAuthBridge() {
-  if (typeof window === "undefined") return true;
-  const host = window.location.hostname;
-  return !(host === "localhost" || host === "127.0.0.1");
+  return shouldUseGoogleAuthBridge();
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
