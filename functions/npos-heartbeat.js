@@ -148,6 +148,16 @@ exports.nposDeviceHeartbeat = functions
       if (Object.prototype.hasOwnProperty.call(body, "printerLabel")) {
         patch.printerLabel = asString(body.printerLabel, 80);
       }
+      if (Object.prototype.hasOwnProperty.call(body, "paperWidthMm")) {
+        const pw = Number(body.paperWidthMm);
+        patch.paperWidthMm = pw === 58 ? 58 : 80;
+      }
+      if (Object.prototype.hasOwnProperty.call(body, "receiptCols")) {
+        const cols = Math.floor(Number(body.receiptCols));
+        if (Number.isFinite(cols) && cols > 0 && cols < 80) {
+          patch.receiptCols = cols;
+        }
+      }
       if (Object.prototype.hasOwnProperty.call(body, "customerDisplay")) {
         patch.customerDisplay = asString(body.customerDisplay, 24) || "unknown";
       }

@@ -133,6 +133,10 @@ export type PosDevice = {
   syncLastError: string;
   deviceHint: string;
   printerLabel: string;
+  /** nPos paper preference / Sunmi getPrinterPaper sync — 58 or 80. */
+  paperWidthMm: 58 | 80 | 0;
+  /** Esc/POS column count used for slip layout (32/42…). */
+  receiptCols: number;
   printerReady: boolean;
   /** Cash drawer via receipt printer — true when printer endpoint is ready. */
   drawerReady: boolean;
@@ -341,6 +345,11 @@ function mapPosDeviceDoc(id: string, data: Record<string, unknown>): PosDevice {
     syncLastError: typeof data.syncLastError === "string" ? data.syncLastError : "",
     deviceHint: typeof data.deviceHint === "string" ? data.deviceHint : "",
     printerLabel: typeof data.printerLabel === "string" ? data.printerLabel : "",
+    paperWidthMm: data.paperWidthMm === 58 ? 58 : data.paperWidthMm === 80 ? 80 : 0,
+    receiptCols:
+      typeof data.receiptCols === "number" && Number.isFinite(data.receiptCols)
+        ? Math.floor(data.receiptCols)
+        : 0,
     printerReady: data.printerReady === true,
     drawerReady:
       typeof data.drawerReady === "boolean"
