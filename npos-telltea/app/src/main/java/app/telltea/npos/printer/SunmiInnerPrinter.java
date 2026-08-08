@@ -84,32 +84,18 @@ public final class SunmiInnerPrinter {
   }
 
   /**
-   * Sale slip with claim QR — text → bitmap QR → lineWrap → invite → rest.
+   * Sale slip on InnerPrinter — full paper width via {@code printColumnsString} / alignment.
    *
-   * <p>Esc/POS QR bytes are not used on InnerPrinter (plain UTF path strips them).
+   * <p><b>Why not space-padded {@code printText}:</b> Sunmi UTF fonts are proportional. ASCII
+   * spaces and {@code -} are ~half a Thai glyph, so Esc/POS-style {@code pairRow}/{@code rule}
+   * leave a large empty right margin on D2s 80mm paper. Structured rows fix that.
    *
-   * <p><b>Layout:</b> {@code printBitmap} does not advance the paper band. Printing the
-   * space-padded invite from {@link ReceiptFormBuilder} immediately after the bitmap puts Thai
-   * text on the <em>same</em> vertical band (QR left, invite right) and makes the centering
-   * margin look like a large blank before the QR. Always {@code lineWrap} after the bitmap, then
-   * print invite as its own centered {@code printText} (not as padded {@code after}).
+   * <p>Also syncs paper width from {@code getPrinterPaper()} (0=80mm, 1=58mm) and sizes claim QR
+   * to the printable pixel width (384 / 576).
    */
-  public static PrinterTransport.Result printPlainWithClaimQr(
-      Context context, String body, String claimUrl) {
-    String safe = body == null ? "" : body;
+  public static PrinterTransport.Result printSlip(
+      Context context, java.util.List<ReceiptSlipLine> lines, String claimUrl) {
     String url = claimUrl == null ? "" : claimUrl.trim();
-    String marker = ReceiptFormBuilder.CLAIM_QR_MARKER;
-    int idx = url.isEmpty() ? -1 : safe.indexOf(marker);
-    if (idx < 0) {
-      safe = safe.replace(marker + "\n", "").replace(marker, "");
-      return printPlain(context, EscPos.stripBoldMarkers(safe));
-    }
-    String before = EscPos.stripBoldMarkers(safe.substring(0, idx));
-    String afterRaw = safe.substring(idx + marker.length());
-    if (afterRaw.startsWith("\n")) afterRaw = afterRaw.substring(1);
-    // Peel invite (bold markers + space-padded center) out of after — print centered separately.
-    String afterRest = EscPos.peelClaimInviteLine(afterRaw);
-    String after = EscPos.stripBoldMarkers(afterRest);
     try {
       SunmiPrinterService svc = ensureService(context);
       if (svc == null) {
@@ -119,64 +105,30 @@ public final class SunmiInnerPrinter {
       if (!InnerPrinterManager.getInstance().hasPrinter(svc)) {
         return new PrinterTransport.Result(false, "เครื่องนี้ไม่มีปริ้นในตัว");
       }
+      int paperMm = syncPaperWidthFromPrinter(context, svc);
+      int qrPx = paperMm == PrinterPrefs.PAPER_58 ? 220 : 300;
+      int ruleChars = paperMm == PrinterPrefs.PAPER_58 ? 22 : 32;
+
       try {
         svc.setAlignment(0, null);
       } catch (Exception ignored) {
         /* optional */
       }
-      if (!before.isEmpty()) {
-        PrinterTransport.Result r = printTextOnce(svc, before.endsWith("\n") ? before : before + "\n");
-        if (!r.ok) return r;
-      }
-      Bitmap qr = QrBitmaps.encode(url, 168);
-      if (qr != null) {
-        try {
-          svc.setAlignment(1, null);
-        } catch (Exception ignored) {
-          /* optional */
-        }
-        PrinterTransport.Result qrRes = printBitmapOnce(svc, qr);
-        if (!qrRes.ok) return qrRes;
-        // Advance past the bitmap band. printBitmap leaves the cursor on the same band —
-        // without a wrap, the next printText sits to the right of the QR (real slip bug).
-        boolean wrapped = false;
-        try {
-          svc.lineWrap(1, null);
-          wrapped = true;
-        } catch (Exception ignored) {
-          /* fall through to printText feed */
-        }
-        if (!wrapped) {
-          PrinterTransport.Result feed = printTextOnce(svc, "\n");
-          if (!feed.ok) return feed;
+
+      if (lines != null) {
+        for (ReceiptSlipLine line : lines) {
+          if (line == null) continue;
+          PrinterTransport.Result row = printSlipLine(svc, line, url, qrPx, ruleChars);
+          if (!row.ok) return row;
         }
       }
-      // Invite: separate centered call (not space-padded beside QR). Bold best-effort.
-      try {
-        svc.setAlignment(1, null);
-      } catch (Exception ignored) {
-        /* optional */
-      }
-      sendEscE(svc, true);
-      PrinterTransport.Result inviteRes =
-          printTextOnce(svc, ReceiptFormBuilder.CLAIM_QR_INVITE + "\n");
-      sendEscE(svc, false);
-      if (!inviteRes.ok) return inviteRes;
-      try {
-        svc.setAlignment(0, null);
-      } catch (Exception ignored) {
-        /* optional */
-      }
-      if (!after.isEmpty()) {
-        PrinterTransport.Result r = printTextOnce(svc, after.endsWith("\n") ? after : after + "\n");
-        if (!r.ok) return r;
-      }
+
       try {
         svc.lineWrap(2, null);
       } catch (Exception ignored) {
         /* optional */
       }
-      return cutPaperBestEffort(svc, "SUNMI พิมพ์ใบเสร็จ+QR แล้ว");
+      return cutPaperBestEffort(svc, "SUNMI พิมพ์ใบเสร็จแล้ว");
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return new PrinterTransport.Result(false, "interrupted");
@@ -184,6 +136,189 @@ public final class SunmiInnerPrinter {
       String msg = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
       return new PrinterTransport.Result(false, msg);
     }
+  }
+
+  /**
+   * Legacy plain+marker path — prefer {@link #printSlip}. Kept for callers that only have a body
+   * string; falls back to structured-less UTF print.
+   */
+  public static PrinterTransport.Result printPlainWithClaimQr(
+      Context context, String body, String claimUrl) {
+    String safe = body == null ? "" : body;
+    String url = claimUrl == null ? "" : claimUrl.trim();
+    String marker = ReceiptFormBuilder.CLAIM_QR_MARKER;
+    if (url.isEmpty() || safe.indexOf(marker) < 0) {
+      safe = safe.replace(marker + "\n", "").replace(marker, "");
+      return printPlain(context, EscPos.stripBoldMarkers(safe));
+    }
+    // Best-effort: rebuild is unavailable here — use slip printer only when lines exist upstream.
+    return printPlain(context, EscPos.stripBoldMarkers(safe.replace(marker, "\n")));
+  }
+
+  /** {@code getPrinterPaper}: 0 → 80mm, 1 → 58mm. Writes {@link PrinterPrefs}. */
+  static int syncPaperWidthFromPrinter(Context context, SunmiPrinterService svc) {
+    int fallback = PrinterPrefs.getPaperWidthMm(context);
+    if (svc == null) return fallback;
+    try {
+      int code = svc.getPrinterPaper();
+      int mm = code == 1 ? PrinterPrefs.PAPER_58 : PrinterPrefs.PAPER_80;
+      PrinterPrefs.setPaperWidthMm(context, mm);
+      return mm;
+    } catch (Exception ignored) {
+      return fallback;
+    }
+  }
+
+  private static PrinterTransport.Result printSlipLine(
+      SunmiPrinterService svc, ReceiptSlipLine line, String claimUrl, int qrPx, int ruleChars)
+      throws Exception {
+    switch (line.kind) {
+      case BLANK:
+        return printTextOnce(svc, "\n");
+      case RULE:
+        return printFullRule(svc, '─', ruleChars);
+      case DOUBLE_RULE:
+        return printFullRule(svc, '═', ruleChars);
+      case CENTER:
+        return printCentered(svc, line.left, line.bold);
+      case LEFT:
+        return printLeft(svc, line.left, line.bold);
+      case LEFT_RIGHT:
+        return printLeftRight(svc, line.left, line.right, line.bold);
+      case QR_MARK:
+        return printClaimQrBlock(svc, claimUrl, qrPx);
+      default:
+        return new PrinterTransport.Result(true, "ok");
+    }
+  }
+
+  private static PrinterTransport.Result printFullRule(
+      SunmiPrinterService svc, char ch, int count) throws Exception {
+    try {
+      svc.setAlignment(0, null);
+    } catch (Exception ignored) {
+      /* optional */
+    }
+    StringBuilder sb = new StringBuilder(count + 1);
+    for (int i = 0; i < count; i++) sb.append(ch);
+    sb.append('\n');
+    // Full-width glyphs (─ / ═) match Thai cell width → rule spans the paper.
+    return printColumnsOnce(svc, new String[] {sb.toString().trim()}, new int[] {1}, new int[] {0});
+  }
+
+  private static PrinterTransport.Result printCentered(
+      SunmiPrinterService svc, String text, boolean bold) throws Exception {
+    String t = text == null ? "" : text.trim();
+    if (t.isEmpty()) return printTextOnce(svc, "\n");
+    try {
+      svc.setAlignment(1, null);
+    } catch (Exception ignored) {
+      /* optional */
+    }
+    if (bold) sendEscE(svc, true);
+    // Invite: slightly larger on InnerPrinter when possible.
+    if (ReceiptFormBuilder.CLAIM_QR_INVITE.equals(t)) {
+      try {
+        svc.setFontSize(28, null);
+      } catch (Exception ignored) {
+        /* optional */
+      }
+    }
+    PrinterTransport.Result r = printTextOnce(svc, t + "\n");
+    if (ReceiptFormBuilder.CLAIM_QR_INVITE.equals(t)) {
+      try {
+        svc.setFontSize(24, null);
+      } catch (Exception ignored) {
+        /* optional */
+      }
+    }
+    if (bold) sendEscE(svc, false);
+    try {
+      svc.setAlignment(0, null);
+    } catch (Exception ignored) {
+      /* optional */
+    }
+    return r;
+  }
+
+  private static PrinterTransport.Result printLeft(
+      SunmiPrinterService svc, String text, boolean bold) throws Exception {
+    String t = text == null ? "" : text;
+    try {
+      svc.setAlignment(0, null);
+    } catch (Exception ignored) {
+      /* optional */
+    }
+    if (bold) sendEscE(svc, true);
+    PrinterTransport.Result r = printTextOnce(svc, t.endsWith("\n") ? t : t + "\n");
+    if (bold) sendEscE(svc, false);
+    return r;
+  }
+
+  private static PrinterTransport.Result printLeftRight(
+      SunmiPrinterService svc, String left, String right, boolean bold) throws Exception {
+    if (bold) sendEscE(svc, true);
+    // Weights: label wider, price snug on the right edge of the full paper band.
+    PrinterTransport.Result r =
+        printColumnsOnce(
+            svc,
+            new String[] {left == null ? "" : left, right == null ? "" : right},
+            new int[] {2, 1},
+            new int[] {0, 2});
+    if (bold) sendEscE(svc, false);
+    return r;
+  }
+
+  private static PrinterTransport.Result printClaimQrBlock(
+      SunmiPrinterService svc, String claimUrl, int qrPx) throws Exception {
+    String url = claimUrl == null ? "" : claimUrl.trim();
+    if (url.isEmpty()) return new PrinterTransport.Result(true, "ok");
+    Bitmap qr = QrBitmaps.encode(url, qrPx);
+    if (qr == null) return new PrinterTransport.Result(true, "ok");
+    try {
+      svc.setAlignment(1, null);
+    } catch (Exception ignored) {
+      /* optional */
+    }
+    PrinterTransport.Result qrRes = printBitmapOnce(svc, qr);
+    if (!qrRes.ok) return qrRes;
+    boolean wrapped = false;
+    try {
+      svc.lineWrap(1, null);
+      wrapped = true;
+    } catch (Exception ignored) {
+      /* fall through */
+    }
+    if (!wrapped) {
+      PrinterTransport.Result feed = printTextOnce(svc, "\n");
+      if (!feed.ok) return feed;
+    }
+    try {
+      svc.setAlignment(0, null);
+    } catch (Exception ignored) {
+      /* optional */
+    }
+    return new PrinterTransport.Result(true, "ok");
+  }
+
+  private static PrinterTransport.Result printColumnsOnce(
+      SunmiPrinterService svc, String[] texts, int[] widths, int[] aligns) throws Exception {
+    CountDownLatch done = new CountDownLatch(1);
+    AtomicReference<PrinterTransport.Result> out = new AtomicReference<>();
+    svc.printColumnsString(
+        texts,
+        widths,
+        aligns,
+        latchCallback(
+            out,
+            done,
+            new PrinterTransport.Result(true, "ok"),
+            new PrinterTransport.Result(false, "SUNMI printColumnsString ไม่สำเร็จ")));
+    if (!done.await(20, TimeUnit.SECONDS)) {
+      return new PrinterTransport.Result(false, "SUNMI timeout (printColumnsString)");
+    }
+    PrinterTransport.Result r = out.get();
+    return r != null ? r : new PrinterTransport.Result(false, "SUNMI ไม่ตอบ");
   }
 
   private static PrinterTransport.Result printBitmapOnce(SunmiPrinterService svc, Bitmap bmp)

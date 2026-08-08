@@ -16,6 +16,14 @@ public final class WhatsNewCatalog {
   private WhatsNewCatalog() {}
 
   public static List<WhatsNewSlide> slidesFor(int versionCode) {
+    if (versionCode == 143) {
+      List<WhatsNewSlide> slides = new ArrayList<>();
+      slides.add(
+          new WhatsNewSlide(
+              "สลิปเต็มความกว้างกระดาษ",
+              "ราคาชิดขวา · เส้นคั่นยาว · QR ใหญ่ขึ้นบน Sunmi D2s"));
+      return slides;
+    }
     if (versionCode == 142) {
       List<WhatsNewSlide> slides = new ArrayList<>();
       slides.add(

@@ -1466,16 +1466,18 @@ public final class SaleSync {
                                     kick.message,
                                     kick.ok));
         }
-        String body =
-                ReceiptFormBuilder.build(
-                        shopJson, payload, billNo, total, PrinterPrefs.receiptCols(app));
+        int cols = PrinterPrefs.receiptCols(app);
         String claimUrl = payload != null ? payload.optString("claimUrl", "").trim() : "";
-        if (!claimUrl.isEmpty() && ep.kind == PrinterEndpoint.Kind.SUNMI) {
-            // InnerPrinter: UTF text + bitmap QR (Esc/POS QR bytes are stripped on plain path).
+        if (ep.kind == PrinterEndpoint.Kind.SUNMI) {
+            // InnerPrinter: structured rows → full paper width (proportional Thai font).
+            // Do NOT space-pad Esc/POS body then printText — ASCII '-' / spaces look half-width.
+            final java.util.List<app.telltea.npos.printer.ReceiptSlipLine> slipLines =
+                    ReceiptFormBuilder.buildLines(shopJson, payload, billNo, total, cols);
+            final String claim = claimUrl;
             executor.execute(
                     () -> {
                         PrinterTransport.Result result =
-                                SunmiInnerPrinter.printPlainWithClaimQr(app, body, claimUrl);
+                                SunmiInnerPrinter.printSlip(app, slipLines, claim);
                         if (result.ok) {
                             OpsLogger.result(app, "printer", "พิมพ์ใบเสร็จแล้ว", billNo, true);
                         } else {
@@ -1484,6 +1486,7 @@ public final class SaleSync {
                     });
             return;
         }
+        String body = ReceiptFormBuilder.build(shopJson, payload, billNo, total, cols);
         byte[] receipt = EscPos.documentReceipt(body, claimUrl);
         transport.send(
                 app,

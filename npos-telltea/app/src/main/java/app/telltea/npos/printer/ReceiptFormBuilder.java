@@ -42,14 +42,27 @@ public final class ReceiptFormBuilder {
 
   public static String build(
       JSONObject shop, JSONObject payload, String billNo, double total, int cols) {
+    return renderEscPos(buildLines(shop, payload, billNo, total, cols), cols);
+  }
+
+  /** Default 80mm columns. */
+  public static String build(JSONObject shop, JSONObject payload, String billNo, double total) {
+    return build(shop, payload, billNo, total, COLS_80);
+  }
+
+  /**
+   * Structured slip rows — same content as {@link #build}. SUNMI InnerPrinter prints these with
+   * full-width columns (proportional font); Esc/POS renders via {@link #renderEscPos}.
+   */
+  public static List<ReceiptSlipLine> buildLines(
+      JSONObject shop, JSONObject payload, String billNo, double total, int cols) {
     int width = cols <= 0 ? COLS_80 : cols;
     boolean compact = width <= COLS_58;
+    List<ReceiptSlipLine> out = new ArrayList<>();
 
     String shopEn = firstNonEmpty(opt(shop, "shopName"), DEFAULT_SHOP_EN);
     String shopTh = firstNonEmpty(opt(shop, "shopNameTh"), DEFAULT_SHOP_TH);
     String shopName = shopDisplayName(shopEn, shopTh);
-    // Prefer live settings; do not invent a street address when cloud/cache is empty
-    // (that made BO edits look "stuck" on the old default).
     String shopAddress = opt(shop, "shopAddress");
     String shopPhone = opt(shop, "shopPhone");
     String footerNote =
@@ -69,9 +82,10 @@ public final class ReceiptFormBuilder {
     double redeem =
         payload != null && payload.has("redeemBaht") ? payload.optDouble("redeemBaht", 0) : 0;
     int pointsRedeemed =
-        payload != null ? Math.max(0, payload.optInt("pointsToRedeem", payload.optInt("pointsRedeemed", 0))) : 0;
+        payload != null
+            ? Math.max(0, payload.optInt("pointsToRedeem", payload.optInt("pointsRedeemed", 0)))
+            : 0;
     double discountLegacy = payload != null ? payload.optDouble("discountBaht", 0) : 0;
-    // When split fields missing, treat legacy discountBaht as manual-only total.
     if (manualDisc <= 0 && redeem <= 0 && discountLegacy > 0) {
       manualDisc = discountLegacy;
     }
@@ -107,85 +121,66 @@ public final class ReceiptFormBuilder {
     JSONArray lines = payload != null ? payload.optJSONArray("lines") : null;
     int itemCount = itemQtyTotal(lines);
 
-    StringBuilder sb = new StringBuilder();
-    // Hierarchy: bold bill + shop, airy meta, spaced items, bold net.
-    sb.append(EscPos.BOLD_ON)
-        .append(center(billDisplay, width))
-        .append(EscPos.BOLD_OFF)
-        .append('\n');
-    if (!customerName.isEmpty()) {
-      sb.append(center(customerName, width)).append('\n');
-    }
-    sb.append(EscPos.BOLD_ON)
-        .append(center(shopName, width))
-        .append(EscPos.BOLD_OFF)
-        .append('\n');
+    out.add(ReceiptSlipLine.center(billDisplay, true));
+    if (!customerName.isEmpty()) out.add(ReceiptSlipLine.center(customerName, false));
+    out.add(ReceiptSlipLine.center(shopName, true));
     if (!shopAddress.isEmpty()) {
       for (String part : wrap(shopAddress, width)) {
-        sb.append(center(part, width)).append('\n');
+        out.add(ReceiptSlipLine.center(part, false));
       }
     }
-    if (!shopPhone.isEmpty()) {
-      sb.append(center("โทร : " + shopPhone, width)).append('\n');
-    }
+    if (!shopPhone.isEmpty()) out.add(ReceiptSlipLine.center("โทร : " + shopPhone, false));
     String taxId = opt(shop, "taxId");
-    if (!taxId.isEmpty()) {
-      sb.append(center("เลขผู้เสียภาษี : " + taxId, width)).append('\n');
-    }
-    sb.append('\n');
-    sb.append(EscPos.BOLD_ON)
-        .append(center("ใบเสร็จ", width))
-        .append(EscPos.BOLD_OFF)
-        .append('\n');
-    sb.append('\n');
+    if (!taxId.isEmpty()) out.add(ReceiptSlipLine.center("เลขผู้เสียภาษี : " + taxId, false));
+    out.add(ReceiptSlipLine.blank());
+    out.add(ReceiptSlipLine.center("ใบเสร็จ", true));
+    out.add(ReceiptSlipLine.blank());
 
-    if (!externalOrderId.isEmpty()) sb.append(metaRow("Order", externalOrderId, width));
-    if (!staffName.isEmpty()) sb.append(metaRow("Staff", staffName, width));
-    if (!staffId.isEmpty()) sb.append(metaRow("ID", staffId, width));
-    sb.append(metaRow("วันที่", formatDate(createdAt), width));
-    sb.append(metaRow("เวลา", formatTime(createdAt), width));
-    sb.append(rule(width)).append('\n');
-    sb.append('\n');
+    if (!externalOrderId.isEmpty()) {
+      appendMetaLines(out, "Order", externalOrderId, width);
+    }
+    if (!staffName.isEmpty()) appendMetaLines(out, "Staff", staffName, width);
+    if (!staffId.isEmpty()) appendMetaLines(out, "ID", staffId, width);
+    appendMetaLines(out, "วันที่", formatDate(createdAt), width);
+    appendMetaLines(out, "เวลา", formatTime(createdAt), width);
+    out.add(ReceiptSlipLine.rule());
+    out.add(ReceiptSlipLine.blank());
 
     if (lines != null) {
       boolean firstItem = true;
       for (int i = 0; i < lines.length(); i++) {
         JSONObject line = lines.optJSONObject(i);
         if (line == null) continue;
-        if (!firstItem) sb.append('\n'); // blank line between drinks (FoodStory-style)
+        if (!firstItem) out.add(ReceiptSlipLine.blank());
         firstItem = false;
-        appendItem(sb, line, width, compact);
+        appendItemLines(out, line, width, compact);
       }
     }
 
-    sb.append('\n');
-    sb.append(rule(width)).append('\n');
-    sb.append(moneyRow("จำนวน:", String.valueOf(itemCount), width)).append('\n');
-    sb.append(moneyRow("รวม:", formatMoney(subtotal), width)).append('\n');
+    out.add(ReceiptSlipLine.blank());
+    out.add(ReceiptSlipLine.rule());
+    out.add(ReceiptSlipLine.leftRight("จำนวน:", String.valueOf(itemCount), false));
+    out.add(ReceiptSlipLine.leftRight("รวม:", formatMoney(subtotal), false));
     if (manualDisc > 0.0001) {
-      sb.append(moneyRow("ส่วนลด", "-" + formatMoney(manualDisc), width)).append('\n');
+      out.add(ReceiptSlipLine.leftRight("ส่วนลด", "-" + formatMoney(manualDisc), false));
     }
     if (redeem > 0.0001) {
       String redeemLabel =
           pointsRedeemed > 0 ? ("แลกแต้ม (" + pointsRedeemed + ")") : "แลกแต้ม";
-      sb.append(moneyRow(redeemLabel, "-" + formatMoney(redeem), width)).append('\n');
+      out.add(ReceiptSlipLine.leftRight(redeemLabel, "-" + formatMoney(redeem), false));
     }
-    sb.append(doubleRule(width)).append('\n');
-    sb.append(EscPos.BOLD_ON)
-        .append(moneyRow("ยอดสุทธิ:", formatMoney(total), width))
-        .append(EscPos.BOLD_OFF)
-        .append('\n');
-    sb.append(doubleRule(width)).append('\n');
-    // Skip tender lines when net is 0 (full redeem) — still a valid closed bill.
+    out.add(ReceiptSlipLine.doubleRule());
+    out.add(ReceiptSlipLine.leftRight("ยอดสุทธิ:", formatMoney(total), true));
+    out.add(ReceiptSlipLine.doubleRule());
     if (total > 0.009) {
-      sb.append(moneyRow("ชำระ", paymentLabel(pay), width)).append('\n');
+      out.add(ReceiptSlipLine.leftRight("ชำระ", paymentLabel(pay), false));
       if ("cash".equals(pay)) {
-        sb.append(moneyRow("เงินสด", formatMoney(cashReceived), width)).append('\n');
-        sb.append(moneyRow("เงินทอน", formatMoney(change), width)).append('\n');
+        out.add(ReceiptSlipLine.leftRight("เงินสด", formatMoney(cashReceived), false));
+        out.add(ReceiptSlipLine.leftRight("เงินทอน", formatMoney(change), false));
       }
     }
     if (pointsEarned > 0) {
-      sb.append(moneyRow("แต้มที่ได้", "+" + pointsEarned, width)).append('\n');
+      out.add(ReceiptSlipLine.leftRight("แต้มที่ได้", "+" + pointsEarned, false));
     }
     if (!memberName.isEmpty() || !memberPhone.isEmpty()) {
       String mem =
@@ -193,33 +188,100 @@ public final class ReceiptFormBuilder {
               + firstNonEmpty(memberName, "สมาชิก")
               + (memberPhone.isEmpty() ? "" : (" · " + memberPhone));
       for (String part : wrap(mem, width)) {
-        sb.append(part).append('\n');
+        out.add(ReceiptSlipLine.left(part, false));
       }
     }
     if (!orderNotes.isEmpty()) {
-      sb.append(rule(width)).append('\n');
+      out.add(ReceiptSlipLine.rule());
       for (String part : wrap(orderNotes, width)) {
-        sb.append(part).append('\n');
+        out.add(ReceiptSlipLine.left(part, false));
       }
     }
     if (!claimUrl.isEmpty()) {
-      sb.append('\n');
-      sb.append(CLAIM_QR_MARKER).append('\n');
-      // Invite larger/bolder than body so staff/customer can read it at a glance.
-      sb.append(EscPos.BOLD_ON)
-          .append(center(CLAIM_QR_INVITE, width))
-          .append(EscPos.BOLD_OFF)
-          .append('\n');
+      out.add(ReceiptSlipLine.blank());
+      out.add(ReceiptSlipLine.qrMark());
+      out.add(ReceiptSlipLine.center(CLAIM_QR_INVITE, true));
     }
-    sb.append('\n');
-    sb.append(center(footerNote, width)).append('\n');
-    // Shop-only document — no system/product brand on customer paper.
+    out.add(ReceiptSlipLine.blank());
+    out.add(ReceiptSlipLine.center(footerNote, false));
+    return out;
+  }
+
+  /** Monospace Esc/POS body from structured lines (USB/BT/LAN). */
+  public static String renderEscPos(List<ReceiptSlipLine> lines, int cols) {
+    int width = cols <= 0 ? COLS_80 : cols;
+    StringBuilder sb = new StringBuilder();
+    if (lines == null) return "";
+    for (ReceiptSlipLine line : lines) {
+      if (line == null) continue;
+      switch (line.kind) {
+        case CENTER:
+          if (line.bold) sb.append(EscPos.BOLD_ON);
+          sb.append(center(line.left, width));
+          if (line.bold) sb.append(EscPos.BOLD_OFF);
+          sb.append('\n');
+          break;
+        case LEFT_RIGHT:
+          if (line.bold) sb.append(EscPos.BOLD_ON);
+          sb.append(pairRow(line.left, line.right, width));
+          if (line.bold) sb.append(EscPos.BOLD_OFF);
+          sb.append('\n');
+          break;
+        case LEFT:
+          if (line.bold) sb.append(EscPos.BOLD_ON);
+          sb.append(line.left);
+          if (line.bold) sb.append(EscPos.BOLD_OFF);
+          sb.append('\n');
+          break;
+        case RULE:
+          sb.append(rule(width)).append('\n');
+          break;
+        case DOUBLE_RULE:
+          sb.append(doubleRule(width)).append('\n');
+          break;
+        case BLANK:
+          sb.append('\n');
+          break;
+        case QR_MARK:
+          sb.append(CLAIM_QR_MARKER).append('\n');
+          break;
+        default:
+          break;
+      }
+    }
     return sb.toString();
   }
 
-  /** Default 80mm columns. */
-  public static String build(JSONObject shop, JSONObject payload, String billNo, double total) {
-    return build(shop, payload, billNo, total, COLS_80);
+  private static void appendMetaLines(
+      List<ReceiptSlipLine> out, String label, String value, int width) {
+    String row = label + ": " + (value == null ? "" : value);
+    if (row.length() <= width) {
+      out.add(ReceiptSlipLine.left(row, false));
+      return;
+    }
+    for (String part : wrap(row, width)) {
+      out.add(ReceiptSlipLine.left(part, false));
+    }
+  }
+
+  private static void appendItemLines(
+      List<ReceiptSlipLine> out, JSONObject line, int width, boolean compact) {
+    int qty = Math.max(1, line.optInt("qty", 1));
+    double price = line.optDouble("price", 0);
+    double lineTotal = Math.round(price * qty * 100.0) / 100.0;
+    String title = receiptLineBaseName(line.optString("name", ""));
+    String priceText = formatMoney(lineTotal);
+    String qtyCol = qty < 10 ? (" " + qty) : String.valueOf(Math.min(qty, 99));
+    out.add(ReceiptSlipLine.leftRight(qtyCol + " " + title, priceText, true));
+    for (ModTally mod : tallyModifiers(line.opt("options"), compact)) {
+      int modCount = Math.max(1, mod.count);
+      String label =
+          modCount >= 2 ? "- " + mod.label + " x" + modCount : "- " + mod.label;
+      boolean emphasizeQty = qtyEmphasized(mod.count);
+      for (String part : wrap("    " + label, width)) {
+        out.add(ReceiptSlipLine.left(part, emphasizeQty));
+      }
+    }
   }
 
   static String billDisplay(String billNo) {
@@ -272,37 +334,6 @@ public final class ReceiptFormBuilder {
       }
     }
     return toList(tallies);
-  }
-
-  private static void appendItem(StringBuilder sb, JSONObject line, int width, boolean compact) {
-    int qty = Math.max(1, line.optInt("qty", 1));
-    double price = line.optDouble("price", 0);
-    double lineTotal = Math.round(price * qty * 100.0) / 100.0;
-    String title = receiptLineBaseName(line.optString("name", ""));
-    String priceText = formatMoney(lineTotal);
-
-    // Fixed 2-char qty column so prices line up; bold title row; options indented + normal.
-    String qtyCol = qty < 10 ? (" " + qty) : String.valueOf(Math.min(qty, 99));
-    String left = qtyCol + " " + title;
-    sb.append(EscPos.BOLD_ON)
-        .append(pairRow(left, priceText, width))
-        .append(EscPos.BOLD_OFF)
-        .append('\n');
-
-    for (ModTally mod : tallyModifiers(line.opt("options"), compact)) {
-      // Indent under name (past qty column). ASCII "-" ; "xN" only when ≥2.
-      int modCount = Math.max(1, mod.count);
-      String label =
-          modCount >= 2 ? "- " + mod.label + " x" + modCount : "- " + mod.label;
-      boolean emphasizeQty = qtyEmphasized(mod.count);
-      for (String part : wrap("    " + label, width)) {
-        if (emphasizeQty) {
-          sb.append(EscPos.BOLD_ON).append(part).append(EscPos.BOLD_OFF).append('\n');
-        } else {
-          sb.append(part).append('\n');
-        }
-      }
-    }
   }
 
   private static int itemQtyTotal(JSONArray lines) {
