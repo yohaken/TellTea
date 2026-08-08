@@ -319,6 +319,10 @@ export function claimBlockedTitle(code: string | undefined): string {
     case "disabled":
     case "receipt_off":
       return "ร้านยังไม่เปิดรับแต้มจากสลิป";
+    case "deleted":
+      return "สมาชิกนี้ถูกลบแล้ว";
+    case "suspended":
+      return "บัตรนี้ใช้ไม่ได้ชั่วคราว";
     default:
       return "เปิดบิลนี้ไม่สำเร็จ";
   }
