@@ -293,6 +293,7 @@ export function claimErrorLabel(code: string | undefined): string {
     auth_mismatch: "บัญชีไม่ตรง",
     pdpa_required: "กดยอมรับก่อนนะ",
     suspended: "บัตรนี้ใช้ไม่ได้ชั่วคราว",
+    deleted: "สมาชิกนี้ถูกลบแล้ว",
     zero_points: "บิลนี้ยังไม่มีแต้ม",
     missing_sale: "ไม่เจอบิลนี้",
     bad_body: "ข้อมูลไม่ครบ",

@@ -46,6 +46,19 @@ function normalizeMemberId(raw) {
   return phoneDigitsFromInput(s);
 }
 
+/** Suspended or soft-deleted — cannot earn / redeem / claim. */
+function isMemberInactive(m) {
+  const status = m && typeof m.status === "string" ? m.status : "active";
+  return status === "suspended" || status === "deleted";
+}
+
+function memberStatusLabel(m) {
+  if (!m) return "active";
+  if (m.status === "deleted") return "deleted";
+  if (m.status === "suspended") return "suspended";
+  return "active";
+}
+
 async function loadMemberSettings(db) {
   const snap = await db.doc("meta/memberSettings").get();
   const d = snap.exists ? snap.data() || {} : {};
@@ -129,7 +142,7 @@ async function tryEarnPointsForSale(db, { saleId, memberId, total, actorId }) {
       const mSnap = await tx.get(memberRef);
       if (!mSnap.exists) return { skipped: "missing_member" };
       const m = mSnap.data() || {};
-      if (m.status === "suspended") return { skipped: "suspended" };
+      if (isMemberInactive(m)) return { skipped: memberStatusLabel(m) };
       const balance = typeof m.pointsBalance === "number" ? m.pointsBalance : 0;
       const lifetime = typeof m.lifetimePointsEarned === "number" ? m.lifetimePointsEarned : 0;
       const balanceAfter = balance + points;
@@ -307,7 +320,9 @@ function planRedeemFromMemberSnap(mSnap, {
   if (redeemBaht <= 0) throw new Error("จำนวนแต้มแลกไม่พอคิดเป็นส่วนลด");
   if (!mSnap || !mSnap.exists) throw new Error("ไม่พบสมาชิก");
   const m = mSnap.data() || {};
-  if (m.status === "suspended") throw new Error("บัตรสมาชิกระงับ");
+  if (isMemberInactive(m)) {
+    throw new Error(m.status === "deleted" ? "สมาชิกถูกลบแล้ว" : "บัตรสมาชิกระงับ");
+  }
   const balance = typeof m.pointsBalance === "number" ? m.pointsBalance : 0;
   if (balance < pts) throw new Error("แต้มไม่พอแลก");
   return {
@@ -357,7 +372,7 @@ async function lookupMember(db, phoneInput) {
       phoneDisplay: formatPhoneDisplay(digits),
       displayName: asString(m.displayName, 80) || formatPhoneDisplay(digits),
       cardNo: asString(m.cardNo, 24) || cardNoFromDigits(digits),
-      status: m.status === "suspended" ? "suspended" : "active",
+      status: memberStatusLabel(m),
       pointsBalance: typeof m.pointsBalance === "number" ? m.pointsBalance : 0,
     },
   };
@@ -377,6 +392,10 @@ async function quickCreateMember(db, { phone, displayName, actorId, source, goog
   const ref = db.collection("members").doc(digits);
   const existing = await ref.get();
   if (existing.exists) {
+    const prev = existing.data() || {};
+    if (isMemberInactive(prev)) {
+      return { ok: false, error: memberStatusLabel(prev) };
+    }
     const patch = {};
     const g = asString(googleUid, 128);
     const em = asString(email, 120).toLowerCase();
@@ -565,7 +584,7 @@ async function lookupReceiptClaimAuth(db, auth, { saleId, token, idToken }) {
     };
   }
   const m = docSnap.data() || {};
-  if (m.status === "suspended") return { ok: false, error: "suspended" };
+  if (isMemberInactive(m)) return { ok: false, error: memberStatusLabel(m) };
   return {
     ok: true,
     found: true,
@@ -602,7 +621,7 @@ async function getMyMember(db, auth, { idToken }) {
   if (!docSnap && uid) docSnap = await findMemberByGoogleUid(db, uid);
   if (!docSnap || !docSnap.exists) return { ok: true, found: false };
   const m = docSnap.data() || {};
-  if (m.status === "suspended") return { ok: false, error: "suspended" };
+  if (isMemberInactive(m)) return { ok: false, error: memberStatusLabel(m) };
   return {
     ok: true,
     found: true,
@@ -649,7 +668,7 @@ async function creditReceiptClaimToMember(db, {
       if (sale.claimStatus === "claimed") return { error: "already_claimed" };
 
       const m = mSnap.data() || {};
-      if (m.status === "suspended") return { error: "suspended" };
+      if (isMemberInactive(m)) return { error: memberStatusLabel(m) };
       const balance = typeof m.pointsBalance === "number" ? m.pointsBalance : 0;
       const lifetime = typeof m.lifetimePointsEarned === "number" ? m.lifetimePointsEarned : 0;
       const balanceAfter = balance + points;
@@ -784,7 +803,7 @@ async function claimReceiptPoints(db, auth, {
     isNew = !beforeCreate.exists;
   } else {
     const m = existingDoc.data() || {};
-    if (m.status === "suspended") return { ok: false, error: "suspended" };
+    if (isMemberInactive(m)) return { ok: false, error: memberStatusLabel(m) };
     digits = existingDoc.id;
     const patch = {};
     if (uid && !asString(m.googleUid, 128)) patch.googleUid = uid;
