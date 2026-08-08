@@ -91,7 +91,7 @@ assert.match(smoke, /"claim"/);
 assert.match(smoke, /"me"/);
 
 const version = read("src/lib/version.ts");
-assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 756);
+assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 757);
 assert.match(claimLib, /ลองใหม่อีกครั้งนะ/);
 assert.match(claimLib, /ได้แต้มจากบิลนี้ไปแล้ว/);
 
