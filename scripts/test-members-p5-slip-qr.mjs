@@ -74,8 +74,8 @@ const phases = read("docs/members-round-phases.md");
 assert.match(phases, /P5/);
 
 const appBuild = Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)[1]);
-assert.ok(appBuild >= 746, "APP_BUILD >= 746");
+assert.ok(appBuild >= 748, "APP_BUILD >= 748");
 const posBuild = Number(read("src/lib/pos-version.ts").match(/POS_BUILD = (\d+)/)[1]);
-assert.ok(posBuild >= 194, "POS_BUILD >= 194");
+assert.ok(posBuild >= 195, "POS_BUILD >= 195");
 
 console.log("OK test-members-p5-slip-qr");
