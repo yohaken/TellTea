@@ -1063,6 +1063,16 @@ body.modal-open .main-panel {
   color: #2f6b4f;
 }
 
+.claim-bill-meta {
+  margin: 0.15rem 0 0;
+  font-size: 0.95rem;
+}
+
+.claim-bill-meta strong {
+  color: #2f6b4f;
+  font-variant-numeric: tabular-nums;
+}
+
 .claim-used {
   margin-top: 1rem;
 }
