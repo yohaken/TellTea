@@ -5,6 +5,11 @@ import {
   signInWithPopup,
   type User,
 } from "firebase/auth";
+import {
+  mapFirebaseAuthError,
+  shouldUseGoogleAuthBridge,
+  startGoogleAuthBridge,
+} from "./auth";
 import { getDb, getFirebaseAuth } from "./firebase";
 import { getMemberSettings, pointsFromReceiptClaim } from "./members";
 import { POS_SALES_COL } from "./pos-sales";
@@ -227,11 +232,32 @@ async function currentIdToken(): Promise<string> {
   return user.getIdToken(true);
 }
 
-export async function signInMemberWithGoogle(): Promise<User> {
-  const provider = new GoogleAuthProvider();
-  provider.setCustomParameters({ prompt: "select_account" });
-  const cred = await signInWithPopup(getFirebaseAuth(), provider);
-  return cred.user;
+/**
+ * Google for /claim and /me.
+ * On production hosts: redirect through firebaseapp auth bridge (popup fails in LINE/WebView
+ * with auth/argument-error). Returns null when navigating away.
+ */
+function memberGoogleReturnUrl(): string {
+  if (typeof window === "undefined") return "https://telltea-shop.web.app/me/";
+  const url = new URL(window.location.href);
+  url.hash = "";
+  url.searchParams.delete("ticket");
+  return url.toString();
+}
+
+export async function signInMemberWithGoogle(): Promise<User | null> {
+  if (shouldUseGoogleAuthBridge()) {
+    startGoogleAuthBridge(memberGoogleReturnUrl());
+    return null;
+  }
+  try {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: "select_account" });
+    const cred = await signInWithPopup(getFirebaseAuth(), provider);
+    return cred.user;
+  } catch (err) {
+    throw new Error(mapFirebaseAuthError(err));
+  }
 }
 
 export async function lookupReceiptClaimAuth(input: {
@@ -306,5 +332,28 @@ export function claimErrorLabel(code: string | undefined): string {
     missing_sale: "ไม่เจอบิลนี้",
     bad_body: "ข้อมูลไม่ครบ",
   };
-  return map[code || ""] || code || "ลองใหม่อีกครั้งนะ";
+  const key = (code || "").trim();
+  if (map[key]) return map[key];
+  if (/Firebase:\s*Error|auth\/[a-z0-9-]+/i.test(key)) {
+    return "เข้าสู่ระบบไม่สำเร็จ — ลองใหม่ หรือใช้เบอร์แทน";
+  }
+  return key || "ลองใหม่อีกครั้งนะ";
+}
+
+/** Soft title for blocked claim states — never sounds like “สมัครไม่ได้”. */
+export function claimBlockedTitle(code: string | undefined): string {
+  switch ((code || "").trim()) {
+    case "expired":
+      return "ลิงก์บิลนี้หมดอายุแล้ว";
+    case "bad_token":
+    case "missing_sale":
+      return "ไม่เจอบิลจากลิงก์นี้";
+    case "voided":
+      return "บิลนี้ยกเลิกแล้ว";
+    case "disabled":
+    case "receipt_off":
+      return "ร้านยังไม่เปิดรับแต้มจากสลิป";
+    default:
+      return "เปิดบิลนี้ไม่สำเร็จ";
+  }
 }
