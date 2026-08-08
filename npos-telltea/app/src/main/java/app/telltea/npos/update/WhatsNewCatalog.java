@@ -16,6 +16,14 @@ public final class WhatsNewCatalog {
   private WhatsNewCatalog() {}
 
   public static List<WhatsNewSlide> slidesFor(int versionCode) {
+    if (versionCode == 142) {
+      List<WhatsNewSlide> slides = new ArrayList<>();
+      slides.add(
+          new WhatsNewSlide(
+              "สลิป QR กับข้อความไม่ซ้อนกัน",
+              "สแกนสะสมแต้มอยู่ใต้ QR · ไม่เยื้องข้าง · ช่องว่างใหญ่หาย"));
+      return slides;
+    }
     if (versionCode == 141) {
       List<WhatsNewSlide> slides = new ArrayList<>();
       slides.add(
