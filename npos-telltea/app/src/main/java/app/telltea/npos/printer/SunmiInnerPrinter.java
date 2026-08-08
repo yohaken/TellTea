@@ -24,6 +24,10 @@ import java.util.concurrent.atomic.AtomicReference;
  *
  * <p>Thai: prefer {@code printText} (UTF-16 Java → printer UTF fonts) instead of raw TIS-620
  * ESC/POS bytes, which Sunmi often mis-decodes as Chinese code pages.
+ *
+ * <p><b>Share with LINE MAN / delivery apps:</b> bind only for the job, reset font/alignment, then
+ * {@code unBindService}. Holding the AIDL connection for the whole app session can leave the
+ * system printer sticky so LINE MAN tickets stop printing after nPos opens or OTA-restarts.
  */
 public final class SunmiInnerPrinter {
   public static final String ENDPOINT_ID = "sunmi:inner";
@@ -105,15 +109,10 @@ public final class SunmiInnerPrinter {
       if (!InnerPrinterManager.getInstance().hasPrinter(svc)) {
         return new PrinterTransport.Result(false, "เครื่องนี้ไม่มีปริ้นในตัว");
       }
+      resetPrinterDefaults(svc);
       int paperMm = syncPaperWidthFromPrinter(context, svc);
       int qrPx = paperMm == PrinterPrefs.PAPER_58 ? 220 : 300;
       int ruleChars = paperMm == PrinterPrefs.PAPER_58 ? 22 : 32;
-
-      try {
-        svc.setAlignment(0, null);
-      } catch (Exception ignored) {
-        /* optional */
-      }
 
       if (lines != null) {
         for (ReceiptSlipLine line : lines) {
@@ -128,13 +127,17 @@ public final class SunmiInnerPrinter {
       } catch (Exception ignored) {
         /* optional */
       }
-      return cutPaperBestEffort(svc, "SUNMI พิมพ์ใบเสร็จแล้ว");
+      PrinterTransport.Result cut = cutPaperBestEffort(svc, "SUNMI พิมพ์ใบเสร็จแล้ว");
+      resetPrinterDefaults(svc);
+      return cut;
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return new PrinterTransport.Result(false, "interrupted");
     } catch (Exception e) {
       String msg = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
       return new PrinterTransport.Result(false, msg);
+    } finally {
+      releaseService();
     }
   }
 
@@ -359,11 +362,7 @@ public final class SunmiInnerPrinter {
       if (!InnerPrinterManager.getInstance().hasPrinter(svc)) {
         return new PrinterTransport.Result(false, "เครื่องนี้ไม่มีปริ้นในตัว");
       }
-      try {
-        svc.setAlignment(0, null);
-      } catch (Exception ignored) {
-        /* optional */
-      }
+      resetPrinterDefaults(svc);
       PrinterTransport.Result printed = printTextOnce(svc, EscPos.stripBoldMarkers(body));
       if (!printed.ok) return printed;
       try {
@@ -371,14 +370,19 @@ public final class SunmiInnerPrinter {
       } catch (Exception ignored) {
         /* optional */
       }
-      return cutPaperBestEffort(
-          svc, longDoc ? "SUNMI พิมพ์สรุปรอบแล้ว" : "SUNMI พิมพ์ไทยแล้ว");
+      PrinterTransport.Result cut =
+          cutPaperBestEffort(
+              svc, longDoc ? "SUNMI พิมพ์สรุปรอบแล้ว" : "SUNMI พิมพ์ไทยแล้ว");
+      resetPrinterDefaults(svc);
+      return cut;
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return new PrinterTransport.Result(false, "interrupted");
     } catch (Exception e) {
       String msg = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
       return new PrinterTransport.Result(false, msg);
+    } finally {
+      releaseService();
     }
   }
 
@@ -548,6 +552,7 @@ public final class SunmiInnerPrinter {
       if (!InnerPrinterManager.getInstance().hasPrinter(svc)) {
         return new PrinterTransport.Result(false, "เครื่องนี้ไม่มีปริ้นในตัว");
       }
+      resetPrinterDefaults(svc);
       CountDownLatch done = new CountDownLatch(1);
       AtomicReference<PrinterTransport.Result> out = new AtomicReference<>();
       svc.sendRAWData(
@@ -590,6 +595,7 @@ public final class SunmiInnerPrinter {
         return new PrinterTransport.Result(false, "SUNMI timeout (sendRAWData)");
       }
       PrinterTransport.Result r = out.get();
+      resetPrinterDefaults(svc);
       return r != null ? r : new PrinterTransport.Result(false, "SUNMI ไม่ตอบ");
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -597,6 +603,8 @@ public final class SunmiInnerPrinter {
     } catch (Exception e) {
       String msg = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
       return new PrinterTransport.Result(false, msg);
+    } finally {
+      releaseService();
     }
   }
 
@@ -650,6 +658,8 @@ public final class SunmiInnerPrinter {
     } catch (Exception e) {
       String msg = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
       return new PrinterTransport.Result(false, msg);
+    } finally {
+      releaseService();
     }
   }
 
@@ -802,6 +812,50 @@ public final class SunmiInnerPrinter {
     return Arrays.equals(payload, EscPos.drawerKick());
   }
 
+  /** Clear bold / font / alignment so the next app (LINE MAN) starts clean. */
+  static void resetPrinterDefaults(SunmiPrinterService svc) {
+    if (svc == null) return;
+    try {
+      svc.printerInit(null);
+    } catch (Exception ignored) {
+      /* optional on some firmwares */
+    }
+    try {
+      svc.setFontSize(24, null);
+    } catch (Exception ignored) {
+      /* optional */
+    }
+    try {
+      svc.setAlignment(0, null);
+    } catch (Exception ignored) {
+      /* optional */
+    }
+    try {
+      sendEscE(svc, false);
+    } catch (Exception ignored) {
+      /* optional */
+    }
+  }
+
+  /**
+   * Drop AIDL bind after each job so delivery apps can connect to InnerPrinter.
+   * Safe to call when not bound.
+   */
+  static void releaseService() {
+    synchronized (LOCK) {
+      Context ctx = appCtx;
+      InnerPrinterCallback cb = boundCallback;
+      service = null;
+      boundCallback = null;
+      if (ctx == null || cb == null) return;
+      try {
+        InnerPrinterManager.getInstance().unBindService(ctx, cb);
+      } catch (Exception ignored) {
+        /* best-effort — never block the sale path */
+      }
+    }
+  }
+
   private static SunmiPrinterService ensureService(Context context)
       throws InnerPrinterException, InterruptedException {
     if (context == null) return null;
@@ -830,9 +884,16 @@ public final class SunmiInnerPrinter {
       boundCallback = cb;
       boolean ok = InnerPrinterManager.getInstance().bindService(appCtx, cb);
       if (!ok) {
+        boundCallback = null;
         return null;
       }
       if (!connected.await(8, TimeUnit.SECONDS)) {
+        try {
+          InnerPrinterManager.getInstance().unBindService(appCtx, cb);
+        } catch (Exception ignored) {
+          /* optional */
+        }
+        boundCallback = null;
         return null;
       }
       return got.get();
