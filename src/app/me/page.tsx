@@ -109,8 +109,8 @@ export default function MemberMePage() {
       <div className="join-card">
         <p className="join-brand">TellTea</p>
         <h1>แต้มของฉัน</h1>
-        <p className="muted">ใช้เบอร์มือถือไทย หรือ Google (Chrome/Safari)</p>
         <ClaimPointsValueNote />
+        <p className="muted">ใช้เบอร์มือถือไทย หรือ Google (Chrome/Safari)</p>
 
         {step === "auth" ? (
           <div className="join-form">

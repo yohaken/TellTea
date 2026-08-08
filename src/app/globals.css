@@ -1075,12 +1075,22 @@ body.modal-open .main-panel {
 
 .claim-value-note {
   margin: 0.65rem 0 0;
-  padding: 0.65rem 0.75rem;
+  padding: 0.7rem 0.8rem;
   border-radius: 0.65rem;
   background: rgba(47, 107, 79, 0.08);
   color: #2f4a3c;
   font-size: 0.92rem;
   line-height: 1.4;
+}
+
+.claim-value-note-lead {
+  margin: 0;
+}
+
+.claim-value-note-sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.86rem;
+  color: #4a6356;
 }
 
 .claim-value-note strong {
