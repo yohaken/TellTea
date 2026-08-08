@@ -167,18 +167,30 @@ jobs:
             exit "$host"
           fi
 
-          # 2) Firestore rules — Rules API มัก 503; retry ถี่+ยาว · แยก rules ก่อน indexes
+          # 2) Firestore rules — Rules API มัก 503/409; retry ถี่+ยาว · แยก rules ก่อน indexes
+          # 409 "Requested entity already exists" = release ชนตอน rules ไม่เปลี่ยน → ถือว่า OK
           rules=1
           for attempt in 1 2 3 4 5 6 7 8; do
             echo "Firestore rules attempt $attempt"
-            npx firebase-tools@latest deploy --only firestore:rules --project mypeer-501909 --non-interactive --force
+            rules_log="$(mktemp)"
+            npx firebase-tools@latest deploy --only firestore:rules --project mypeer-501909 --non-interactive --force >"$rules_log" 2>&1
             rules=$?
+            cat "$rules_log"
             if [ "$rules" -eq 0 ]; then
               echo "Firestore rules OK on attempt $attempt"
               # indexes แยก — อย่าให้ดึง rules พังทั้งก้อน
               npx firebase-tools@latest deploy --only firestore:indexes --project mypeer-501909 --non-interactive --force || true
+              rm -f "$rules_log"
               break
             fi
+            if grep -Eqi 'HTTP Error: 409|Requested entity already exists|already up to date' "$rules_log"; then
+              echo "Firestore rules 409/already-current — treat as OK (attempt $attempt)"
+              rules=0
+              npx firebase-tools@latest deploy --only firestore:indexes --project mypeer-501909 --non-interactive --force || true
+              rm -f "$rules_log"
+              break
+            fi
+            rm -f "$rules_log"
             sleep $((attempt * 12))
           done
 
