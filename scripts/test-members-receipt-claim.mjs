@@ -36,6 +36,12 @@ assert.match(claimPage, /ส่งรหัสยืนยันเบอร์/
 assert.match(claimPage, /ได้แต้มจากบิลนี้ไปแล้ว/);
 assert.match(claimPage, /ดูแต้มของฉัน/);
 assert.match(claimPage, /"used"/);
+assert.match(claimPage, /ClaimPointsValueNote/);
+const valueNote = read("src/components/ClaimPointsValueNote.tsx");
+assert.match(valueNote, /1 แต้ม = 1 บาท/);
+assert.match(valueNote, /ลดยอดตอนจ่าย/);
+const mePageSrc = read("src/app/me/page.tsx");
+assert.match(mePageSrc, /ClaimPointsValueNote/);
 assert.doesNotMatch(claimPage, /ดำเนินการต่อด้วย Google/);
 assert.doesNotMatch(claimPage, /นโยบายข้อมูลส่วนบุคคล/);
 
@@ -82,7 +88,7 @@ assert.match(smoke, /"claim"/);
 assert.match(smoke, /"me"/);
 
 const version = read("src/lib/version.ts");
-assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 750);
+assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 756);
 assert.match(claimLib, /ลองใหม่อีกครั้งนะ/);
 assert.match(claimLib, /ได้แต้มจากบิลนี้ไปแล้ว/);
 

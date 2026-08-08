@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import type { ConfirmationResult } from "firebase/auth";
+import { ClaimPointsValueNote } from "@/components/ClaimPointsValueNote";
 import {
   completeMemberGoogleRedirect,
   mapFirebaseAuthError,
@@ -109,6 +110,7 @@ export default function MemberMePage() {
         <p className="join-brand">TellTea</p>
         <h1>แต้มของฉัน</h1>
         <p className="muted">ใช้เบอร์มือถือไทย หรือ Google (Chrome/Safari)</p>
+        <ClaimPointsValueNote />
 
         {step === "auth" ? (
           <div className="join-form">
