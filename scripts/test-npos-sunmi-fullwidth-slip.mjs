@@ -41,15 +41,15 @@ assert.match(fn, /paperWidthMm/);
 assert.match(fn, /receiptCols/);
 
 const gradle = read("npos-telltea/app/build.gradle");
-assert.ok(Number(gradle.match(/versionCode\s+(\d+)/)[1]) >= 143);
+assert.ok(Number(gradle.match(/versionCode\s+(\d+)/)[1]) >= 144);
 
 const pin = read("src/lib/npos-apk-release.ts");
-assert.ok(Number(pin.match(/NPOS_SYSTEM_VERSION_CODE = (\d+)/)[1]) >= 143);
+assert.ok(Number(pin.match(/NPOS_SYSTEM_VERSION_CODE = (\d+)/)[1]) >= 144);
 
 const whats = read("npos-telltea/app/src/main/java/app/telltea/npos/update/WhatsNewCatalog.java");
-assert.match(whats, /versionCode == 143/);
+assert.match(whats, /versionCode == 144/);
 
-assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)[1]) >= 751);
-assert.ok(Number(read("src/lib/pos-version.ts").match(/POS_BUILD = (\d+)/)[1]) >= 196);
+assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)[1]) >= 752);
+assert.ok(Number(read("src/lib/pos-version.ts").match(/POS_BUILD = (\d+)/)[1]) >= 197);
 
 console.log("OK test-npos-sunmi-fullwidth-slip");

@@ -33,6 +33,8 @@ assert.match(bridge, /printSlip/);
 assert.match(bridge, /printPlainWithClaimQr/);
 assert.match(bridge, /printColumnsString/);
 assert.match(bridge, /syncPaperWidthFromPrinter/);
+assert.match(bridge, /releaseService/);
+assert.match(bridge, /unBindService/);
 assert.match(bridge, /printBitmapOnce[\s\S]*lineWrap\(1/);
 assert.match(bridge, /escPosTis620ToPlain/);
 assert.match(bridge, /printTextBoldSegments/);

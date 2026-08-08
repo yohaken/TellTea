@@ -16,6 +16,14 @@ public final class WhatsNewCatalog {
   private WhatsNewCatalog() {}
 
   public static List<WhatsNewSlide> slidesFor(int versionCode) {
+    if (versionCode == 144) {
+      List<WhatsNewSlide> slides = new ArrayList<>();
+      slides.add(
+          new WhatsNewSlide(
+              "ใช้ปริ้นร่วมกับ LINE MAN ได้",
+              "หลังพิมพ์บิล nPos ปล่อยเครื่องพิมพ์ทันที · แอปอื่นพิมพ์ต่อได้"));
+      return slides;
+    }
     if (versionCode == 143) {
       List<WhatsNewSlide> slides = new ArrayList<>();
       slides.add(
