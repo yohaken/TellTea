@@ -41,7 +41,9 @@ assert.match(claimPage, /"used"/);
 assert.match(claimPage, /ClaimPointsValueNote/);
 const valueNote = read("src/components/ClaimPointsValueNote.tsx");
 assert.match(valueNote, /1 แต้ม = ส่วนลด 1 บาท/);
-assert.match(valueNote, /ใช้ลดยอดตอนจ่ายครั้งหน้าที่ร้าน/);
+assert.match(valueNote, /claim-value-note-steps/);
+assert.match(valueNote, /สแกน QR รับแต้มจากบิล/);
+assert.match(valueNote, /ครั้งหน้าบอกเบอร์ตอนจ่าย/);
 assert.match(valueNote, /ไม่ต้องรอครบแก้ว/);
 const mePageSrc = read("src/app/me/page.tsx");
 assert.match(mePageSrc, /ClaimPointsValueNote/);
@@ -91,7 +93,7 @@ assert.match(smoke, /"claim"/);
 assert.match(smoke, /"me"/);
 
 const version = read("src/lib/version.ts");
-assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 757);
+assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 760);
 assert.match(claimLib, /ลองใหม่อีกครั้งนะ/);
 assert.match(claimLib, /ได้แต้มจากบิลนี้ไปแล้ว/);
 

@@ -16,6 +16,14 @@ public final class WhatsNewCatalog {
   private WhatsNewCatalog() {}
 
   public static List<WhatsNewSlide> slidesFor(int versionCode) {
+    if (versionCode == 146) {
+      List<WhatsNewSlide> slides = new ArrayList<>();
+      slides.add(
+          new WhatsNewSlide(
+              "สลิปบอกวิธีใช้แต้ม",
+              "ใต้ QR: 1แต้ม=ลด1฿ · ครั้งหน้าบอกเบอร์ตอนจ่าย"));
+      return slides;
+    }
     if (versionCode == 145) {
       List<WhatsNewSlide> slides = new ArrayList<>();
       slides.add(

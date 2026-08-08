@@ -332,6 +332,12 @@ export function unifiedReceiptStyles(layout: PrinterKindProfile, cutMode: PosPri
       color: #111;
       letter-spacing: 0.03em;
     }
+    .claim-qr-hint {
+      margin-top: 3px;
+      font-size: ${layout.metaFontPx}px;
+      font-weight: 600;
+      color: #222;
+    }
     ${cutHint}
     @media print { body { margin: 0; } }
   `;
@@ -427,6 +433,7 @@ export function buildUnifiedReceiptBody(data: ReceiptPrintPayload, layout: Print
           : ""
       }
       <div class="claim-qr-invite">สแกนสะสมแต้ม</div>
+      <div class="claim-qr-hint">1แต้ม=ลด1฿ · ครั้งหน้าบอกเบอร์</div>
     </div>`
       : "";
 

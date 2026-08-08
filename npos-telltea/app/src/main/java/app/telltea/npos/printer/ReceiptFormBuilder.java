@@ -32,6 +32,8 @@ public final class ReceiptFormBuilder {
   public static final String CLAIM_QR_MARKER = "<<<CLAIM_QR>>>";
 
   public static final String CLAIM_QR_INVITE = "สแกนสะสมแต้ม";
+  /** Short redeem hint under invite — keep short for 58mm. */
+  public static final String CLAIM_QR_HINT = "1แต้ม=ลด1฿ · ครั้งหน้าบอกเบอร์";
 
   /** Our shop fallback when settings are empty — not a third-party POS brand. */
   private static final String DEFAULT_SHOP_EN = "TELL TEA";
@@ -201,6 +203,7 @@ public final class ReceiptFormBuilder {
       out.add(ReceiptSlipLine.blank());
       out.add(ReceiptSlipLine.qrMark());
       out.add(ReceiptSlipLine.center(CLAIM_QR_INVITE, true));
+      out.add(ReceiptSlipLine.center(CLAIM_QR_HINT, false));
     }
     out.add(ReceiptSlipLine.blank());
     out.add(ReceiptSlipLine.center(footerNote, false));

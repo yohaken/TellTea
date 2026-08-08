@@ -209,6 +209,7 @@ export function buildUnifiedReceiptText(
     out.push("");
     out.push(CLAIM_QR_MARKER);
     out.push(center("สแกนสะสมแต้ม", width));
+    out.push(center("1แต้ม=ลด1฿ · ครั้งหน้าบอกเบอร์", width));
   }
   out.push("");
   out.push(center(footerNote, width));
