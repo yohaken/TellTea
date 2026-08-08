@@ -373,12 +373,13 @@ function ClaimForm() {
     <main className="join-page">
       <div className="join-card">
         <p className="join-brand">TellTea</p>
-        <h1>ได้แต้มจากบิลนี้</h1>
+        <h1>สะสมแต้มจากบิลนี้</h1>
         {showBillMeta ? (
           <p className="muted claim-bill-meta">
             {typeof preview?.pointsPreview === "number" && step !== "no_points" ? (
               <>
                 ได้ <strong>{preview.pointsPreview}</strong> แต้ม
+                {" · "}มูลค่าส่วนลด <strong>{preview.pointsPreview}</strong> บาท
                 {preview?.billNo ? ` · บิล ${preview.billNo}` : ""}
               </>
             ) : (
@@ -389,10 +390,10 @@ function ClaimForm() {
             )}
           </p>
         ) : (
-          <p className="muted">สแกนจากสลิป TellTea</p>
+          <p className="muted">สแกนจากสลิป TellTea — รับแต้มใช้เป็นส่วนลดได้เลย</p>
         )}
 
-        {step !== "load" ? <ClaimPointsValueNote /> : null}
+        <ClaimPointsValueNote />
 
         {step === "load" ? (
           <p className="muted" style={{ marginTop: "1rem" }}>
@@ -596,6 +597,7 @@ function ClaimForm() {
             </p>
             <p style={{ marginTop: "0.75rem" }}>
               รวมตอนนี้ <strong>{done.balance}</strong> แต้ม
+              {" · "}ลดได้ถึง <strong>{done.balance}</strong> บาท
             </p>
             <p className="muted" style={{ marginTop: "0.35rem" }}>
               {done.displayName}
