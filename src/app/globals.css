@@ -1073,6 +1073,21 @@ body.modal-open .main-panel {
   font-variant-numeric: tabular-nums;
 }
 
+.claim-value-note {
+  margin: 0.65rem 0 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.65rem;
+  background: rgba(47, 107, 79, 0.08);
+  color: #2f4a3c;
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.claim-value-note strong {
+  color: #2f6b4f;
+  font-weight: 700;
+}
+
 .claim-used {
   margin-top: 1rem;
 }

@@ -10,6 +10,7 @@ import {
   sendLinkPhoneOtp,
   sendPhoneOtp,
 } from "@/lib/phone-auth";
+import { ClaimPointsValueNote } from "@/components/ClaimPointsValueNote";
 import {
   completeMemberGoogleRedirect,
   mapFirebaseAuthError,
@@ -391,6 +392,8 @@ function ClaimForm() {
           <p className="muted">สแกนจากสลิป TellTea</p>
         )}
 
+        {step !== "load" ? <ClaimPointsValueNote /> : null}
+
         {step === "load" ? (
           <p className="muted" style={{ marginTop: "1rem" }}>
             แป๊บหนึ่ง...
@@ -597,6 +600,7 @@ function ClaimForm() {
             <p className="muted" style={{ marginTop: "0.35rem" }}>
               {done.displayName}
             </p>
+            <ClaimPointsValueNote />
             <a
               className="primary-btn claim-used-cta"
               href="/me/"
