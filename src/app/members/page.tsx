@@ -13,9 +13,11 @@ import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
 import { mapFirestoreError } from "@/lib/firestore-errors";
+import { PosConfirmDialog } from "@/components/PosConfirmDialog";
 import {
   adjustMemberPoints,
   createMember,
+  deleteMember,
   filterMembers,
   getMemberSettings,
   listMemberLedger,
@@ -94,6 +96,7 @@ function MembersView() {
   const [ledgerLoading, setLedgerLoading] = useState(false);
   const [pointsDelta, setPointsDelta] = useState("");
   const [pointsNote, setPointsNote] = useState("");
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const [setEnabled, setSetEnabled] = useState(false);
   const [setBaht, setSetBaht] = useState("25");
@@ -242,6 +245,25 @@ function MembersView() {
       await reload();
     } catch (err) {
       setError(mapFirestoreError(err, "เปลี่ยนสถานะ"));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function onConfirmDeleteMember() {
+    if (!canManage || !actorId || !selected) return;
+    setSaving(true);
+    setError(null);
+    setMsg(null);
+    try {
+      const name = selected.displayName;
+      await deleteMember(selected.id, actorId);
+      setConfirmDeleteOpen(false);
+      setSelected(null);
+      setMsg(`ลบสมาชิกแล้ว · ${name}`);
+      await reload();
+    } catch (err) {
+      setError(mapFirestoreError(err, "ลบสมาชิก"));
     } finally {
       setSaving(false);
     }
@@ -845,6 +867,14 @@ function MembersView() {
                         >
                           {selected.status === "active" ? "ระงับ" : "เปิดใช้"}
                         </button>
+                        <button
+                          type="button"
+                          className="ghost-btn staff-btn-sm is-danger"
+                          disabled={saving}
+                          onClick={() => setConfirmDeleteOpen(true)}
+                        >
+                          ลบสมาชิก
+                        </button>
                       </div>
                     ) : null}
                   </form>
@@ -923,6 +953,24 @@ function MembersView() {
           )}
         </>
       )}
+
+      <PosConfirmDialog
+        open={confirmDeleteOpen}
+        title="ลบสมาชิก?"
+        message={
+          selected
+            ? `ยืนยันลบ ${selected.displayName} (${phoneLabel(selected)}) — จะหายจากรายชื่อ และใช้แต้ม/แลกไม่ได้`
+            : "ยืนยันลบสมาชิกนี้"
+        }
+        confirmLabel="ยืนยัน"
+        cancelLabel="ยกเลิก"
+        destructive
+        busy={saving}
+        onConfirm={() => void onConfirmDeleteMember()}
+        onCancel={() => {
+          if (!saving) setConfirmDeleteOpen(false);
+        }}
+      />
     </div>
   );
 }

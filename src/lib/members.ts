@@ -22,7 +22,7 @@ import {
 /** แหล่งสมัคร — จอง `qr_self` ไว้ตั้งแต่โครง (M4) */
 export type MemberSource = "staff_boh" | "staff_pos" | "qr_self" | "receipt_qr";
 
-export type MemberStatus = "active" | "suspended";
+export type MemberStatus = "active" | "suspended" | "deleted";
 
 export type MemberLedgerReason =
   | "earn_sale"
@@ -164,7 +164,12 @@ function mapMember(snap: QueryDocumentSnapshot | { id: string; data: () => Recor
       typeof d.cardNo === "string" && d.cardNo
         ? d.cardNo
         : cardNoFromPhoneDigits(phoneDigits),
-    status: d.status === "suspended" ? "suspended" : "active",
+    status:
+      d.status === "deleted"
+        ? "deleted"
+        : d.status === "suspended"
+          ? "suspended"
+          : "active",
     pointsBalance: typeof d.pointsBalance === "number" ? d.pointsBalance : 0,
     lifetimePointsEarned:
       typeof d.lifetimePointsEarned === "number" ? d.lifetimePointsEarned : 0,
@@ -338,11 +343,11 @@ export async function getMemberByPhone(phoneInput: string): Promise<ShopMember |
   return getMember(memberIdFromPhone(phoneInput));
 }
 
-/** รายการล่าสุด (อัปเดตล่าสุดก่อน) */
+/** รายการล่าสุด (อัปเดตล่าสุดก่อน) — ซ่อนสมาชิกที่ลบแล้ว */
 export async function listMembers(max = 200): Promise<ShopMember[]> {
   const q = query(membersCol(), orderBy("updatedAt", "desc"), limit(max));
   const snap = await getDocs(q);
-  return snap.docs.map(mapMember);
+  return snap.docs.map(mapMember).filter((m) => m.status !== "deleted");
 }
 
 export function filterMembers(
@@ -386,12 +391,32 @@ export async function createMember(
   const phoneDigits = phoneDigitsFromE164(phone);
   const id = phoneDigits;
   const existing = await getDoc(memberRef(id));
+  const now = Date.now();
+  const displayName = input.displayName.trim() || formatPhoneDisplay(phone);
+
+  // Soft-deleted: owner may re-register the same phone (keeps ledger history).
   if (existing.exists()) {
+    const prev = existing.data() as Partial<ShopMember>;
+    if (prev.status === "deleted") {
+      await updateDoc(memberRef(id), {
+        phone,
+        phoneDigits,
+        displayName,
+        cardNo: cardNoFromPhoneDigits(phoneDigits),
+        status: "active",
+        birthday: (input.birthday || "").trim(),
+        note: (input.note || "").trim(),
+        source: input.source || "staff_boh",
+        updatedAt: now,
+        updatedBy: actorId,
+      });
+      const restored = await getMember(id);
+      if (!restored) throw new Error("ไม่พบสมาชิก");
+      return restored;
+    }
     throw new Error("เบอร์นี้เป็นสมาชิกแล้ว");
   }
 
-  const now = Date.now();
-  const displayName = input.displayName.trim() || formatPhoneDisplay(phone);
   const member: ShopMember = {
     id,
     phone,
@@ -474,7 +499,11 @@ export async function updateMember(
   if (typeof patch.note === "string") {
     data.note = patch.note.trim();
   }
-  if (patch.status === "active" || patch.status === "suspended") {
+  if (
+    patch.status === "active" ||
+    patch.status === "suspended" ||
+    patch.status === "deleted"
+  ) {
     data.status = patch.status;
   }
 
@@ -482,6 +511,22 @@ export async function updateMember(
   const next = await getMember(id);
   if (!next) throw new Error("ไม่พบสมาชิก");
   return next;
+}
+
+/**
+ * Soft-delete member (owner). Keeps phone id + ledger; hides from list and
+ * blocks earn/redeem/claim until re-registered.
+ */
+export async function deleteMember(
+  id: string,
+  actorId: string,
+): Promise<ShopMember> {
+  const ref = memberRef(id);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error("ไม่พบสมาชิก");
+  const prev = snap.data() as Partial<ShopMember>;
+  if (prev.status === "deleted") throw new Error("ลบสมาชิกนี้ไปแล้ว");
+  return updateMember(id, { status: "deleted" }, actorId);
 }
 
 export type AdjustPointsInput = {
@@ -515,6 +560,7 @@ export async function adjustMemberPoints(
     const snap = await tx.get(mRef);
     if (!snap.exists()) throw new Error("ไม่พบสมาชิก");
     const before = snap.data() as Partial<ShopMember>;
+    if (before.status === "deleted") throw new Error("สมาชิกถูกลบแล้ว");
     const balance =
       typeof before.pointsBalance === "number" ? before.pointsBalance : 0;
     const lifetime =

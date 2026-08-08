@@ -293,6 +293,7 @@ export function claimErrorLabel(code: string | undefined): string {
     auth_mismatch: "บัญชีไม่ตรง",
     pdpa_required: "กดยอมรับก่อนนะ",
     suspended: "บัตรนี้ใช้ไม่ได้ชั่วคราว",
+    deleted: "สมาชิกนี้ถูกลบแล้ว",
     zero_points: "บิลนี้ยังไม่มีแต้ม",
     missing_sale: "ไม่เจอบิลนี้",
     bad_body: "ข้อมูลไม่ครบ",
@@ -318,6 +319,10 @@ export function claimBlockedTitle(code: string | undefined): string {
     case "disabled":
     case "receipt_off":
       return "ร้านยังไม่เปิดรับแต้มจากสลิป";
+    case "deleted":
+      return "สมาชิกนี้ถูกลบแล้ว";
+    case "suspended":
+      return "บัตรนี้ใช้ไม่ได้ชั่วคราว";
     default:
       return "เปิดบิลนี้ไม่สำเร็จ";
   }

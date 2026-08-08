@@ -11,6 +11,7 @@
     "test:staff-rbac": "node scripts/test-staff-rbac-phases.mjs",
     "test:permissions-resolve": "node scripts/test-permissions-resolve.mjs",
     "test:members-crm": "node scripts/test-members-crm-m0.mjs",
+    "test:members-owner-delete": "node scripts/test-members-owner-delete.mjs",
     "test:members-receipt-claim": "node scripts/test-members-receipt-claim.mjs",
     "test:members-claim-google-phone-otp": "node scripts/test-members-claim-google-phone-otp.mjs",
     "test:members-claim-auth-bridge": "node scripts/test-members-claim-auth-bridge.mjs",
