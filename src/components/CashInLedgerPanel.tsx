@@ -41,6 +41,7 @@ import {
   normalizeSessionNotes,
   subscribeCashDepositsPage,
   suggestedNetBankTransfer,
+  summarizeCashDepositTransfers,
   sumBankTransferAmounts,
   sumBankTransferFees,
   sumCashDepositDays,
@@ -409,39 +410,34 @@ export function CashInLedgerPanel({
     [workingDays, occupancy, selected?.id],
   );
 
-  const flatRows = useMemo(() => {
-    const rows: {
-      roundId: string;
-      roundLabel: string;
-      roundNote: string;
-      status: CashDepositStatus;
-      transferUi: CashDepositTransferUiState;
-      day: CashDepositDayLine;
-      bankAmount: number;
-      /** Bank e-slips — transfer evidence (not round-print compare photos) */
-      bankSlipUrls: string[];
-    }[] = [];
-    for (const entry of entries) {
-      const label = labelCashDepositRound(entry);
-      const bankSlipUrls = cashDepositBankSlipUrls(entry);
+  /** One row per transfer (CashDeposit) — owner overview, not day-line flatten. */
+  const transferRows = useMemo(() => {
+    const rows = entries.map((entry) => {
       const transferUi = deriveCashDepositTransferUiState(entry);
-      const roundNote = (entry.note || "").trim();
-      for (const day of entry.days) {
-        rows.push({
-          roundId: entry.id,
-          roundLabel: label,
-          roundNote,
-          status: entry.status,
-          transferUi,
-          day,
-          bankAmount: entry.bankAmount,
-          bankSlipUrls,
-        });
-      }
-    }
-    rows.sort((a, b) => b.day.date - a.day.date);
+      return {
+        roundId: entry.id,
+        roundLabel: labelCashDepositRound(entry),
+        roundNote: (entry.note || "").trim(),
+        status: entry.status as CashDepositStatus,
+        transferUi,
+        transferDate: Number(entry.transferDate) || 0,
+        bankAmount: Number(entry.bankAmount) || 0,
+        transferFee: Math.max(0, Number(entry.transferFee) || 0),
+        bankSlipUrls: cashDepositBankSlipUrls(entry),
+      };
+    });
+    rows.sort((a, b) => {
+      const td = (b.transferDate || 0) - (a.transferDate || 0);
+      if (td) return td;
+      return b.roundId.localeCompare(a.roundId);
+    });
     return rows;
   }, [entries]);
+
+  const transferSummary = useMemo(
+    () => summarizeCashDepositTransfers(entries),
+    [entries],
+  );
 
   function toggle() {
     setOpen((v) => {
@@ -1109,6 +1105,9 @@ export function CashInLedgerPanel({
       return `รอ ${pendingDepositSessions.length} · ฿${formatPlainNumber(pendingDepositSum)}`;
     }
     if (loading && !entries.length) return "…";
+    if (transferSummary.count > 0) {
+      return `เข้าบช. ฿${formatPlainNumber(transferSummary.bankAmountSum)} · คชจ. ฿${formatPlainNumber(transferSummary.transferFeeSum)}`;
+    }
     return "ติ๊กบิลเพื่อโอน";
   })();
   const primaryTransfer = workingTransfers[0] ?? null;
@@ -1625,86 +1624,125 @@ export function CashInLedgerPanel({
             </div>
           ) : null}
 
-          {/* Overview: all rounds flattened */}
+          {/* Overview: one row per bank transfer (CashDeposit) */}
           {!editingRound ? (
             <>
-              {loading && !flatRows.length ? (
+              {loading && !transferRows.length ? (
                 <p className="empty">…</p>
-              ) : !flatRows.length ? (
+              ) : !transferRows.length ? (
                 <p className="empty">ยังไม่มีมัดรวม · ติ๊กบิลด้านบนเพื่อโอน</p>
               ) : (
-                <div className="sheet-wrap cash-in-panel-table-wrap">
-                  <table className="sheet-table cash-in-slim">
-                    <thead>
-                      <tr>
-                        <th className="col-round">มัด</th>
-                        <th className="col-date">วัน</th>
-                        <th className="col-num" title="ยอดบิล">
-                          ยอด
-                        </th>
-                        <th className="col-note" title="โน้ตมัดโอน">
-                          โน้ต
-                        </th>
-                        <th className="col-slip" title="สลิปโอนเข้าบัญชี">
-                          สลิปโอน
-                        </th>
-                        <th className="col-type">สถานะ</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {flatRows.map((row) => (
-                        <tr
-                          key={`${row.roundId}-${row.day.id}`}
-                          className={row.status === "void" ? "is-void-row" : undefined}
-                        >
-                          <td className="col-round">
-                            <button
-                              type="button"
-                              className="desc-link"
-                              onClick={() => setSelectedId(row.roundId)}
-                            >
-                              {row.roundLabel}
-                            </button>
-                          </td>
-                          <td className="col-date">{formatCashDayShort(row.day.date)}</td>
-                          <td className="col-num">
-                            {row.day.cashAmount
-                              ? formatPlainNumber(row.day.cashAmount)
-                              : ""}
-                          </td>
-                          <td className="col-note" title={row.roundNote || undefined}>
-                            {row.roundNote ? (
-                              <span className="cash-in-round-note">{row.roundNote}</span>
-                            ) : (
-                              <span className="muted">—</span>
-                            )}
-                          </td>
-                          <td className="col-slip">
-                            {row.bankSlipUrls.length ? (
-                              <EntryPhotoIndicator
-                                imageUrls={row.bankSlipUrls}
-                                label="สลิปโอน"
-                                onView={(urls) =>
-                                  setImagePreview({
-                                    urls,
-                                    title: `สลิปโอน ${row.roundLabel}`,
-                                  })
-                                }
-                              />
-                            ) : (
-                              <span className="muted">—</span>
-                            )}
-                          </td>
-                          <td className="col-type">
-                            <span className={transferUiClass(row.transferUi)}>
-                              {labelCashDepositTransferUiState(row.transferUi)}
-                            </span>
-                          </td>
+                <>
+                  {transferSummary.count > 0 ? (
+                    <div
+                      className="cash-in-history-summary"
+                      aria-label="สรุปยอดโอนเข้า"
+                    >
+                      <p className="cash-in-history-summary-line">
+                        <span className="cash-in-history-summary-text">
+                          โอนเข้า {transferSummary.count} ครั้ง · เข้าบช. ฿
+                          {formatPlainNumber(transferSummary.bankAmountSum)}
+                          {" · "}
+                          คชจ. ฿{formatPlainNumber(transferSummary.transferFeeSum)}
+                          {transferSummary.awaitingSlipCount > 0
+                            ? ` · รอสลิป ${transferSummary.awaitingSlipCount}`
+                            : ""}
+                        </span>
+                      </p>
+                    </div>
+                  ) : null}
+                  <div className="sheet-wrap cash-in-panel-table-wrap">
+                    <table className="sheet-table cash-in-slim">
+                      <thead>
+                        <tr>
+                          <th className="col-round">มัด</th>
+                          <th className="col-date" title="วันที่โอนเข้าบัญชี">
+                            วันโอน
+                          </th>
+                          <th className="col-num" title="ยอดเข้าบัญชี">
+                            เข้าบช.
+                          </th>
+                          <th className="col-num col-fee" title="ค่าธรรมเนียมโอน">
+                            คชจ.
+                          </th>
+                          <th className="col-note" title="โน้ตมัดโอน">
+                            โน้ต
+                          </th>
+                          <th className="col-slip" title="สลิปโอนเข้าบัญชี">
+                            สลิป
+                          </th>
+                          <th className="col-type">สถานะ</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {transferRows.map((row) => (
+                          <tr
+                            key={row.roundId}
+                            className={
+                              row.status === "void" ? "is-void-row" : undefined
+                            }
+                          >
+                            <td className="col-round">
+                              <button
+                                type="button"
+                                className="desc-link"
+                                onClick={() => setSelectedId(row.roundId)}
+                              >
+                                {row.roundLabel}
+                              </button>
+                            </td>
+                            <td className="col-date">
+                              {formatCashDayShort(row.transferDate)}
+                            </td>
+                            <td className="col-num">
+                              {row.bankAmount
+                                ? formatPlainNumber(row.bankAmount)
+                                : ""}
+                            </td>
+                            <td className="col-num col-fee">
+                              {row.transferFee
+                                ? formatPlainNumber(row.transferFee)
+                                : "—"}
+                            </td>
+                            <td
+                              className="col-note"
+                              title={row.roundNote || undefined}
+                            >
+                              {row.roundNote ? (
+                                <span className="cash-in-round-note">
+                                  {row.roundNote}
+                                </span>
+                              ) : (
+                                <span className="muted">—</span>
+                              )}
+                            </td>
+                            <td className="col-slip">
+                              {row.bankSlipUrls.length ? (
+                                <EntryPhotoIndicator
+                                  imageUrls={row.bankSlipUrls}
+                                  label="สลิปโอน"
+                                  onView={(urls) =>
+                                    setImagePreview({
+                                      urls,
+                                      title: `สลิปโอน ${row.roundLabel}`,
+                                    })
+                                  }
+                                />
+                              ) : (
+                                <span className="muted">—</span>
+                              )}
+                            </td>
+                            <td className="col-type">
+                              <span className={transferUiClass(row.transferUi)}>
+                                {labelCashDepositTransferUiState(row.transferUi)}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
               {!loading && hasMore ? (
                 <button

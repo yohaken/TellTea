@@ -23468,6 +23468,18 @@ a.ghost-btn {
   text-overflow: unset;
 }
 
+.ledger-ops-duo .cash-in-history-summary {
+  margin: 0 0 0.25rem;
+  padding: 0.18rem 0.28rem;
+}
+
+.ledger-ops-duo .cash-in-history-summary-text {
+  font-size: 0.56rem;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+}
+
 .ledger-ops-duo .bill-notice-panel-add {
   margin-top: 0.25rem;
   min-height: 1.55rem;
@@ -24155,6 +24167,35 @@ a.ghost-btn {
 .cash-in-slim .col-note {
   min-width: 4.2rem;
   max-width: 7.5rem;
+}
+
+.cash-in-slim .col-fee {
+  min-width: 2.2rem;
+  color: rgba(28, 42, 31, 0.72);
+}
+
+.cash-in-history-summary {
+  margin: 0 0 0.35rem;
+  padding: 0.28rem 0.4rem;
+  border-radius: 0.4rem;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(28, 42, 31, 0.08);
+  overflow: hidden;
+}
+
+.cash-in-history-summary-line {
+  margin: 0;
+  min-width: 0;
+}
+
+.cash-in-history-summary-text {
+  display: block;
+  font-size: 0.66rem;
+  font-variant-numeric: tabular-nums;
+  color: rgba(28, 42, 31, 0.68);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .cash-in-round-note {
