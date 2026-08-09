@@ -18,6 +18,7 @@
     "test:members-claim-google-phone-otp": "node scripts/test-members-claim-google-phone-otp.mjs",
     "test:members-claim-auth-bridge": "node scripts/test-members-claim-auth-bridge.mjs",
     "test:members-auth-structural": "node scripts/test-members-auth-structural.mjs",
+    "test:auth-login-stuck": "node scripts/test-auth-login-stuck.mjs",
     "test:members-p4-npos": "node scripts/test-members-p4-npos.mjs",
     "test:members-p5-slip-qr": "node scripts/test-members-p5-slip-qr.mjs",
     "test:members-boh-receipt-qr": "node scripts/test-members-boh-receipt-qr.mjs",

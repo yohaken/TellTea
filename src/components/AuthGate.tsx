@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth";
+import { AUTH_LOADING_ESCAPE_MS, useAuth } from "@/lib/auth";
 import { AppBrand } from "./AppBrand";
 import { AppShell } from "./AppShell";
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
-  const { status, error, signIn, signOut, user } = useAuth();
+  const { status, busyReason, error, signIn, signOut, user } = useAuth();
   const router = useRouter();
+  const [showEscape, setShowEscape] = useState(false);
 
   useEffect(() => {
     if (status === "signedOut" || status === "unconfigured") {
@@ -16,11 +17,46 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     }
   }, [status, router]);
 
+  useEffect(() => {
+    if (status !== "loading") {
+      setShowEscape(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setShowEscape(true), AUTH_LOADING_ESCAPE_MS);
+    return () => window.clearTimeout(timer);
+  }, [status]);
+
   if (status === "loading") {
+    const hint =
+      busyReason === "bridge"
+        ? "กำลังยืนยันสิทธิ์จาก Google..."
+        : busyReason === "staff"
+          ? "กำลังตรวจสิทธิ์พนักงาน..."
+          : "กำลังตรวจสอบสิทธิ์...";
     return (
       <div className="center-screen">
         <AppBrand />
-        <p className="muted">กำลังตรวจสอบสิทธิ์...</p>
+        <p className="muted">{hint}</p>
+        {error ? <p className="error-text">{error}</p> : null}
+        {showEscape ? (
+          <>
+            <p className="error-text">ค้างนานผิดปกติ — ลองใหม่อีกครั้ง</p>
+            <div className="btn-row">
+              <button
+                type="button"
+                className="primary-btn"
+                onClick={() => {
+                  window.location.assign("/login/");
+                }}
+              >
+                ไปหน้าเข้าสู่ระบบ
+              </button>
+              <button type="button" className="ghost-btn" onClick={() => void signOut()}>
+                ออกจากระบบ
+              </button>
+            </div>
+          </>
+        ) : null}
       </div>
     );
   }
