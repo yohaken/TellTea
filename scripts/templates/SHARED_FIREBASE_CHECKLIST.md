@@ -1,5 +1,7 @@
 # Sibling app on mypeer-501909 (same project as TellTea)
 
+Known siblings: `taxtag.web.app`, `caltracker-th.web.app` (and TellTea / nPos sites).
+
 ## Do
 
 1. Prefer a **new Firebase project** for a new product.
@@ -16,4 +18,5 @@
 - `firebase deploy --only firestore` from the sibling repo
 - Replace TellTea `firestore.rules` with an app-only rules file
 
-Wiping rules breaks TellTea login / ledger / POS for the shop.
+Wiping rules breaks TellTea login / ledger / POS / production / bonus for the shop
+(seen when a sibling shipped a ~17-line rules file over the shared project).

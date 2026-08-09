@@ -1,7 +1,8 @@
 rules_version = '2';
 // Canonical Firestore rules for Firebase project mypeer-501909 (TellTea + shared apps).
-// Sibling sites (e.g. taxtag.web.app) MUST NOT deploy their own firestore.rules —
-// that wipes this file and locks the shop out. Hosting-only deploy for siblings.
+// Sibling sites (e.g. taxtag.web.app, caltracker-th.web.app) MUST NOT deploy their
+// own firestore.rules — that wipes this file and locks the shop out.
+// Hosting-only deploy for siblings.
 // See scripts/templates/SHARED_FIREBASE_CHECKLIST.md and scripts/assert-firestore-rules.mjs
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -1309,6 +1310,18 @@ service cloud.firestore {
       allow read, write: if request.auth != null
         && request.auth.uid == uid
         && request.auth.token.email == 'yohaken@gmail.com';
+    }
+
+    // Cal Tracker (https://caltracker-th.web.app) — same Firebase project.
+    // Sibling must deploy hosting only; keep userData rules here so TellTea
+    // deploys do not wipe cal-tracker (and cal-tracker must never ship a tiny rules file).
+    match /userData/{userId} {
+      allow read, write: if request.auth != null
+        && request.auth.uid == userId;
+      match /{document=**} {
+        allow read, write: if request.auth != null
+          && request.auth.uid == userId;
+      }
     }
   }
 }

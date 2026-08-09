@@ -76,6 +76,8 @@ const REQUIRED_MATCHES = [
 const SHARED_APP_MATCHES = [
   // https://taxtag.web.app — collection taxtag/{uid}
   "taxtag",
+  // https://caltracker-th.web.app — collection userData/{userId}
+  "userData",
 ];
 
 const matchNames = [...rules.matchAll(/match\s+\/([A-Za-z0-9_]+)\/\{/g)].map((m) => m[1]);
