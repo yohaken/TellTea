@@ -31,9 +31,16 @@ export function BusinessLogoField({ value, onChange, onError, disabled }: Props)
   useEffect(() => {
     let cancelled = false;
     void loadBrandLogo().then((src) => {
-      if (!cancelled) {
-        setPreviewSrc(src);
-        onChange(src ? "brandLogo" : "");
+      if (cancelled) return;
+      // Do not wipe a newer upload that finished while this load was in flight.
+      const mem = getBrandLogoMemory();
+      const next = mem || src;
+      if (next) {
+        setPreviewSrc(next);
+        onChange("brandLogo");
+      } else if (!getBrandLogoMemory()) {
+        setPreviewSrc("");
+        onChange("");
       }
     });
     return () => {
@@ -44,8 +51,16 @@ export function BusinessLogoField({ value, onChange, onError, disabled }: Props)
   }, []);
 
   useEffect(() => {
-    if (!value) setPreviewSrc("");
-  }, [value]);
+    if (value === "brandLogo") {
+      const mem = getBrandLogoMemory();
+      if (mem) setPreviewSrc(mem);
+      return;
+    }
+    // Only clear when parent truly cleared and memory is empty (not a load/upload race).
+    if (!value && !busy && !getBrandLogoMemory()) {
+      setPreviewSrc("");
+    }
+  }, [value, busy]);
 
   async function onPick(fileList: FileList | null) {
     const file = fileList?.[0];
@@ -55,8 +70,11 @@ export function BusinessLogoField({ value, onChange, onError, disabled }: Props)
     try {
       const dataUrl = await fileToLogoDataUrl(file);
       const saved = await saveBrandLogo(dataUrl, actorId || "owner");
+      if (!saved) {
+        throw new Error("อัปโหลดโลโก้ไม่สำเร็จ — ไม่ได้รูปหลังย่อขนาด");
+      }
       setPreviewSrc(saved);
-      onChange(saved ? "brandLogo" : "");
+      onChange("brandLogo");
     } catch (err) {
       onError?.(friendlyFirestoreWriteError(err, "อัปโหลดโลโก้ไม่สำเร็จ"));
     } finally {

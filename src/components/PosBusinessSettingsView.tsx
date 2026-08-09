@@ -342,8 +342,9 @@ export function PosBusinessSettingsView({
                       setLogoPointer(next);
                       const src = next ? getBrandLogoMemory() : "";
                       setShopLogoDataUrl(src);
+                      if (src) setError(null);
                     }}
-                    onError={(msg) => setError(msg)}
+                    onError={(msg) => setError(msg || null)}
                     disabled={busy}
                   />
                   <label className="pos-biz-check pos-biz-span2">

@@ -26,6 +26,8 @@ assert.match(brand, /meta", "brandLogo"/);
 assert.match(brand, /purgeLegacyBrandLogoStorage/);
 assert.match(brand, /if \(next === memorySrc\) return/);
 assert.match(brand, /loadPromise/);
+assert.match(brand, /logoEpoch/);
+assert.match(brand, /epochAtStart !== logoEpoch/);
 assert.match(brand, /lightBgKnockedOut/);
 assert.match(brand, /prepareBrandLogoPngDataUrl|prepareAndShrinkLogo/);
 assert.match(receipts, /LOGO_DATA_URL_SOFT_MAX = 80_000/);
@@ -34,6 +36,8 @@ assert.match(receipts, /knockOutLogoLightBackground/);
 assert.match(receipts, /prepareBrandLogoPngDataUrl/);
 assert.match(receipts, /isLogoKnockoutRgb/);
 assert.match(logoField, /ตัดแถบขาว|ตัดพื้นขาว/);
+assert.match(logoField, /getBrandLogoMemory/);
+assert.match(logoField, /Do not wipe a newer upload|newer upload/);
 
 // businessProfile must stay text-only (no localStorage of data URLs)
 assert.doesNotMatch(profile, /localStorage|cacheBrandLogo|saveBusinessLogo/);

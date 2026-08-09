@@ -20,6 +20,8 @@ type BrandLogoDoc = {
 
 let memorySrc = "";
 let loadPromise: Promise<string> | null = null;
+/** Bumped on every save/clear so in-flight loads cannot overwrite a newer upload. */
+let logoEpoch = 0;
 
 function brandLogoRef() {
   return doc(getDb(), "meta", "brandLogo");
@@ -79,7 +81,16 @@ async function prepareAndShrinkLogo(dataUrl: string): Promise<string> {
 }
 
 export async function saveBrandLogo(dataUrl: string, updatedBy: string): Promise<string> {
+  // Invalidate any in-flight loadBrandLogo before awaiting encode/network.
+  logoEpoch += 1;
+  const epoch = logoEpoch;
+
   const shrunk = dataUrl.trim() ? await prepareAndShrinkLogo(dataUrl.trim()) : "";
+  if (epoch !== logoEpoch) {
+    // A newer save started while we were encoding — prefer the newer memory.
+    return memorySrc;
+  }
+
   const payload: BrandLogoDoc = {
     dataUrl: shrunk,
     updatedAt: Date.now(),
@@ -87,12 +98,16 @@ export async function saveBrandLogo(dataUrl: string, updatedBy: string): Promise
     lightBgKnockedOut: Boolean(shrunk),
   };
   await setDoc(brandLogoRef(), payload, { merge: true });
+  if (epoch !== logoEpoch) return memorySrc;
+
   // Keep businessProfile lean — never store image bytes there again.
   await setDoc(
     profileRef(),
     { logoUrl: shrunk ? "brandLogo" : "", updatedAt: Date.now(), updatedBy },
     { merge: true },
   );
+  if (epoch !== logoEpoch) return memorySrc;
+
   setBrandLogoMemory(shrunk, true);
   loadPromise = Promise.resolve(shrunk);
   return shrunk;
@@ -107,22 +122,30 @@ export async function loadBrandLogo(): Promise<string> {
   if (memorySrc) return memorySrc;
   if (loadPromise) return loadPromise;
 
+  const epochAtStart = logoEpoch;
+
   loadPromise = (async () => {
     purgeLegacyBrandLogoStorage();
     try {
       const snap = await getDoc(brandLogoRef());
+      // Upload won while we were fetching — keep the uploaded bytes.
+      if (epochAtStart !== logoEpoch || memorySrc) return memorySrc;
+
       const docData = snap.exists() ? (snap.data() as BrandLogoDoc) : null;
       let src = docData ? String(docData.dataUrl || "").trim() : "";
       const alreadyKnocked = Boolean(docData?.lightBgKnockedOut);
 
       if (!src) {
         const profileSnap = await getDoc(profileRef());
+        if (epochAtStart !== logoEpoch || memorySrc) return memorySrc;
+
         const legacy = profileSnap.exists()
           ? String((profileSnap.data() as { logoUrl?: string })?.logoUrl || "").trim()
           : "";
         if (legacy.startsWith("data:image/")) {
           try {
             src = await prepareAndShrinkLogo(legacy);
+            if (epochAtStart !== logoEpoch || memorySrc) return memorySrc;
             await setDoc(
               brandLogoRef(),
               {
@@ -136,6 +159,7 @@ export async function loadBrandLogo(): Promise<string> {
           } catch {
             src = "";
           }
+          if (epochAtStart !== logoEpoch || memorySrc) return memorySrc;
           await setDoc(profileRef(), { logoUrl: src ? "brandLogo" : "" }, { merge: true });
         } else if (isEvidencePhotoRef(legacy)) {
           try {
@@ -143,6 +167,7 @@ export async function loadBrandLogo(): Promise<string> {
             src = resolved.startsWith("data:")
               ? await prepareAndShrinkLogo(resolved)
               : "";
+            if (epochAtStart !== logoEpoch || memorySrc) return memorySrc;
             if (src) {
               await setDoc(
                 brandLogoRef(),
@@ -165,6 +190,7 @@ export async function loadBrandLogo(): Promise<string> {
       } else if (!alreadyKnocked || src.length > BRAND_LOGO_MAX_CHARS) {
         try {
           src = await prepareAndShrinkLogo(src);
+          if (epochAtStart !== logoEpoch || memorySrc) return memorySrc;
           await setDoc(
             brandLogoRef(),
             {
@@ -180,9 +206,11 @@ export async function loadBrandLogo(): Promise<string> {
         }
       }
 
+      if (epochAtStart !== logoEpoch || memorySrc) return memorySrc;
       setBrandLogoMemory(src, false);
       return memorySrc;
     } catch {
+      if (epochAtStart !== logoEpoch || memorySrc) return memorySrc;
       setBrandLogoMemory("", false);
       return "";
     }
