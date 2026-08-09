@@ -6,6 +6,9 @@ import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   averagePerBill,
   averagePerDay,
+  averagePerUnit,
+  averageUnitsPerBill,
+  countSaleUnits,
   summarizePosSalesByDay,
   summarizePosSalesByHour,
   summarizePosSalesByWeekday,
@@ -33,7 +36,12 @@ import { bangkokMonthKey } from "@/lib/vat-sales";
 import { subscribeMenuCategories, subscribeMenuItems } from "@/lib/pos-menu";
 import { subscribeStockMovements } from "@/lib/stock";
 import type { MenuCategory, MenuItem, PosSale, StockMovement } from "@/lib/types";
-import { formatPlainNumber, parseDateInput, startOfLocalDay } from "@/lib/utils";
+import {
+  formatPlainNumber,
+  formatStockQty,
+  parseDateInput,
+  startOfLocalDay,
+} from "@/lib/utils";
 import {
   PosDashDailyAreaChart,
   PosDashDailyTotalsTable,
@@ -236,8 +244,11 @@ export function PosSalesDashboard({
     [stockMovements, clamped, stockCosts],
   );
   const label = formatPosDateRangeLabel(clamped);
+  const unitCount = useMemo(() => countSaleUnits(sales), [sales]);
   const avgBill = averagePerBill(summary.total, summary.activeCount);
   const avgDay = averagePerDay(summary.total, clamped);
+  const avgUnit = averagePerUnit(summary.total, unitCount);
+  const avgUnitsBill = averageUnitsPerBill(unitCount, summary.activeCount);
   const discountBillPct = pct(summary.discountCount, summary.activeCount);
 
   function applyDraftRange() {
@@ -631,6 +642,18 @@ export function PosSalesDashboard({
                     <span className="muted">จ่ายเงินเฉลี่ย</span>
                     <strong>{formatPlainNumber(avgBill)} บาท/บิล</strong>
                     <span className="muted">เฉลี่ยต่อบิล (ไม่ใช่ต่อลูกค้า)</span>
+                  </div>
+                  <div>
+                    <span className="muted">จำนวนชิ้นที่ขาย</span>
+                    <strong>{formatStockQty(unitCount)} ชิ้น</strong>
+                    <span className="muted">
+                      เฉลี่ย {formatPlainNumber(avgUnitsBill)} ชิ้น/บิล
+                    </span>
+                  </div>
+                  <div>
+                    <span className="muted">รายได้เฉลี่ยต่อชิ้น</span>
+                    <strong>{formatPlainNumber(avgUnit)} บาท/ชิ้น</strong>
+                    <span className="muted">ยอดสุทธิ ÷ จำนวนชิ้น (หน้าร้าน)</span>
                   </div>
                 </div>
               </article>

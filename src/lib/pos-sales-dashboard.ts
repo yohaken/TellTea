@@ -261,6 +261,30 @@ export function averagePerDay(netTotal: number, range: PosDateRange): number {
   return round2(netTotal / days);
 }
 
+/** รวมจำนวนชิ้น (หน่วยขาย) จากบรรทัดบิลที่ปิดแล้ว — หนึ่งบิลอาจหลายชิ้น */
+export function countSaleUnits(sales: PosSale[]): number {
+  let qty = 0;
+  for (const sale of activeSales(sales)) {
+    for (const line of sale.lines || []) {
+      const n = Number(line.qty);
+      if (Number.isFinite(n) && n > 0) qty += n;
+    }
+  }
+  return qty;
+}
+
+/** รายได้เฉลี่ยต่อชิ้นหน้าร้าน = ยอดสุทธิ ÷ จำนวนชิ้น */
+export function averagePerUnit(netTotal: number, unitCount: number): number {
+  if (!(unitCount > 0)) return 0;
+  return round2(netTotal / unitCount);
+}
+
+/** เฉลี่ยชิ้นต่อบิล */
+export function averageUnitsPerBill(unitCount: number, billCount: number): number {
+  if (!(billCount > 0)) return 0;
+  return round2(unitCount / billCount);
+}
+
 export type PosDashStockSummary = {
   inCount: number;
   inValue: number;

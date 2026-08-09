@@ -103,6 +103,7 @@
     "test:pos-sales-dashboard-p2-p4": "node scripts/test-pos-sales-dashboard-p2-p4.mjs",
     "test:pos-sales-dashboard-p5": "node scripts/test-pos-sales-dashboard-p5.mjs",
     "test:pos-sales-dashboard-month-perm": "node scripts/test-pos-sales-dashboard-month-perm.mjs",
+    "test:pos-avg-per-unit": "node scripts/test-pos-avg-per-unit.mjs",
     "test:ledger-transfer-in-fab": "node scripts/test-ledger-transfer-in-fab.mjs",
     "test:cash-in-ledger": "node scripts/test-cash-in-ledger.mjs",
     "test:cash-in-npos-only": "node scripts/test-cash-in-npos-only.mjs",
