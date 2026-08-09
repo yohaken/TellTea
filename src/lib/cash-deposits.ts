@@ -360,6 +360,65 @@ export function labelCashDepositTransferUiState(
   }
 }
 
+/** Owner overview totals — one level = one transfer (CashDeposit), skip void. */
+export type CashDepositTransferSummary = {
+  count: number;
+  bankAmountSum: number;
+  transferFeeSum: number;
+  expectedCashSum: number;
+  transferredCount: number;
+  awaitingSlipCount: number;
+  voidCount: number;
+};
+
+export function summarizeCashDepositTransfers(
+  entries: Pick<
+    CashDeposit,
+    | "status"
+    | "bankAmount"
+    | "transferFee"
+    | "expectedCashTotal"
+    | "bankTransfers"
+    | "bankSlipUrls"
+    | "bankRef"
+    | "transferDate"
+    | "bankAmountSource"
+    | "transferFeeSource"
+  >[],
+): CashDepositTransferSummary {
+  let count = 0;
+  let bankAmountSum = 0;
+  let transferFeeSum = 0;
+  let expectedCashSum = 0;
+  let transferredCount = 0;
+  let awaitingSlipCount = 0;
+  let voidCount = 0;
+
+  for (const entry of entries) {
+    if (entry.status === "void") {
+      voidCount += 1;
+      continue;
+    }
+    count += 1;
+    bankAmountSum += Number(entry.bankAmount) || 0;
+    transferFeeSum += Math.max(0, Number(entry.transferFee) || 0);
+    expectedCashSum += Number(entry.expectedCashTotal) || 0;
+    const ui = deriveCashDepositTransferUiState(entry);
+    if (ui === "transferred") transferredCount += 1;
+    else if (ui === "awaiting_bank_slip") awaitingSlipCount += 1;
+  }
+
+  return {
+    count,
+    bankAmountSum: Math.round(bankAmountSum * 100) / 100,
+    transferFeeSum: Math.round(transferFeeSum * 100) / 100,
+    expectedCashSum: Math.round(expectedCashSum * 100) / 100,
+    transferredCount,
+    awaitingSlipCount,
+    voidCount,
+  };
+}
+
 export function labelCashSlipKind(kind: CashSlipKind) {
   switch (kind) {
     case "daily":
