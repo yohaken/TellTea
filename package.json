@@ -196,6 +196,7 @@
     "test:pos-discount": "node scripts/test-pos-discount.mjs",
     "test:pos-receipt-layout": "node scripts/test-pos-receipt-layout.mjs",
     "test:npos-receipt-design-d1": "node scripts/test-npos-receipt-design-d1.mjs",
+    "test:npos-receipt-logo-d3": "node scripts/test-npos-receipt-logo-d3.mjs",
     "test:logo-knockout-checkerboard": "node scripts/test-logo-knockout-checkerboard.mjs",
     "test:logo-knockout-pixels": "node scripts/test-logo-knockout-pixels.mjs",
     "test:logo-upload-browser": "node scripts/test-logo-upload-browser.mjs",

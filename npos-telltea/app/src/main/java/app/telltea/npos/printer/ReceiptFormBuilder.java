@@ -132,6 +132,10 @@ public final class ReceiptFormBuilder {
 
     out.add(ReceiptSlipLine.center(billDisplay, true));
     if (!customerName.isEmpty()) out.add(ReceiptSlipLine.center(customerName, false));
+    // Logo above shop name when BO flag on + brandLogo present (Sunmi bitmap draws it).
+    if (shouldPrintShopLogo(shop)) {
+      out.add(ReceiptSlipLine.logoMark());
+    }
     out.add(ReceiptSlipLine.center(shopName, true));
     if (!shopAddress.isEmpty()) {
       for (String part : wrap(shopAddress, width)) {
@@ -258,11 +262,22 @@ public final class ReceiptFormBuilder {
         case QR_MARK:
           sb.append(CLAIM_QR_MARKER).append('\n');
           break;
+        case LOGO_MARK:
+          // Esc/POS text path skips logo (Sunmi bitmap path draws it). Fail-open.
+          break;
         default:
           break;
       }
     }
     return sb.toString();
+  }
+
+  /** BO flag default ON when brandLogo exists (`receiptPrintLogo !== false`). */
+  static boolean shouldPrintShopLogo(JSONObject shop) {
+    if (shop == null) return false;
+    if (shop.optBoolean("receiptPrintLogo", true) == false) return false;
+    String logo = opt(shop, "brandLogo");
+    return logo.startsWith("data:image/");
   }
 
   private static void appendMetaLines(

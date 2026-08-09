@@ -1482,10 +1482,11 @@ public final class SaleSync {
             final java.util.List<app.telltea.npos.printer.ReceiptSlipLine> slipLines =
                     ReceiptFormBuilder.buildLines(shopJson, payload, billNo, total, cols);
             final String claim = claimUrl;
+            final JSONObject shopForPrint = shopJson;
             executor.execute(
                     () -> {
                         PrinterTransport.Result result =
-                                SunmiInnerPrinter.printSlip(app, slipLines, claim);
+                                SunmiInnerPrinter.printSlip(app, slipLines, claim, shopForPrint);
                         if (result.ok) {
                             OpsLogger.result(app, "printer", "พิมพ์ใบเสร็จแล้ว", billNo, true);
                         } else {
