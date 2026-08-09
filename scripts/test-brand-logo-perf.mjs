@@ -35,6 +35,8 @@ assert.match(receipts, /edge = 320/);
 assert.match(receipts, /knockOutLogoLightBackground/);
 assert.match(receipts, /prepareBrandLogoPngDataUrl/);
 assert.match(receipts, /isLogoKnockoutRgb/);
+assert.match(receipts, /avg >= 155/);
+assert.match(receipts, /checkerboard|ตารางหมากรุก|Transparency-grid/);
 assert.match(logoField, /ตัดแถบขาว|ตัดพื้นขาว/);
 assert.match(logoField, /getBrandLogoMemory/);
 assert.match(logoField, /Do not wipe a newer upload|newer upload/);
@@ -53,10 +55,11 @@ assert.match(logoField, /UPLOAD_BUDGET_MS|ย่อรูปนานเกิ�
 assert.match(logoField, /business-logo-error|localError/);
 assert.match(logoField, /ยกเลิก/);
 assert.doesNotMatch(logoField, /saveBusinessLogo|saveEvidencePhotoDoc/);
+assert.match(receipts, /Sync PNG encode/);
 assert.match(receipts, /toDataURL\("image\/png"\)/);
 assert.match(receipts, /decodeImageFile|createObjectURL/);
 assert.match(receipts, /ยังไม่รองรับ HEIC/);
-assert.doesNotMatch(receipts, /canvas\.toBlob/);
+assert.match(receipts, /function canvasToPngDataUrl[\s\S]*?toDataURL\("image\/png"\)/);
 
 assert.match(rules, /docId == 'brandLogo'/);
 assert.match(rules, /docId == 'businessProfile'/);

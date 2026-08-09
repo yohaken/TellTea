@@ -132,7 +132,7 @@ export function BusinessLogoField({ value, onChange, onError, disabled }: Props)
       <div className="business-logo-field-head">
         <span className="business-logo-field-label">โลโก้ร้าน</span>
         <span className="business-logo-field-hint">
-          ใช้ PNG หรือ JPG · ตัดแถบขาว/ครีมที่ขอบอัตโนมัติ · แทนโลโก้เดิมทันที
+          ใช้ PNG/JPG · ตัดพื้นขาวและตารางหมากรุกในไฟล์อัตโนมัติ · แทนโลโก้เดิมทันที
         </span>
       </div>
 

@@ -146,17 +146,26 @@ export async function fileToReceiptDataUrl(
 /** Soft target for brand logos (PNG with alpha) — keep tiny for AppShell. */
 export const LOGO_DATA_URL_SOFT_MAX = 80_000;
 
-/** Near-white / cream / light gray pad around circular marks (phone exports). */
+/**
+ * Near-white / cream / light gray pad — รวมตารางหมากรุก “โปร่งใส” ที่ถูก bake ลง PNG
+ * (Photoshop/Figma checkerboard: #fff + #ccc) ซึ่งไม่ใช่ alpha จริง
+ * ไม่กินโลโก้สีเข้ม/สีอิ่มตัว (เช่น กรมท่า Tell Tea)
+ */
 export function isLogoKnockoutRgb(r: number, g: number, b: number): boolean {
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);
   const avg = (r + g + b) / 3;
-  return avg >= 210 && max - min <= 60;
+  const chroma = max - min;
+  // White / cream phone-export pad
+  if (avg >= 205 && chroma <= 60) return true;
+  // Neutral greys from transparency-grid tiles (#bbb–#e8e8e8)
+  if (avg >= 155 && avg <= 245 && chroma <= 22) return true;
+  return false;
 }
 
 /**
- * Flood-fill from edges: turn connected light pixels transparent.
- * Keeps white line-art inside the green mark (not edge-connected).
+ * Flood-fill from edges: turn connected light / checkerboard pixels transparent.
+ * Keeps ink inside the mark (not edge-connected) — e.g. navy Tell Tea logo.
  */
 export function knockOutLogoLightBackground(
   ctx: CanvasRenderingContext2D,
@@ -200,10 +209,15 @@ export function knockOutLogoLightBackground(
     cleared += 1;
     const x = i % w;
     const y = (i / w) | 0;
+    // 8-connected so checkerboard whites/greys stay one component
     tryPush(x + 1, y);
     tryPush(x - 1, y);
     tryPush(x, y + 1);
     tryPush(x, y - 1);
+    tryPush(x + 1, y + 1);
+    tryPush(x - 1, y - 1);
+    tryPush(x + 1, y - 1);
+    tryPush(x - 1, y + 1);
   }
 
   if (!cleared) return false;
