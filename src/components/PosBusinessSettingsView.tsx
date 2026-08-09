@@ -10,6 +10,12 @@ import {
   subscribePosShopSettings,
   type PosShopSettings,
 } from "@/lib/pos-settings";
+import {
+  BRAND_LOGO_CHANGED_EVENT,
+  getBrandLogoMemory,
+  loadBrandLogo,
+} from "@/lib/brand-logo";
+import { BusinessLogoField } from "@/components/BusinessLogoField";
 import { isValidPromptPayId, maskPromptPayId, normalizePromptPayId } from "@/lib/pos-promptpay";
 import { posVersionLabel } from "@/lib/pos-version";
 import {
@@ -26,11 +32,13 @@ import {
 type Tab = "bill" | "pay" | "menu";
 type PreviewDoc = "receipt" | "x" | "z";
 
+type PreviewShop = PosShopSettings & { shopLogoDataUrl?: string };
+
 function stripPrintScripts(html: string) {
   return html.replace(/<script[\s\S]*?<\/script>/gi, "");
 }
 
-function DocPreview({ shop }: { shop: PosShopSettings }) {
+function DocPreview({ shop }: { shop: PreviewShop }) {
   const cases = useMemo(() => sampleReceiptCases(), []);
   const [doc, setDoc] = useState<PreviewDoc>("receipt");
   const [caseId, setCaseId] = useState<SampleReceiptCaseId>("cash_change");
@@ -122,6 +130,9 @@ export function PosBusinessSettingsView({
   const [taxId, setTaxId] = useState("");
   const [receiptStaffName, setReceiptStaffName] = useState("");
   const [receiptFooterNote, setReceiptFooterNote] = useState("");
+  const [receiptPrintLogo, setReceiptPrintLogo] = useState(true);
+  const [logoPointer, setLogoPointer] = useState("");
+  const [shopLogoDataUrl, setShopLogoDataUrl] = useState(() => getBrandLogoMemory());
   const [promptPayId, setPromptPayId] = useState("");
   const [autoPrintReceipt, setAutoPrintReceipt] = useState(true);
   const [menuArrangeMode, setMenuArrangeMode] = useState<"fix" | "bestsellers">("fix");
@@ -137,6 +148,7 @@ export function PosBusinessSettingsView({
     setTaxId(s.taxId || "");
     setReceiptStaffName(s.receiptStaffName);
     setReceiptFooterNote(s.receiptFooterNote);
+    setReceiptPrintLogo(s.receiptPrintLogo !== false);
     setPromptPayId(s.promptPayId);
     setAutoPrintReceipt(s.autoPrintReceipt);
     setMenuArrangeMode(s.menuArrangeMode);
@@ -165,7 +177,28 @@ export function PosBusinessSettingsView({
     };
   }, [applySettings, embedded]);
 
-  const draftPreview: PosShopSettings = {
+  useEffect(() => {
+    let cancelled = false;
+    void loadBrandLogo().then((src) => {
+      if (!cancelled) {
+        setShopLogoDataUrl(src);
+        setLogoPointer(src ? "brandLogo" : "");
+      }
+    });
+    const onLogo = (ev: Event) => {
+      const detail = (ev as CustomEvent<string>).detail;
+      const src = typeof detail === "string" ? detail.trim() : getBrandLogoMemory();
+      setShopLogoDataUrl(src);
+      setLogoPointer(src ? "brandLogo" : "");
+    };
+    window.addEventListener(BRAND_LOGO_CHANGED_EVENT, onLogo);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(BRAND_LOGO_CHANGED_EVENT, onLogo);
+    };
+  }, []);
+
+  const draftPreview: PreviewShop = {
     shopName,
     shopNameTh,
     shopAddress,
@@ -175,8 +208,10 @@ export function PosBusinessSettingsView({
     autoPrintReceipt,
     receiptStaffName,
     receiptFooterNote,
+    receiptPrintLogo,
     menuArrangeMode,
     bestsellerWindowDays,
+    shopLogoDataUrl: receiptPrintLogo ? shopLogoDataUrl : "",
   };
 
   async function saveBill(e: FormEvent) {
@@ -193,6 +228,7 @@ export function PosBusinessSettingsView({
         taxId,
         receiptStaffName,
         receiptFooterNote,
+        receiptPrintLogo,
       });
       if (!result.synced && embedded) {
         setError(
@@ -294,70 +330,99 @@ export function PosBusinessSettingsView({
             <DocPreview shop={draftPreview} />
             <form className="pos-biz-form" onSubmit={(e) => void saveBill(e)}>
               <p className="muted pos-biz-lead">
-                หัวบิล · <strong>กดบันทึก</strong> ถึงขึ้น Firebase
+                ออกแบบหัวสลิป · พรีวิวซ้ายใช้ฟอร์มใบเสร็จล่าสุด · <strong>กดบันทึก</strong> ถึงขึ้น
+                Firebase
               </p>
-              <div className="pos-biz-grid">
-                <label>
-                  <span>ชื่อร้าน (EN)</span>
-                  <input
-                    value={shopName}
-                    onChange={(e) => setShopName(e.target.value)}
-                    required
-                    autoComplete="organization"
+              <fieldset className="pos-biz-slip-head">
+                <legend>หัวสลิป</legend>
+                <div className="pos-biz-logo-block">
+                  <BusinessLogoField
+                    value={logoPointer}
+                    onChange={(next) => {
+                      setLogoPointer(next);
+                      const src = next ? getBrandLogoMemory() : "";
+                      setShopLogoDataUrl(src);
+                    }}
+                    onError={(msg) => setError(msg)}
+                    disabled={busy}
                   />
-                </label>
-                <label>
-                  <span>ชื่อร้าน (ไทย)</span>
-                  <input
-                    value={shopNameTh}
-                    onChange={(e) => setShopNameTh(e.target.value)}
-                    placeholder="เทล ที"
-                  />
-                </label>
-                <label className="pos-biz-span2">
-                  <span>ที่อยู่บนบิล</span>
-                  <textarea
-                    value={shopAddress}
-                    onChange={(e) => setShopAddress(e.target.value)}
-                    rows={2}
-                    placeholder="ถ.… ต.… อ.… จ.…"
-                  />
-                </label>
-                <label>
-                  <span>โทรศัพท์</span>
-                  <input
-                    value={shopPhone}
-                    onChange={(e) => setShopPhone(e.target.value)}
-                    inputMode="tel"
-                    autoComplete="tel"
-                  />
-                </label>
-                <label>
-                  <span>เลขผู้เสียภาษี</span>
-                  <input
-                    value={taxId}
-                    onChange={(e) => setTaxId(e.target.value)}
-                    inputMode="numeric"
-                    placeholder="13 หลัก (ถ้ามี · แสดงบนสลิป)"
-                  />
-                </label>
-                <label>
-                  <span>พนักงานบนบิล</span>
-                  <input
-                    value={receiptStaffName}
-                    onChange={(e) => setReceiptStaffName(e.target.value)}
-                    placeholder="หน้าร้าน"
-                  />
-                </label>
-                <label className="pos-biz-span2">
-                  <span>ข้อความท้ายสลิป</span>
-                  <input
-                    value={receiptFooterNote}
-                    onChange={(e) => setReceiptFooterNote(e.target.value)}
-                    placeholder="ขอบคุณที่อุดหนุน"
-                  />
-                </label>
-              </div>
+                  <label className="pos-biz-check pos-biz-span2">
+                    <input
+                      type="checkbox"
+                      checked={receiptPrintLogo}
+                      onChange={(e) => setReceiptPrintLogo(e.target.checked)}
+                    />
+                    <span>แสดงโลโก้บนใบเสร็จ (ค่าเริ่มเปิดเมื่อมีรูป · ปิดได้ถ้าพิมพ์พัง)</span>
+                  </label>
+                  {!shopLogoDataUrl ? (
+                    <p className="muted pos-biz-logo-hint">
+                      ยังไม่มีโลโก้ — อัปโหลดด้านบนแล้วพรีวิวจะโชว์บนหัวสลิป
+                    </p>
+                  ) : null}
+                </div>
+                <div className="pos-biz-grid">
+                  <label>
+                    <span>ชื่อร้าน (EN)</span>
+                    <input
+                      value={shopName}
+                      onChange={(e) => setShopName(e.target.value)}
+                      required
+                      autoComplete="organization"
+                    />
+                  </label>
+                  <label>
+                    <span>ชื่อร้าน (ไทย)</span>
+                    <input
+                      value={shopNameTh}
+                      onChange={(e) => setShopNameTh(e.target.value)}
+                      placeholder="เทล ที"
+                    />
+                  </label>
+                  <label className="pos-biz-span2">
+                    <span>ที่อยู่บนบิล</span>
+                    <textarea
+                      value={shopAddress}
+                      onChange={(e) => setShopAddress(e.target.value)}
+                      rows={2}
+                      placeholder="ถ.… ต.… อ.… จ.…"
+                    />
+                  </label>
+                  <label>
+                    <span>โทรศัพท์</span>
+                    <input
+                      value={shopPhone}
+                      onChange={(e) => setShopPhone(e.target.value)}
+                      inputMode="tel"
+                      autoComplete="tel"
+                    />
+                  </label>
+                  <label>
+                    <span>เลขผู้เสียภาษี</span>
+                    <input
+                      value={taxId}
+                      onChange={(e) => setTaxId(e.target.value)}
+                      inputMode="numeric"
+                      placeholder="13 หลัก (ถ้ามี · แสดงบนสลิป)"
+                    />
+                  </label>
+                  <label>
+                    <span>พนักงานบนบิล</span>
+                    <input
+                      value={receiptStaffName}
+                      onChange={(e) => setReceiptStaffName(e.target.value)}
+                      placeholder="หน้าร้าน"
+                    />
+                  </label>
+                  <label className="pos-biz-span2">
+                    <span>ข้อความท้ายสลิป</span>
+                    <input
+                      value={receiptFooterNote}
+                      onChange={(e) => setReceiptFooterNote(e.target.value)}
+                      placeholder="ขอบคุณที่อุดหนุน"
+                    />
+                  </label>
+                </div>
+              </fieldset>
               <button type="submit" className="primary-btn pos-biz-save" disabled={busy}>
                 {busy ? "กำลังบันทึก..." : "บันทึกขึ้น Firebase"}
               </button>

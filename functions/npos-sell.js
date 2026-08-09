@@ -316,6 +316,8 @@ exports.nposShopSettings = functions.region("asia-southeast1").https.onRequest(a
       autoPrintReceipt: x.autoPrintReceipt !== false,
       receiptStaffName: asString(x.receiptStaffName, 80) || "หน้าร้าน",
       receiptFooterNote: asString(x.receiptFooterNote, 160),
+      // Owner lock: print logo by default when brandLogo exists (native D3 reads this).
+      receiptPrintLogo: x.receiptPrintLogo !== false,
       brandLogo,
       employees,
       menuVersion:

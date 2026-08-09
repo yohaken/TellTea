@@ -18088,6 +18088,33 @@ body.modal-open .main-panel {
   min-width: 0;
 }
 
+.pos-biz-slip-head {
+  margin: 0;
+  padding: 0.75rem 0.85rem 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--border, #d4d4d8) 85%, transparent);
+  border-radius: 10px;
+  min-width: 0;
+}
+
+.pos-biz-slip-head legend {
+  padding: 0 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 650;
+  color: var(--text, #18181b);
+}
+
+.pos-biz-logo-block {
+  display: grid;
+  gap: 0.65rem;
+  margin-bottom: 0.85rem;
+}
+
+.pos-biz-logo-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
 .pos-biz-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
