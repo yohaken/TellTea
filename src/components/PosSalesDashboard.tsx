@@ -9,12 +9,19 @@ import {
   averagePerUnit,
   averageUnitsPerBill,
   countSaleUnits,
+  posRangeUntilExclusiveMs,
+  summarizeMemberGrowth,
+  summarizeMemberSalesTouch,
   summarizePosSalesByDay,
   summarizePosSalesByHour,
   summarizePosSalesByWeekday,
   summarizePosSalesProducts,
   summarizeStockMovementsForDashboard,
 } from "@/lib/pos-sales-dashboard";
+import {
+  subscribeMembersCreatedThrough,
+  type ShopMember,
+} from "@/lib/members";
 import {
   clampPosDateRange,
   defaultPosDashboardRange,
@@ -50,6 +57,7 @@ import {
 } from "@/components/PosSalesDashboardCharts";
 import { PosSalesDashboardProducts } from "@/components/PosSalesDashboardProducts";
 import { PosSalesDashboardStock } from "@/components/PosSalesDashboardStock";
+import { PosSalesDashboardMembers } from "@/components/PosSalesDashboardMembers";
 import { collection, onSnapshot } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import {
@@ -108,8 +116,10 @@ export function PosSalesDashboard({
   const [menuCategories, setMenuCategories] = useState<MenuCategory[]>([]);
   const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
   const [stockCosts, setStockCosts] = useState<Map<string, number>>(() => new Map());
+  const [members, setMembers] = useState<ShopMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [stockNote, setStockNote] = useState<string | null>(null);
+  const [membersNote, setMembersNote] = useState<string | null>(null);
   const [weatherByDay, setWeatherByDay] = useState<Record<string, WeatherDayDoc>>({});
 
   const clamped = useMemo(() => clampPosDateRange(range), [range]);
@@ -205,9 +215,39 @@ export function PosSalesDashboard({
     );
   }, []);
 
+  useEffect(() => {
+    if (rangeTooLong) {
+      setMembers([]);
+      return;
+    }
+    setMembers([]);
+    setMembersNote(null);
+    const untilExclusive = posRangeUntilExclusiveMs(clamped);
+    return subscribeMembersCreatedThrough(
+      untilExclusive,
+      (list) => {
+        setMembers(list);
+        setMembersNote(null);
+      },
+      (err) => {
+        setMembers([]);
+        setMembersNote(
+          /permission|insufficient/i.test(err.message || "")
+            ? "ไม่มีสิทธิ์อ่านสมาชิก — การ์ดสมาชิกว่าง"
+            : "โหลดสมาชิกไม่สำเร็จ — การ์ดสมาชิกว่าง",
+        );
+      },
+    );
+  }, [clamped, rangeTooLong]);
+
   const summary = useMemo(() => summarizePosSalesDetailed(sales), [sales]);
   const tenders = useMemo(() => tenderSegments(summary), [summary]);
   const byDay = useMemo(() => summarizePosSalesByDay(sales, clamped), [sales, clamped]);
+  const memberGrowth = useMemo(
+    () => summarizeMemberGrowth(members, clamped),
+    [members, clamped],
+  );
+  const memberSalesTouch = useMemo(() => summarizeMemberSalesTouch(sales), [sales]);
   // Stable key list — do not re-fetch weather on every sales snapshot tick.
   const weatherDateKeys = useMemo(
     () => byDay.map((d) => d.dateKey).join(","),
@@ -407,6 +447,7 @@ export function PosSalesDashboard({
       ) : null}
 
       {stockNote ? <p className="muted pos-dash-stock-note">{stockNote}</p> : null}
+      {membersNote ? <p className="muted pos-dash-stock-note">{membersNote}</p> : null}
 
       {rangeTooLong ? (
         <p className="error-text">ช่วงวันที่ยาวเกิน {POS_DASHBOARD_MAX_RANGE_DAYS} วัน — ย่อช่วงก่อน</p>
@@ -417,9 +458,12 @@ export function PosSalesDashboard({
         <>
           <div className="pos-dash-top-grid">
             <article className="pos-dash-card pos-dash-card--net">
-              <h3 className="pos-dash-card-title">ยอดขายสุทธิ</h3>
+              <h3 className="pos-dash-card-title">ยอดรับเงินจริง</h3>
               <p className="pos-dash-net-value">
                 {formatPlainNumber(summary.total)} <span>บาท</span>
+              </p>
+              <p className="muted pos-dash-footnote">
+                หลังหักส่วนลดมือ + แลกแต้ม · ไม่ใช่ยอดขายบวกแต้ม
               </p>
               <div className="pos-dash-net-body">
                 <div className="pos-dash-tender">
@@ -465,11 +509,11 @@ export function PosSalesDashboard({
                     <dd>−{formatPlainNumber(summary.manualDiscountTotal)} บาท</dd>
                   </div>
                   <div>
-                    <dt>แลกแต้ม</dt>
+                    <dt>แลกแต้ม (ส่วนลด)</dt>
                     <dd>−{formatPlainNumber(summary.redeemTotal)} บาท</dd>
                   </div>
                   <div className="pos-dash-breakdown--total">
-                    <dt>รวมสุทธิ</dt>
+                    <dt>ยอดรับเงิน</dt>
                     <dd>{formatPlainNumber(summary.total)} บาท</dd>
                   </div>
                 </dl>
@@ -530,7 +574,9 @@ export function PosSalesDashboard({
                   </li>
                 </ul>
               </div>
-              <p className="muted pos-dash-footnote">แยกตามช่องทางชำระ (ไม่แยกประเภทออเดอร์)</p>
+              <p className="muted pos-dash-footnote">
+                แยกตามช่องทางชำระจากยอดรับเงินหลังหักแลกแต้ม · แลกแต้มไม่เข้าเงินสด/ลิ้นชัก
+              </p>
             </article>
 
             <article className="pos-dash-card pos-dash-card--void">
@@ -567,6 +613,13 @@ export function PosSalesDashboard({
             <PosDashDailyAreaChart points={byDay} />
           </div>
 
+          <PosSalesDashboardMembers
+            members={memberGrowth}
+            memberBillCount={memberSalesTouch.memberBillCount}
+            memberSalesTotal={memberSalesTouch.memberSalesTotal}
+            onOpenMembers={() => router.push("/members/")}
+          />
+
           <div className="pos-dash-chart-row">
             <div className="pos-dash-chart-row__hour">
               <PosDashHourBarChart points={byHour} />
@@ -593,8 +646,8 @@ export function PosSalesDashboard({
                 <h3 className="pos-dash-card-title">ส่วนลด / แลกแต้ม</h3>
                 <p className="pos-dash-side-value">{formatPlainNumber(summary.discountTotal)} บาท</p>
                 <p className="muted pos-dash-side-meta">
-                  รวมส่วนลด · บิลที่มีลด {summary.discountCount.toLocaleString("th-TH")} ·{" "}
-                  {discountBillPct.toFixed(2)}%
+                  รวมส่วนลดที่หักจากยอดขาย · ไม่ใช่ช่องทางชำระ · บิลที่มีลด{" "}
+                  {summary.discountCount.toLocaleString("th-TH")} · {discountBillPct.toFixed(2)}%
                 </p>
                 <dl className="pos-dash-breakdown pos-dash-breakdown--compact">
                   <div>
@@ -602,7 +655,7 @@ export function PosSalesDashboard({
                     <dd>−{formatPlainNumber(summary.manualDiscountTotal)}</dd>
                   </div>
                   <div>
-                    <dt>แลกแต้ม</dt>
+                    <dt>แลกแต้ม (ไม่เข้าลิ้นชัก)</dt>
                     <dd>−{formatPlainNumber(summary.redeemTotal)}</dd>
                   </div>
                   <div>
@@ -618,16 +671,19 @@ export function PosSalesDashboard({
                   <div>
                     <span className="muted">แต้มที่ได้</span>
                     <strong>+{summary.pointsEarnedTotal.toLocaleString("th-TH")}</strong>
-                    <span className="muted">จากบิลในช่วง</span>
+                    <span className="muted">จากยอดรับเงินหลังลด</span>
                   </div>
                   <div>
                     <span className="muted">แต้มที่ตัด</span>
                     <strong>−{summary.pointsRedeemedTotal.toLocaleString("th-TH")}</strong>
                     <span className="muted">
-                      ≈ {formatPlainNumber(summary.redeemTotal)} บาท
+                      ส่วนลด ≈ {formatPlainNumber(summary.redeemTotal)} บาท
                     </span>
                   </div>
                 </div>
+                <p className="muted pos-dash-footnote">
+                  แลกแต้มลดยอดก่อนรับเงิน — เงินสด/PP/โอนนับเฉพาะยอดที่รับจริง
+                </p>
               </article>
 
               <article className="pos-dash-card">

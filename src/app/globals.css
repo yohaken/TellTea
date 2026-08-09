@@ -26145,6 +26145,66 @@ a.ghost-btn {
   gap: 0.25rem;
 }
 
+.pos-dash-card--members .pos-dash-card-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.pos-dash-member-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin-bottom: 0.55rem;
+}
+
+@media (min-width: 700px) {
+  .pos-dash-member-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.pos-dash-member-stats > div {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 0.45rem;
+  background: rgba(28, 42, 31, 0.04);
+  font-size: 0.72rem;
+  min-width: 0;
+}
+
+.pos-dash-member-stats strong {
+  font-size: 1rem;
+}
+
+.pos-dash-member-trend.is-up {
+  color: #2f7d4a;
+  font-weight: 600;
+}
+
+.pos-dash-member-trend.is-down {
+  color: #b45309;
+  font-weight: 600;
+}
+
+.pos-dash-member-trend.is-flat {
+  color: rgba(28, 42, 31, 0.55);
+}
+
+.pos-dash-member-bar {
+  fill: #7eb8d8;
+}
+
+.pos-dash-member-line {
+  stroke: #2f7d4a;
+  stroke-width: 2.2;
+}
+
+.pos-dash-member-legend {
+  margin-top: 0.25rem;
+}
+
 .pos-dash-bottom-grid {
   display: grid;
   gap: 0.65rem;

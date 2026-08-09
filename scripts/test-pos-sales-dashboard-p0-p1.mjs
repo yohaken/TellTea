@@ -36,7 +36,7 @@ assert.match(lib, /where\("date", ">="/);
 assert.match(lib, /where\("date", "<="/);
 
 const dash = read("src/components/PosSalesDashboard.tsx");
-assert.match(dash, /ยอดขายสุทธิ/);
+assert.match(dash, /ยอดรับเงินจริง|ยอดขายสุทธิ/);
 assert.match(dash, /บิลที่ปิดไปแล้ว/);
 assert.match(dash, /บิลที่ยกเลิก/);
 assert.match(dash, /ทำลาย/);

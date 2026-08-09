@@ -4,6 +4,7 @@ import {
   getDoc,
   getDocs,
   limit,
+  onSnapshot,
   orderBy,
   query,
   runTransaction,
@@ -11,6 +12,7 @@ import {
   updateDoc,
   where,
   type QueryDocumentSnapshot,
+  type Unsubscribe,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
 import {
@@ -348,6 +350,37 @@ export async function listMembers(max = 200): Promise<ShopMember[]> {
   const q = query(membersCol(), orderBy("updatedAt", "desc"), limit(max));
   const snap = await getDocs(q);
   return snap.docs.map(mapMember).filter((m) => m.status !== "deleted");
+}
+
+/**
+ * Members created before `untilExclusiveMs` (exclusive upper bound).
+ * Used by `/pos-sales` dashboard for signup + cumulative trends.
+ * Soft-deleted rows are filtered out client-side; suspended still count.
+ */
+export function subscribeMembersCreatedThrough(
+  untilExclusiveMs: number,
+  onData: (members: ShopMember[]) => void,
+  onError?: (err: Error) => void,
+): Unsubscribe {
+  const until = Number(untilExclusiveMs);
+  if (!Number.isFinite(until) || until <= 0) {
+    onData([]);
+    return () => {};
+  }
+  const q = query(
+    membersCol(),
+    where("createdAt", "<", until),
+    orderBy("createdAt", "asc"),
+  );
+  return onSnapshot(
+    q,
+    (snap) => {
+      onData(snap.docs.map(mapMember).filter((m) => m.status !== "deleted"));
+    },
+    (err) => {
+      onError?.(err instanceof Error ? err : new Error(String(err)));
+    },
+  );
 }
 
 export function filterMembers(
