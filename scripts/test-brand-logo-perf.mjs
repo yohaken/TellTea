@@ -49,7 +49,14 @@ assert.doesNotMatch(appBrand, /getBusinessProfile|cacheBrandLogo/);
 assert.match(appBrand, /setCustomLogoSrc\(detail\)/);
 
 assert.match(logoField, /saveBrandLogo/);
+assert.match(logoField, /UPLOAD_BUDGET_MS|ย่อรูปนานเกินไป|บันทึกโลโก้นานเกินไป/);
+assert.match(logoField, /business-logo-error|localError/);
+assert.match(logoField, /ยกเลิก/);
 assert.doesNotMatch(logoField, /saveBusinessLogo|saveEvidencePhotoDoc/);
+assert.match(receipts, /toDataURL\("image\/png"\)/);
+assert.match(receipts, /decodeImageFile|createObjectURL/);
+assert.match(receipts, /ยังไม่รองรับ HEIC/);
+assert.doesNotMatch(receipts, /canvas\.toBlob/);
 
 assert.match(rules, /docId == 'brandLogo'/);
 assert.match(rules, /docId == 'businessProfile'/);

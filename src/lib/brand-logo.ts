@@ -97,15 +97,27 @@ export async function saveBrandLogo(dataUrl: string, updatedBy: string): Promise
     updatedBy,
     lightBgKnockedOut: Boolean(shrunk),
   };
-  await setDoc(brandLogoRef(), payload, { merge: true });
+  const writeLogo = setDoc(brandLogoRef(), payload, { merge: true });
+  await Promise.race([
+    writeLogo,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("บันทึกโลโก้นานเกินไป — ตรวจเน็ตแล้วลองใหม่")), 20_000),
+    ),
+  ]);
   if (epoch !== logoEpoch) return memorySrc;
 
   // Keep businessProfile lean — never store image bytes there again.
-  await setDoc(
+  const writeProfile = setDoc(
     profileRef(),
     { logoUrl: shrunk ? "brandLogo" : "", updatedAt: Date.now(), updatedBy },
     { merge: true },
   );
+  await Promise.race([
+    writeProfile,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("บันทึกโปรไฟล์นานเกินไป — ตรวจเน็ตแล้วลองใหม่")), 15_000),
+    ),
+  ]);
   if (epoch !== logoEpoch) return memorySrc;
 
   setBrandLogoMemory(shrunk, true);

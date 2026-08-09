@@ -12181,6 +12181,12 @@ body.modal-open .main-panel {
   line-height: 1.4;
 }
 
+.business-logo-error {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
 .business-logo-actions {
   display: flex;
   flex-wrap: wrap;
