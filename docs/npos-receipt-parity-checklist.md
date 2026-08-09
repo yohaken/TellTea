@@ -1,7 +1,8 @@
 # nPos — ใบเสร็จลูกค้าพาริตี้เว็บ → ESC/POS (ฟอร์มเดียวกัน)
 
 อัปเดต: **1.14.107** (ใบเสร็จ) · ship ปัจจุบัน **1.14.105** (พิมพ์เร็วท้องถิ่น) · `APP_BUILD` 581 · `POS_BUILD` 166 · `versionCode` 130  
-อ่านง่าย / ASCII qty: ดู [npos-receipt-readable-checklist.md](./npos-receipt-readable-checklist.md)
+อ่านง่าย / ASCII qty: ดู [npos-receipt-readable-checklist.md](./npos-receipt-readable-checklist.md)  
+ออกแบบโลโก้/ข้อความจากหลังร้าน (เฟสยาว): ดู [npos-receipt-design-phases.md](./npos-receipt-design-phases.md)
 
 เป้าหมาย: พนักงานขายบนแท็บเล็ต nPos ได้ใบเสร็จหน้าตา/ฟิลด์**เหมือนเว็บ** แต่ส่งเครื่องพิมพ์ฮาร์ดแวร์ตรง (USB / BT / LAN) — ไม่ผ่านไดอะล็อกเบราว์เซอร์
 
