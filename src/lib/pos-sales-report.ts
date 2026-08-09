@@ -172,6 +172,9 @@ function mapPosSale(id: string, data: Record<string, unknown>): PosSale {
     ...(typeof data.claimTokenExpiresAt === "number"
       ? { claimTokenExpiresAt: data.claimTokenExpiresAt }
       : {}),
+    ...(typeof data.claimPointsPreview === "number" && data.claimPointsPreview > 0
+      ? { claimPointsPreview: Math.trunc(data.claimPointsPreview) }
+      : {}),
     ...(typeof data.claimStatus === "string" && data.claimStatus.trim()
       ? { claimStatus: data.claimStatus.trim() }
       : {}),

@@ -83,6 +83,10 @@ export function localReceiptToPrintPayload(
       typeof receipt.pointsEarned === "number" && receipt.pointsEarned > 0
         ? receipt.pointsEarned
         : undefined,
+    claimPointsPreview:
+      typeof receipt.claimPointsPreview === "number" && receipt.claimPointsPreview > 0
+        ? receipt.claimPointsPreview
+        : undefined,
     total: receipt.total,
     paymentMethod: receipt.paymentMethod,
     cashReceived: receipt.cashReceived,

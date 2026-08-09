@@ -35,10 +35,10 @@ assert.match(form, /1แต้ม=ลด1฿ · ครั้งหน้าบ�
 assert.match(form, /center\(CLAIM_QR_HINT/);
 
 const version = read("src/lib/version.ts");
-assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 760);
+assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 762);
 const pos = read("src/lib/pos-version.ts");
-assert.ok(Number(pos.match(/POS_BUILD = (\d+)/)[1]) >= 199);
+assert.ok(Number(pos.match(/POS_BUILD = (\d+)/)[1]) >= 200);
 const gradle = read("npos-telltea/app/build.gradle");
-assert.ok(Number(gradle.match(/versionCode\s+(\d+)/)[1]) >= 146);
+assert.ok(Number(gradle.match(/versionCode\s+(\d+)/)[1]) >= 147);
 
 console.log("OK test-members-howto-redeem");

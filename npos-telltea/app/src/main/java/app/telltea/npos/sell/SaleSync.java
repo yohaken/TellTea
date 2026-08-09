@@ -1026,6 +1026,11 @@ public final class SaleSync {
                             if (receiptRow.optInt("pointsEarned", 0) > 0) {
                                 payload.put("pointsEarned", receiptRow.optInt("pointsEarned", 0));
                             }
+                            if (receiptRow.optInt("claimPointsPreview", 0) > 0) {
+                                payload.put(
+                                        "claimPointsPreview",
+                                        receiptRow.optInt("claimPointsPreview", 0));
+                            }
                             payload.put("subtotal", receiptRow.optDouble("subtotal", 0));
                             payload.put("cashReceived", receiptRow.optDouble("cashReceived", 0));
                             payload.put("change", receiptRow.optDouble("change", 0));
@@ -1287,10 +1292,12 @@ public final class SaleSync {
         String claimUrl = res.optString("claimUrl", "").trim();
         String claimToken = res.optString("claimToken", "").trim();
         int pointsEarned = Math.max(0, res.optInt("pointsEarned", 0));
+        int claimPointsPreview = Math.max(0, res.optInt("claimPointsPreview", 0));
         try {
             if (!claimUrl.isEmpty()) payload.put("claimUrl", claimUrl);
             if (!claimToken.isEmpty()) payload.put("claimToken", claimToken);
             if (pointsEarned > 0) payload.put("pointsEarned", pointsEarned);
+            if (claimPointsPreview > 0) payload.put("claimPointsPreview", claimPointsPreview);
             payload.put("change", change);
             if (!saleId.isEmpty()) payload.put("saleId", saleId);
         } catch (Exception ignored) {
@@ -1305,7 +1312,8 @@ public final class SaleSync {
                 change,
                 claimUrl,
                 claimToken,
-                pointsEarned);
+                pointsEarned,
+                claimPointsPreview);
         OpsLogger.info(app, "sync", "ซิงก์บิลแล้ว", billNo + " · " + total);
         if (callback != null) callback.onSynced(billNo, change, total);
 
@@ -1817,7 +1825,8 @@ public final class SaleSync {
             double change,
             String claimUrl,
             String claimToken,
-            int pointsEarned)
+            int pointsEarned,
+            int claimPointsPreview)
             throws Exception {
         JSONArray arr =
                 new JSONArray(
@@ -1831,6 +1840,7 @@ public final class SaleSync {
                 if (claimUrl != null && !claimUrl.isEmpty()) o.put("claimUrl", claimUrl);
                 if (claimToken != null && !claimToken.isEmpty()) o.put("claimToken", claimToken);
                 if (pointsEarned > 0) o.put("pointsEarned", pointsEarned);
+                if (claimPointsPreview > 0) o.put("claimPointsPreview", claimPointsPreview);
             }
         }
         app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)

@@ -66,6 +66,8 @@ export type ReceiptPrintPayload = {
   redeemBaht?: number;
   pointsRedeemed?: number;
   pointsEarned?: number;
+  /** Points available to claim from slip QR (when not yet earned at counter). */
+  claimPointsPreview?: number;
   paymentMethod: PosSalePaymentMethod;
   cashReceived?: number;
   change?: number;

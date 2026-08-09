@@ -14,6 +14,8 @@ assert.match(form, /CLAIM_QR_MARKER/);
 assert.match(form, /สแกนสะสมแต้ม|CLAIM_QR_INVITE/);
 assert.match(form, /CLAIM_QR_HINT/);
 assert.match(form, /1แต้ม=ลด1฿ · ครั้งหน้าบอกเบอร์/);
+assert.match(form, /แต้มบิลนี้/);
+assert.match(form, /claimPointsPreview/);
 assert.match(form, /แลกแต้ม/);
 assert.match(form, /สมาชิก:/);
 assert.match(form, /manualDiscountBaht/);
@@ -60,23 +62,23 @@ assert.match(nposSell, /memberName: body\.memberName/);
 
 const gradle = read("npos-telltea/app/build.gradle");
 const ver = gradle.match(/versionCode\s+(\d+)/);
-assert.ok(ver && Number(ver[1]) >= 146, "versionCode >= 146");
+assert.ok(ver && Number(ver[1]) >= 147, "versionCode >= 147");
 
 const apkPin = read("src/lib/npos-apk-release.ts");
-assert.ok(Number(apkPin.match(/NPOS_SYSTEM_VERSION_CODE = (\d+)/)[1]) >= 146);
+assert.ok(Number(apkPin.match(/NPOS_SYSTEM_VERSION_CODE = (\d+)/)[1]) >= 147);
 
 const whats = read("npos-telltea/app/src/main/java/app/telltea/npos/update/WhatsNewCatalog.java");
-assert.match(whats, /versionCode == 146/);
+assert.match(whats, /versionCode == 147/);
 
 const checklist = read("docs/npos-whats-new-checklist.md");
-assert.match(checklist, /146/);
+assert.match(checklist, /147/);
 
 const phases = read("docs/members-round-phases.md");
 assert.match(phases, /P5/);
 
 const appBuild = Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)[1]);
-assert.ok(appBuild >= 760, "APP_BUILD >= 760");
+assert.ok(appBuild >= 762, "APP_BUILD >= 762");
 const posBuild = Number(read("src/lib/pos-version.ts").match(/POS_BUILD = (\d+)/)[1]);
-assert.ok(posBuild >= 199, "POS_BUILD >= 199");
+assert.ok(posBuild >= 200, "POS_BUILD >= 200");
 
 console.log("OK test-members-p5-slip-qr");

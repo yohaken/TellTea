@@ -115,6 +115,13 @@ public final class ReceiptFormBuilder {
             : "";
     String claimUrl = payload != null ? payload.optString("claimUrl", "").trim() : "";
     int pointsEarned = payload != null ? Math.max(0, payload.optInt("pointsEarned", 0)) : 0;
+    int claimPointsPreview =
+        payload != null
+            ? Math.max(
+                0,
+                payload.optInt(
+                    "claimPointsPreview", payload.optInt("pointsPreview", 0)))
+            : 0;
     String externalOrderId =
         payload != null ? payload.optString("externalOrderId", "").trim() : "";
     String orderNotes = payload != null ? payload.optString("orderNotes", "").trim() : "";
@@ -181,8 +188,11 @@ public final class ReceiptFormBuilder {
         out.add(ReceiptSlipLine.leftRight("เงินทอน", formatMoney(change), false));
       }
     }
+    // Modern-trade style: points sit with tender totals (not under QR).
     if (pointsEarned > 0) {
       out.add(ReceiptSlipLine.leftRight("แต้มที่ได้", "+" + pointsEarned, false));
+    } else if (claimPointsPreview > 0) {
+      out.add(ReceiptSlipLine.leftRight("แต้มบิลนี้", "+" + claimPointsPreview, false));
     }
     if (!memberName.isEmpty() || !memberPhone.isEmpty()) {
       String mem =

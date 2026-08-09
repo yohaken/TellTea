@@ -866,6 +866,7 @@ async function tryIssueReceiptClaimForSale(db, { saleId, total, actorId }) {
 
     const token = canReuse ? existingToken : randomClaimToken();
     const expiresAt = canReuse && existingExp > now ? existingExp : now + ttlMs;
+    const claimPointsPreview = pointsFromReceiptClaim(Number(total) || 0, settings);
 
     if (!canReuse || !claimed) {
       const patch = {
@@ -873,16 +874,23 @@ async function tryIssueReceiptClaimForSale(db, { saleId, total, actorId }) {
         claimTokenExpiresAt: expiresAt,
         claimIssuedAt: now,
         claimIssuedBy: actorId || "pos",
+        claimPointsPreview,
       };
       if (!claimed) patch.claimStatus = "open";
       await ref.set(patch, { merge: true });
+    } else if (
+      typeof data.claimPointsPreview !== "number" ||
+      data.claimPointsPreview !== claimPointsPreview
+    ) {
+      // Keep slip reprint / BOH preview in sync with current earn rate.
+      await ref.set({ claimPointsPreview }, { merge: true });
     }
 
     return {
       claimToken: token,
       claimUrl: buildPublicClaimUrl(id, token),
       claimExpiresAt: expiresAt,
-      claimPointsPreview: pointsFromReceiptClaim(Number(total) || 0, settings),
+      claimPointsPreview,
     };
   } catch (err) {
     console.error("tryIssueReceiptClaimForSale", err && err.message);

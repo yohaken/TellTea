@@ -473,7 +473,9 @@ export function buildUnifiedReceiptBody(data: ReceiptPrintPayload, layout: Print
     ${
       data.pointsEarned && data.pointsEarned > 0
         ? `<div class="total-row"><span>แต้มที่ได้</span><span>+${data.pointsEarned}</span></div>`
-        : ""
+        : data.claimPointsPreview && data.claimPointsPreview > 0
+          ? `<div class="total-row"><span>แต้มบิลนี้</span><span>+${data.claimPointsPreview}</span></div>`
+          : ""
     }
     ${memberBlock}
     ${notesBlock}
