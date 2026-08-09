@@ -193,6 +193,8 @@ export function buildUnifiedReceiptText(
   }
   if (data.pointsEarned && data.pointsEarned > 0) {
     out.push(pairRow("แต้มที่ได้", `+${data.pointsEarned}`, width));
+  } else if (data.claimPointsPreview && data.claimPointsPreview > 0) {
+    out.push(pairRow("แต้มบิลนี้", `+${data.claimPointsPreview}`, width));
   }
   const memberName = (data.memberName || "").trim();
   const memberPhone = (data.memberPhone || "").trim();

@@ -52,6 +52,7 @@ export function saleToLocalReceipt(sale: PosSale): PosLocalReceipt {
     redeemBaht: sale.redeemBaht,
     pointsRedeemed: sale.pointsRedeemed,
     pointsEarned: sale.pointsEarned,
+    claimPointsPreview: sale.claimPointsPreview,
     cashReceived: sale.cashReceived,
     change: sale.change,
     createdAt: sale.createdAt,

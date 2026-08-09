@@ -7,8 +7,8 @@
  * versionName is a short display label (same digits as versionCode). Renaming it never
  * blocks or unlocks an update — only a higher versionCode does.
  */
-export const NPOS_SYSTEM_VERSION_NAME = "146";
-export const NPOS_SYSTEM_VERSION_CODE = 146;
+export const NPOS_SYSTEM_VERSION_NAME = "147";
+export const NPOS_SYSTEM_VERSION_CODE = 147;
 
 export const NPOS_LATEST_MANIFEST_URL =
   "https://telltea-pos.web.app/downloads/latest.json";

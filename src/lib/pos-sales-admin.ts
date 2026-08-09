@@ -109,6 +109,9 @@ function mapPosSale(id: string, data: Record<string, unknown>): PosSale {
     claimToken: typeof data.claimToken === "string" ? data.claimToken : undefined,
     claimTokenExpiresAt:
       typeof data.claimTokenExpiresAt === "number" ? data.claimTokenExpiresAt : undefined,
+    ...(typeof data.claimPointsPreview === "number" && data.claimPointsPreview > 0
+      ? { claimPointsPreview: Math.trunc(data.claimPointsPreview) }
+      : {}),
     claimStatus: typeof data.claimStatus === "string" ? data.claimStatus : undefined,
     claimedAt: typeof data.claimedAt === "number" ? data.claimedAt : undefined,
     claimedByMemberId:
