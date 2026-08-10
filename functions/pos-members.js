@@ -91,7 +91,8 @@ async function loadMemberSettings(db) {
 function pointsFromSaleAmount(amountBaht, settings) {
   if (!settings?.enabled || !(settings.bahtPerPoint > 0)) return 0;
   if (!(amountBaht > 0)) return 0;
-  return Math.floor(amountBaht / settings.bahtPerPoint);
+  // Min 1 point on any positive paid total (small SKUs ~13฿ must not earn 0).
+  return Math.max(1, Math.floor(amountBaht / settings.bahtPerPoint));
 }
 
 function pointsFromReceiptClaim(amountBaht, settings) {

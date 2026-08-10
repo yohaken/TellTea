@@ -71,7 +71,7 @@ export type MemberLedgerEntry = {
 
 export type MemberSettings = {
   enabled: boolean;
-  /** ทุก bahtPerPoint บาท = 1 แต้ม (ปัดลง) — path POS ผูกสมาชิก */
+  /** ทุก bahtPerPoint บาท = 1 แต้ม (ปัดลง · ขั้นต่ำ 1 เมื่อยอดชำระ > 0) */
   bahtPerPoint: number;
   /** แต้มต่อ 1 บาทส่วนลดตอนแลก — ใช้ M3 */
   pointsPerBahtRedeem: number;
@@ -643,14 +643,17 @@ export async function listMemberLedger(
   return snap.docs.map(mapLedger);
 }
 
-/** คะแนนที่จะได้จากยอดขาย (ปัดลง) — ใช้ M2 */
+/**
+ * คะแนนจากยอดขาย (ปัดลง) — ใช้ M2 / claim
+ * บิลที่มียอดชำระจริง > 0 ได้ขั้นต่ำ 1 แต้ม (เมนูต่ำสุด ~13฿ ไม่ตก 0)
+ */
 export function pointsFromSaleAmount(
   amountBaht: number,
   settings: MemberSettings = DEFAULT_MEMBER_SETTINGS,
 ): number {
   if (!settings.enabled || settings.bahtPerPoint <= 0) return 0;
   if (!(amountBaht > 0)) return 0;
-  return Math.floor(amountBaht / settings.bahtPerPoint);
+  return Math.max(1, Math.floor(amountBaht / settings.bahtPerPoint));
 }
 
 /** แต้มเคลมจากสลิป — ใช้ bahtPerPoint ชุดเดียวกับระบบสมาชิก */

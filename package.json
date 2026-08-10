@@ -15,6 +15,7 @@
     "test:members-howto-redeem": "node scripts/test-members-howto-redeem.mjs",
     "test:members-slip-points-line": "node scripts/test-members-slip-points-line.mjs",
     "test:members-receipt-claim": "node scripts/test-members-receipt-claim.mjs",
+    "test:members-min-one-point": "node scripts/test-members-min-one-point.mjs",
     "test:members-claim-google-phone-otp": "node scripts/test-members-claim-google-phone-otp.mjs",
     "test:members-claim-auth-bridge": "node scripts/test-members-claim-auth-bridge.mjs",
     "test:members-auth-structural": "node scripts/test-members-auth-structural.mjs",
