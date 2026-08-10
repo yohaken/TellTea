@@ -115,6 +115,22 @@ function ReportCard({ r }: { r: Row }) {
         )}
 
         <h4 className="npos-diagnose-sub">
+          สลิปล่าสุด{" "}
+          <span className="muted">
+            {r.latestSlipAt ? formatDiagnoseAt(r.latestSlipAt) : ""}
+            {r.latestSlipBillNo ? ` · ${r.latestSlipBillNo}` : ""}
+          </span>
+        </h4>
+        <NposCaptureGallery
+          slipUrl={resolveNposCaptureDisplayUrl({
+            shotId: r.latestSlipId,
+            role: "slip",
+            storedUrl: r.latestSlipUrl,
+          })}
+          emptyHint="ยังไม่มีสลิป — ขาย/พิมพ์ 1 บิลบนเครื่องแล้วรูปจะโผล่เอง"
+        />
+
+        <h4 className="npos-diagnose-sub">
           แคปจอล่าสุด{" "}
           <span className="muted">
             {r.latestCaptureAt ? formatDiagnoseAt(r.latestCaptureAt) : ""}

@@ -22,15 +22,22 @@ function asString(v, max = 200) {
   return v.trim().slice(0, max);
 }
 
+function normalizeCaptureRole(role) {
+  const r = asString(role, 16);
+  if (r === "secondary" || r === "slip") return r;
+  return "primary";
+}
+
 /** Public HTTPS URL for BO thumbs / lightbox (works even when Storage tokens 412). */
 function captureMediaUrl(shotId, role) {
   const id = asString(shotId, 160);
-  const r = role === "secondary" ? "secondary" : "primary";
+  const r = normalizeCaptureRole(role);
   if (!id) return "";
   return `${MEDIA_BASE}?id=${encodeURIComponent(id)}&role=${r}`;
 }
 
 exports.captureMediaUrl = captureMediaUrl;
+exports.normalizeCaptureRole = normalizeCaptureRole;
 
 exports.nposCaptureMedia = functions
   .region(REGION)
@@ -47,7 +54,7 @@ exports.nposCaptureMedia = functions
     }
 
     const shotId = asString(req.query.id, 160);
-    const role = asString(req.query.role, 16) === "secondary" ? "secondary" : "primary";
+    const role = normalizeCaptureRole(req.query.role);
     if (!shotId || shotId.length < 8) {
       res.status(400).json({ ok: false, error: "invalid id" });
       return;

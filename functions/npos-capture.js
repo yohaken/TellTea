@@ -1,7 +1,8 @@
 /**
- * Receive nPos screen captures (primary + secondary JPEG base64).
+ * Receive nPos screen captures (primary + secondary JPEG base64)
+ * and rendered sale-slip bitmaps ({@code slip}).
  * Admin upload → Storage npos-screenshots/ + nposScreenShots/{id}
- * Also patches nposDiagnose latest capture URLs and posDevices ack fields.
+ * Also patches nposDiagnose latest capture / slip URLs and posDevices ack fields.
  */
 const crypto = require("crypto");
 const functions = require("firebase-functions/v1");
@@ -171,23 +172,34 @@ exports.reportNposScreenCapture = functions
       const primaryMeta = body.primary && typeof body.primary === "object" ? body.primary : {};
       const secondaryMeta =
         body.secondary && typeof body.secondary === "object" ? body.secondary : {};
+      const slipMeta = body.slip && typeof body.slip === "object" ? body.slip : {};
+      const billNo = asString(body.billNo, 40);
 
       let primaryShot = null;
       let secondaryShot = null;
+      let slipShot = null;
       if (primaryMeta.ok === true && primaryMeta.jpegBase64) {
         primaryShot = await saveJpeg(installId, "primary", primaryMeta.jpegBase64);
       }
       if (secondaryMeta.ok === true && secondaryMeta.jpegBase64) {
         secondaryShot = await saveJpeg(installId, "secondary", secondaryMeta.jpegBase64);
       }
+      if (slipMeta.ok === true && slipMeta.jpegBase64) {
+        slipShot = await saveJpeg(installId, "slip", slipMeta.jpegBase64);
+      }
 
       const failDetail = [
-        primaryMeta.ok === true ? "primary_upload_empty" : asString(primaryMeta.detail, 40) || "primary_fail",
+        primaryMeta.ok === true
+          ? "primary_upload_empty"
+          : asString(primaryMeta.detail, 40) || "primary_fail",
         secondaryMeta.ok === true
           ? "secondary_upload_empty"
           : asString(secondaryMeta.detail, 40) || "secondary_fail",
-      ].join(" · ");
-      if (!primaryShot && !secondaryShot) {
+        slipMeta.ok === true ? "slip_upload_empty" : asString(slipMeta.detail, 40) || "",
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      if (!primaryShot && !secondaryShot && !slipShot) {
         // Still record failure metadata so BO can see why (ops already logs on device).
         console.warn("reportNposScreenCapture no images", installId, failDetail);
       }
@@ -201,7 +213,13 @@ exports.reportNposScreenCapture = functions
       const secondaryUrl = secondaryShot
         ? captureMediaUrl(shotId, "secondary") || secondaryShot.downloadUrl || ""
         : "";
-      const hasImages = !!(primaryUrl || secondaryUrl);
+      const slipUrl = slipShot
+        ? captureMediaUrl(shotId, "slip") || slipShot.downloadUrl || ""
+        : "";
+      const hasScreenImages = !!(primaryUrl || secondaryUrl);
+      const hasSlipImage = !!slipUrl;
+      const hasImages = hasScreenImages || hasSlipImage;
+      const isSlipOnly = reason === "slip" || (hasSlipImage && !hasScreenImages);
       const doc = {
         id: shotId,
         installId,
@@ -213,6 +231,7 @@ exports.reportNposScreenCapture = functions
         capturedAt,
         customerDisplay,
         displays,
+        billNo,
         primary: {
           ok: primaryMeta.ok === true && !!primaryShot,
           detail: asString(primaryMeta.detail, 80),
@@ -233,6 +252,16 @@ exports.reportNposScreenCapture = functions
           bytes: secondaryShot?.bytes || 0,
           bucket: secondaryShot?.bucket || "",
         },
+        slip: {
+          ok: slipMeta.ok === true && !!slipShot,
+          detail: asString(slipMeta.detail, 80) || billNo,
+          width: Number.isFinite(slipMeta.width) ? Math.floor(slipMeta.width) : 0,
+          height: Number.isFinite(slipMeta.height) ? Math.floor(slipMeta.height) : 0,
+          url: slipUrl,
+          path: slipShot?.path || "",
+          bytes: slipShot?.bytes || 0,
+          bucket: slipShot?.bucket || "",
+        },
         source: "npos-telltea",
         updatedAt: Date.now(),
       };
@@ -251,55 +280,57 @@ exports.reportNposScreenCapture = functions
       }
 
       // Keep updatedAt fresh so BO orderBy("updatedAt") includes capture-only docs.
+      // Slip-only: update latestSlip* without wiping screen-capture URLs or acking แคปจอ.
       // On empty capture: do NOT wipe last good URLs or ack the request — heartbeat retries.
       const diagnoseAt = Date.now();
-      await db
-        .collection("nposDiagnose")
-        .doc(installId)
-        .set(
-          {
-            installId,
-            stableKey,
-            customerDisplay,
-            ...(displays.length ? { displays } : {}),
-            ...(hasImages
-              ? {
-                  latestCaptureAt: capturedAt,
-                  latestCaptureId: shotId,
-                  latestPrimaryUrl: doc.primary.url || "",
-                  latestSecondaryUrl: doc.secondary.url || "",
-                  latestCaptureReason: reason,
-                }
-              : {
-                  latestCaptureFailAt: capturedAt,
-                  latestCaptureFailDetail: failDetail,
-                }),
-            updatedAt: diagnoseAt,
-          },
-          { merge: true },
-        );
+      const diagnosePatch = {
+        installId,
+        stableKey,
+        customerDisplay,
+        ...(displays.length ? { displays } : {}),
+        updatedAt: diagnoseAt,
+      };
+      if (hasSlipImage) {
+        diagnosePatch.latestSlipAt = capturedAt;
+        diagnosePatch.latestSlipId = shotId;
+        diagnosePatch.latestSlipUrl = doc.slip.url || "";
+        diagnosePatch.latestSlipBillNo = billNo || asString(slipMeta.detail, 40);
+      }
+      if (hasScreenImages) {
+        diagnosePatch.latestCaptureAt = capturedAt;
+        diagnosePatch.latestCaptureId = shotId;
+        diagnosePatch.latestPrimaryUrl = doc.primary.url || "";
+        diagnosePatch.latestSecondaryUrl = doc.secondary.url || "";
+        diagnosePatch.latestCaptureReason = reason;
+      } else if (!hasImages) {
+        diagnosePatch.latestCaptureFailAt = capturedAt;
+        diagnosePatch.latestCaptureFailDetail = failDetail;
+      }
+      await db.collection("nposDiagnose").doc(installId).set(diagnosePatch, { merge: true });
 
-      await db
-        .collection("posDevices")
-        .doc(installId)
-        .set(
-          {
-            ...(hasImages
-              ? {
-                  lastCaptureAckAt: requestAt,
-                  lastCaptureAt: capturedAt,
-                  latestPrimaryUrl: doc.primary.url || "",
-                  latestSecondaryUrl: doc.secondary.url || "",
-                }
-              : {
-                  lastCaptureFailAt: capturedAt,
-                  lastCaptureFailDetail: failDetail,
-                }),
-            customerDisplay,
-            updatedAt: Date.now(),
-          },
-          { merge: true },
-        );
+      const devicePatch = {
+        customerDisplay,
+        updatedAt: Date.now(),
+      };
+      if (hasSlipImage) {
+        devicePatch.latestSlipAt = capturedAt;
+        devicePatch.latestSlipId = shotId;
+        devicePatch.latestSlipUrl = doc.slip.url || "";
+      }
+      if (hasScreenImages) {
+        devicePatch.lastCaptureAckAt = requestAt;
+        devicePatch.lastCaptureAt = capturedAt;
+        devicePatch.latestPrimaryUrl = doc.primary.url || "";
+        devicePatch.latestSecondaryUrl = doc.secondary.url || "";
+      } else if (!hasImages) {
+        devicePatch.lastCaptureFailAt = capturedAt;
+        devicePatch.lastCaptureFailDetail = failDetail;
+      }
+      // Slip-only must not ack a pending screen-capture request.
+      if (isSlipOnly && requestAt > 0) {
+        delete devicePatch.lastCaptureAckAt;
+      }
+      await db.collection("posDevices").doc(installId).set(devicePatch, { merge: true });
 
       res.status(200).json({
         ok: true,
@@ -307,6 +338,7 @@ exports.reportNposScreenCapture = functions
         shotId,
         primaryUrl: doc.primary.url || null,
         secondaryUrl: doc.secondary.url || null,
+        slipUrl: doc.slip.url || null,
         capturedAt,
         hasImages,
         pruned,

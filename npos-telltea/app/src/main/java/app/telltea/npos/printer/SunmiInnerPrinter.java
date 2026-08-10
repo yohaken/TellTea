@@ -112,6 +112,8 @@ public final class SunmiInnerPrinter {
       JSONObject shop) {
     String url = claimUrl == null ? "" : claimUrl.trim();
     Bitmap shopLogo = null;
+    Bitmap slipForBo = null;
+    boolean printedOk = false;
     try {
       SunmiPrinterService svc = ensureService(context);
       if (svc == null) {
@@ -137,6 +139,7 @@ public final class SunmiInnerPrinter {
       if (slip != null) {
         PrinterTransport.Result bmpRes = printBitmapBands(svc, slip);
         if (!bmpRes.ok) return bmpRes;
+        slipForBo = slip; // upload after release — same pixels staff saw on paper
       } else {
         // Fallback: structured columns (better than space-padded printText).
         int qrPx = SunmiSlipBitmap.claimQrPx(paperMm);
@@ -157,6 +160,7 @@ public final class SunmiInnerPrinter {
       }
       PrinterTransport.Result cut = cutPaperBestEffort(svc, "SUNMI พิมพ์ใบเสร็จแล้ว");
       resetPrinterDefaults(svc);
+      printedOk = cut != null && cut.ok;
       return cut;
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -166,6 +170,19 @@ public final class SunmiInnerPrinter {
       return new PrinterTransport.Result(false, msg);
     } finally {
       releaseService();
+      // After printer is free (LINE MAN share) — send rendered slip to BO.
+      if (printedOk && slipForBo != null) {
+        String billHint = "";
+        if (lines != null) {
+          for (ReceiptSlipLine line : lines) {
+            if (line != null && line.kind == ReceiptSlipLine.Kind.CENTER && line.bold) {
+              billHint = line.left == null ? "" : line.left.trim();
+              break;
+            }
+          }
+        }
+        app.telltea.npos.diagnose.SlipCaptureUpload.uploadPrintedSlip(context, slipForBo, billHint);
+      }
     }
   }
 

@@ -182,6 +182,9 @@ export type PosDevice = {
   /** Latest capture download URLs (from reportNposScreenCapture). */
   latestPrimaryUrl: string;
   latestSecondaryUrl: string;
+  latestSlipUrl: string;
+  latestSlipAt: number;
+  latestSlipId: string;
 };
 
 function deviceRef(id: string) {
@@ -388,6 +391,9 @@ function mapPosDeviceDoc(id: string, data: Record<string, unknown>): PosDevice {
     latestPrimaryUrl: typeof data.latestPrimaryUrl === "string" ? data.latestPrimaryUrl : "",
     latestSecondaryUrl:
       typeof data.latestSecondaryUrl === "string" ? data.latestSecondaryUrl : "",
+    latestSlipUrl: typeof data.latestSlipUrl === "string" ? data.latestSlipUrl : "",
+    latestSlipAt: typeof data.latestSlipAt === "number" ? data.latestSlipAt : 0,
+    latestSlipId: typeof data.latestSlipId === "string" ? data.latestSlipId : "",
   };
 }
 
