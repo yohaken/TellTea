@@ -91,6 +91,13 @@ textarea {
   background: transparent;
 }
 
+/** Placeholder while meta/brandLogo loads — avoids flashing stock TellTea SVG */
+.brand-logo-slot {
+  display: inline-block;
+  width: 2.75rem;
+  background: transparent;
+}
+
 .brand {
   font-family: var(--font-display), "Poppins", sans-serif;
   font-size: clamp(2rem, 8vw, 2.6rem);
@@ -355,6 +362,12 @@ body.modal-open .main-panel {
   height: clamp(5.5rem, 28vw, 8rem);
   max-width: min(86vw, 20rem);
   filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.18));
+}
+
+.hero-brand .brand-logo-slot {
+  height: clamp(5.5rem, 28vw, 8rem);
+  width: clamp(5.5rem, 28vw, 8rem);
+  max-width: min(86vw, 20rem);
 }
 
 .hero-brand .brand {

@@ -1,5 +1,6 @@
 /**
- * Pixel-level proof: baked #fff/#ccc checkerboard clears; navy Tell Tea ink stays.
+ * Pixel-level proof: baked #fff/#ccc checkerboard clears (outer + enclosed hole);
+ * navy Tell Tea ink stays.
  * Mirrors knockOutLogoLightBackground without DOM canvas.
  */
 import assert from "node:assert/strict";
@@ -10,7 +11,7 @@ function isLogoKnockoutRgb(r, g, b) {
   const avg = (r + g + b) / 3;
   const chroma = max - min;
   if (avg >= 205 && chroma <= 60) return true;
-  if (avg >= 155 && avg <= 245 && chroma <= 22) return true;
+  if (avg >= 150 && avg <= 245 && chroma <= 28) return true;
   return false;
 }
 
@@ -55,6 +56,13 @@ function knockOut(data, w, h) {
     tryPush(x + 1, y - 1);
     tryPush(x - 1, y + 1);
   }
+  // Enclosed holes (v2)
+  for (let i = 0, o = 0; i < w * h; i++, o += 4) {
+    if (data[o + 3] < 12) continue;
+    if (!isLogoKnockoutRgb(data[o], data[o + 1], data[o + 2])) continue;
+    data[o + 3] = 0;
+    cleared += 1;
+  }
   return cleared;
 }
 
@@ -83,10 +91,15 @@ for (let y = 0; y < H; y++) {
   }
 }
 
-// Navy mark in the middle (Tell Tea-like)
-for (let y = 20; y < 44; y++) {
-  for (let x = 20; x < 44; x++) {
-    setPx(data, W, x, y, 20, 40, 90);
+// Navy ring (circular-mark style) — center stays checkerboard, enclosed
+for (let y = 16; y < 48; y++) {
+  for (let x = 16; x < 48; x++) {
+    const cx = x - 31.5;
+    const cy = y - 31.5;
+    const r2 = cx * cx + cy * cy;
+    if (r2 >= 10 * 10 && r2 <= 15.5 * 15.5) {
+      setPx(data, W, x, y, 20, 40, 90);
+    }
   }
 }
 
@@ -100,12 +113,28 @@ assert.equal(getA(data, W, 0, 63), 0);
 assert.equal(getA(data, W, 8, 8), 0); // grey tile
 assert.equal(getA(data, W, 12, 4), 0); // white tile
 
-// Navy block stays opaque
-assert.equal(getA(data, W, 32, 32), 255);
-assert.equal(data[(32 * W + 32) * 4], 20);
-assert.equal(data[(32 * W + 32) * 4 + 2], 90);
+// Enclosed center hole (inside navy ring) must clear — edge flood alone cannot
+assert.equal(getA(data, W, 32, 32), 0, "enclosed center pad must clear");
 
-// Edge of navy still ink
-assert.equal(getA(data, W, 20, 20), 255);
+// Navy ring stays opaque
+assert.equal(getA(data, W, 32, 16 + 2), 255); // near top of ring approx
+assert.equal(getA(data, W, 16 + 2, 32), 255);
+
+// Sample a known ring pixel
+let ringOk = false;
+for (let y = 16; y < 48 && !ringOk; y++) {
+  for (let x = 16; x < 48; x++) {
+    const cx = x - 31.5;
+    const cy = y - 31.5;
+    const r2 = cx * cx + cy * cy;
+    if (r2 >= 10 * 10 && r2 <= 15.5 * 15.5) {
+      assert.equal(getA(data, W, x, y), 255, `ring ink at ${x},${y}`);
+      assert.equal(data[(y * W + x) * 4], 20);
+      ringOk = true;
+      break;
+    }
+  }
+}
+assert.ok(ringOk, "expected to sample ring ink");
 
 console.log("OK test-logo-knockout-pixels", { cleared });

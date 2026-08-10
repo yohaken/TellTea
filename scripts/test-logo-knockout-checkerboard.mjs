@@ -10,10 +10,11 @@ import { createRequire } from "node:module";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const src = readFileSync(join(root, "src/lib/receipts.ts"), "utf8");
 assert.match(src, /Transparency-grid|checkerboard|ตารางหมากรุก/);
-assert.match(src, /avg >= 155/);
-assert.match(src, /chroma <= 22/);
+assert.match(src, /avg >= 150/);
+assert.match(src, /chroma <= 28/);
 assert.match(src, /8-connected/);
 assert.match(src, /tryPush\(x \+ 1, y \+ 1\)/);
+assert.match(src, /Enclosed holes|enclosed/);
 
 // Pure RGB rules — mirror isLogoKnockoutRgb without DOM.
 function isLogoKnockoutRgb(r, g, b) {
@@ -22,7 +23,7 @@ function isLogoKnockoutRgb(r, g, b) {
   const avg = (r + g + b) / 3;
   const chroma = max - min;
   if (avg >= 205 && chroma <= 60) return true;
-  if (avg >= 155 && avg <= 245 && chroma <= 22) return true;
+  if (avg >= 150 && avg <= 245 && chroma <= 28) return true;
   return false;
 }
 

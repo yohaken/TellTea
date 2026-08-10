@@ -24,7 +24,10 @@ export function AppBrand({
   versionLabel?: string;
 }) {
   const label = versionLabel ?? appVersionLabel();
-  const [customLogoSrc, setCustomLogoSrc] = useState<string>(() => getBrandLogoMemory());
+  const mem = getBrandLogoMemory();
+  const [customLogoSrc, setCustomLogoSrc] = useState<string>(() => mem);
+  /** Avoid flashing the stock TellTea SVG while meta/brandLogo is loading. */
+  const [logoResolved, setLogoResolved] = useState(() => Boolean(mem));
 
   useEffect(() => {
     if (!showLogo) return;
@@ -32,12 +35,17 @@ export function AppBrand({
     purgeLegacyBrandLogoStorage();
 
     void loadBrandLogo().then((src) => {
-      if (!cancelled) setCustomLogoSrc(src);
+      if (cancelled) return;
+      setCustomLogoSrc(src);
+      setLogoResolved(true);
     });
 
     function onBrandLogo(ev: Event) {
       const detail = String((ev as CustomEvent).detail ?? "");
-      if (!cancelled) setCustomLogoSrc(detail);
+      if (!cancelled) {
+        setCustomLogoSrc(detail);
+        setLogoResolved(true);
+      }
     }
     window.addEventListener(BRAND_LOGO_CHANGED_EVENT, onBrandLogo);
     return () => {
@@ -59,12 +67,17 @@ export function AppBrand({
             className={cn("brand-logo brand-logo-custom", compact && "brand-logo-compact")}
             aria-hidden
           />
-        ) : (
+        ) : logoResolved ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={compact ? "/logo-mark.svg" : "/logo-telltea.svg"}
             alt=""
             className={cn("brand-logo", compact && "brand-logo-compact")}
+            aria-hidden
+          />
+        ) : (
+          <span
+            className={cn("brand-logo brand-logo-slot", compact && "brand-logo-compact")}
             aria-hidden
           />
         )

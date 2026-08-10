@@ -159,13 +159,20 @@ export function isLogoKnockoutRgb(r: number, g: number, b: number): boolean {
   // White / cream phone-export pad
   if (avg >= 205 && chroma <= 60) return true;
   // Neutral greys from transparency-grid tiles (#bbb–#e8e8e8)
-  if (avg >= 155 && avg <= 245 && chroma <= 22) return true;
+  // chroma≤28 covers mild JPEG noise on grey tiles
+  if (avg >= 150 && avg <= 245 && chroma <= 28) return true;
   return false;
 }
 
 /**
- * Flood-fill from edges: turn connected light / checkerboard pixels transparent.
- * Keeps ink inside the mark (not edge-connected) — e.g. navy Tell Tea logo.
+ * Knock out light / checkerboard pad → transparent.
+ *
+ * 1) Edge flood-fill (8-connected) clears the outer pad.
+ * 2) Full pass clears leftover knockout pixels inside closed holes
+ *    (e.g. empty center of a circular mark that edge-fill cannot reach
+ *    because ink forms a ring barrier).
+ *
+ * Dark / saturated ink is kept.
  */
 export function knockOutLogoLightBackground(
   ctx: CanvasRenderingContext2D,
@@ -218,6 +225,14 @@ export function knockOutLogoLightBackground(
     tryPush(x - 1, y - 1);
     tryPush(x + 1, y - 1);
     tryPush(x - 1, y + 1);
+  }
+
+  // Enclosed holes: edge flood cannot cross ink rings — sweep remaining pad.
+  for (let i = 0, o = 0; i < w * h; i++, o += 4) {
+    if (d[o + 3] < 12) continue;
+    if (!isLogoKnockoutRgb(d[o], d[o + 1], d[o + 2])) continue;
+    d[o + 3] = 0;
+    cleared += 1;
   }
 
   if (!cleared) return false;
@@ -331,17 +346,25 @@ async function resizeToPngDataUrl(file: File, maxEdge: number): Promise<string> 
 }
 
 /**
- * Re-encode a stored logo data URL as PNG with light edge pad removed.
+ * Re-encode a stored logo data URL as PNG with light pad / holes removed.
  * Safe for already-uploaded JPEG/PNG marks that show white corners on login.
+ *
+ * @param forceKnockout when true, always redraw + knock out (even small PNGs).
+ *   Needed to upgrade older uploads that only cleared the outer pad.
  */
 export async function prepareBrandLogoPngDataUrl(
   dataUrl: string,
   maxEdge = 320,
+  forceKnockout = false,
 ): Promise<string> {
   const raw = String(dataUrl || "").trim();
   if (!raw.startsWith("data:image/")) return raw;
-  // Fresh uploads from fileToLogoDataUrl are already PNG + knockout under the soft cap.
-  if (raw.startsWith("data:image/png") && raw.length <= LOGO_DATA_URL_SOFT_MAX) {
+  // Fresh uploads under the soft cap already ran knockout — skip unless upgrading.
+  if (
+    !forceKnockout &&
+    raw.startsWith("data:image/png") &&
+    raw.length <= LOGO_DATA_URL_SOFT_MAX
+  ) {
     return raw;
   }
 

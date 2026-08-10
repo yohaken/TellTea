@@ -10,12 +10,20 @@ export const BRAND_LOGO_CHANGED_EVENT = "telltea-brand-logo";
 /** Legacy key that once held full data URLs and froze mobile Safari. */
 export const BRAND_LOGO_LEGACY_STORAGE_KEY = "telltea-brand-logo-v1";
 
+/**
+ * Bump when knockout rules change so loadBrandLogo re-punches stored PNGs
+ * (v2: also clear enclosed center pad inside ink rings).
+ */
+export const BRAND_LOGO_KNOCKOUT_VERSION = 2;
+
 type BrandLogoDoc = {
   dataUrl: string;
   updatedAt: number;
   updatedBy: string;
   /** Light edge pad knocked out → transparent PNG (no white corners on login). */
   lightBgKnockedOut?: boolean;
+  /** Which knockout algorithm wrote dataUrl — reprocess when behind. */
+  knockoutVersion?: number;
 };
 
 let memorySrc = "";
@@ -75,8 +83,11 @@ async function shrinkPngDataUrlIfNeeded(
 }
 
 /** Knock out light pad + shrink — always stores transparent PNG. */
-async function prepareAndShrinkLogo(dataUrl: string): Promise<string> {
-  const punched = await prepareBrandLogoPngDataUrl(dataUrl.trim(), 320);
+async function prepareAndShrinkLogo(
+  dataUrl: string,
+  forceKnockout = false,
+): Promise<string> {
+  const punched = await prepareBrandLogoPngDataUrl(dataUrl.trim(), 320, forceKnockout);
   return shrinkPngDataUrlIfNeeded(punched);
 }
 
@@ -85,7 +96,9 @@ export async function saveBrandLogo(dataUrl: string, updatedBy: string): Promise
   logoEpoch += 1;
   const epoch = logoEpoch;
 
-  const shrunk = dataUrl.trim() ? await prepareAndShrinkLogo(dataUrl.trim()) : "";
+  const shrunk = dataUrl.trim()
+    ? await prepareAndShrinkLogo(dataUrl.trim(), true)
+    : "";
   if (epoch !== logoEpoch) {
     // A newer save started while we were encoding — prefer the newer memory.
     return memorySrc;
@@ -96,6 +109,7 @@ export async function saveBrandLogo(dataUrl: string, updatedBy: string): Promise
     updatedAt: Date.now(),
     updatedBy,
     lightBgKnockedOut: Boolean(shrunk),
+    knockoutVersion: shrunk ? BRAND_LOGO_KNOCKOUT_VERSION : 0,
   };
   const writeLogo = setDoc(brandLogoRef(), payload, { merge: true });
   await Promise.race([
@@ -145,7 +159,12 @@ export async function loadBrandLogo(): Promise<string> {
 
       const docData = snap.exists() ? (snap.data() as BrandLogoDoc) : null;
       let src = docData ? String(docData.dataUrl || "").trim() : "";
-      const alreadyKnocked = Boolean(docData?.lightBgKnockedOut);
+      const storedKnockoutVer = Number(docData?.knockoutVersion || 0);
+      const needsKnockoutUpgrade =
+        Boolean(src) &&
+        (storedKnockoutVer < BRAND_LOGO_KNOCKOUT_VERSION ||
+          !docData?.lightBgKnockedOut ||
+          src.length > BRAND_LOGO_MAX_CHARS);
 
       if (!src) {
         const profileSnap = await getDoc(profileRef());
@@ -156,7 +175,7 @@ export async function loadBrandLogo(): Promise<string> {
           : "";
         if (legacy.startsWith("data:image/")) {
           try {
-            src = await prepareAndShrinkLogo(legacy);
+            src = await prepareAndShrinkLogo(legacy, true);
             if (epochAtStart !== logoEpoch || memorySrc) return memorySrc;
             await setDoc(
               brandLogoRef(),
@@ -165,6 +184,7 @@ export async function loadBrandLogo(): Promise<string> {
                 updatedAt: Date.now(),
                 updatedBy: "migrate",
                 lightBgKnockedOut: true,
+                knockoutVersion: BRAND_LOGO_KNOCKOUT_VERSION,
               } satisfies BrandLogoDoc,
               { merge: true },
             );
@@ -177,7 +197,7 @@ export async function loadBrandLogo(): Promise<string> {
           try {
             const resolved = await resolveEvidencePhotoSrc(legacy);
             src = resolved.startsWith("data:")
-              ? await prepareAndShrinkLogo(resolved)
+              ? await prepareAndShrinkLogo(resolved, true)
               : "";
             if (epochAtStart !== logoEpoch || memorySrc) return memorySrc;
             if (src) {
@@ -188,6 +208,7 @@ export async function loadBrandLogo(): Promise<string> {
                   updatedAt: Date.now(),
                   updatedBy: "migrate",
                   lightBgKnockedOut: true,
+                  knockoutVersion: BRAND_LOGO_KNOCKOUT_VERSION,
                 } satisfies BrandLogoDoc,
                 { merge: true },
               );
@@ -199,17 +220,21 @@ export async function loadBrandLogo(): Promise<string> {
         } else if (/^https?:\/\//i.test(legacy)) {
           src = legacy;
         }
-      } else if (!alreadyKnocked || src.length > BRAND_LOGO_MAX_CHARS) {
+      } else if (needsKnockoutUpgrade) {
         try {
-          src = await prepareAndShrinkLogo(src);
+          src = await prepareAndShrinkLogo(src, true);
           if (epochAtStart !== logoEpoch || memorySrc) return memorySrc;
           await setDoc(
             brandLogoRef(),
             {
               dataUrl: src,
               updatedAt: Date.now(),
-              updatedBy: alreadyKnocked ? "shrink" : "knockout",
+              updatedBy:
+                storedKnockoutVer > 0 || docData?.lightBgKnockedOut
+                  ? "knockout-v" + BRAND_LOGO_KNOCKOUT_VERSION
+                  : "knockout",
               lightBgKnockedOut: true,
+              knockoutVersion: BRAND_LOGO_KNOCKOUT_VERSION,
             } satisfies BrandLogoDoc,
             { merge: true },
           );

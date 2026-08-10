@@ -79,6 +79,7 @@
     "test:ledger-evidence-policy": "node scripts/test-ledger-evidence-policy.mjs",
     "test:ledger-ai-classify": "node scripts/test-ledger-ai-classify.mjs",
     "test:brand-logo-perf": "node scripts/test-brand-logo-perf.mjs",
+    "test:login-brand-logo": "node scripts/test-login-brand-logo.mjs",
     "test:stock-catalog-owner": "node scripts/test-stock-catalog-owner.mjs",
     "test:stock-history-round-label": "node scripts/test-stock-history-round-label.mjs",
     "test:stock-count-edit": "node scripts/test-stock-count-edit.mjs",
