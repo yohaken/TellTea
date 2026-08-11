@@ -52,6 +52,6 @@ if (!(g > b * 1.05)) {
 }
 
 // Also confirm production CSS contains the fix
-const css = await (await fetch("https://telltea-shop.web.app/")).text().catch(() => "");
+const css = await (await fetch("https://telltea-bo.web.app/")).text().catch(() => "");
 await browser.close();
 if (process.exitCode) process.exit(process.exitCode);

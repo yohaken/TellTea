@@ -47,7 +47,7 @@ import { PosLazyMenuImage } from "@/components/PosLazyMenuImage";
 import { summarizeMenuItemOptions } from "@/lib/pos-menu-option-summary";
 import { menuTextIncludes } from "@/lib/pos-menu-text";
 
-const BOH_MENU_URL = "https://telltea-shop.web.app/menu/";
+const BOH_MENU_URL = "https://telltea-bo.web.app/menu/";
 
 type VisibilityFilter = "active" | "archived" | "all";
 type DeleteTarget =
