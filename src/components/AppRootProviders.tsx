@@ -13,8 +13,10 @@ export function AppRootProviders({ children }: { children: React.ReactNode }) {
   /** Public QR signup / receipt claim — no staff auth shell */
   const isPublicJoin = pathname === "/join" || pathname.startsWith("/join/");
   const isPublicClaim = pathname === "/claim" || pathname.startsWith("/claim/");
+  const isPublicGift = pathname === "/gift" || pathname.startsWith("/gift/");
   const isPublicMemberMe = pathname === "/me" || pathname.startsWith("/me/");
-  const skipBoAuth = isPos || isPublicJoin || isPublicClaim || isPublicMemberMe;
+  const skipBoAuth =
+    isPos || isPublicJoin || isPublicClaim || isPublicGift || isPublicMemberMe;
 
   useEffect(() => {
     if (skipBoAuth) return;

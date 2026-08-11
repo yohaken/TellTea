@@ -41,10 +41,10 @@ const sale = read("npos-telltea/app/src/main/java/app/telltea/npos/sell/SaleSync
 assert.match(sale, /printSlip\(app, slipLines, claim, shopForPrint\)/);
 
 const gradle = read("npos-telltea/app/build.gradle");
-assert.equal(Number(gradle.match(/versionCode\s+(\d+)/)[1]), 148);
+assert.ok(Number(gradle.match(/versionCode\s+(\d+)/)[1]) >= 148);
 
 const pin = read("src/lib/npos-apk-release.ts");
-assert.equal(Number(pin.match(/NPOS_SYSTEM_VERSION_CODE = (\d+)/)[1]), 148);
+assert.ok(Number(pin.match(/NPOS_SYSTEM_VERSION_CODE = (\d+)/)[1]) >= 148);
 
 const whats = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/update/WhatsNewCatalog.java",

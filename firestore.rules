@@ -937,6 +937,12 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    /** One-time QR ให้แต้ม coupons — issue/claim via Cloud Functions only. */
+    match /pointCoupons/{couponId} {
+      allow read: if membersHubView();
+      allow write: if false;
+    }
+
     /**
      * เงินเดือน / บัญชีรับโอน / เบิกค้าง — แยกจากรายชื่อร้าน
      * อ่าน: เจ้าของ · payrollPay · ของตัวเอง · เขียน: เจ้าของ / payrollPay / staffManage (ตั้งค่า)
