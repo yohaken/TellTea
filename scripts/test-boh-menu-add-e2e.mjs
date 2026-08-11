@@ -5,7 +5,7 @@
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
 
-const BASE = process.env.BOH_MENU_URL || "https://telltea-shop.web.app/menu/";
+const BASE = process.env.BOH_MENU_URL || "https://telltea-bo.web.app/menu/";
 
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage();

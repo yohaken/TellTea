@@ -29,7 +29,7 @@ assert.doesNotMatch(page, /ensurePosDeviceAuth/);
 const admin = read("src/components/PosMenuAdmin.tsx");
 assert.match(admin, /authMode/);
 assert.match(admin, /setMenuDbMode/);
-assert.match(admin, /telltea-shop\.web\.app\/menu\//);
+assert.match(admin, /telltea-bo\.web\.app\/menu\//);
 assert.match(admin, /แนะนำจัดการเมนูที่หลังร้าน/);
 
 const db = read("src/lib/pos-menu-db.ts");

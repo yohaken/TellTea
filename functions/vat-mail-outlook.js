@@ -109,8 +109,8 @@ function publicStatus(oauth, hasConfig) {
 }
 
 function appReturnUrl(base, query) {
-  const root = asString(base, 400) || "https://telltea-shop.web.app/vat-sales/";
-  const url = new URL(root.includes("://") ? root : `https://telltea-shop.web.app${root}`);
+  const root = asString(base, 400) || "https://telltea-bo.web.app/vat-sales/";
+  const url = new URL(root.includes("://") ? root : `https://telltea-bo.web.app${root}`);
   if (!url.pathname.includes("vat-sales")) url.pathname = "/vat-sales/";
   Object.entries(query || {}).forEach(([k, v]) => url.searchParams.set(k, String(v)));
   return url.toString();
@@ -260,7 +260,7 @@ exports.vatOutlookOAuthStart = functions.region(REGION).https.onCall(async (data
       "ยังไม่ได้ตั้งค่า Outlook OAuth (OUTLOOK_OAUTH_* หรือ meta/vatMailOAuthConfigOutlook)",
     );
   }
-  const returnTo = asString(data?.returnTo, 400) || "https://telltea-shop.web.app/vat-sales/";
+  const returnTo = asString(data?.returnTo, 400) || "https://telltea-bo.web.app/vat-sales/";
   const state = crypto.randomBytes(24).toString("hex");
   await db.doc(OAUTH_STATE_DOC).set({ state, actorId, returnTo, createdAt: Date.now() });
   const url = new URL("https://login.microsoftonline.com/common/oauth2/v2.0/authorize");
@@ -275,7 +275,7 @@ exports.vatOutlookOAuthStart = functions.region(REGION).https.onCall(async (data
 
 exports.vatOutlookOAuthCallback = functions.region(REGION).https.onRequest(async (req, res) => {
   const db = getFirestore();
-  let returnTo = "https://telltea-shop.web.app/vat-sales/";
+  let returnTo = "https://telltea-bo.web.app/vat-sales/";
   try {
     const code = asString(req.query.code, 2000);
     const state = asString(req.query.state, 120);

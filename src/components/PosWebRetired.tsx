@@ -2,8 +2,8 @@
 
 import { POS_APK_INSTALL_PAGE_URL } from "@/lib/pos-url";
 
-const POS_SALES_URL = "https://telltea-shop.web.app/pos-sales/";
-const MENU_URL = "https://telltea-shop.web.app/menu/";
+const POS_SALES_URL = "https://telltea-bo.web.app/pos-sales/";
+const MENU_URL = "https://telltea-bo.web.app/menu/";
 
 /**
  * เว็บ POS เคาน์เตอร์เลิกใช้แล้ว — ขายบน nPos · รายงาน/ตั้งค่าอยู่หลังร้าน

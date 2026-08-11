@@ -5,7 +5,7 @@
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
 
-const BASE = "https://telltea-shop.web.app";
+const BASE = "https://telltea-bo.web.app";
 const DATA_PNG =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 

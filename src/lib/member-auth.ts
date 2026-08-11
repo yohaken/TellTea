@@ -1,7 +1,7 @@
 /**
  * Member public auth (/claim, /me) — stable path owned by TellTea.
  *
- * Google: Firebase native redirect on telltea-shop (same origin).
+ * Google: Firebase native redirect on telltea-bo (same origin).
  * Does NOT use P-Note telltea-auth.html / loginTickets hop.
  *
  * Staff BO login still uses the legacy firebaseapp bridge in auth.tsx.

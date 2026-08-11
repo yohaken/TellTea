@@ -87,7 +87,7 @@ assert.match(read("npos-telltea/app/build.gradle"), /versionName "1.14.49"/);
 const posMenuPage = read("src/app/pos/menu/page.tsx");
 assert.doesNotMatch(posMenuPage, /PosMenuAdmin/);
 assert.match(posMenuPage, /PosWebRetired/);
-assert.match(read("src/components/PosWebRetired.tsx"), /telltea-shop\.web\.app\/menu\//);
+assert.match(read("src/components/PosWebRetired.tsx"), /telltea-bo\.web\.app\/menu\//);
 
 const e2e = read("scripts/test-pos-menu-e2e.mjs");
 assert.match(e2e, /เลิกใช้|nPos|หลังร้าน/);
