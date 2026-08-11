@@ -21,6 +21,7 @@
     "test:members-auth-structural": "node scripts/test-members-auth-structural.mjs",
     "test:members-comp-gift": "node scripts/test-members-comp-gift.mjs",
     "test:no-dead-telltea-shop": "node scripts/test-no-dead-telltea-shop-runtime.mjs",
+    "test:short-receipt-link": "node scripts/test-short-receipt-link.mjs",
     "test:auth-login-stuck": "node scripts/test-auth-login-stuck.mjs",
     "test:members-p4-npos": "node scripts/test-members-p4-npos.mjs",
     "test:members-p5-slip-qr": "node scripts/test-members-p5-slip-qr.mjs",

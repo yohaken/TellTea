@@ -69,6 +69,7 @@ assert.match(giftPage, /completeMemberGoogleRedirect/);
 const providers = read("src/components/AppRootProviders.tsx");
 assert.match(providers, /isPublicGift/);
 assert.match(providers, /isPublicClaim/);
+assert.match(providers, /isPublicShortLink/);
 assert.match(providers, /isPublicJoin/);
 assert.match(providers, /isPublicMemberMe/);
 

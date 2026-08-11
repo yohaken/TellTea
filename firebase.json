@@ -38,6 +38,12 @@
           "type": 301
         }
       ],
+      "rewrites": [
+        {
+          "source": "/r/**",
+          "destination": "/r/index.html"
+        }
+      ],
       "headers": [
         {
           "source": "**",

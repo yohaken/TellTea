@@ -21,6 +21,8 @@ const BACK_OFFICE_ROUTES = [
   "members",
   "join",
   "claim",
+  "gift",
+  "r",
   "me",
   "tasks",
   "bonus",
@@ -95,6 +97,7 @@ try {
   const sites = Array.isArray(firebase.hosting) ? firebase.hosting : [firebase.hosting];
   const main = sites.find((s) => s.target === "telltea");
   const redirects = main?.redirects ?? [];
+  const rewrites = main?.rewrites ?? [];
   const posRedirect = redirects.find(
     (r) => r.source === "/pos" && String(r.destination).startsWith(POS_REDIRECT_DEST),
   );
@@ -102,6 +105,14 @@ try {
     fail("firebase.json must 301 redirect /pos → telltea-pos.web.app");
   } else {
     ok("firebase.json /pos → telltea-pos redirect");
+  }
+  const shortRewrite = rewrites.find(
+    (r) => r.source === "/r/**" && r.destination === "/r/index.html",
+  );
+  if (!shortRewrite) {
+    fail("firebase.json must rewrite /r/** → /r/index.html for slip short links");
+  } else {
+    ok("firebase.json /r/** → /r/index.html rewrite");
   }
   for (const rule of redirects) {
     const dest = String(rule.destination || "");
