@@ -68,6 +68,12 @@ async function loadMemberSettings(db) {
     d.claimTokenTtlDays <= 365
       ? Math.floor(d.claimTokenTtlDays)
       : 30;
+  const compCouponDailyQuota =
+    typeof d.compCouponDailyQuota === "number" &&
+    d.compCouponDailyQuota >= 0 &&
+    d.compCouponDailyQuota <= 10000
+      ? Math.floor(d.compCouponDailyQuota)
+      : 100;
   return {
     // Default OFF when doc missing — live counters stay unchanged until owner enables.
     enabled: d.enabled === true,
@@ -85,6 +91,10 @@ async function loadMemberSettings(db) {
     publicSignupToken: typeof d.publicSignupToken === "string" ? d.publicSignupToken : "",
     receiptClaimEnabled: d.receiptClaimEnabled === true,
     claimTokenTtlDays,
+    compCouponEnabled: d.compCouponEnabled === true,
+    // Locked to 1 point per slip for v1.
+    compCouponPointsPerSlip: 1,
+    compCouponDailyQuota,
   };
 }
 
@@ -840,6 +850,389 @@ function buildPublicClaimUrl(saleId, token) {
   return `https://telltea-bo.web.app/claim/?s=${s}&t=${t}`;
 }
 
+function buildPublicGiftUrl(token) {
+  const c = encodeURIComponent(String(token || ""));
+  return `https://telltea-bo.web.app/gift/?c=${c}`;
+}
+
+function bangkokDayKey(ms = Date.now()) {
+  const { bangkokCalendarParts } = require("./bangkok-day");
+  const { y, m, d } = bangkokCalendarParts(ms);
+  return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
+async function readCompCouponDailyIssued(db, dayKey) {
+  const snap = await db.doc("meta/compCouponDaily").get();
+  if (!snap.exists) return 0;
+  const d = snap.data() || {};
+  if (asString(d.dayKey, 16) !== dayKey) return 0;
+  const n = typeof d.issued === "number" ? Math.floor(d.issued) : 0;
+  return n >= 0 ? n : 0;
+}
+
+/**
+ * Remaining daily quota for QR ให้แต้ม (does not create a coupon).
+ */
+async function getCompCouponStatus(db) {
+  const settings = await loadMemberSettings(db);
+  if (!settings.enabled) return { ok: false, error: "disabled" };
+  if (!settings.compCouponEnabled) return { ok: false, error: "comp_off" };
+  const quota = settings.compCouponDailyQuota;
+  const dayKey = bangkokDayKey();
+  const issued = await readCompCouponDailyIssued(db, dayKey);
+  const remaining = Math.max(0, quota - issued);
+  return {
+    ok: true,
+    enabled: true,
+    points: 1,
+    quota,
+    issuedToday: issued,
+    remaining,
+    dayKey,
+  };
+}
+
+/**
+ * Issue one-time gift point coupon — decrements daily quota at print time.
+ */
+async function issueCompCoupon(db, { actorId }) {
+  const settings = await loadMemberSettings(db);
+  if (!settings.enabled) return { ok: false, error: "disabled" };
+  if (!settings.compCouponEnabled) return { ok: false, error: "comp_off" };
+  const quota = settings.compCouponDailyQuota;
+  if (!(quota > 0)) return { ok: false, error: "quota_zero" };
+
+  const dayKey = bangkokDayKey();
+  const dailyRef = db.doc("meta/compCouponDaily");
+  const token = randomClaimToken();
+  const couponRef = db.collection("pointCoupons").doc(token);
+  const now = Date.now();
+  const ttlMs = Math.max(1, settings.claimTokenTtlDays) * 24 * 60 * 60 * 1000;
+  const expiresAt = now + ttlMs;
+  const points = 1;
+
+  try {
+    const result = await db.runTransaction(async (tx) => {
+      const dailySnap = await tx.get(dailyRef);
+      let issued = 0;
+      if (dailySnap.exists) {
+        const d = dailySnap.data() || {};
+        if (asString(d.dayKey, 16) === dayKey) {
+          issued =
+            typeof d.issued === "number" && d.issued >= 0 ? Math.floor(d.issued) : 0;
+        }
+      }
+      if (issued >= quota) {
+        return { error: "quota_exhausted", remaining: 0, quota, issuedToday: issued };
+      }
+      const nextIssued = issued + 1;
+      tx.set(
+        dailyRef,
+        { dayKey, issued: nextIssued, updatedAt: now },
+        { merge: true },
+      );
+      tx.set(couponRef, {
+        token,
+        points,
+        status: "open",
+        createdAt: now,
+        createdBy: asString(actorId, 80) || "pos",
+        expiresAt,
+        dayKey,
+      });
+      return {
+        token,
+        points,
+        claimUrl: buildPublicGiftUrl(token),
+        expiresAt,
+        remaining: quota - nextIssued,
+        quota,
+        issuedToday: nextIssued,
+        dayKey,
+      };
+    });
+    if (result.error) return { ok: false, ...result };
+    return { ok: true, ...result };
+  } catch (err) {
+    console.error("issueCompCoupon", err && err.message);
+    return { ok: false, error: "issue_failed" };
+  }
+}
+
+async function loadCouponForClaim(db, token) {
+  const tok = asString(token, 128);
+  if (!tok || tok.length < 16) return { ok: false, error: "bad_token" };
+  const settings = await loadMemberSettings(db);
+  if (!settings.enabled) return { ok: false, error: "disabled" };
+  if (!settings.compCouponEnabled) return { ok: false, error: "comp_off" };
+  const snap = await db.collection("pointCoupons").doc(tok).get();
+  if (!snap.exists) return { ok: false, error: "bad_token" };
+  const data = snap.data() || {};
+  if (asString(data.token, 128) && asString(data.token, 128) !== tok) {
+    return { ok: false, error: "bad_token" };
+  }
+  const exp = typeof data.expiresAt === "number" ? data.expiresAt : 0;
+  if (exp && exp < Date.now()) return { ok: false, error: "expired" };
+  if (asString(data.status, 24) === "claimed") {
+    return {
+      ok: false,
+      error: "already_claimed",
+      view: {
+        pointsPreview: typeof data.points === "number" ? data.points : 1,
+        expiresAt: exp,
+      },
+    };
+  }
+  const points = typeof data.points === "number" && data.points > 0 ? Math.floor(data.points) : 1;
+  return {
+    ok: true,
+    settings,
+    token: tok,
+    data,
+    view: { pointsPreview: points, expiresAt: exp },
+  };
+}
+
+async function previewCompCoupon(db, { token }) {
+  const loaded = await loadCouponForClaim(db, token);
+  if (!loaded.ok) {
+    return {
+      ok: false,
+      error: loaded.error,
+      ...(loaded.view || {}),
+    };
+  }
+  return {
+    ok: true,
+    pointsPreview: loaded.view.pointsPreview,
+    expiresAt: loaded.view.expiresAt,
+  };
+}
+
+async function lookupCompCouponAuth(db, auth, { token, idToken }) {
+  const loaded = await loadCouponForClaim(db, token);
+  if (!loaded.ok) {
+    return { ok: false, error: loaded.error, ...(loaded.view || {}) };
+  }
+  const rawToken = asString(idToken, 4096);
+  if (!rawToken) return { ok: false, error: "auth_required" };
+  let decoded;
+  try {
+    decoded = await auth.verifyIdToken(rawToken);
+  } catch (err) {
+    console.error("lookupCompCouponAuth verifyIdToken", err && err.message);
+    return { ok: false, error: "auth_required" };
+  }
+  const uid = asString(decoded.uid, 128);
+  const email = asString(decoded.email, 120).toLowerCase();
+  const phoneFromAuth = asString(decoded.phone_number, 32);
+  let digits = phoneDigitsFromInput(phoneFromAuth);
+  let existingDoc = null;
+  if (digits) {
+    const s = await db.collection("members").doc(digits).get();
+    if (s.exists) existingDoc = s;
+  }
+  if (!existingDoc && uid) {
+    existingDoc = await findMemberByGoogleUid(db, uid);
+  }
+  if (!existingDoc || !existingDoc.exists) {
+    return {
+      ok: true,
+      found: false,
+      needsPhone: true,
+      provider: phoneFromAuth ? "phone" : email ? "google" : "unknown",
+      email,
+      pointsPreview: loaded.view.pointsPreview,
+    };
+  }
+  const m = existingDoc.data() || {};
+  if (isMemberInactive(m)) return { ok: false, error: memberStatusLabel(m) };
+  return {
+    ok: true,
+    found: true,
+    needsPhone: false,
+    provider: phoneFromAuth ? "phone" : email ? "google" : "unknown",
+    email,
+    pointsPreview: loaded.view.pointsPreview,
+    member: {
+      id: existingDoc.id,
+      displayName: asString(m.displayName, 80) || formatPhoneDisplay(existingDoc.id),
+      cardNo: asString(m.cardNo, 24) || cardNoFromDigits(existingDoc.id),
+      pointsBalance: typeof m.pointsBalance === "number" ? m.pointsBalance : 0,
+    },
+  };
+}
+
+async function creditCompCouponToMember(db, {
+  loaded,
+  digits,
+  displayName,
+  isNew,
+  note,
+}) {
+  const points =
+    typeof loaded.data.points === "number" && loaded.data.points > 0
+      ? Math.floor(loaded.data.points)
+      : 1;
+  const memberRef = db.collection("members").doc(digits);
+  const couponRef = db.collection("pointCoupons").doc(loaded.token);
+  const ledgerRef = db.collection("memberLedger").doc();
+  const now = Date.now();
+  const saleKey = `gift_${loaded.token}`;
+
+  try {
+    const result = await db.runTransaction(async (tx) => {
+      const [mSnap, cSnap] = await Promise.all([tx.get(memberRef), tx.get(couponRef)]);
+      if (!mSnap.exists) return { error: "not_member" };
+      if (!cSnap.exists) return { error: "bad_token" };
+      const coupon = cSnap.data() || {};
+      if (asString(coupon.status, 24) === "claimed") return { error: "already_claimed" };
+      const exp = typeof coupon.expiresAt === "number" ? coupon.expiresAt : 0;
+      if (exp && exp < now) return { error: "expired" };
+
+      const m = mSnap.data() || {};
+      if (isMemberInactive(m)) return { error: memberStatusLabel(m) };
+      const balance = typeof m.pointsBalance === "number" ? m.pointsBalance : 0;
+      const lifetime = typeof m.lifetimePointsEarned === "number" ? m.lifetimePointsEarned : 0;
+      const balanceAfter = balance + points;
+      const namePatch = asString(displayName, 80);
+      const memberPatch = {
+        pointsBalance: balanceAfter,
+        lifetimePointsEarned: lifetime + points,
+        updatedAt: now,
+        updatedBy: "comp_coupon",
+      };
+      if (namePatch && !asString(m.displayName, 80)) {
+        memberPatch.displayName = namePatch;
+      }
+      tx.update(memberRef, memberPatch);
+      tx.set(ledgerRef, {
+        memberId: digits,
+        delta: points,
+        balanceAfter,
+        reason: "earn_comp_coupon",
+        saleId: saleKey,
+        note: note || "QR ให้แต้ม",
+        channel: "comp_coupon",
+        actorType: "customer",
+        actorId: digits,
+        createdAt: now,
+      });
+      tx.set(
+        couponRef,
+        {
+          status: "claimed",
+          claimedAt: now,
+          claimedByMemberId: digits,
+        },
+        { merge: true },
+      );
+      return {
+        points,
+        balanceAfter,
+        displayName:
+          asString(memberPatch.displayName, 80) ||
+          asString(m.displayName, 80) ||
+          formatPhoneDisplay(digits),
+        cardNo: asString(m.cardNo, 24) || cardNoFromDigits(digits),
+      };
+    });
+    if (result.error) return { ok: false, error: result.error };
+    return {
+      ok: true,
+      points: result.points,
+      balanceAfter: result.balanceAfter,
+      member: {
+        id: digits,
+        displayName: result.displayName,
+        cardNo: result.cardNo,
+        pointsBalance: result.balanceAfter,
+        isNew: isNew === true,
+      },
+    };
+  } catch (err) {
+    console.error("creditCompCouponToMember", err && err.message);
+    return { ok: false, error: "claim_failed" };
+  }
+}
+
+async function claimCompCoupon(db, auth, {
+  token,
+  phone,
+  displayName,
+  pdpaAccepted,
+  idToken,
+}) {
+  const loaded = await loadCouponForClaim(db, token);
+  if (!loaded.ok) return { ok: false, error: loaded.error, ...(loaded.view || {}) };
+
+  const rawToken = asString(idToken, 4096);
+  if (!rawToken) return { ok: false, error: "auth_required" };
+  let decoded;
+  try {
+    decoded = await auth.verifyIdToken(rawToken);
+  } catch (err) {
+    console.error("claimCompCoupon verifyIdToken", err && err.message);
+    return { ok: false, error: "auth_required" };
+  }
+
+  const uid = asString(decoded.uid, 128);
+  const email = asString(decoded.email, 120).toLowerCase();
+  const phoneFromAuth = asString(decoded.phone_number, 32);
+  let digits = phoneDigitsFromInput(phoneFromAuth);
+  let existingDoc = null;
+
+  if (digits) {
+    const s = await db.collection("members").doc(digits).get();
+    if (s.exists) existingDoc = s;
+  }
+  if (!existingDoc && uid) {
+    existingDoc = await findMemberByGoogleUid(db, uid);
+    if (existingDoc) digits = existingDoc.id;
+  }
+
+  let isNew = false;
+  if (!existingDoc || !existingDoc.exists) {
+    digits = phoneDigitsFromInput(phoneFromAuth);
+    if (!digits) return { ok: false, error: "phone_otp_required" };
+    const bodyDigits = phoneDigitsFromInput(phone);
+    if (bodyDigits && bodyDigits !== digits) {
+      return { ok: false, error: "phone_mismatch" };
+    }
+    if (pdpaAccepted !== true) return { ok: false, error: "pdpa_required" };
+    const beforeCreate = await db.collection("members").doc(digits).get();
+    const created = await quickCreateMember(db, {
+      phone: phoneFromAuth || phone || digits,
+      displayName: displayName || (email ? email.split("@")[0] : ""),
+      actorId: "comp_coupon",
+      source: "qr_self",
+      googleUid: uid,
+      email,
+    });
+    if (!created.ok) return created;
+    isNew = !beforeCreate.exists;
+  } else {
+    const m = existingDoc.data() || {};
+    if (isMemberInactive(m)) return { ok: false, error: memberStatusLabel(m) };
+    digits = existingDoc.id;
+    const patch = {};
+    if (uid && !asString(m.googleUid, 128)) patch.googleUid = uid;
+    if (email && !asString(m.email, 120)) patch.email = email;
+    if (Object.keys(patch).length) {
+      patch.updatedAt = Date.now();
+      await existingDoc.ref.set(patch, { merge: true });
+    }
+  }
+
+  return creditCompCouponToMember(db, {
+    loaded,
+    digits,
+    displayName,
+    isNew,
+    note: isNew ? "สมัคร+รับ QR ให้แต้ม" : "รับ QR ให้แต้ม",
+  });
+}
+
 /**
  * Issue / reuse claim token on a completed sale for slip QR (A1 — even 0 points).
  * No-op when members or receiptClaim flag is off. Never throws to sale path.
@@ -915,6 +1308,12 @@ module.exports = {
   writeRedeemInSaleTx,
   tryIssueReceiptClaimForSale,
   buildPublicClaimUrl,
+  buildPublicGiftUrl,
+  getCompCouponStatus,
+  issueCompCoupon,
+  previewCompCoupon,
+  lookupCompCouponAuth,
+  claimCompCoupon,
   lookupMember,
   quickCreateMember,
   publicSignup,

@@ -65,6 +65,13 @@ import app.telltea.npos.shell.PosShellNav;
 import app.telltea.npos.shift.BlindCloseFlow;
 import app.telltea.npos.shift.ShiftPrefs;
 import app.telltea.npos.printer.DrawerKick;
+import app.telltea.npos.printer.EscPos;
+import app.telltea.npos.printer.PrinterEndpoint;
+import app.telltea.npos.printer.PrinterPrefs;
+import app.telltea.npos.printer.PrinterTransport;
+import app.telltea.npos.printer.ReceiptFormBuilder;
+import app.telltea.npos.printer.ReceiptSlipLine;
+import app.telltea.npos.printer.SunmiInnerPrinter;
 import app.telltea.npos.ui.NposConfirmDialog;
 import app.telltea.npos.ui.NposFonts;
 import app.telltea.npos.ui.NposNumberPad;
@@ -101,7 +108,9 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
   private TextView restoreHoldButton;
   private TextView memberButton;
   private TextView redeemButton;
+  private TextView giftCouponButton;
   private TextView memberStatusLabel;
+  private boolean giftCouponBusy = false;
   private View payAllButton;
   private TextView payAllAmount;
   private TextView payAllDiscount;
@@ -278,6 +287,10 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
     redeemButton = findViewById(R.id.redeemButton);
     if (redeemButton != null) {
       redeemButton.setOnClickListener(v -> showRedeemDialog());
+    }
+    giftCouponButton = findViewById(R.id.giftCouponButton);
+    if (giftCouponButton != null) {
+      giftCouponButton.setOnClickListener(v -> showGiftCouponFlow());
     }
     memberStatusLabel = findViewById(R.id.memberStatusLabel);
     View discountBtn = findViewById(R.id.discountButton);
@@ -2609,6 +2622,10 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
     return shop != null && shop.optBoolean("membersEnabled", false);
   }
 
+  private boolean compCouponEnabled() {
+    return membersEnabled() && shop != null && shop.optBoolean("membersCompCouponEnabled", false);
+  }
+
   private boolean hasMember() {
     return memberId != null && !memberId.isEmpty();
   }
@@ -2685,6 +2702,9 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
         redeemButton.setText(R.string.sell_hub_redeem);
       }
     }
+    if (giftCouponButton != null) {
+      giftCouponButton.setVisibility(compCouponEnabled() ? View.VISIBLE : View.GONE);
+    }
     if (memberStatusLabel != null) {
       if (on && hasMember()) {
         String redeemSuffix = "";
@@ -2727,6 +2747,135 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
 
   private double cartTotal() {
     return Math.max(0, cartSubtotal() - discountBaht - redeemBaht());
+  }
+
+  private void showGiftCouponFlow() {
+    if (!compCouponEnabled()) {
+      Toast.makeText(this, R.string.gift_off, Toast.LENGTH_LONG).show();
+      return;
+    }
+    if (giftCouponBusy) return;
+    giftCouponBusy = true;
+    MemberApi.compCouponStatus(
+        this,
+        new MemberApi.Callback() {
+          @Override
+          public void onResult(JSONObject res) {
+            giftCouponBusy = false;
+            int remaining = res.optInt("remaining", 0);
+            int quota = res.optInt("quota", 0);
+            int points = Math.max(1, res.optInt("points", 1));
+            if (remaining <= 0) {
+              Toast.makeText(SellActivity.this, R.string.gift_quota_empty, Toast.LENGTH_LONG)
+                  .show();
+              return;
+            }
+            NposConfirmDialog.confirm(
+                SellActivity.this,
+                getString(R.string.gift_title),
+                getString(R.string.gift_confirm_fmt, points, remaining, quota),
+                getString(R.string.gift_print),
+                () -> issueAndPrintGiftCoupon());
+          }
+
+          @Override
+          public void onError(String message) {
+            giftCouponBusy = false;
+            Toast.makeText(
+                    SellActivity.this,
+                    message == null || message.isEmpty()
+                        ? getString(R.string.gift_fail)
+                        : message,
+                    Toast.LENGTH_LONG)
+                .show();
+          }
+        });
+  }
+
+  private void issueAndPrintGiftCoupon() {
+    if (giftCouponBusy) return;
+    giftCouponBusy = true;
+    Toast.makeText(this, R.string.gift_printing, Toast.LENGTH_SHORT).show();
+    MemberApi.issueCompCoupon(
+        this,
+        new MemberApi.Callback() {
+          @Override
+          public void onResult(JSONObject res) {
+            String url = res.optString("claimUrl", "").trim();
+            int points = Math.max(1, res.optInt("points", 1));
+            if (url.isEmpty()) {
+              giftCouponBusy = false;
+              Toast.makeText(SellActivity.this, R.string.gift_fail, Toast.LENGTH_LONG).show();
+              return;
+            }
+            printGiftCouponSlip(url, points);
+          }
+
+          @Override
+          public void onError(String message) {
+            giftCouponBusy = false;
+            Toast.makeText(
+                    SellActivity.this,
+                    message == null || message.isEmpty()
+                        ? getString(R.string.gift_fail)
+                        : message,
+                    Toast.LENGTH_LONG)
+                .show();
+          }
+        });
+  }
+
+  private void finishGiftPrint(boolean ok, String message) {
+    giftCouponBusy = false;
+    if (ok) {
+      Toast.makeText(this, R.string.gift_done, Toast.LENGTH_SHORT).show();
+    } else {
+      Toast.makeText(
+              this,
+              message == null || message.isEmpty() ? getString(R.string.gift_fail) : message,
+              Toast.LENGTH_LONG)
+          .show();
+    }
+  }
+
+  private void printGiftCouponSlip(String claimUrl, int points) {
+    final JSONObject shopJson = shop != null ? shop : new JSONObject();
+    final String url = claimUrl == null ? "" : claimUrl.trim();
+    final int pts = Math.max(1, points);
+    final PrinterEndpoint ep = PrinterPrefs.savedOrNull(this);
+    final boolean useSunmi =
+        (ep != null && ep.kind == PrinterEndpoint.Kind.SUNMI) || SunmiInnerPrinter.isSunmiDevice();
+    if (useSunmi && (ep == null || ep.kind == PrinterEndpoint.Kind.SUNMI)) {
+      new Thread(
+              () -> {
+                PrinterTransport.Result result;
+                try {
+                  List<ReceiptSlipLine> lines =
+                      ReceiptFormBuilder.buildGiftCouponLines(shopJson, pts, url);
+                  result = SunmiInnerPrinter.printSlip(this, lines, url, shopJson);
+                } catch (Exception e) {
+                  result =
+                      new PrinterTransport.Result(
+                          false,
+                          e.getMessage() == null ? getString(R.string.gift_fail) : e.getMessage());
+                }
+                final boolean ok = result != null && result.ok;
+                final String msg = result == null ? "" : result.message;
+                runOnUiThread(() -> finishGiftPrint(ok, msg));
+              },
+              "gift-coupon-print")
+          .start();
+      return;
+    }
+    if (ep == null) {
+      finishGiftPrint(false, getString(R.string.gift_fail));
+      return;
+    }
+    int cols = PrinterPrefs.receiptCols(this);
+    String body = ReceiptFormBuilder.buildGiftCouponBody(shopJson, pts, url, cols);
+    byte[] payload = EscPos.documentReceipt(body, url);
+    new PrinterTransport()
+        .send(this, ep, payload, result -> runOnUiThread(() -> finishGiftPrint(result.ok, result.message)));
   }
 
   private void showMemberDialog() {

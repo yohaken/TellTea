@@ -38,6 +38,19 @@ assert.match(mePage, /completeMemberGoogleRedirect/);
 assert.match(mePage, /เข้าด้วยเบอร์/);
 assert.doesNotMatch(mePage, /completeGoogleAuthBridgeFromUrl/);
 
+const giftPage = read("src/app/gift/page.tsx");
+assert.match(giftPage, /completeMemberGoogleRedirect/);
+assert.match(giftPage, /signInMemberWithGoogle/);
+assert.match(giftPage, /sendPhoneOtp/);
+assert.match(giftPage, /sendLinkPhoneOtp/);
+assert.doesNotMatch(giftPage, /completeGoogleAuthBridgeFromUrl/);
+
+const providers = read("src/components/AppRootProviders.tsx");
+assert.match(providers, /isPublicGift/);
+assert.match(providers, /isPublicClaim/);
+assert.match(providers, /isPublicJoin/);
+assert.match(providers, /isPublicMemberMe/);
+
 const readme = read("README.md");
 assert.match(readme, /src\/lib\/member-auth\.ts/);
 assert.match(readme, /ไม่พึ่ง/);

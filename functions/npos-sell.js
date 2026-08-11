@@ -16,6 +16,11 @@ const {
   lookupReceiptClaimAuth,
   getMyMember,
   claimReceiptPoints,
+  getCompCouponStatus,
+  issueCompCoupon,
+  previewCompCoupon,
+  lookupCompCouponAuth,
+  claimCompCoupon,
 } = require("./pos-members");
 
 function cors(res) {
@@ -296,6 +301,7 @@ exports.nposShopSettings = functions.region("asia-southeast1").https.onRequest(a
     let membersBahtPerPoint = 25;
     let membersPointsPerBahtRedeem = 1;
     let membersReceiptClaimEnabled = false;
+    let membersCompCouponEnabled = false;
     try {
       const ms = await loadMemberSettings(db);
       membersEnabled = ms.enabled === true;
@@ -303,6 +309,7 @@ exports.nposShopSettings = functions.region("asia-southeast1").https.onRequest(a
       membersPointsPerBahtRedeem = ms.pointsPerBahtRedeem;
       // Same BOH flag as «ทดลอง QR สลิป» — tablet defers paper until claim URL exists.
       membersReceiptClaimEnabled = ms.receiptClaimEnabled === true;
+      membersCompCouponEnabled = ms.compCouponEnabled === true;
     } catch (msErr) {
       console.warn("nposShopSettings members", msErr && msErr.message);
     }
@@ -344,6 +351,7 @@ exports.nposShopSettings = functions.region("asia-southeast1").https.onRequest(a
       membersBahtPerPoint,
       membersPointsPerBahtRedeem,
       membersReceiptClaimEnabled,
+      membersCompCouponEnabled,
       updatedAt: typeof x.shopSettingsUpdatedAt === "number" ? x.shopSettingsUpdatedAt : 0,
     });
   } catch (err) {
@@ -965,5 +973,156 @@ exports.publicMemberMe = functions.region("asia-southeast1").https.onRequest(asy
   } catch (err) {
     console.error("publicMemberMe", err);
     res.status(500).json({ ok: false, error: "me_failed" });
+  }
+});
+
+/** Remaining daily quota for QR ให้แต้ม — device gated. */
+exports.nposCompCouponStatus = functions.region("asia-southeast1").https.onRequest(async (req, res) => {
+  cors(res);
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
+  }
+  if (req.method !== "POST") {
+    res.status(405).json({ ok: false, error: "POST only" });
+    return;
+  }
+  const body = parseBody(req);
+  const installId = requireInstallId(body);
+  if (!installId) {
+    res.status(400).json({ ok: false, error: "invalid installId" });
+    return;
+  }
+  try {
+    const db = getFirestore();
+    if (await rejectIfDeviceNotAllowed(db, installId, res)) return;
+    const result = await getCompCouponStatus(db);
+    res.status(200).json(result);
+  } catch (err) {
+    console.error("nposCompCouponStatus", err);
+    res.status(500).json({ ok: false, error: "status_failed" });
+  }
+});
+
+/** Issue one gift-point coupon + decrement daily quota — device gated. */
+exports.nposIssueCompCoupon = functions.region("asia-southeast1").https.onRequest(async (req, res) => {
+  cors(res);
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
+  }
+  if (req.method !== "POST") {
+    res.status(405).json({ ok: false, error: "POST only" });
+    return;
+  }
+  const body = parseBody(req);
+  const installId = requireInstallId(body);
+  if (!installId) {
+    res.status(400).json({ ok: false, error: "invalid installId" });
+    return;
+  }
+  try {
+    const db = getFirestore();
+    if (await rejectIfDeviceNotAllowed(db, installId, res)) return;
+    const result = await issueCompCoupon(db, { actorId: `pos:${installId}` });
+    res.status(200).json(result);
+  } catch (err) {
+    console.error("nposIssueCompCoupon", err);
+    res.status(500).json({ ok: false, error: "issue_failed" });
+  }
+});
+
+/** Public gift-coupon preview — token only. */
+exports.publicCompCouponPreview = functions.region("asia-southeast1").https.onRequest(async (req, res) => {
+  cors(res);
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
+  }
+  if (req.method !== "POST") {
+    res.status(405).json({ ok: false, error: "POST only" });
+    return;
+  }
+  const body = parseBody(req);
+  if (!body) {
+    res.status(400).json({ ok: false, error: "bad_body" });
+    return;
+  }
+  try {
+    const result = await previewCompCoupon(getFirestore(), {
+      token: body.token || body.c || body.coupon,
+    });
+    const deny = result.ok === false && result.error === "bad_token";
+    res.status(deny ? 403 : 200).json(result);
+  } catch (err) {
+    console.error("publicCompCouponPreview", err);
+    res.status(500).json({ ok: false, error: "preview_failed" });
+  }
+});
+
+/** Auth probe for gift claim page. */
+exports.publicCompCouponLookup = functions.region("asia-southeast1").https.onRequest(async (req, res) => {
+  cors(res);
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
+  }
+  if (req.method !== "POST") {
+    res.status(405).json({ ok: false, error: "POST only" });
+    return;
+  }
+  const body = parseBody(req);
+  if (!body) {
+    res.status(400).json({ ok: false, error: "bad_body" });
+    return;
+  }
+  try {
+    const result = await lookupCompCouponAuth(getFirestore(), getAuth(), {
+      token: body.token || body.c || body.coupon,
+      idToken: body.idToken,
+    });
+    const deny =
+      result.ok === false &&
+      (result.error === "bad_token" || result.error === "auth_required");
+    res.status(deny ? 403 : 200).json(result);
+  } catch (err) {
+    console.error("publicCompCouponLookup", err);
+    res.status(500).json({ ok: false, error: "lookup_failed" });
+  }
+});
+
+/** Public gift-coupon claim — Firebase Auth required. */
+exports.publicCompCouponClaim = functions.region("asia-southeast1").https.onRequest(async (req, res) => {
+  cors(res);
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
+  }
+  if (req.method !== "POST") {
+    res.status(405).json({ ok: false, error: "POST only" });
+    return;
+  }
+  const body = parseBody(req);
+  if (!body) {
+    res.status(400).json({ ok: false, error: "bad_body" });
+    return;
+  }
+  try {
+    const result = await claimCompCoupon(getFirestore(), getAuth(), {
+      token: body.token || body.c || body.coupon,
+      phone: body.phone,
+      displayName: body.displayName,
+      pdpaAccepted: body.pdpaAccepted === true,
+      idToken: body.idToken,
+    });
+    const deny =
+      result.ok === false &&
+      (result.error === "bad_token" ||
+        result.error === "auth_required" ||
+        result.error === "auth_mismatch");
+    res.status(deny ? 403 : 200).json(result);
+  } catch (err) {
+    console.error("publicCompCouponClaim", err);
+    res.status(500).json({ ok: false, error: "claim_failed" });
   }
 });
