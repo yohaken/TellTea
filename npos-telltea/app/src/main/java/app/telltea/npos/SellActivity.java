@@ -2705,17 +2705,12 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
       }
     }
     if (giftCouponButton != null) {
-      // Show whenever CRM is on — print gift does not need a sale in cart.
+      // Beside สมาชิก when CRM on — print gift does not need a sale in cart.
       // If BOH gift flag is still off, tap explains where to enable.
       boolean showGift = on;
       giftCouponButton.setVisibility(showGift ? View.VISIBLE : View.GONE);
       if (showGift) {
-        if (compCouponEnabled() && giftRemainingCached >= 0) {
-          giftCouponButton.setText(
-              getString(R.string.sell_hub_gift_remain_fmt, giftRemainingCached));
-        } else {
-          giftCouponButton.setText(R.string.sell_hub_gift);
-        }
+        giftCouponButton.setText(R.string.sell_hub_gift);
         if (compCouponEnabled()) {
           refreshGiftRemainingLabel();
         }
@@ -2743,13 +2738,28 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
     }
   }
 
-  /** Pay bar: ชำระ | สมาชิก | บันทึก when CRM on · else ชำระ | บันทึก. */
+  /** Pay bar: ชำระ | สมาชิก | พิมพ์ให้แต้ม | บันทึก when CRM on · else ชำระ | บันทึก. */
   private void applyPayBarWeights(boolean memberVisible) {
     if (payAllButton != null) {
       LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) payAllButton.getLayoutParams();
       if (lp != null) {
-        lp.weight = memberVisible ? 70f : 85f;
+        // CRM on → four buttons; CRM off → pay + hold.
+        lp.weight = memberVisible ? 55f : 85f;
         payAllButton.setLayoutParams(lp);
+      }
+    }
+    if (memberButton != null) {
+      LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) memberButton.getLayoutParams();
+      if (lp != null) {
+        lp.weight = 15f;
+        memberButton.setLayoutParams(lp);
+      }
+    }
+    if (giftCouponButton != null) {
+      LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) giftCouponButton.getLayoutParams();
+      if (lp != null) {
+        lp.weight = 15f;
+        giftCouponButton.setLayoutParams(lp);
       }
     }
     if (holdBillButton != null) {
@@ -2766,22 +2776,18 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
   }
 
   private void refreshGiftRemainingLabel() {
-    if (!compCouponEnabled() || giftCouponButton == null) return;
+    if (!compCouponEnabled()) return;
     MemberApi.compCouponStatus(
         this,
         new MemberApi.Callback() {
           @Override
           public void onResult(JSONObject res) {
             giftRemainingCached = Math.max(0, res.optInt("remaining", 0));
-            if (giftCouponButton != null && membersEnabled()) {
-              giftCouponButton.setText(
-                  getString(R.string.sell_hub_gift_remain_fmt, giftRemainingCached));
-            }
           }
 
           @Override
           public void onError(String message) {
-            /* keep last label — status probe is best-effort */
+            /* best-effort cache for confirm dialog */
           }
         });
   }
@@ -2813,10 +2819,6 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
             int quota = res.optInt("quota", 0);
             int points = Math.max(1, res.optInt("points", 1));
             giftRemainingCached = remaining;
-            if (giftCouponButton != null) {
-              giftCouponButton.setText(
-                  getString(R.string.sell_hub_gift_remain_fmt, remaining));
-            }
             if (remaining <= 0) {
               Toast.makeText(SellActivity.this, R.string.gift_quota_empty, Toast.LENGTH_LONG)
                   .show();
@@ -2857,10 +2859,6 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
             int points = Math.max(1, res.optInt("points", 1));
             if (res.has("remaining")) {
               giftRemainingCached = Math.max(0, res.optInt("remaining", 0));
-              if (giftCouponButton != null) {
-                giftCouponButton.setText(
-                    getString(R.string.sell_hub_gift_remain_fmt, giftRemainingCached));
-              }
             }
             if (url.isEmpty()) {
               giftCouponBusy = false;

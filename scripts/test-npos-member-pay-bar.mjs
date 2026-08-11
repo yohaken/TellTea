@@ -13,8 +13,10 @@ const layout = read("npos-telltea/app/src/main/res/layout/activity_sell.xml");
 assert.match(layout, /cartPayBar/);
 const payBar = layout.slice(layout.indexOf("cartPayBar"));
 assert.match(payBar, /memberButton/);
+assert.match(payBar, /giftCouponButton/);
 assert.match(payBar, /holdBillButton/);
-assert.ok(payBar.indexOf("memberButton") < payBar.indexOf("holdBillButton"));
+assert.ok(payBar.indexOf("memberButton") < payBar.indexOf("giftCouponButton"));
+assert.ok(payBar.indexOf("giftCouponButton") < payBar.indexOf("holdBillButton"));
 
 const sell = read("npos-telltea/app/src/main/java/app/telltea/npos/SellActivity.java");
 assert.match(sell, /applyPayBarWeights/);

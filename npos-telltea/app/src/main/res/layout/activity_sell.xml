@@ -431,28 +431,7 @@
                             android:text="@string/cart_total_zero" />
                     </LinearLayout>
 
-                    <!-- Gift points: print anytime (no sale required) · above pay -->
-                    <TextView
-                        android:id="@+id/giftCouponButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:background="@drawable/npos_touch_secondary"
-                        android:ellipsize="end"
-                        android:fontFamily="@font/prompt_semibold"
-                        android:gravity="center"
-                        android:maxLines="2"
-                        android:minHeight="48dp"
-                        android:paddingLeft="10dp"
-                        android:paddingTop="10dp"
-                        android:paddingRight="10dp"
-                        android:paddingBottom="10dp"
-                        android:text="@string/sell_hub_gift"
-                        android:textColor="@color/npos_orange"
-                        android:textSize="15sp"
-                        android:visibility="gone" />
-
-                    <!-- Footer: ชำระทั้งหมด | สมาชิก (เมื่อเปิด CRM) | บันทึก -->
+                    <!-- Footer: ชำระทั้งหมด | สมาชิก | พิมพ์ให้แต้ม | บันทึก (เมื่อเปิด CRM) -->
                     <LinearLayout
                         android:id="@+id/cartPayBar"
                         android:layout_width="match_parent"
@@ -528,6 +507,24 @@
                             android:paddingLeft="4dp"
                             android:paddingRight="4dp"
                             android:text="@string/sell_hub_member"
+                            android:textColor="@color/npos_orange"
+                            android:textSize="13sp"
+                            android:visibility="gone" />
+
+                        <TextView
+                            android:id="@+id/giftCouponButton"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_marginEnd="6dp"
+                            android:layout_weight="15"
+                            android:background="@drawable/npos_touch_secondary"
+                            android:ellipsize="end"
+                            android:fontFamily="@font/prompt_semibold"
+                            android:gravity="center"
+                            android:maxLines="2"
+                            android:paddingLeft="4dp"
+                            android:paddingRight="4dp"
+                            android:text="@string/sell_hub_gift"
                             android:textColor="@color/npos_orange"
                             android:textSize="13sp"
                             android:visibility="gone" />

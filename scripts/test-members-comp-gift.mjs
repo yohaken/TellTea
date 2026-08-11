@@ -95,22 +95,24 @@ assert.match(rules, /pointCoupons/);
 const sellXml = read("npos-telltea/app/src/main/res/layout/activity_sell.xml");
 assert.match(sellXml, /giftCouponButton/);
 assert.match(sellXml, /sell_hub_gift/);
-// Prominent full-width control above pay bar (not a tiny cart-tools chip).
-const giftIdx = sellXml.indexOf('android:id="@+id/giftCouponButton"');
-const payIdx = sellXml.indexOf('android:id="@+id/cartPayBar"');
-assert.ok(giftIdx > 0 && payIdx > giftIdx, "giftCouponButton must sit above cartPayBar");
-assert.match(sellXml.slice(giftIdx, payIdx), /match_parent/);
+// Pay bar order: สมาชิก → พิมพ์ให้แต้ม → บันทึก
+const payBar = sellXml.slice(sellXml.indexOf('android:id="@+id/cartPayBar"'));
+assert.match(payBar, /giftCouponButton/);
+assert.ok(
+  payBar.indexOf("memberButton") < payBar.indexOf("giftCouponButton") &&
+    payBar.indexOf("giftCouponButton") < payBar.indexOf("holdBillButton"),
+  "pay bar order: member → gift → hold",
+);
 
 const strings = read("npos-telltea/app/src/main/res/values/strings.xml");
 assert.match(strings, /sell_hub_gift">พิมพ์ให้แต้ม</);
-assert.match(strings, /sell_hub_gift_remain_fmt/);
 
 const sellAct = read("npos-telltea/app/src/main/java/app/telltea/npos/SellActivity.java");
 assert.match(sellAct, /showGiftCouponFlow/);
 assert.match(sellAct, /buildGiftCouponLines/);
 assert.match(sellAct, /membersCompCouponEnabled/);
-assert.match(sellAct, /refreshGiftRemainingLabel/);
 assert.match(sellAct, /boolean showGift = on/);
+assert.match(sellAct, /ชำระ \| สมาชิก \| พิมพ์ให้แต้ม \| บันทึก/);
 
 const memberApi = read("npos-telltea/app/src/main/java/app/telltea/npos/sell/MemberApi.java");
 assert.match(memberApi, /nposIssueCompCoupon/);
@@ -123,12 +125,12 @@ assert.match(formBuilder, /buildGiftCouponLines/);
 assert.match(formBuilder, /ของขวัญแต้ม/);
 
 const gradle = read("npos-telltea/app/build.gradle");
-assert.match(gradle, /versionCode 151/);
+assert.match(gradle, /versionCode 152/);
 const whats = read("npos-telltea/app/src/main/java/app/telltea/npos/update/WhatsNewCatalog.java");
-assert.match(whats, /versionCode == 151/);
+assert.match(whats, /versionCode == 152/);
 
 const appBuild = Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)[1]);
-assert.ok(appBuild >= 778, "APP_BUILD >= 778");
+assert.ok(appBuild >= 779, "APP_BUILD >= 779");
 
 function sendPhoneOtpGuard(src) {
   assert.match(src, /sendPhoneOtp/);
