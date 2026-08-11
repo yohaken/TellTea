@@ -111,6 +111,8 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
   private TextView giftCouponButton;
   private TextView memberStatusLabel;
   private boolean giftCouponBusy = false;
+  /** Cached remaining daily gift slips (−1 = unknown). */
+  private int giftRemainingCached = -1;
   private View payAllButton;
   private TextView payAllAmount;
   private TextView payAllDiscount;
@@ -2703,7 +2705,21 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
       }
     }
     if (giftCouponButton != null) {
-      giftCouponButton.setVisibility(compCouponEnabled() ? View.VISIBLE : View.GONE);
+      // Show whenever CRM is on — print gift does not need a sale in cart.
+      // If BOH gift flag is still off, tap explains where to enable.
+      boolean showGift = on;
+      giftCouponButton.setVisibility(showGift ? View.VISIBLE : View.GONE);
+      if (showGift) {
+        if (compCouponEnabled() && giftRemainingCached >= 0) {
+          giftCouponButton.setText(
+              getString(R.string.sell_hub_gift_remain_fmt, giftRemainingCached));
+        } else {
+          giftCouponButton.setText(R.string.sell_hub_gift);
+        }
+        if (compCouponEnabled()) {
+          refreshGiftRemainingLabel();
+        }
+      }
     }
     if (memberStatusLabel != null) {
       if (on && hasMember()) {
@@ -2749,9 +2765,40 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
     return Math.max(0, cartSubtotal() - discountBaht - redeemBaht());
   }
 
+  private void refreshGiftRemainingLabel() {
+    if (!compCouponEnabled() || giftCouponButton == null) return;
+    MemberApi.compCouponStatus(
+        this,
+        new MemberApi.Callback() {
+          @Override
+          public void onResult(JSONObject res) {
+            giftRemainingCached = Math.max(0, res.optInt("remaining", 0));
+            if (giftCouponButton != null && membersEnabled()) {
+              giftCouponButton.setText(
+                  getString(R.string.sell_hub_gift_remain_fmt, giftRemainingCached));
+            }
+          }
+
+          @Override
+          public void onError(String message) {
+            /* keep last label — status probe is best-effort */
+          }
+        });
+  }
+
   private void showGiftCouponFlow() {
+    if (!membersEnabled()) {
+      Toast.makeText(this, R.string.gift_members_off, Toast.LENGTH_LONG).show();
+      return;
+    }
     if (!compCouponEnabled()) {
-      Toast.makeText(this, R.string.gift_off, Toast.LENGTH_LONG).show();
+      NposConfirmDialog.alert(
+          this,
+          getString(R.string.gift_title),
+          getString(R.string.gift_off),
+          getString(android.R.string.ok),
+          true,
+          null);
       return;
     }
     if (giftCouponBusy) return;
@@ -2765,6 +2812,11 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
             int remaining = res.optInt("remaining", 0);
             int quota = res.optInt("quota", 0);
             int points = Math.max(1, res.optInt("points", 1));
+            giftRemainingCached = remaining;
+            if (giftCouponButton != null) {
+              giftCouponButton.setText(
+                  getString(R.string.sell_hub_gift_remain_fmt, remaining));
+            }
             if (remaining <= 0) {
               Toast.makeText(SellActivity.this, R.string.gift_quota_empty, Toast.LENGTH_LONG)
                   .show();
@@ -2803,6 +2855,13 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
           public void onResult(JSONObject res) {
             String url = res.optString("claimUrl", "").trim();
             int points = Math.max(1, res.optInt("points", 1));
+            if (res.has("remaining")) {
+              giftRemainingCached = Math.max(0, res.optInt("remaining", 0));
+              if (giftCouponButton != null) {
+                giftCouponButton.setText(
+                    getString(R.string.sell_hub_gift_remain_fmt, giftRemainingCached));
+              }
+            }
             if (url.isEmpty()) {
               giftCouponBusy = false;
               Toast.makeText(SellActivity.this, R.string.gift_fail, Toast.LENGTH_LONG).show();

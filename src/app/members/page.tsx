@@ -107,7 +107,7 @@ function MembersView() {
   const [setReceiptClaim, setSetReceiptClaim] = useState(false);
   const [setClaimTtl, setSetClaimTtl] = useState("30");
   const [setCompCoupon, setSetCompCoupon] = useState(false);
-  const [setCompQuota, setSetCompQuota] = useState("100");
+  const [setCompQuota, setSetCompQuota] = useState("200");
   const [compIssuedToday, setCompIssuedToday] = useState(0);
 
   const [todaySales, setTodaySales] = useState<PosSale[]>([]);
