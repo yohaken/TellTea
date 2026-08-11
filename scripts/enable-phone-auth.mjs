@@ -11,7 +11,9 @@ const PROJECT = process.env.FIREBASE_PROJECT_ID || "mypeer-501909";
 
 const AUTHORIZED_DOMAINS = [
   "localhost",
+  "telltea-bo.web.app",
   "telltea-shop.web.app",
+  "telltea-pos.web.app",
   "mypeer-501909.firebaseapp.com",
   "mypeer-501909.web.app",
 ];

@@ -836,7 +836,8 @@ function randomClaimToken() {
 function buildPublicClaimUrl(saleId, token) {
   const s = encodeURIComponent(String(saleId || ""));
   const t = encodeURIComponent(String(token || ""));
-  return `https://telltea-shop.web.app/claim/?s=${s}&t=${t}`;
+  // Canonical public shop/BO host (telltea-shop site id is gone / reserved elsewhere).
+  return `https://telltea-bo.web.app/claim/?s=${s}&t=${t}`;
 }
 
 /**

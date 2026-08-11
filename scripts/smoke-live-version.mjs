@@ -11,7 +11,7 @@ const ATTEMPTS = Number(process.env.LIVE_VERSION_SMOKE_ATTEMPTS || 15);
 const DELAY_MS = Number(process.env.LIVE_VERSION_SMOKE_DELAY_MS || 8000);
 
 const SHOP_VERSION_URL =
-  process.env.SHOP_VERSION_URL || "https://telltea-shop.web.app/version.json";
+  process.env.SHOP_VERSION_URL || "https://telltea-bo.web.app/version.json";
 const POS_VERSION_URL =
   process.env.POS_VERSION_URL || "https://telltea-pos.web.app/pos-version.json";
 
@@ -79,6 +79,6 @@ async function waitForBuild(label, url, expected) {
 }
 
 console.log(`Expect APP_BUILD=${expectedApp} · POS_BUILD=${expectedPos}`);
-await waitForBuild("telltea-shop version.json", SHOP_VERSION_URL, expectedApp);
+await waitForBuild("telltea-bo version.json", SHOP_VERSION_URL, expectedApp);
 await waitForBuild("telltea-pos pos-version.json", POS_VERSION_URL, expectedPos);
 console.log("OK smoke-live-version");

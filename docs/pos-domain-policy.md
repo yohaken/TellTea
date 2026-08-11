@@ -13,21 +13,22 @@
 
 | ระบบ | URL |
 |------|-----|
-| หลังร้าน TellTea | https://telltea-shop.web.app/ |
-| รายงาน + ตั้งค่า + จัดการ nPos (เจ้าของ) | https://telltea-shop.web.app/pos-sales/ |
+| หลังร้าน TellTea | https://telltea-bo.web.app/ |
+| รายงาน + ตั้งค่า + จัดการ nPos (เจ้าของ) | https://telltea-bo.web.app/pos-sales/ |
 | ติดตั้ง / อัปเดต APK | **https://telltea-pos.web.app/install/** |
 | เว็บ `/pos/*` เคาน์เตอร์ | **เลิกใช้** — หน้า stub ชี้ไป nPos |
 
+URL เก่า `telltea-shop.web.app` — ไซต์ถูกลบ/ชื่อโดเมนถูกจองโปรเจกต์อื่น · ใช้ `telltea-bo` เป็นหลัก  
 URL เก่า `telltea-shop.web.app/pos/` → redirect ไป `telltea-pos.web.app/pos/...` (stub)
 
 ## Hosting
 
 | Firebase site | โฟลเดอร์ | เนื้อหา |
 |---------------|----------|---------|
-| `telltea-shop` | `out/` | หลังร้าน |
+| `telltea-bo` | `out/` | หลังร้าน + หน้า claim สมาชิก |
 | `telltea-pos` | `out-pos/` | `/install/` · `/downloads/` · stub `/pos/*` |
 
-**ห้ามลบไซต์ telltea-pos ทั้งก้อน** — ยังโฮสต์ APK / หน้าติดตั้ง
+**ห้ามลบไซต์ telltea-bo / telltea-pos** — claim QR + APK พังทันที
 
 ## สิ่งที่ห้ามทำ
 

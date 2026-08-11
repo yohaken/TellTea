@@ -153,16 +153,29 @@ jobs:
 
       - name: Ensure shop + POS hosting sites exist
         run: |
-          # Site Not Found on *.web.app usually means the Hosting site was deleted.
-          # Recreate before deploy (409 already-exists is fine).
-          npx firebase-tools@latest hosting:sites:create telltea-shop \
-            --project mypeer-501909 --non-interactive 2>/dev/null || true
-          npx firebase-tools@latest hosting:sites:create telltea-pos \
-            --project mypeer-501909 --non-interactive 2>/dev/null || true
-          npx firebase-tools@latest target:apply hosting telltea telltea-shop \
-            --project mypeer-501909 --non-interactive 2>/dev/null || true
+          set -e
+          # Canonical BO/shop site is telltea-bo (telltea-shop was deleted and the
+          # site id is reserved by another Firebase project — cannot recreate).
+          create_site() {
+            local id="$1"
+            echo "Ensure hosting site: $id"
+            out="$(npx firebase-tools@latest hosting:sites:create "$id" \
+              --project mypeer-501909 --non-interactive 2>&1)" || true
+            echo "$out"
+            if echo "$out" | grep -Eqi 'already exists|Success|Created'; then
+              return 0
+            fi
+            # list to confirm presence even if create message differs
+            npx firebase-tools@latest hosting:sites:list --project mypeer-501909 --non-interactive \
+              | tee /tmp/hosting-sites.txt
+            grep -q "$id" /tmp/hosting-sites.txt
+          }
+          create_site telltea-bo
+          create_site telltea-pos
+          npx firebase-tools@latest target:apply hosting telltea telltea-bo \
+            --project mypeer-501909 --non-interactive
           npx firebase-tools@latest target:apply hosting telltea-pos telltea-pos \
-            --project mypeer-501909 --non-interactive 2>/dev/null || true
+            --project mypeer-501909 --non-interactive
 
       - name: Deploy Hosting + Firestore + Storage + Functions
         run: |
