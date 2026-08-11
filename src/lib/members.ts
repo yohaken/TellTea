@@ -87,7 +87,7 @@ export type MemberSettings = {
   receiptClaimEnabled: boolean;
   /** อายุ claimToken (วัน) */
   claimTokenTtlDays: number;
-  /** QR ให้แต้ม (comp) จากเครื่องขาย — ค่าเริ่มปิด */
+  /** QR ให้แต้ม (comp) จากเครื่องขาย — ค่าเริ่มเปิดเมื่อระบบสมาชิกพร้อม */
   compCouponEnabled: boolean;
   /** แต้มต่อสลิป — ล็อก 1 ตอนนี้ */
   compCouponPointsPerSlip: number;
@@ -111,7 +111,7 @@ export const DEFAULT_MEMBER_SETTINGS: MemberSettings = {
   publicSignupToken: "",
   receiptClaimEnabled: false,
   claimTokenTtlDays: 30,
-  compCouponEnabled: false,
+  compCouponEnabled: true,
   compCouponPointsPerSlip: 1,
   /** Suggested starting daily print budget for counter gift slips. */
   compCouponDailyQuota: 200,
