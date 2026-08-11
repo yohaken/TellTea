@@ -3,7 +3,7 @@
  */
 import assert from "node:assert/strict";
 
-const BASE = process.env.TELLTEA_SHOP_URL || "https://telltea-shop.web.app";
+const BASE = process.env.TELLTEA_SHOP_URL || "https://telltea-bo.web.app";
 
 async function main() {
   const verRes = await fetch(`${BASE}/version.json`, { cache: "no-store" });

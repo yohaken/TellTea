@@ -4,6 +4,7 @@ import { getDb, getFirebaseAuth } from "./firebase";
 import { signInMemberWithGoogle } from "./member-auth";
 import { getMemberSettings, pointsFromReceiptClaim } from "./members";
 import { POS_SALES_COL } from "./pos-sales";
+import { TELLTEA_SHOP_ORIGIN } from "./telltea-origins";
 
 export { signInMemberWithGoogle };
 
@@ -51,7 +52,7 @@ export function buildClaimUrl(saleId: string, token: string, origin?: string): s
   if (typeof window !== "undefined" && window.location?.origin) {
     return `${window.location.origin}${path}`;
   }
-  return `https://telltea-shop.web.app${path}`;
+  return `${TELLTEA_SHOP_ORIGIN}${path}`;
 }
 
 export async function claimQrDataUrl(claimUrl: string): Promise<string> {

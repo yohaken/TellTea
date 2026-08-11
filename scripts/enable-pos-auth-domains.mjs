@@ -10,6 +10,7 @@ const PROJECT = process.env.FIREBASE_PROJECT_ID || "mypeer-501909";
 
 const POS_AUTHORIZED_DOMAINS = [
   "localhost",
+  "telltea-bo.web.app",
   "telltea-shop.web.app",
   "telltea-pos.web.app",
   "taxtag.web.app",
