@@ -4,6 +4,7 @@ import { getDb, getFirebaseAuth } from "./firebase";
 import { signInMemberWithGoogle } from "./member-auth";
 import { getMemberSettings, pointsFromReceiptClaim } from "./members";
 import { POS_SALES_COL } from "./pos-sales";
+import { buildShortClaimPath, buildShortClaimUrl } from "./short-receipt-link";
 import { TELLTEA_SHOP_ORIGIN } from "./telltea-origins";
 
 export { signInMemberWithGoogle };
@@ -40,19 +41,24 @@ function randomToken(): string {
   return `tt${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;
 }
 
-export function buildClaimPath(saleId: string, token: string): string {
+/** Canonical long claim path (still accepted forever). */
+export function buildClaimPathLong(saleId: string, token: string): string {
   const s = encodeURIComponent(saleId);
   const t = encodeURIComponent(token);
   return `/claim/?s=${s}&t=${t}`;
 }
 
+/** Path printed on new slips — short /r/c/… (redirects to long claim). */
+export function buildClaimPath(saleId: string, token: string): string {
+  return buildShortClaimPath(saleId, token);
+}
+
 export function buildClaimUrl(saleId: string, token: string, origin?: string): string {
-  const path = buildClaimPath(saleId, token);
-  if (origin) return `${origin.replace(/\/$/, "")}${path}`;
+  if (origin) return buildShortClaimUrl(saleId, token, origin);
   if (typeof window !== "undefined" && window.location?.origin) {
-    return `${window.location.origin}${path}`;
+    return buildShortClaimUrl(saleId, token, window.location.origin);
   }
-  return `${TELLTEA_SHOP_ORIGIN}${path}`;
+  return buildShortClaimUrl(saleId, token, TELLTEA_SHOP_ORIGIN);
 }
 
 export async function claimQrDataUrl(claimUrl: string): Promise<string> {
