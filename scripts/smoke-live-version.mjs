@@ -35,8 +35,19 @@ async function fetchBuild(url) {
     redirect: "follow",
     headers: { Accept: "application/json", "Cache-Control": "no-cache" },
   });
+  const text = await res.text();
+  if (/Site Not Found/i.test(text)) {
+    throw new Error(
+      `${url} → Firebase Hosting Site Not Found (site missing or no release)`,
+    );
+  }
   if (!res.ok) throw new Error(`${url} → HTTP ${res.status}`);
-  const data = await res.json();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error(`${url} → not JSON (got ${text.slice(0, 80).replace(/\s+/g, " ")})`);
+  }
   const build = Number(data.build);
   if (!Number.isFinite(build)) throw new Error(`${url} → missing numeric build`);
   return { build, version: data.version || data.product || "", raw: data };

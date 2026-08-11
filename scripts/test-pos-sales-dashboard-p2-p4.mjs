@@ -24,6 +24,9 @@ assert.match(agg, /summarizePosSalesByDay/);
 assert.match(agg, /summarizePosSalesByHour/);
 assert.match(agg, /summarizePosSalesByWeekday/);
 assert.match(agg, /summarizePosSalesProducts/);
+assert.match(agg, /countSaleUnits/);
+assert.match(agg, /averagePerUnit/);
+assert.match(agg, /averageUnitsPerBill/);
 assert.match(agg, /bangkokWeekday/);
 
 const charts = read("src/components/PosSalesDashboardCharts.tsx");
@@ -44,6 +47,8 @@ assert.match(dash, /pos-dash-daily-block/);
 assert.match(dash, /PosDashDailyAreaChart|PosDashHourBarChart|PosDashWeekdayBarChart/);
 assert.match(dash, /PosSalesDashboardProducts/);
 assert.match(dash, /ส่วนลด|สถิติบิล|กิจกรรม/);
+assert.match(dash, /จำนวนชิ้นที่ขาย|รายได้เฉลี่ยต่อชิ้น|บาท\/ชิ้น/);
+assert.match(dash, /countSaleUnits|averagePerUnit/);
 assert.match(dash, /subscribeMenuItems|subscribeMenuCategories/);
 assert.doesNotMatch(dash, /โต๊ะอาหาร|อัตราการใช้โต๊ะ/);
 

@@ -7,37 +7,39 @@ import { ImagePreviewModal } from "@/components/EntryPhotoCell";
 export function NposCaptureGallery({
   primaryUrl,
   secondaryUrl,
+  slipUrl,
   caption,
   emptyHint = "ยังไม่มีภาพแคป — สั่งแคปจากแผงเครื่องแล้วรอ ~1 นาที",
 }: {
   primaryUrl?: string;
   secondaryUrl?: string;
+  /** Rendered InnerPrinter slip (pixels that went to paper). */
+  slipUrl?: string;
   caption?: string;
   emptyHint?: string;
 }) {
-  const urls = useMemo(
-    () => [primaryUrl, secondaryUrl].map((u) => (u || "").trim()).filter(Boolean),
-    [primaryUrl, secondaryUrl],
-  );
+  const entries = useMemo(() => {
+    const out: { url: string; label: string }[] = [];
+    if (slipUrl?.trim()) out.push({ url: slipUrl.trim(), label: "สลิป" });
+    if (primaryUrl?.trim()) out.push({ url: primaryUrl.trim(), label: "จอหลัก" });
+    if (secondaryUrl?.trim()) out.push({ url: secondaryUrl.trim(), label: "จอลูกค้า" });
+    return out;
+  }, [primaryUrl, secondaryUrl, slipUrl]);
+  const urls = useMemo(() => entries.map((e) => e.url), [entries]);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [failed, setFailed] = useState<Record<number, boolean>>({});
 
-  if (!urls.length) {
+  if (!entries.length) {
     return <p className="muted npos-capture-empty">{emptyHint}</p>;
   }
-
-  const labels = [
-    primaryUrl?.trim() ? "จอหลัก" : null,
-    secondaryUrl?.trim() ? "จอลูกค้า" : null,
-  ].filter(Boolean) as string[];
 
   return (
     <>
       {caption ? <p className="muted npos-capture-caption">{caption}</p> : null}
       <div className="npos-capture-thumbs">
-        {urls.map((url, i) => (
+        {entries.map((entry, i) => (
           <button
-            key={`${url}-${i}`}
+            key={`${entry.label}-${entry.url}-${i}`}
             type="button"
             className="npos-capture-thumb-btn"
             onClick={() => setPreviewIndex(i)}
@@ -49,8 +51,8 @@ export function NposCaptureGallery({
             ) : (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
-                src={url}
-                alt={labels[i] || `แคป ${i + 1}`}
+                src={entry.url}
+                alt={entry.label}
                 onError={() => setFailed((prev) => ({ ...prev, [i]: true }))}
                 onLoad={() =>
                   setFailed((prev) => {
@@ -62,7 +64,7 @@ export function NposCaptureGallery({
                 }
               />
             )}
-            <span>{labels[i] || `รูป ${i + 1}`}</span>
+            <span>{entry.label}</span>
           </button>
         ))}
       </div>
@@ -70,7 +72,7 @@ export function NposCaptureGallery({
         <ImagePreviewModal
           urls={urls}
           initialIndex={previewIndex}
-          title="แคปจอ nPos"
+          title="แคป nPos / สลิป"
           onClose={() => setPreviewIndex(null)}
         />
       ) : null}

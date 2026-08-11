@@ -425,7 +425,7 @@ export type PosSale = {
   claimToken?: string;
   claimTokenExpiresAt?: number;
   claimStatus?: "open" | "claimed" | string;
-  /** Points this bill can earn via slip QR (floor(total/bahtPerPoint)) */
+  /** Points this bill can earn via slip QR (max(1, floor(total/bahtPerPoint)) when total>0) */
   claimPointsPreview?: number;
   claimedAt?: number;
   claimedByMemberId?: string;

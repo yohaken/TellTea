@@ -16,10 +16,13 @@ export type NposScreenShot = {
   installId: string;
   capturedAt: number;
   reason: string;
+  billNo: string;
   primaryUrl: string;
   secondaryUrl: string;
+  slipUrl: string;
   primaryOk: boolean;
   secondaryOk: boolean;
+  slipOk: boolean;
 };
 
 function mapShot(id: string, data?: Record<string, unknown> | null): NposScreenShot {
@@ -29,15 +32,21 @@ function mapShot(id: string, data?: Record<string, unknown> | null): NposScreenS
   const secondary = (data?.secondary && typeof data.secondary === "object"
     ? data.secondary
     : {}) as Record<string, unknown>;
+  const slip = (data?.slip && typeof data.slip === "object"
+    ? data.slip
+    : {}) as Record<string, unknown>;
   return {
     id,
     installId: typeof data?.installId === "string" ? data.installId : "",
     capturedAt: typeof data?.capturedAt === "number" ? data.capturedAt : 0,
     reason: typeof data?.reason === "string" ? data.reason : "",
+    billNo: typeof data?.billNo === "string" ? data.billNo : "",
     primaryUrl: typeof primary.url === "string" ? primary.url : "",
     secondaryUrl: typeof secondary.url === "string" ? secondary.url : "",
+    slipUrl: typeof slip.url === "string" ? slip.url : "",
     primaryOk: primary.ok === true,
     secondaryOk: secondary.ok === true,
+    slipOk: slip.ok === true,
   };
 }
 

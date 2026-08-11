@@ -22,7 +22,9 @@ public final class ReceiptSlipLine {
     /** Empty feed line. */
     BLANK,
     /** Claim QR marker — printer emits bitmap QR here. */
-    QR_MARK
+    QR_MARK,
+    /** Shop brand logo marker — Sunmi bitmap path draws {@code brandLogo} here. */
+    LOGO_MARK
   }
 
   public final Kind kind;
@@ -63,5 +65,9 @@ public final class ReceiptSlipLine {
 
   public static ReceiptSlipLine qrMark() {
     return new ReceiptSlipLine(Kind.QR_MARK, "", "", false);
+  }
+
+  public static ReceiptSlipLine logoMark() {
+    return new ReceiptSlipLine(Kind.LOGO_MARK, "", "", false);
   }
 }

@@ -57,6 +57,11 @@ export type ReceiptPrintPayload = {
   shopPhone?: string;
   /** Tax ID on paper when set. */
   taxId?: string;
+  /**
+   * Shop brand logo data URL for HTML/preview paper (nPos bitmap path later).
+   * Omit or empty = no logo block.
+   */
+  shopLogoDataUrl?: string;
   billNo: string;
   lines: PosSaleLine[];
   total: number;

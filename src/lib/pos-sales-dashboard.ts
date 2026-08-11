@@ -1,6 +1,7 @@
 /**
  * Aggregators for BO `/pos-sales` dashboard charts + product cards.
  */
+import type { ShopMember } from "./members";
 import type { MenuCategory, MenuItem, PosSale, StockMovement } from "./types";
 import {
   clampPosDateRange,
@@ -259,6 +260,147 @@ export function averagePerBill(netTotal: number, billCount: number): number {
 export function averagePerDay(netTotal: number, range: PosDateRange): number {
   const days = Math.max(1, posDateRangeDayCount(range));
   return round2(netTotal / days);
+}
+
+/** รวมจำนวนชิ้น (หน่วยขาย) จากบรรทัดบิลที่ปิดแล้ว — หนึ่งบิลอาจหลายชิ้น */
+export function countSaleUnits(sales: PosSale[]): number {
+  let qty = 0;
+  for (const sale of activeSales(sales)) {
+    for (const line of sale.lines || []) {
+      const n = Number(line.qty);
+      if (Number.isFinite(n) && n > 0) qty += n;
+    }
+  }
+  return qty;
+}
+
+/** รายได้เฉลี่ยต่อชิ้นหน้าร้าน = ยอดสุทธิ ÷ จำนวนชิ้น */
+export function averagePerUnit(netTotal: number, unitCount: number): number {
+  if (!(unitCount > 0)) return 0;
+  return round2(netTotal / unitCount);
+}
+
+/** เฉลี่ยชิ้นต่อบิล */
+export function averageUnitsPerBill(unitCount: number, billCount: number): number {
+  if (!(billCount > 0)) return 0;
+  return round2(unitCount / billCount);
+}
+
+export type PosDashMemberDayPoint = {
+  dateMs: number;
+  dateKey: string;
+  label: string;
+  /** สมัครใหม่ในวันนั้น */
+  signups: number;
+  /** สมาชิกสะสม ณ สิ้นวัน (ไม่นับที่ลบแล้ว) */
+  cumulative: number;
+};
+
+export type PosDashMembersSummary = {
+  /** สมาชิกสะสมก่อนวันแรกของช่วง */
+  cumulativeStart: number;
+  /** สมาชิกสะสมปลายช่วง */
+  cumulativeEnd: number;
+  /** สมัครใหม่ในช่วง */
+  signupsInRange: number;
+  /** cumulativeEnd - cumulativeStart */
+  netChange: number;
+  byDay: PosDashMemberDayPoint[];
+};
+
+/** Exclusive end bound for Bangkok-local inclusive end day of a pos range. */
+export function posRangeUntilExclusiveMs(range: PosDateRange): number {
+  const { endMs } = clampPosDateRange(range);
+  return startOfLocalDay(endMs) + 24 * 60 * 60 * 1000;
+}
+
+/**
+ * Signup + cumulative member trend for the dashboard date range.
+ * `members` must include everyone with createdAt < untilExclusive (deleted already filtered).
+ */
+export function summarizeMemberGrowth(
+  members: ShopMember[],
+  range: PosDateRange,
+): PosDashMembersSummary {
+  const { startMs, endMs } = clampPosDateRange(range);
+  const dayMs = 24 * 60 * 60 * 1000;
+  const untilExclusive = startOfLocalDay(endMs) + dayMs;
+
+  const created = members
+    .map((m) => Number(m.createdAt) || 0)
+    .filter((t) => t > 0 && t < untilExclusive)
+    .sort((a, b) => a - b);
+
+  let cumulativeStart = 0;
+  for (const t of created) {
+    if (t < startMs) cumulativeStart += 1;
+    else break;
+  }
+
+  const map = new Map<string, PosDashMemberDayPoint>();
+  for (let ms = startMs; ms <= endMs; ms += dayMs) {
+    const dateMs = startOfLocalDay(ms);
+    const dateKey = bangkokDateKey(dateMs);
+    map.set(dateKey, {
+      dateMs,
+      dateKey,
+      label: shortDayLabel(dateMs),
+      signups: 0,
+      cumulative: cumulativeStart,
+    });
+  }
+
+  let running = cumulativeStart;
+  let signupsInRange = 0;
+  for (const t of created) {
+    if (t < startMs) continue;
+    if (t >= untilExclusive) break;
+    const dateKey = bangkokDateKey(startOfLocalDay(t));
+    const row = map.get(dateKey);
+    if (!row) continue;
+    row.signups += 1;
+    signupsInRange += 1;
+  }
+
+  const days = [...map.values()].sort((a, b) => a.dateMs - b.dateMs);
+  for (const row of days) {
+    running += row.signups;
+    row.cumulative = running;
+  }
+
+  const cumulativeEnd = days.length ? days[days.length - 1].cumulative : cumulativeStart;
+  return {
+    cumulativeStart,
+    cumulativeEnd,
+    signupsInRange,
+    netChange: cumulativeEnd - cumulativeStart,
+    byDay: days,
+  };
+}
+
+/** Bills tagged with a member in the loaded sales set (completed only). */
+export function summarizeMemberSalesTouch(sales: PosSale[]): {
+  memberBillCount: number;
+  memberSalesTotal: number;
+  redeemBillCount: number;
+  redeemTotal: number;
+} {
+  let memberBillCount = 0;
+  let memberSalesTotal = 0;
+  let redeemBillCount = 0;
+  let redeemTotal = 0;
+  for (const sale of activeSales(sales)) {
+    if (sale.memberId) {
+      memberBillCount += 1;
+      memberSalesTotal = round2(memberSalesTotal + sale.total);
+    }
+    const redeem = Math.max(0, sale.redeemBaht || 0);
+    if (redeem > 0) {
+      redeemBillCount += 1;
+      redeemTotal = round2(redeemTotal + redeem);
+    }
+  }
+  return { memberBillCount, memberSalesTotal, redeemBillCount, redeemTotal };
 }
 
 export type PosDashStockSummary = {

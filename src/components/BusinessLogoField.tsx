@@ -18,6 +18,15 @@ type Props = {
   disabled?: boolean;
 };
 
+const UPLOAD_BUDGET_MS = 35_000;
+
+function raceTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error(message)), ms)),
+  ]);
+}
+
 /**
  * อัปโหลดโลโก้ร้าน — ตัดพื้นขาว/ครีมที่ขอบอัตโนมัติ → PNG โปร่งใส
  * พรีวิวเต็มไม่มีกรอบ · บันทึกที่ meta/brandLogo
@@ -26,14 +35,22 @@ export function BusinessLogoField({ value, onChange, onError, disabled }: Props)
   const { actorId } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
   const [previewSrc, setPreviewSrc] = useState(() => getBrandLogoMemory());
 
   useEffect(() => {
     let cancelled = false;
     void loadBrandLogo().then((src) => {
-      if (!cancelled) {
-        setPreviewSrc(src);
-        onChange(src ? "brandLogo" : "");
+      if (cancelled) return;
+      // Do not wipe a newer upload that finished while this load was in flight.
+      const mem = getBrandLogoMemory();
+      const next = mem || src;
+      if (next) {
+        setPreviewSrc(next);
+        onChange("brandLogo");
+      } else if (!getBrandLogoMemory()) {
+        setPreviewSrc("");
+        onChange("");
       }
     });
     return () => {
@@ -44,21 +61,47 @@ export function BusinessLogoField({ value, onChange, onError, disabled }: Props)
   }, []);
 
   useEffect(() => {
-    if (!value) setPreviewSrc("");
-  }, [value]);
+    if (value === "brandLogo") {
+      const mem = getBrandLogoMemory();
+      if (mem) setPreviewSrc(mem);
+      return;
+    }
+    // Only clear when parent truly cleared and memory is empty (not a load/upload race).
+    if (!value && !busy && !getBrandLogoMemory()) {
+      setPreviewSrc("");
+    }
+  }, [value, busy]);
+
+  function reportError(msg: string) {
+    setLocalError(msg);
+    onError?.(msg);
+  }
 
   async function onPick(fileList: FileList | null) {
     const file = fileList?.[0];
     if (!file) return;
     setBusy(true);
+    setLocalError(null);
     onError?.("");
     try {
-      const dataUrl = await fileToLogoDataUrl(file);
-      const saved = await saveBrandLogo(dataUrl, actorId || "owner");
+      const dataUrl = await raceTimeout(
+        fileToLogoDataUrl(file),
+        UPLOAD_BUDGET_MS,
+        "ย่อรูปนานเกินไป — ลองไฟล์ PNG/JPG ขนาดเล็กกว่า",
+      );
+      const saved = await raceTimeout(
+        saveBrandLogo(dataUrl, actorId || "owner"),
+        UPLOAD_BUDGET_MS,
+        "บันทึกโลโก้นานเกินไป — ตรวจเน็ตแล้วลองใหม่",
+      );
+      if (!saved) {
+        throw new Error("อัปโหลดโลโก้ไม่สำเร็จ — ไม่ได้รูปหลังย่อขนาด");
+      }
       setPreviewSrc(saved);
-      onChange(saved ? "brandLogo" : "");
+      onChange("brandLogo");
+      setLocalError(null);
     } catch (err) {
-      onError?.(friendlyFirestoreWriteError(err, "อัปโหลดโลโก้ไม่สำเร็จ"));
+      reportError(friendlyFirestoreWriteError(err, "อัปโหลดโลโก้ไม่สำเร็จ"));
     } finally {
       setBusy(false);
       if (inputRef.current) inputRef.current.value = "";
@@ -67,13 +110,18 @@ export function BusinessLogoField({ value, onChange, onError, disabled }: Props)
 
   async function onClear() {
     setBusy(true);
+    setLocalError(null);
     onError?.("");
     try {
-      await saveBrandLogo("", actorId || "owner");
+      await raceTimeout(
+        saveBrandLogo("", actorId || "owner"),
+        20_000,
+        "ลบโลโก้นานเกินไป — ตรวจเน็ตแล้วลองใหม่",
+      );
       setPreviewSrc("");
       onChange("");
     } catch (err) {
-      onError?.(friendlyFirestoreWriteError(err, "ลบโลโก้ไม่สำเร็จ"));
+      reportError(friendlyFirestoreWriteError(err, "ลบโลโก้ไม่สำเร็จ"));
     } finally {
       setBusy(false);
     }
@@ -84,7 +132,7 @@ export function BusinessLogoField({ value, onChange, onError, disabled }: Props)
       <div className="business-logo-field-head">
         <span className="business-logo-field-label">โลโก้ร้าน</span>
         <span className="business-logo-field-hint">
-          อัปโหลดแล้วตัดแถบขาว/ครีมที่ขอบอัตโนมัติ · แทนโลโก้เดิมทันที (รวมหน้าล็อกอิน)
+          ใช้ PNG/JPG · ตัดพื้นขาวและตารางหมากรุกในไฟล์อัตโนมัติ · แทนโลโก้เดิมทันที
         </span>
       </div>
 
@@ -93,15 +141,17 @@ export function BusinessLogoField({ value, onChange, onError, disabled }: Props)
           // eslint-disable-next-line @next/next/no-img-element
           <img src={previewSrc} alt="โลโก้ร้าน" className="business-logo-preview" />
         ) : (
-          <p className="business-logo-empty">ยังไม่มีโลโก้ — อัปโหลด PNG เพื่อแทนโลโก้เดิมทั่วแอป</p>
+          <p className="business-logo-empty">ยังไม่มีโลโก้ — อัปโหลด PNG/JPG เพื่อแสดงบนหัวสลิป</p>
         )}
       </div>
+
+      {localError ? <p className="error-text business-logo-error">{localError}</p> : null}
 
       <div className="business-logo-actions">
         <input
           ref={inputRef}
           type="file"
-          accept="image/png,image/webp,image/jpeg,image/*"
+          accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"
           hidden
           disabled={disabled || busy}
           onChange={(e) => void onPick(e.target.files)}
@@ -115,11 +165,23 @@ export function BusinessLogoField({ value, onChange, onError, disabled }: Props)
           <ImagePlus size={16} aria-hidden />
           {busy ? "กำลังอัปโหลด…" : previewSrc ? "เปลี่ยนโลโก้" : "อัปโหลดโลโก้"}
         </button>
-        {previewSrc ? (
+        {busy ? (
           <button
             type="button"
             className="ghost-btn"
-            disabled={disabled || busy}
+            onClick={() => {
+              setBusy(false);
+              reportError("ยกเลิกแล้ว — ลองอัปโหลดใหม่ด้วย PNG หรือ JPG");
+            }}
+          >
+            ยกเลิก
+          </button>
+        ) : null}
+        {previewSrc && !busy ? (
+          <button
+            type="button"
+            className="ghost-btn"
+            disabled={disabled}
             onClick={() => void onClear()}
           >
             <Trash2 size={16} aria-hidden />

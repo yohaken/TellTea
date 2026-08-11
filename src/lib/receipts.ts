@@ -146,17 +146,33 @@ export async function fileToReceiptDataUrl(
 /** Soft target for brand logos (PNG with alpha) — keep tiny for AppShell. */
 export const LOGO_DATA_URL_SOFT_MAX = 80_000;
 
-/** Near-white / cream / light gray pad around circular marks (phone exports). */
+/**
+ * Near-white / cream / light gray pad — รวมตารางหมากรุก “โปร่งใส” ที่ถูก bake ลง PNG
+ * (Photoshop/Figma checkerboard: #fff + #ccc) ซึ่งไม่ใช่ alpha จริง
+ * ไม่กินโลโก้สีเข้ม/สีอิ่มตัว (เช่น กรมท่า Tell Tea)
+ */
 export function isLogoKnockoutRgb(r: number, g: number, b: number): boolean {
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);
   const avg = (r + g + b) / 3;
-  return avg >= 210 && max - min <= 60;
+  const chroma = max - min;
+  // White / cream phone-export pad
+  if (avg >= 205 && chroma <= 60) return true;
+  // Neutral greys from transparency-grid tiles (#bbb–#e8e8e8)
+  // chroma≤28 covers mild JPEG noise on grey tiles
+  if (avg >= 150 && avg <= 245 && chroma <= 28) return true;
+  return false;
 }
 
 /**
- * Flood-fill from edges: turn connected light pixels transparent.
- * Keeps white line-art inside the green mark (not edge-connected).
+ * Knock out light / checkerboard pad → transparent.
+ *
+ * 1) Edge flood-fill (8-connected) clears the outer pad.
+ * 2) Full pass clears leftover knockout pixels inside closed holes
+ *    (e.g. empty center of a circular mark that edge-fill cannot reach
+ *    because ink forms a ring barrier).
+ *
+ * Dark / saturated ink is kept.
  */
 export function knockOutLogoLightBackground(
   ctx: CanvasRenderingContext2D,
@@ -200,10 +216,23 @@ export function knockOutLogoLightBackground(
     cleared += 1;
     const x = i % w;
     const y = (i / w) | 0;
+    // 8-connected so checkerboard whites/greys stay one component
     tryPush(x + 1, y);
     tryPush(x - 1, y);
     tryPush(x, y + 1);
     tryPush(x, y - 1);
+    tryPush(x + 1, y + 1);
+    tryPush(x - 1, y - 1);
+    tryPush(x + 1, y - 1);
+    tryPush(x - 1, y + 1);
+  }
+
+  // Enclosed holes: edge flood cannot cross ink rings — sweep remaining pad.
+  for (let i = 0, o = 0; i < w * h; i++, o += 4) {
+    if (d[o + 3] < 12) continue;
+    if (!isLogoKnockoutRgb(d[o], d[o + 1], d[o + 2])) continue;
+    d[o + 3] = 0;
+    cleared += 1;
   }
 
   if (!cleared) return false;
@@ -211,56 +240,139 @@ export function knockOutLogoLightBackground(
   return true;
 }
 
-function canvasToPngDataUrl(canvas: HTMLCanvasElement): Promise<string> {
+/** Sync PNG encode — toBlob callbacks can hang forever on some mobile WebViews. */
+function canvasToPngDataUrl(canvas: HTMLCanvasElement): string {
+  try {
+    const out = canvas.toDataURL("image/png");
+    if (!out.startsWith("data:image/png")) {
+      throw new Error("ไม่สามารถเข้ารหัสโลโก้ PNG ได้");
+    }
+    return out;
+  } catch {
+    throw new Error("ไม่สามารถเข้ารหัสโลโก้ PNG ได้");
+  }
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
   return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (!blob) {
-        reject(new Error("ไม่สามารถเข้ารหัสโลโก้ PNG ได้"));
-        return;
-      }
-      void readAsDataUrl(blob).then(resolve, reject);
-    }, "image/png");
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
   });
+}
+
+function loadHtmlImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const el = new Image();
+    el.onload = () => resolve(el);
+    el.onerror = () => reject(new Error("อ่านโลโก้ไม่สำเร็จ"));
+    el.src = src;
+  });
+}
+
+type DrawableImage = {
+  width: number;
+  height: number;
+  draw: (ctx: CanvasRenderingContext2D, w: number, h: number) => void;
+  close?: () => void;
+};
+
+/** Decode file for canvas — bitmap first, object-URL image fallback (iOS HEIC/WebView). */
+async function decodeImageFile(file: File): Promise<DrawableImage> {
+  if (typeof createImageBitmap === "function") {
+    try {
+      const bitmap = await withTimeout(
+        createImageBitmap(file),
+        12_000,
+        "อ่านรูปนานเกินไป — ลองเป็น PNG หรือ JPG",
+      );
+      return {
+        width: bitmap.width,
+        height: bitmap.height,
+        draw: (ctx, w, h) => ctx.drawImage(bitmap, 0, 0, w, h),
+        close: () => bitmap.close(),
+      };
+    } catch {
+      /* fall through */
+    }
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const img = await withTimeout(
+      loadHtmlImage(objectUrl),
+      12_000,
+      "อ่านรูปนานเกินไป — ลองเป็น PNG หรือ JPG",
+    );
+    return {
+      width: img.naturalWidth || img.width,
+      height: img.naturalHeight || img.height,
+      draw: (ctx, w, h) => ctx.drawImage(img, 0, 0, w, h),
+    };
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
 }
 
 /** Resize any image to PNG + knock out light edge background. */
 async function resizeToPngDataUrl(file: File, maxEdge: number): Promise<string> {
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
-  const w = Math.max(1, Math.round(bitmap.width * scale));
-  const h = Math.max(1, Math.round(bitmap.height * scale));
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  if (!ctx) {
-    bitmap.close();
-    throw new Error("ไม่สามารถย่อโลโก้ได้");
+  const source = await decodeImageFile(file);
+  try {
+    const sw = Math.max(1, source.width);
+    const sh = Math.max(1, source.height);
+    const scale = Math.min(1, maxEdge / Math.max(sw, sh));
+    const w = Math.max(1, Math.round(sw * scale));
+    const h = Math.max(1, Math.round(sh * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) throw new Error("ไม่สามารถย่อโลโก้ได้");
+    ctx.clearRect(0, 0, w, h);
+    source.draw(ctx, w, h);
+    knockOutLogoLightBackground(ctx, w, h);
+    return canvasToPngDataUrl(canvas);
+  } finally {
+    source.close?.();
   }
-  ctx.clearRect(0, 0, w, h);
-  ctx.drawImage(bitmap, 0, 0, w, h);
-  bitmap.close();
-  knockOutLogoLightBackground(ctx, w, h);
-  return canvasToPngDataUrl(canvas);
 }
 
 /**
- * Re-encode a stored logo data URL as PNG with light edge pad removed.
+ * Re-encode a stored logo data URL as PNG with light pad / holes removed.
  * Safe for already-uploaded JPEG/PNG marks that show white corners on login.
+ *
+ * @param forceKnockout when true, always redraw + knock out (even small PNGs).
+ *   Needed to upgrade older uploads that only cleared the outer pad.
  */
 export async function prepareBrandLogoPngDataUrl(
   dataUrl: string,
   maxEdge = 320,
+  forceKnockout = false,
 ): Promise<string> {
   const raw = String(dataUrl || "").trim();
   if (!raw.startsWith("data:image/")) return raw;
+  // Fresh uploads under the soft cap already ran knockout — skip unless upgrading.
+  if (
+    !forceKnockout &&
+    raw.startsWith("data:image/png") &&
+    raw.length <= LOGO_DATA_URL_SOFT_MAX
+  ) {
+    return raw;
+  }
 
-  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const el = new Image();
-    el.onload = () => resolve(el);
-    el.onerror = () => reject(new Error("อ่านโลโก้ไม่สำเร็จ"));
-    el.src = raw;
-  });
+  const img = await withTimeout(
+    loadHtmlImage(raw),
+    12_000,
+    "แปลงโลโก้นานเกินไป — ลองไฟล์เล็กกว่าหรือเป็น PNG",
+  );
 
   const nw = img.naturalWidth || maxEdge;
   const nh = img.naturalHeight || maxEdge;
@@ -286,7 +398,12 @@ export async function fileToLogoDataUrl(
   file: File,
   maxChars: number = LOGO_DATA_URL_SOFT_MAX,
 ): Promise<string> {
-  if (!file.type.startsWith("image/") && file.type !== "") {
+  const mime = (file.type || "").toLowerCase();
+  const name = (file.name || "").toLowerCase();
+  if (mime.includes("heic") || mime.includes("heif") || /\.heic$|\.heif$/i.test(name)) {
+    throw new Error("ยังไม่รองรับ HEIC — บันทึกเป็น JPG หรือ PNG แล้วลองใหม่");
+  }
+  if (mime && !mime.startsWith("image/") && mime !== "application/octet-stream") {
     throw new Error("ไฟล์ต้องเป็นรูปภาพ");
   }
   const soft = Math.min(Math.max(40_000, maxChars), RECEIPT_DATA_URL_HARD_MAX);

@@ -173,6 +173,15 @@ export function unifiedReceiptStyles(layout: PrinterKindProfile, cutMode: PosPri
       margin-bottom: 6px;
     }
     .shop-block { text-align: center; margin-bottom: 8px; }
+    .shop-logo {
+      display: block;
+      margin: 0 auto 6px;
+      max-width: ${layout.paperWidthMm === 58 ? "42%" : "48%"};
+      max-height: ${layout.paperWidthMm === 58 ? "52px" : "72px"};
+      width: auto;
+      height: auto;
+      object-fit: contain;
+    }
     .shop-name {
       font-weight: 700;
       font-size: ${layout.titleFontPx}px;
@@ -351,6 +360,11 @@ export function buildUnifiedReceiptBody(data: ReceiptPrintPayload, layout: Print
   const shopAddress = (data.shopAddress || DEFAULT_SHOP.shopAddress).trim();
   const shopPhone = (data.shopPhone || DEFAULT_SHOP.shopPhone).trim();
   const taxId = (data.taxId || "").trim();
+  const shopLogo = (data.shopLogoDataUrl || "").trim();
+  const logoBlock =
+    shopLogo.startsWith("data:image/")
+      ? `<img class="shop-logo" src="${escapeReceiptHtml(shopLogo)}" alt="" />`
+      : "";
 
   const billDisplay = data.billNo.startsWith("#") ? data.billNo : `#${data.billNo}`;
   const itemCount = itemQtyTotal(data.lines);
@@ -442,6 +456,7 @@ export function buildUnifiedReceiptBody(data: ReceiptPrintPayload, layout: Print
     <div class="bill-no">${escapeReceiptHtml(billDisplay)}</div>
     ${customerBlock}
     <div class="shop-block">
+      ${logoBlock}
       <div class="shop-name">${escapeReceiptHtml(shopName)}</div>
       ${shopAddress ? `<div class="shop-addr">${escapeReceiptHtml(shopAddress)}</div>` : ""}
       ${shopPhone ? `<div class="shop-phone">โทร : ${escapeReceiptHtml(shopPhone)}</div>` : ""}
@@ -722,8 +737,13 @@ export function applyShopToReceiptSample(
     taxId?: string;
     receiptStaffName?: string;
     receiptFooterNote?: string;
+    /** When false, strip logo even if shopLogoDataUrl is passed. Default on. */
+    receiptPrintLogo?: boolean;
+    shopLogoDataUrl?: string;
   },
 ): ReceiptPrintPayload {
+  const printLogo = shop.receiptPrintLogo !== false;
+  const logo = printLogo ? (shop.shopLogoDataUrl || "").trim() : "";
   return {
     ...sample,
     shopName: shop.shopName?.trim() || sample.shopName,
@@ -733,5 +753,6 @@ export function applyShopToReceiptSample(
     taxId: shop.taxId?.trim() || sample.taxId,
     staffName: shop.receiptStaffName?.trim() || sample.staffName,
     receiptFooterNote: shop.receiptFooterNote?.trim() || sample.receiptFooterNote,
+    shopLogoDataUrl: logo.startsWith("data:image/") ? logo : undefined,
   };
 }

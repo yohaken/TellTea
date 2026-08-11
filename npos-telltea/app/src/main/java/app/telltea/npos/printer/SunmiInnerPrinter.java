@@ -4,12 +4,15 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.Build;
 
+import org.json.JSONObject;
+
 import com.sunmi.peripheral.printer.InnerPrinterCallback;
 import com.sunmi.peripheral.printer.InnerPrinterException;
 import com.sunmi.peripheral.printer.InnerPrinterManager;
 import com.sunmi.peripheral.printer.InnerResultCallback;
 import com.sunmi.peripheral.printer.SunmiPrinterService;
 
+import app.telltea.npos.sell.ImageLoader;
 import app.telltea.npos.sell.QrBitmaps;
 
 import java.nio.charset.Charset;
@@ -96,7 +99,21 @@ public final class SunmiInnerPrinter {
    */
   public static PrinterTransport.Result printSlip(
       Context context, java.util.List<ReceiptSlipLine> lines, String claimUrl) {
+    return printSlip(context, lines, claimUrl, null);
+  }
+
+  /**
+   * @param shop optional shopJson — when present and logo enabled, brandLogo is drawn on the slip.
+   */
+  public static PrinterTransport.Result printSlip(
+      Context context,
+      java.util.List<ReceiptSlipLine> lines,
+      String claimUrl,
+      JSONObject shop) {
     String url = claimUrl == null ? "" : claimUrl.trim();
+    Bitmap shopLogo = null;
+    Bitmap slipForBo = null;
+    boolean printedOk = false;
     try {
       SunmiPrinterService svc = ensureService(context);
       if (svc == null) {
@@ -109,10 +126,20 @@ public final class SunmiInnerPrinter {
       resetPrinterDefaults(svc);
       int paperMm = syncPaperWidthFromPrinter(context, svc);
 
-      Bitmap slip = SunmiSlipBitmap.render(lines, url, paperMm);
+      // Fail-open: bad/missing logo never blocks the sale slip.
+      if (ReceiptFormBuilder.shouldPrintShopLogo(shop)) {
+        try {
+          shopLogo = ImageLoader.decode(shop.optString("brandLogo", "").trim());
+        } catch (Exception ignored) {
+          shopLogo = null;
+        }
+      }
+
+      Bitmap slip = SunmiSlipBitmap.render(lines, url, paperMm, shopLogo);
       if (slip != null) {
         PrinterTransport.Result bmpRes = printBitmapBands(svc, slip);
         if (!bmpRes.ok) return bmpRes;
+        slipForBo = slip; // upload after release — same pixels staff saw on paper
       } else {
         // Fallback: structured columns (better than space-padded printText).
         int qrPx = SunmiSlipBitmap.claimQrPx(paperMm);
@@ -133,6 +160,7 @@ public final class SunmiInnerPrinter {
       }
       PrinterTransport.Result cut = cutPaperBestEffort(svc, "SUNMI พิมพ์ใบเสร็จแล้ว");
       resetPrinterDefaults(svc);
+      printedOk = cut != null && cut.ok;
       return cut;
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -142,6 +170,19 @@ public final class SunmiInnerPrinter {
       return new PrinterTransport.Result(false, msg);
     } finally {
       releaseService();
+      // After printer is free (LINE MAN share) — send rendered slip to BO.
+      if (printedOk && slipForBo != null) {
+        String billHint = "";
+        if (lines != null) {
+          for (ReceiptSlipLine line : lines) {
+            if (line != null && line.kind == ReceiptSlipLine.Kind.CENTER && line.bold) {
+              billHint = line.left == null ? "" : line.left.trim();
+              break;
+            }
+          }
+        }
+        app.telltea.npos.diagnose.SlipCaptureUpload.uploadPrintedSlip(context, slipForBo, billHint);
+      }
     }
   }
 

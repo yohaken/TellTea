@@ -3,7 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { signInWithCustomToken } from "firebase/auth";
-import { useAuth } from "@/lib/auth";
+import { AUTH_LOADING_ESCAPE_MS, useAuth } from "@/lib/auth";
 import { getFirebaseAuth } from "@/lib/firebase";
 import { AppBrand } from "@/components/AppBrand";
 import { cn } from "@/lib/utils";
@@ -17,7 +17,8 @@ function isInAppBrowser() {
 type LoginMode = "google" | "phone";
 
 export default function LoginPage() {
-  const { status, signIn, sendPhoneLoginOtp, confirmPhoneLoginOtp, error } = useAuth();
+  const { status, busyReason, signIn, signOut, sendPhoneLoginOtp, confirmPhoneLoginOtp, error } =
+    useAuth();
   const router = useRouter();
   const [inApp, setInApp] = useState(false);
   const [mode, setMode] = useState<LoginMode>("google");
@@ -26,6 +27,7 @@ export default function LoginPage() {
   const [otpSent, setOtpSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [showEscape, setShowEscape] = useState(false);
 
   useEffect(() => {
     setInApp(isInAppBrowser());
@@ -66,7 +68,17 @@ export default function LoginPage() {
     }
   }, [status, router]);
 
+  useEffect(() => {
+    if (status !== "loading" || busyReason === "boot" || busyReason == null) {
+      setShowEscape(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setShowEscape(true), AUTH_LOADING_ESCAPE_MS);
+    return () => window.clearTimeout(timer);
+  }, [status, busyReason]);
+
   const blocked = status === "unconfigured";
+  const signingIn = busyReason === "bridge" || busyReason === "staff";
   const displayError = localError || error;
 
   async function onSendOtp(e: FormEvent) {
@@ -120,10 +132,36 @@ export default function LoginPage() {
             บัญชีนี้ยังไม่อยู่ในรายชื่อพนักงาน ให้เจ้าของเพิ่มอีเมลหรือเบอร์โทรก่อน
           </p>
         ) : null}
-        {status === "loading" ? (
+        {busyReason === "bridge" ? (
           <p className="muted" style={{ marginBottom: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>
-            กำลังยืนยันสิทธิ์จาก Google — ถ้าค้างนาน ให้รีเฟรชแล้วกดเข้าสู่ระบบอีกครั้ง
+            กำลังยืนยันสิทธิ์จาก Google — ถ้าค้างนาน กดลองใหม่ด้านล่าง
           </p>
+        ) : null}
+        {busyReason === "staff" ? (
+          <p className="muted" style={{ marginBottom: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>
+            กำลังตรวจสิทธิ์พนักงาน...
+          </p>
+        ) : null}
+        {showEscape ? (
+          <div style={{ marginBottom: "0.75rem", textAlign: "left" }}>
+            <p className="error-text" style={{ marginBottom: "0.5rem" }}>
+              ล็อกอินค้างนานผิดปกติ — ลองใหม่หรือออกจากระบบแล้วเข้าอีกครั้ง
+            </p>
+            <div className="btn-row">
+              <button
+                type="button"
+                className="ghost-btn"
+                onClick={() => {
+                  window.location.assign("/login/");
+                }}
+              >
+                รีเฟรชหน้าเข้าสู่ระบบ
+              </button>
+              <button type="button" className="ghost-btn" onClick={() => void signOut()}>
+                ออกแล้วลองใหม่
+              </button>
+            </div>
+          </div>
         ) : null}
 
         <p className="muted" style={{ marginBottom: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>
@@ -164,9 +202,9 @@ export default function LoginPage() {
             type="button"
             className="primary-btn"
             onClick={() => void signIn()}
-            disabled={blocked}
+            disabled={blocked || signingIn}
           >
-            {status === "loading" ? "กำลังเตรียมระบบ..." : "เข้าสู่ระบบด้วย Google"}
+            {signingIn ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบด้วย Google"}
           </button>
         ) : (
           <div className="login-phone-panel">
@@ -186,7 +224,7 @@ export default function LoginPage() {
                     required
                   />
                 </div>
-                <button type="submit" className="primary-btn" disabled={blocked || busy}>
+                <button type="submit" className="primary-btn" disabled={blocked || busy || signingIn}>
                   {busy ? "กำลังส่ง..." : "ส่งรหัส OTP"}
                 </button>
               </form>
@@ -209,7 +247,7 @@ export default function LoginPage() {
                   />
                 </div>
                 <div className="btn-row">
-                  <button type="submit" className="primary-btn" disabled={blocked || busy}>
+                  <button type="submit" className="primary-btn" disabled={blocked || busy || signingIn}>
                     {busy ? "กำลังยืนยัน..." : "ยืนยันและเข้าใช้"}
                   </button>
                   <button

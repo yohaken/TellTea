@@ -112,7 +112,8 @@ public final class ImageLoader {
         return decoded;
     }
 
-    static Bitmap decode(String url) {
+    /** Decode http(s) or {@code data:image…;base64,} — used by menu thumbs and slip logo. */
+    public static Bitmap decode(String url) {
         try {
             if (url.startsWith("data:image")) {
                 int comma = url.indexOf(',');

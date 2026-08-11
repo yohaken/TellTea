@@ -151,9 +151,17 @@ jobs:
             "${{ secrets.GEMINI_API_KEY }}" > functions/.env
           echo "Wrote functions/.env TELLTEA_STORAGE_BUCKET=$BUCKET"
 
-      - name: Ensure POS hosting site exists
+      - name: Ensure shop + POS hosting sites exist
         run: |
+          # Site Not Found on *.web.app usually means the Hosting site was deleted.
+          # Recreate before deploy (409 already-exists is fine).
+          npx firebase-tools@latest hosting:sites:create telltea-shop \
+            --project mypeer-501909 --non-interactive 2>/dev/null || true
           npx firebase-tools@latest hosting:sites:create telltea-pos \
+            --project mypeer-501909 --non-interactive 2>/dev/null || true
+          npx firebase-tools@latest target:apply hosting telltea telltea-shop \
+            --project mypeer-501909 --non-interactive 2>/dev/null || true
+          npx firebase-tools@latest target:apply hosting telltea-pos telltea-pos \
             --project mypeer-501909 --non-interactive 2>/dev/null || true
 
       - name: Deploy Hosting + Firestore + Storage + Functions

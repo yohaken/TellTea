@@ -16,6 +16,22 @@ public final class WhatsNewCatalog {
   private WhatsNewCatalog() {}
 
   public static List<WhatsNewSlide> slidesFor(int versionCode) {
+    if (versionCode == 149) {
+      List<WhatsNewSlide> slides = new ArrayList<>();
+      slides.add(
+          new WhatsNewSlide(
+              "ส่งภาพสลิปกลับหลังร้าน",
+              "พิมพ์บิลแล้วรูปสลิปจริงโผล่ที่แผงเครื่องหลังร้าน · ไม่ต้องถามพนักงาน"));
+      return slides;
+    }
+    if (versionCode == 148) {
+      List<WhatsNewSlide> slides = new ArrayList<>();
+      slides.add(
+          new WhatsNewSlide(
+              "โลโก้ร้านบนใบเสร็จ",
+              "พิมพ์โลโก้จากหลังร้านบนหัวสลิป · เปลี่ยนรูปไม่ต้องอัป APK ใหม่"));
+      return slides;
+    }
     if (versionCode == 147) {
       List<WhatsNewSlide> slides = new ArrayList<>();
       slides.add(

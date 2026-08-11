@@ -25,6 +25,7 @@ import { confirmPhoneOtp, resetPhoneRecaptcha, sendPhoneOtp } from "./phone-auth
 import { migrateAllBonusCloseSideDocs } from "./bonus-close-migrate";
 import { migrateAllLegacyEmployeePay } from "./employees";
 import { migrateAllLegacyStockCosts } from "./stock";
+import { withTimeout } from "./pos-timeout";
 import {
   ensureOwnerBootstrap,
   getStaffByPhone,
@@ -50,8 +51,20 @@ import type { PermissionLevel } from "./types";
 
 type AuthStatus = "loading" | "signedOut" | "denied" | "ready" | "unconfigured";
 
+/** Why status is loading — boot must not look like a stuck Google login. */
+export type AuthBusyReason = "boot" | "bridge" | "staff" | null;
+
+/** Firestore ticket read / Google credential hop — fail instead of infinite spinner. */
+export const AUTH_BRIDGE_TIMEOUT_MS = 15_000;
+/** Staff doc resolve after Auth — fail instead of AuthGate forever. */
+export const AUTH_STAFF_RESOLVE_TIMEOUT_MS = 12_000;
+/** Escape hatch if loading never clears (AuthGate / login). */
+export const AUTH_LOADING_ESCAPE_MS = 14_000;
+
 type AuthContextValue = {
   status: AuthStatus;
+  /** null when not loading · boot = session check · bridge = Google ticket · staff = rights */
+  busyReason: AuthBusyReason;
   user: User | null;
   /** สิทธิ์/บทบาทที่ใช้โชว์เมนู — อาจเป็นพรีวิว · permissions ถูก resolve แล้ว */
   staff: StaffMember | null;
@@ -221,7 +234,11 @@ async function idTokenFromTicket(ticket: string): Promise<string> {
   const ref = doc(getDb(), "loginTickets", ticket);
   let snap;
   try {
-    snap = await getDoc(ref);
+    snap = await withTimeout(
+      getDoc(ref),
+      AUTH_BRIDGE_TIMEOUT_MS,
+      "อ่านตั๋วล็อกอินหมดเวลา — กดเข้าสู่ระบบอีกครั้ง",
+    );
   } catch (err) {
     const code = (err as { code?: string })?.code || "";
     // ตั๋วหมดอายุ/ถูกลบ — rules เก่าเคยตอบ permission-denied จนข้อความหลอกว่าสิทธิ์พนักงาน
@@ -252,6 +269,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>(() =>
     isFirebaseConfigured() ? "loading" : "unconfigured",
   );
+  const [busyReason, setBusyReason] = useState<AuthBusyReason>(() =>
+    isFirebaseConfigured() ? "boot" : null,
+  );
   const [user, setUser] = useState<User | null>(null);
   const [staff, setStaff] = useState<StaffMember | null>(null);
   const [permissionLevels, setPermissionLevels] = useState<PermissionLevel[]>([]);
@@ -261,9 +281,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshStaff = useCallback(async () => {
     if (!user) return;
-    const member = await resolveStaff(user);
-    setStaff(member);
-    setStatus(member ? "ready" : "denied");
+    setBusyReason("staff");
+    try {
+      const member = await withTimeout(
+        resolveStaff(user),
+        AUTH_STAFF_RESOLVE_TIMEOUT_MS,
+        "ตรวจสิทธิ์หมดเวลา — รีเฟรชแล้วลองใหม่",
+      );
+      setStaff(member);
+      setStatus(member ? "ready" : "denied");
+      setBusyReason(null);
+    } catch (err) {
+      setError(mapAuthError(err));
+      setStatus((prev) => (prev === "ready" ? prev : "denied"));
+      setBusyReason(null);
+    }
   }, [user]);
 
   // แคตตาล็อกลำดับสิทธิ์ — resolve/can/พรีวิวใช้ชุดเดียวกัน
@@ -312,6 +344,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isFirebaseConfigured()) {
       setStatus("unconfigured");
+      setBusyReason(null);
       return;
     }
 
@@ -323,23 +356,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const ticket = takeTicketFromUrl();
       if (!ticket) return;
       bridgePending = true;
+      setBusyReason("bridge");
       setStatus("loading");
       setError(null);
       try {
         const idToken = await idTokenFromTicket(ticket);
-        await signInWithCredential(auth, GoogleAuthProvider.credential(idToken));
+        if (cancelled) return;
+        await withTimeout(
+          signInWithCredential(auth, GoogleAuthProvider.credential(idToken)),
+          AUTH_BRIDGE_TIMEOUT_MS,
+          "เข้า Google หมดเวลา — กดเข้าสู่ระบบอีกครั้ง",
+        );
       } catch (err) {
         if (!cancelled) setError(mapAuthError(err));
       } finally {
         bridgePending = false;
         if (!cancelled && !auth.currentUser) {
+          setBusyReason(null);
           setStatus("signedOut");
         }
       }
     })();
 
+    // Don't leave mobile users stuck on boot "กำลังเตรียมระบบ..."
     const readyTimeout = window.setTimeout(() => {
       if (!cancelled && !bridgePending && !auth.currentUser) {
+        setBusyReason(null);
         setStatus((prev) => (prev === "loading" ? "signedOut" : prev));
       }
     }, 6000);
@@ -347,6 +389,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void auth.authStateReady().then(() => {
       if (cancelled || bridgePending) return;
       if (!auth.currentUser) {
+        setBusyReason(null);
         setStatus((prev) => (prev === "loading" ? "signedOut" : prev));
       }
     });
@@ -362,6 +405,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setStaff(null);
         setPermPreview(null);
         savePermPreview(null);
+        setBusyReason(null);
         setStatus("signedOut");
         return;
       }
@@ -372,17 +416,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const cached = cacheKey ? loadCachedStaff(cacheKey) : null;
       if (cached) {
         setStaff(cached);
+        setBusyReason(null);
         setStatus("ready");
       } else {
+        setBusyReason("staff");
         setStatus("loading");
       }
 
       try {
-        const member = await resolveStaff(next);
+        const member = await withTimeout(
+          resolveStaff(next),
+          AUTH_STAFF_RESOLVE_TIMEOUT_MS,
+          "ตรวจสิทธิ์หมดเวลา — รีเฟรชแล้วลองใหม่",
+        );
         if (cancelled) return;
         setStaff(member);
         if (member) {
           saveCachedStaff(member);
+          setBusyReason(null);
           setStatus("ready");
           // ปักเข้าหลังสุดทันทีตอนล็อกอินสำเร็จ (ไม่รอ heartbeat / visibility)
           void import("./staff-presence")
@@ -403,18 +454,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         } else {
           clearAppCaches();
+          setBusyReason(null);
           setStatus("denied");
         }
       } catch (err) {
         if (cancelled) return;
         const code = (err as { code?: string })?.code || "";
         const message = (err as Error)?.message || "";
+        const timedOut = /หมดเวลา/.test(message);
         const permissionDenied =
           code === "permission-denied" || /insufficient permissions/i.test(message);
         // อย่าเด้งออกถ้าแคชยังตรงบัญชีนี้ — โชว์ข้อผิดพลาดแล้วให้ใช้งานต่อได้
-        if (permissionDenied && cached?.id) {
+        if ((permissionDenied || timedOut) && cached?.id) {
           setError(mapAuthError(err));
           setStaff(cached);
+          setBusyReason(null);
           setStatus("ready");
           // ยังปัก presence จากแคช — อย่าให้สถานะค้างเพราะ resolve ล้มชั่วคราว
           void import("./staff-presence")
@@ -426,17 +480,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           clearAppCaches();
           setError(mapAuthError(err));
           setStaff(null);
+          setBusyReason(null);
           setStatus("denied");
           return;
         }
         if (cached?.id) {
           setError(null);
+          setBusyReason(null);
           setStatus("ready");
           return;
         }
         setError(mapAuthError(err));
         setStaff(null);
-        setStatus("denied");
+        setBusyReason(null);
+        // timeout / network — back to login with retry, not infinite spinner
+        setStatus(timedOut ? "signedOut" : "denied");
       }
     });
 
@@ -541,6 +599,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       status,
+      busyReason: status === "loading" ? busyReason : null,
       user,
       staff: effectiveStaff,
       realStaff,
@@ -559,6 +618,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }),
     [
       status,
+      busyReason,
       user,
       effectiveStaff,
       realStaff,

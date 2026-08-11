@@ -37,6 +37,11 @@ export type PosShopSettings = {
   receiptStaffName: string;
   /** ข้อความท้ายสลิป */
   receiptFooterNote: string;
+  /**
+   * พิมพ์โลโก้ร้านบนหัวสลิป — ค่าเริ่มเปิดเมื่อมีรูปใน meta/brandLogo
+   * (โลโก้อยู่คนละเอกสาร · ธงนี้อยู่ meta/pos)
+   */
+  receiptPrintLogo: boolean;
   /** ลำดับเมนูหน้า POS: fix = คงที่/มือ · bestsellers = กลุ่มขายดีจริง */
   menuArrangeMode: MenuArrangeMode;
   /** หน้าต่างสถิติขายดี (วัน) — 7 ช่วงแรก · ขยายได้ถึง 14 */
@@ -67,6 +72,7 @@ const DEFAULTS: PosShopSettings = {
   autoPrintReceipt: true,
   receiptStaffName: "หน้าร้าน",
   receiptFooterNote: "ขอบคุณที่อุดหนุน",
+  receiptPrintLogo: true,
   menuArrangeMode: "fix",
   bestsellerWindowDays: 7,
 };
@@ -95,6 +101,7 @@ function toPublic(stored: StoredShopSettings): PosShopSettings {
     autoPrintReceipt: stored.autoPrintReceipt,
     receiptStaffName: stored.receiptStaffName,
     receiptFooterNote: stored.receiptFooterNote,
+    receiptPrintLogo: stored.receiptPrintLogo,
     menuArrangeMode: stored.menuArrangeMode,
     bestsellerWindowDays: stored.bestsellerWindowDays,
   };
@@ -126,6 +133,8 @@ function mapSettings(
     autoPrintReceipt: data?.autoPrintReceipt !== false,
     receiptStaffName: str(data?.receiptStaffName, DEFAULTS.receiptStaffName) || DEFAULTS.receiptStaffName,
     receiptFooterNote: str(data?.receiptFooterNote, DEFAULTS.receiptFooterNote) || DEFAULTS.receiptFooterNote,
+    // Owner lock: default ON (print logo when brandLogo exists). Explicit false turns off.
+    receiptPrintLogo: data?.receiptPrintLogo !== false,
     menuArrangeMode: normalizeMenuArrangeMode(data?.menuArrangeMode),
     bestsellerWindowDays: normalizeWindowDays(data?.bestsellerWindowDays),
   };
@@ -211,6 +220,7 @@ function remotePayload(settings: PosShopSettings, updatedAt: number): Record<str
     autoPrintReceipt: settings.autoPrintReceipt,
     receiptStaffName: settings.receiptStaffName,
     receiptFooterNote: settings.receiptFooterNote,
+    receiptPrintLogo: settings.receiptPrintLogo !== false,
     menuArrangeMode: settings.menuArrangeMode,
     bestsellerWindowDays: settings.bestsellerWindowDays,
   };
@@ -411,6 +421,8 @@ export async function savePosShopSettings(
       patch.receiptFooterNote != null
         ? patch.receiptFooterNote.trim() || DEFAULTS.receiptFooterNote
         : current.receiptFooterNote,
+    receiptPrintLogo:
+      patch.receiptPrintLogo != null ? patch.receiptPrintLogo !== false : current.receiptPrintLogo !== false,
     menuArrangeMode:
       patch.menuArrangeMode != null
         ? normalizeMenuArrangeMode(patch.menuArrangeMode)

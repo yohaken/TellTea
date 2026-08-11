@@ -52,8 +52,12 @@ type Row = PosDevice & { deviceClass: NposDeviceClass; sortAt: number };
 type CaptureUrls = {
   primaryUrl: string;
   secondaryUrl: string;
+  slipUrl: string;
   at: number;
+  slipAt: number;
   shotId?: string;
+  slipShotId?: string;
+  slipBillNo?: string;
 };
 
 /**
@@ -149,7 +153,12 @@ function DeviceCard({
   const equip = posDeviceEquipment(d);
   const capturePending =
     d.captureRequestAt > 0 && d.captureRequestAt > (d.lastCaptureAckAt || 0);
-  const hasCapture = !!(capture?.primaryUrl || capture?.secondaryUrl);
+  const hasCapture = !!(
+    capture?.primaryUrl ||
+    capture?.secondaryUrl ||
+    capture?.slipUrl
+  );
+  const slipStamp = capture?.slipAt || d.latestSlipAt || 0;
   return (
     <li className="npos-diagnose-card npos-device-slim-card">
       <div className="npos-device-row">
@@ -181,6 +190,9 @@ function DeviceCard({
         {d.customerDisplay || "—"} · แคป{" "}
         {d.lastCaptureAt ? formatSeen(d.lastCaptureAt) : "ยังไม่มี"}
         {capturePending ? " · รอแคป…" : ""}
+        {" · สลิป "}
+        {slipStamp ? formatSeen(slipStamp) : "ยังไม่มี"}
+        {capture?.slipBillNo ? ` · ${capture.slipBillNo}` : ""}
         {" · "}
         {d.permissionsStatus
           ? d.permissionsStatus
@@ -189,17 +201,20 @@ function DeviceCard({
             : "ยังไม่รายงานสิทธิ์"}
       </p>
       <NposCaptureGallery
+        slipUrl={capture?.slipUrl}
         primaryUrl={capture?.primaryUrl}
         secondaryUrl={capture?.secondaryUrl}
         caption={
-          capture?.at
-            ? `แตะรูปเพื่อดูเต็มความละเอียด · ${formatSeen(capture.at)}`
+          slipStamp || capture?.at
+            ? `แตะรูปเพื่อดูเต็ม · สลิป=${slipStamp ? formatSeen(slipStamp) : "—"} · แคปจอ=${
+                capture?.at ? formatSeen(capture.at) : "—"
+              }`
             : undefined
         }
         emptyHint={
           capturePending
             ? "รอเครื่องแคปและอัปโหลด (~1 นาที)…"
-            : "ยังไม่มีภาพ — กด «สั่งแคปจอ» แล้วรอเครื่องออนไลน์"
+            : "ยังไม่มีภาพ — ขาย 1 บิลจะได้สลิป · หรือกด «สั่งแคปจอ»"
         }
       />
       <div className="npos-device-actions npos-device-actions--text">
@@ -366,6 +381,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
       const next: Record<string, CaptureUrls> = {};
       for (const r of reports) {
         const shotId = r.latestCaptureId || "";
+        const slipShotId = r.latestSlipId || "";
         const primaryUrl = resolveNposCaptureDisplayUrl({
           shotId,
           role: "primary",
@@ -376,13 +392,21 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
           role: "secondary",
           storedUrl: r.latestSecondaryUrl,
         });
-        if (!primaryUrl && !secondaryUrl && !r.latestCaptureAt) continue;
-        if (!primaryUrl && !secondaryUrl) continue;
+        const slipUrl = resolveNposCaptureDisplayUrl({
+          shotId: slipShotId,
+          role: "slip",
+          storedUrl: r.latestSlipUrl,
+        });
+        if (!primaryUrl && !secondaryUrl && !slipUrl) continue;
         next[r.installId] = {
           primaryUrl,
           secondaryUrl,
+          slipUrl,
           at: r.latestCaptureAt || 0,
+          slipAt: r.latestSlipAt || 0,
           shotId,
+          slipShotId,
+          slipBillNo: r.latestSlipBillNo || "",
         };
       }
       setCaptures(next);
@@ -395,6 +419,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
     for (const d of devices) {
       const fromDiag = captures[d.id];
       const shotId = fromDiag?.shotId || "";
+      const slipShotId = fromDiag?.slipShotId || d.latestSlipId || "";
       const primaryUrl = resolveNposCaptureDisplayUrl({
         shotId,
         role: "primary",
@@ -405,17 +430,26 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
         role: "secondary",
         storedUrl: fromDiag?.secondaryUrl || d.latestSecondaryUrl,
       });
-      if (!primaryUrl && !secondaryUrl) continue;
+      const slipUrl = resolveNposCaptureDisplayUrl({
+        shotId: slipShotId,
+        role: "slip",
+        storedUrl: fromDiag?.slipUrl || d.latestSlipUrl,
+      });
+      if (!primaryUrl && !secondaryUrl && !slipUrl) continue;
       next[d.id] = {
         primaryUrl,
         secondaryUrl,
+        slipUrl,
         at: Math.max(fromDiag?.at || 0, d.lastCaptureAt || 0),
+        slipAt: Math.max(fromDiag?.slipAt || 0, d.latestSlipAt || 0),
         shotId,
+        slipShotId,
+        slipBillNo: fromDiag?.slipBillNo || "",
       };
     }
     for (const [id, cap] of Object.entries(captures)) {
       if (next[id]) continue;
-      if (!cap.primaryUrl && !cap.secondaryUrl) continue;
+      if (!cap.primaryUrl && !cap.secondaryUrl && !cap.slipUrl) continue;
       next[id] = cap;
     }
     return next;

@@ -41,12 +41,22 @@ public final class SunmiSlipBitmap {
   }
 
   /** Null when nothing to draw. */
+  public static Bitmap render(List<ReceiptSlipLine> lines, String claimUrl, int paperMm) {
+    return render(lines, claimUrl, paperMm, null);
+  }
+
+  /**
+   * @param shopLogo optional brand mark (already decoded). Fail-open if null / bad size.
+   */
   public static Bitmap render(
-      List<ReceiptSlipLine> lines, String claimUrl, int paperMm) {
+      List<ReceiptSlipLine> lines, String claimUrl, int paperMm, Bitmap shopLogo) {
     if (lines == null || lines.isEmpty()) return null;
     int width = paperWidthPx(paperMm);
     int contentW = width - PAD_X * 2;
     int qrPx = claimQrPx(paperMm);
+    int logoMaxW = Math.max(64, Math.round(contentW * 0.48f));
+    int logoMaxH = paperMm == PrinterPrefs.PAPER_58 ? 90 : 120;
+    Bitmap logoReady = scaleLogoForSlip(shopLogo, logoMaxW, logoMaxH);
 
     TextPaint body = makePaint(BODY_SP, false);
     TextPaint bodyBold = makePaint(BODY_SP, true);
@@ -114,6 +124,13 @@ public final class SunmiSlipBitmap {
             }
           }
           break;
+        case LOGO_MARK:
+          if (logoReady != null) {
+            y += 4f;
+            ops.add(DrawOp.logo(logoReady, y));
+            y += logoReady.getHeight() + 8f;
+          }
+          break;
         case QR_MARK:
           if (!url.isEmpty()) {
             Bitmap qr = QrBitmaps.encode(url, qrPx);
@@ -166,6 +183,7 @@ public final class SunmiSlipBitmap {
           }
           break;
         case QR:
+        case LOGO:
           if (op.qr != null) {
             float x = (width - op.qr.getWidth()) / 2f;
             canvas.drawBitmap(op.qr, x, op.y, null);
@@ -176,6 +194,28 @@ public final class SunmiSlipBitmap {
       }
     }
     return bmp;
+  }
+
+  /** Fit logo on slip; white underlay so PNG alpha does not print black. Fail-open → null. */
+  static Bitmap scaleLogoForSlip(Bitmap src, int maxW, int maxH) {
+    if (src == null || src.isRecycled()) return null;
+    try {
+      int sw = Math.max(1, src.getWidth());
+      int sh = Math.max(1, src.getHeight());
+      if (sw > 2000 || sh > 2000) return null;
+      float scale = Math.min(1f, Math.min(maxW / (float) sw, maxH / (float) sh));
+      int w = Math.max(1, Math.round(sw * scale));
+      int h = Math.max(1, Math.round(sh * scale));
+      Bitmap scaled = Bitmap.createScaledBitmap(src, w, h, true);
+      Bitmap out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+      Canvas c = new Canvas(out);
+      c.drawColor(Color.WHITE);
+      c.drawBitmap(scaled, 0, 0, null);
+      if (scaled != src && scaled != out) scaled.recycle();
+      return out;
+    } catch (Exception ignored) {
+      return null;
+    }
   }
 
   private static TextPaint makePaint(float sizePx, boolean bold) {
@@ -220,7 +260,8 @@ public final class SunmiSlipBitmap {
       CENTER,
       LEFT,
       LEFT_RIGHT,
-      QR
+      QR,
+      LOGO
     }
 
     final Kind kind;
@@ -260,6 +301,10 @@ public final class SunmiSlipBitmap {
 
     static DrawOp qr(Bitmap bmp, float y) {
       return new DrawOp(Kind.QR, "", "", y, null, bmp, false);
+    }
+
+    static DrawOp logo(Bitmap bmp, float y) {
+      return new DrawOp(Kind.LOGO, "", "", y, null, bmp, false);
     }
   }
 }

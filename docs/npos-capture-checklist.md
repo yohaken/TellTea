@@ -31,6 +31,7 @@ SKIP_CAPTURE_SMOKE=1 node scripts/check-npos-shop.mjs
 - [x] `clear_captures` / `clear_captures_all` ผ่าน `nposOwnerDeviceCommand`
 - [x] `pruneNposShotsForInstall` หลังอัปโหลด (MAX 50)
 - [x] Android `MAX_EDGE=1920` · `JPEG_QUALITY=88`
+- [x] **สลิปกระดาษ:** หลังพิมพ์ InnerPrinter สำเร็จ → อัป `role=slip` · โชว์ในแผงเครื่อง / ตรวจเครื่อง / ไทม์ไลน์ (APK **149**)
 
 ## มือหลัง deploy
 | # | ผ่านเมื่อ |

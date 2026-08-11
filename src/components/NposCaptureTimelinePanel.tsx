@@ -109,11 +109,18 @@ export function NposCaptureTimelinePanel({
                 <strong>{formatCaptureAt(s.capturedAt)}</strong>
                 <span className="muted">
                   {" "}
-                  · {s.reason || "—"} · เครื่อง {shortStableKey("", s.installId)}
-                  {!s.primaryUrl && !s.secondaryUrl ? " · ไม่มี URL" : ""}
+                  · {s.reason || "—"}
+                  {s.billNo ? ` · ${s.billNo}` : ""} · เครื่อง{" "}
+                  {shortStableKey("", s.installId)}
+                  {!s.primaryUrl && !s.secondaryUrl && !s.slipUrl ? " · ไม่มี URL" : ""}
                 </span>
               </p>
               <NposCaptureGallery
+                slipUrl={resolveNposCaptureDisplayUrl({
+                  shotId: s.id,
+                  role: "slip",
+                  storedUrl: s.slipUrl,
+                })}
                 primaryUrl={resolveNposCaptureDisplayUrl({
                   shotId: s.id,
                   role: "primary",

@@ -91,6 +91,13 @@ textarea {
   background: transparent;
 }
 
+/** Placeholder while meta/brandLogo loads — avoids flashing stock TellTea SVG */
+.brand-logo-slot {
+  display: inline-block;
+  width: 2.75rem;
+  background: transparent;
+}
+
 .brand {
   font-family: var(--font-display), "Poppins", sans-serif;
   font-size: clamp(2rem, 8vw, 2.6rem);
@@ -355,6 +362,12 @@ body.modal-open .main-panel {
   height: clamp(5.5rem, 28vw, 8rem);
   max-width: min(86vw, 20rem);
   filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.18));
+}
+
+.hero-brand .brand-logo-slot {
+  height: clamp(5.5rem, 28vw, 8rem);
+  width: clamp(5.5rem, 28vw, 8rem);
+  max-width: min(86vw, 20rem);
 }
 
 .hero-brand .brand {
@@ -12181,6 +12194,12 @@ body.modal-open .main-panel {
   line-height: 1.4;
 }
 
+.business-logo-error {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
 .business-logo-actions {
   display: flex;
   flex-wrap: wrap;
@@ -18086,6 +18105,33 @@ body.modal-open .main-panel {
   flex-direction: column;
   gap: 0.65rem;
   min-width: 0;
+}
+
+.pos-biz-slip-head {
+  margin: 0;
+  padding: 0.75rem 0.85rem 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--border, #d4d4d8) 85%, transparent);
+  border-radius: 10px;
+  min-width: 0;
+}
+
+.pos-biz-slip-head legend {
+  padding: 0 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 650;
+  color: var(--text, #18181b);
+}
+
+.pos-biz-logo-block {
+  display: grid;
+  gap: 0.65rem;
+  margin-bottom: 0.85rem;
+}
+
+.pos-biz-logo-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.35;
 }
 
 .pos-biz-grid {
@@ -26143,6 +26189,66 @@ a.ghost-btn {
   min-width: 0;
   display: grid;
   gap: 0.25rem;
+}
+
+.pos-dash-card--members .pos-dash-card-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.pos-dash-member-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin-bottom: 0.55rem;
+}
+
+@media (min-width: 700px) {
+  .pos-dash-member-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.pos-dash-member-stats > div {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 0.45rem;
+  background: rgba(28, 42, 31, 0.04);
+  font-size: 0.72rem;
+  min-width: 0;
+}
+
+.pos-dash-member-stats strong {
+  font-size: 1rem;
+}
+
+.pos-dash-member-trend.is-up {
+  color: #2f7d4a;
+  font-weight: 600;
+}
+
+.pos-dash-member-trend.is-down {
+  color: #b45309;
+  font-weight: 600;
+}
+
+.pos-dash-member-trend.is-flat {
+  color: rgba(28, 42, 31, 0.55);
+}
+
+.pos-dash-member-bar {
+  fill: #7eb8d8;
+}
+
+.pos-dash-member-line {
+  stroke: #2f7d4a;
+  stroke-width: 2.2;
+}
+
+.pos-dash-member-legend {
+  margin-top: 0.25rem;
 }
 
 .pos-dash-bottom-grid {

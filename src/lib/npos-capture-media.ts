@@ -2,13 +2,16 @@
 export const NPOS_CAPTURE_MEDIA_URL =
   "https://asia-southeast1-mypeer-501909.cloudfunctions.net/nposCaptureMedia";
 
+export type NposCaptureRole = "primary" | "secondary" | "slip";
+
 export function nposCaptureMediaUrl(
   shotId: string | undefined | null,
-  role: "primary" | "secondary",
+  role: NposCaptureRole,
 ): string {
   const id = String(shotId || "").trim();
   if (!id) return "";
-  return `${NPOS_CAPTURE_MEDIA_URL}?id=${encodeURIComponent(id)}&role=${role}`;
+  const r = role === "secondary" || role === "slip" ? role : "primary";
+  return `${NPOS_CAPTURE_MEDIA_URL}?id=${encodeURIComponent(id)}&role=${r}`;
 }
 
 /**
@@ -19,7 +22,7 @@ export function nposCaptureMediaUrl(
  */
 export function resolveNposCaptureDisplayUrl(opts: {
   shotId?: string | null;
-  role: "primary" | "secondary";
+  role: NposCaptureRole;
   storedUrl?: string | null;
 }): string {
   const stored = String(opts.storedUrl || "").trim();

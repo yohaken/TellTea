@@ -26,26 +26,47 @@ assert.match(brand, /meta", "brandLogo"/);
 assert.match(brand, /purgeLegacyBrandLogoStorage/);
 assert.match(brand, /if \(next === memorySrc\) return/);
 assert.match(brand, /loadPromise/);
+assert.match(brand, /logoEpoch/);
+assert.match(brand, /epochAtStart !== logoEpoch/);
 assert.match(brand, /lightBgKnockedOut/);
+assert.match(brand, /BRAND_LOGO_KNOCKOUT_VERSION = 2/);
+assert.match(brand, /knockoutVersion/);
+assert.match(brand, /forceKnockout|prepareAndShrinkLogo\([^)]*true/);
 assert.match(brand, /prepareBrandLogoPngDataUrl|prepareAndShrinkLogo/);
 assert.match(receipts, /LOGO_DATA_URL_SOFT_MAX = 80_000/);
 assert.match(receipts, /edge = 320/);
 assert.match(receipts, /knockOutLogoLightBackground/);
 assert.match(receipts, /prepareBrandLogoPngDataUrl/);
+assert.match(receipts, /forceKnockout/);
 assert.match(receipts, /isLogoKnockoutRgb/);
+assert.match(receipts, /avg >= 150/);
+assert.match(receipts, /checkerboard|ตารางหมากรุก|Transparency-grid/);
 assert.match(logoField, /ตัดแถบขาว|ตัดพื้นขาว/);
+assert.match(logoField, /getBrandLogoMemory/);
+assert.match(logoField, /Do not wipe a newer upload|newer upload/);
 
 // businessProfile must stay text-only (no localStorage of data URLs)
 assert.doesNotMatch(profile, /localStorage|cacheBrandLogo|saveBusinessLogo/);
 assert.match(profile, /ห้ามฝัง data URL|Never write image bytes|Never keep fat/);
 
 // AppBrand: singleton load, no getBusinessProfile for logo, no re-cache loop
+// Wait for load before stock SVG so login does not flash old TellTea mark.
 assert.match(appBrand, /loadBrandLogo/);
+assert.match(appBrand, /logoResolved/);
+assert.match(appBrand, /brand-logo-slot/);
 assert.doesNotMatch(appBrand, /getBusinessProfile|cacheBrandLogo/);
 assert.match(appBrand, /setCustomLogoSrc\(detail\)/);
 
 assert.match(logoField, /saveBrandLogo/);
+assert.match(logoField, /UPLOAD_BUDGET_MS|ย่อรูปนานเกินไป|บันทึกโลโก้นานเกินไป/);
+assert.match(logoField, /business-logo-error|localError/);
+assert.match(logoField, /ยกเลิก/);
 assert.doesNotMatch(logoField, /saveBusinessLogo|saveEvidencePhotoDoc/);
+assert.match(receipts, /Sync PNG encode/);
+assert.match(receipts, /toDataURL\("image\/png"\)/);
+assert.match(receipts, /decodeImageFile|createObjectURL/);
+assert.match(receipts, /ยังไม่รองรับ HEIC/);
+assert.match(receipts, /function canvasToPngDataUrl[\s\S]*?toDataURL\("image\/png"\)/);
 
 assert.match(rules, /docId == 'brandLogo'/);
 assert.match(rules, /docId == 'businessProfile'/);

@@ -50,6 +50,10 @@ export type NposDiagnoseReport = {
   latestPrimaryUrl: string;
   latestSecondaryUrl: string;
   latestCaptureReason: string;
+  latestSlipAt: number;
+  latestSlipId: string;
+  latestSlipUrl: string;
+  latestSlipBillNo: string;
 };
 
 function mapDisplay(raw: unknown, index: number): NposDisplayInfo {
@@ -126,6 +130,11 @@ export function mapNposDiagnoseReport(
       typeof data?.latestSecondaryUrl === "string" ? data.latestSecondaryUrl : "",
     latestCaptureReason:
       typeof data?.latestCaptureReason === "string" ? data.latestCaptureReason : "",
+    latestSlipAt: typeof data?.latestSlipAt === "number" ? data.latestSlipAt : 0,
+    latestSlipId: typeof data?.latestSlipId === "string" ? data.latestSlipId : "",
+    latestSlipUrl: typeof data?.latestSlipUrl === "string" ? data.latestSlipUrl : "",
+    latestSlipBillNo:
+      typeof data?.latestSlipBillNo === "string" ? data.latestSlipBillNo : "",
   };
 }
 
