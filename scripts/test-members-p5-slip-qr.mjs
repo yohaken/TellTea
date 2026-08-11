@@ -54,7 +54,7 @@ assert.match(complete, /memberName/);
 const membersFn = read("functions/pos-members.js");
 assert.match(membersFn, /tryIssueReceiptClaimForSale/);
 assert.match(membersFn, /buildPublicClaimUrl/);
-assert.match(membersFn, /telltea-bo\.web\.app\/claim/);
+assert.match(membersFn, /telltea-bo\.web\.app\/r\/c\//);
 
 const nposSell = read("functions/npos-sell.js");
 assert.match(nposSell, /membersReceiptClaimEnabled/);

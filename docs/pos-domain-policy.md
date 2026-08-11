@@ -34,7 +34,11 @@ URL เก่า `telltea-shop.web.app/pos/` → redirect ไป `telltea-pos.we
 
 - สลิป/ลิงก์เก่าที่ฝัง `telltea-shop.web.app` **ใช้ไม่ได้** — พิมพ์ QR ใหม่หรือปรับแต้มมือให้ลูกค้า
 - Runtime ต้องชี้ `telltea-bo` เท่านั้น — CI: `npm run test:no-dead-telltea-shop`
-- แผนถัดไป (ยังไม่ทำ): short-link กลางสำหรับ QR สลิป เพื่อไม่ฝังโดเมนเต็มลงกระดาษ
+- สลิปใหม่พิมพ์ short path บนโดเมนเดิม:
+  - claim: `/r/c/{saleId}/{token}/` → redirect ไป `/claim/?s=&t=`
+  - gift: `/r/g/{token}/` → redirect ไป `/gift/?c=`
+- ลิงก์ยาว `/claim` `/gift` **ยังใช้ได้** — short-link ไม่กันกรณีโดเมน/Hosting ถูกลบ
+- **ห้ามลบไซต์ telltea-bo** — QR สลิปทั้งหมดพัง
 
 ## สิ่งที่ห้ามทำ
 

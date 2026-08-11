@@ -14,9 +14,16 @@ export function AppRootProviders({ children }: { children: React.ReactNode }) {
   const isPublicJoin = pathname === "/join" || pathname.startsWith("/join/");
   const isPublicClaim = pathname === "/claim" || pathname.startsWith("/claim/");
   const isPublicGift = pathname === "/gift" || pathname.startsWith("/gift/");
+  /** Short slip QR redirect (/r/c/… /r/g/…) — Hosting may rewrite deep paths here */
+  const isPublicShortLink = pathname === "/r" || pathname.startsWith("/r/");
   const isPublicMemberMe = pathname === "/me" || pathname.startsWith("/me/");
   const skipBoAuth =
-    isPos || isPublicJoin || isPublicClaim || isPublicGift || isPublicMemberMe;
+    isPos ||
+    isPublicJoin ||
+    isPublicClaim ||
+    isPublicGift ||
+    isPublicShortLink ||
+    isPublicMemberMe;
 
   useEffect(() => {
     if (skipBoAuth) return;

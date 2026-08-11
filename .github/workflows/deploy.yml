@@ -44,6 +44,12 @@ jobs:
       - name: Guard APP_BUILD / POS_BUILD bump when UI changes
         run: npm run test:app-build-bump
 
+      - name: Guard no dead telltea-shop runtime URLs
+        run: npm run test:no-dead-telltea-shop
+
+      - name: Guard short receipt QR links
+        run: npm run test:short-receipt-link
+
       - name: Build static export
         run: npm run build
 

@@ -844,15 +844,15 @@ function randomClaimToken() {
 }
 
 function buildPublicClaimUrl(saleId, token) {
-  const s = encodeURIComponent(String(saleId || ""));
-  const t = encodeURIComponent(String(token || ""));
-  // Canonical public shop/BO host (telltea-shop site id is gone / reserved elsewhere).
-  return `https://telltea-bo.web.app/claim/?s=${s}&t=${t}`;
+  const s = encodeURIComponent(String(saleId || "").trim());
+  const t = encodeURIComponent(String(token || "").trim());
+  // Short path on telltea-bo; /r page redirects to /claim (long URLs still work).
+  return `https://telltea-bo.web.app/r/c/${s}/${t}/`;
 }
 
 function buildPublicGiftUrl(token) {
-  const c = encodeURIComponent(String(token || ""));
-  return `https://telltea-bo.web.app/gift/?c=${c}`;
+  const c = encodeURIComponent(String(token || "").trim());
+  return `https://telltea-bo.web.app/r/g/${c}/`;
 }
 
 function bangkokDayKey(ms = Date.now()) {
