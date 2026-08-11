@@ -4,4 +4,4 @@
 
 **ชื่อไฟล์ที่แนะนำ:** `TELL TEA - สต๊อกสินค้า.csv`
 
-หรือนำเข้าผ่านแอป: https://telltea-shop.web.app/stock/ → ตั้งค่า → เลือก CSV
+หรือนำเข้าผ่านแอป: https://telltea-bo.web.app/stock/ → ตั้งค่า → เลือก CSV

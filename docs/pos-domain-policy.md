@@ -30,6 +30,12 @@ URL เก่า `telltea-shop.web.app/pos/` → redirect ไป `telltea-pos.we
 
 **ห้ามลบไซต์ telltea-bo / telltea-pos** — claim QR + APK พังทันที
 
+## หลังเหตุ telltea-shop ถูกลบ (2026-08-11)
+
+- สลิป/ลิงก์เก่าที่ฝัง `telltea-shop.web.app` **ใช้ไม่ได้** — พิมพ์ QR ใหม่หรือปรับแต้มมือให้ลูกค้า
+- Runtime ต้องชี้ `telltea-bo` เท่านั้น — CI: `npm run test:no-dead-telltea-shop`
+- แผนถัดไป (ยังไม่ทำ): short-link กลางสำหรับ QR สลิป เพื่อไม่ฝังโดเมนเต็มลงกระดาษ
+
 ## สิ่งที่ห้ามทำ
 
 - เขียน `ledger` จาก POS

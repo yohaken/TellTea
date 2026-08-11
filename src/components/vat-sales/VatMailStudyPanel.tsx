@@ -49,7 +49,7 @@ const DEFAULT_REDIRECT =
   "https://asia-southeast1-mypeer-501909.cloudfunctions.net/vatMailOAuthCallback";
 
 const SOURCES_RETURN =
-  "https://telltea-shop.web.app/vat-sales/sources/?mail=connected";
+  "https://telltea-bo.web.app/vat-sales/sources/?mail=connected";
 
 function grainLabel(g: string) {
   if (g === "monthly") return "สรุปเดือน";

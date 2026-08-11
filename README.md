@@ -5,7 +5,7 @@
 
 ## ลิงก์แอป
 
-**https://telltea-shop.web.app**
+**https://telltea-bo.web.app**
 
 ## บทบาท
 
@@ -33,7 +33,7 @@
 
 ### สมาชิก (`/claim`, `/me`) — TellTea เอง
 - **เบอร์มือถือไทย + OTP** เป็นทางหลัก (06/08/09)
-- **Google** ใช้ Firebase `signInWithRedirect` บน `telltea-shop.web.app` (same-origin)
+- **Google** ใช้ Firebase `signInWithRedirect` บน `telltea-bo.web.app` (same-origin)
 - **ไม่พึ่ง** P-Note / `telltea-auth.html` / `loginTickets` สำหรับสมาชิก
 - โค้ด: `src/lib/member-auth.ts` · `src/lib/phone-auth.ts`
 
@@ -89,7 +89,7 @@ Push ไป `main` → GitHub Actions deploy Hosting + Firestore rules
 
 | เช็ค | ความหมาย |
 |------|----------|
-| `https://telltea-shop.web.app/version.json` | build หลังบ้านจริงบน CDN |
+| `https://telltea-bo.web.app/version.json` | build หลังบ้านจริงบน CDN |
 | ป้ายเวอร์ชันในแอป (`4.xxx`) | build ของ JS ที่แท็บนั้นโหลดอยู่ |
 | CI `test:app-build-bump` | แก้ UI แล้วต้อง bump `APP_BUILD` |
 | CI `smoke:live-version` | หลัง deploy บังคับให้ live ≥ build ใน commit |

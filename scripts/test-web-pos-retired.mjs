@@ -14,7 +14,7 @@ assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 102/);
 
 const retired = read("src/components/PosWebRetired.tsx");
 assert.match(retired, /เว็บ POS เลิกใช้แล้ว|nPos-telltea/);
-assert.match(retired, /telltea-shop\.web\.app\/pos-sales/);
+assert.match(retired, /telltea-bo\.web\.app\/pos-sales/);
 assert.match(retired, /POS_APK_INSTALL_PAGE_URL/);
 assert.match(read("src/lib/pos-url.ts"), /telltea-pos\.web\.app\/install/);
 

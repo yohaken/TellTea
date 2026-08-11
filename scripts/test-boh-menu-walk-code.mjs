@@ -36,7 +36,7 @@ check("A1.2", /isOwner/.test(menuPage) && /\/more\//.test(menuPage));
 check("A1.4", /isOwner[\s\S]{0,80}\/menu\//.test(more));
 check("A2.1", more.includes('href="/menu/"'));
 check("A3.2", /PosWebRetired/.test(posMenu));
-check("A3.3", /telltea-shop\.web\.app\/menu/.test(retired));
+check("A3.3", /telltea-bo\.web\.app\/menu/.test(retired));
 check("A3.4", /pos-sales/.test(retired));
 check("A3.5", /install|POS_APK_INSTALL/.test(retired));
 check("A3.6", /!isBoh \? \(/.test(admin));

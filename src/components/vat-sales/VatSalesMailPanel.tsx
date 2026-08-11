@@ -167,7 +167,7 @@ export function VatSalesMailPanel({
       const returnTo =
         typeof window !== "undefined"
           ? `${window.location.origin}/vat-sales/?tab=mail`
-          : "https://telltea-shop.web.app/vat-sales/?tab=mail";
+          : "https://telltea-bo.web.app/vat-sales/?tab=mail";
       const url = await startVatMailOAuth(returnTo);
       window.location.href = url;
     } catch (e) {
