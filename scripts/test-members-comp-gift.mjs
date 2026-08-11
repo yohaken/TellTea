@@ -2,11 +2,13 @@
  * Guard: QR ให้แต้ม (comp coupon) + customer signup paths stay intact.
  */
 import assert from "node:assert/strict";
+import { createRequire } from "node:module";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const require = createRequire(import.meta.url);
 const read = (p) => readFileSync(join(root, p), "utf8");
 
 // --- Feature: settings + API + pages ---
@@ -28,11 +30,16 @@ assert.match(posMembers, /buildPublicGiftUrl/);
 assert.match(posMembers, /pointCoupons/);
 assert.match(posMembers, /earn_comp_coupon/);
 assert.match(posMembers, /meta\/compCouponDaily/);
+assert.match(posMembers, /enabled: d\.enabled === true,/);
 // Receipt claim signup path unchanged
 assert.match(posMembers, /source: "receipt_qr"/);
 assert.match(posMembers, /phone_otp_required/);
 assert.match(posMembers, /async function claimReceiptPoints/);
 assert.match(posMembers, /async function publicSignup/);
+// Load module — catch syntax errors before Functions deploy.
+const posMembersMod = require(join(root, "functions/pos-members.js"));
+assert.equal(typeof posMembersMod.issueCompCoupon, "function");
+assert.equal(typeof posMembersMod.claimCompCoupon, "function");
 
 const nposSell = read("functions/npos-sell.js");
 assert.match(nposSell, /nposIssueCompCoupon/);

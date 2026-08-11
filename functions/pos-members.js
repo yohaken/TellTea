@@ -76,7 +76,7 @@ async function loadMemberSettings(db) {
       : 200;
   return {
     // Default OFF when doc missing — live counters stay unchanged until owner enables.
-    enabled: d.enabled === true;
+    enabled: d.enabled === true,
     bahtPerPoint:
       typeof d.bahtPerPoint === "number" && d.bahtPerPoint > 0 ? d.bahtPerPoint : 25,
     pointsPerBahtRedeem:
