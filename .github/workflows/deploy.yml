@@ -130,6 +130,11 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: node scripts/repair-ot-bonus-rates.mjs
 
+      - name: Enable QR ให้แต้ม (comp coupon) in member settings
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node scripts/enable-members-comp-coupon.mjs
+
       - name: Install Cloud Functions deps
         run: npm ci
         working-directory: functions

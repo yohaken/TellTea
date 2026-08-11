@@ -14,9 +14,13 @@ const read = (p) => readFileSync(join(root, p), "utf8");
 // --- Feature: settings + API + pages ---
 const members = read("src/lib/members.ts");
 assert.match(members, /compCouponEnabled/);
+assert.match(members, /compCouponEnabled: true/);
 assert.match(members, /compCouponDailyQuota/);
 assert.match(members, /earn_comp_coupon/);
 assert.match(members, /getCompCouponDailyUsage/);
+assert.ok(existsSync(join(root, "scripts/enable-members-comp-coupon.mjs")));
+assert.match(read("scripts/enable-members-comp-coupon.mjs"), /compCouponEnabled: true/);
+assert.match(read(".github/workflows/deploy.yml"), /enable-members-comp-coupon/);
 
 const membersPage = read("src/app/members/page.tsx");
 assert.match(membersPage, /QR ให้แต้ม/);
