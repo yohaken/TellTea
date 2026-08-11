@@ -29,6 +29,7 @@ export type MemberStatus = "active" | "suspended" | "deleted";
 export type MemberLedgerReason =
   | "earn_sale"
   | "earn_receipt_claim"
+  | "earn_comp_coupon"
   | "redeem"
   | "redeem_void_reverse"
   | "adjust"
@@ -86,6 +87,12 @@ export type MemberSettings = {
   receiptClaimEnabled: boolean;
   /** อายุ claimToken (วัน) */
   claimTokenTtlDays: number;
+  /** QR ให้แต้ม (comp) จากเครื่องขาย — ค่าเริ่มปิด */
+  compCouponEnabled: boolean;
+  /** แต้มต่อสลิป — ล็อก 1 ตอนนี้ */
+  compCouponPointsPerSlip: number;
+  /** โควต้าออกคูปองต่อวัน (Asia/Bangkok) */
+  compCouponDailyQuota: number;
   updatedAt: number;
   updatedBy: string;
 };
@@ -104,6 +111,9 @@ export const DEFAULT_MEMBER_SETTINGS: MemberSettings = {
   publicSignupToken: "",
   receiptClaimEnabled: false,
   claimTokenTtlDays: 30,
+  compCouponEnabled: false,
+  compCouponPointsPerSlip: 1,
+  compCouponDailyQuota: 100,
   updatedAt: 0,
   updatedBy: "",
 };
@@ -118,6 +128,7 @@ export const MEMBER_SOURCE_LABELS: Record<MemberSource, string> = {
 export const MEMBER_LEDGER_REASON_LABELS: Record<MemberLedgerReason, string> = {
   earn_sale: "สะสมจากบิล",
   earn_receipt_claim: "เคลมจากสลิป",
+  earn_comp_coupon: "QR ให้แต้ม",
   redeem: "แลกแต้ม",
   redeem_void_reverse: "คืนแต้มที่แลก (ยกเลิกบิล)",
   adjust: "ปรับมือ",
@@ -199,6 +210,7 @@ function mapLedger(snap: QueryDocumentSnapshot): MemberLedgerEntry {
     reason:
       reason === "earn_sale" ||
       reason === "earn_receipt_claim" ||
+      reason === "earn_comp_coupon" ||
       reason === "redeem" ||
       reason === "signup_bonus" ||
       reason === "void_reverse"
@@ -243,6 +255,14 @@ function mapSettings(data: Partial<MemberSettings> | undefined): MemberSettings 
       Number.isFinite(ttlRaw) && ttlRaw >= 1 && ttlRaw <= 365
         ? Math.floor(ttlRaw)
         : DEFAULT_MEMBER_SETTINGS.claimTokenTtlDays,
+    compCouponEnabled: data.compCouponEnabled === true,
+    compCouponPointsPerSlip: 1,
+    compCouponDailyQuota:
+      typeof data.compCouponDailyQuota === "number" &&
+      data.compCouponDailyQuota >= 0 &&
+      data.compCouponDailyQuota <= 10000
+        ? Math.floor(data.compCouponDailyQuota)
+        : DEFAULT_MEMBER_SETTINGS.compCouponDailyQuota,
     updatedAt: typeof data.updatedAt === "number" ? data.updatedAt : 0,
     updatedBy: typeof data.updatedBy === "string" ? data.updatedBy : "",
   };
@@ -265,7 +285,10 @@ export async function saveMemberSettings(
       | "publicSignupEnabled"
       | "publicSignupToken"
       | "receiptClaimEnabled"
-            | "claimTokenTtlDays"
+      | "claimTokenTtlDays"
+      | "compCouponEnabled"
+      | "compCouponPointsPerSlip"
+      | "compCouponDailyQuota"
     >
   >,
   updatedBy: string,
@@ -301,6 +324,17 @@ export async function saveMemberSettings(
         ? patch.receiptClaimEnabled
         : current.receiptClaimEnabled,
     claimTokenTtlDays,
+    compCouponEnabled:
+      typeof patch.compCouponEnabled === "boolean"
+        ? patch.compCouponEnabled
+        : current.compCouponEnabled,
+    compCouponPointsPerSlip: 1,
+    compCouponDailyQuota:
+      typeof patch.compCouponDailyQuota === "number" &&
+      patch.compCouponDailyQuota >= 0 &&
+      patch.compCouponDailyQuota <= 10000
+        ? Math.floor(patch.compCouponDailyQuota)
+        : current.compCouponDailyQuota,
     bahtPerPoint:
       typeof patch.bahtPerPoint === "number" && patch.bahtPerPoint > 0
         ? patch.bahtPerPoint
@@ -327,12 +361,36 @@ export async function saveMemberSettings(
       publicSignupToken: next.publicSignupToken,
       receiptClaimEnabled: next.receiptClaimEnabled,
       claimTokenTtlDays: next.claimTokenTtlDays,
+      compCouponEnabled: next.compCouponEnabled,
+      compCouponPointsPerSlip: 1,
+      compCouponDailyQuota: next.compCouponDailyQuota,
       updatedAt: next.updatedAt,
       updatedBy: next.updatedBy,
     },
     { merge: true },
   );
   return next;
+}
+
+/** Daily issued counter for QR ให้แต้ม (Asia/Bangkok day). */
+export async function getCompCouponDailyUsage(): Promise<{
+  dayKey: string;
+  issued: number;
+}> {
+  const now = Date.now();
+  const dayKey = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(now));
+  const snap = await getDoc(doc(getDb(), "meta", "compCouponDaily"));
+  if (!snap.exists()) return { dayKey, issued: 0 };
+  const d = snap.data() as { dayKey?: string; issued?: number };
+  if (d.dayKey !== dayKey) return { dayKey, issued: 0 };
+  const issued =
+    typeof d.issued === "number" && d.issued >= 0 ? Math.floor(d.issued) : 0;
+  return { dayKey, issued };
 }
 
 export async function getMember(id: string): Promise<ShopMember | null> {

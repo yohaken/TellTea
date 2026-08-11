@@ -19,6 +19,7 @@ import {
   createMember,
   deleteMember,
   filterMembers,
+  getCompCouponDailyUsage,
   getMemberSettings,
   listMemberLedger,
   listMembers,
@@ -105,6 +106,9 @@ function MembersView() {
   const [setPublic, setSetPublic] = useState(false);
   const [setReceiptClaim, setSetReceiptClaim] = useState(false);
   const [setClaimTtl, setSetClaimTtl] = useState("30");
+  const [setCompCoupon, setSetCompCoupon] = useState(false);
+  const [setCompQuota, setSetCompQuota] = useState("100");
+  const [compIssuedToday, setCompIssuedToday] = useState(0);
 
   const [todaySales, setTodaySales] = useState<PosSale[]>([]);
   const [claimSaleId, setClaimSaleId] = useState("");
@@ -117,7 +121,11 @@ function MembersView() {
     setLoading(true);
     setError(null);
     try {
-      const [list, cfg] = await Promise.all([listMembers(), getMemberSettings()]);
+      const [list, cfg, daily] = await Promise.all([
+        listMembers(),
+        getMemberSettings(),
+        getCompCouponDailyUsage(),
+      ]);
       setMembers(list);
       setSettings(cfg);
       setSetEnabled(cfg.enabled);
@@ -127,6 +135,9 @@ function MembersView() {
       setSetPublic(cfg.publicSignupEnabled);
       setSetReceiptClaim(cfg.receiptClaimEnabled);
       setSetClaimTtl(String(cfg.claimTokenTtlDays));
+      setSetCompCoupon(cfg.compCouponEnabled);
+      setSetCompQuota(String(cfg.compCouponDailyQuota));
+      setCompIssuedToday(daily.issued);
       setSelected((prev) => {
         if (!prev) return null;
         return list.find((m) => m.id === prev.id) || null;
@@ -305,12 +316,22 @@ function MembersView() {
     const redeem = Number(setRedeem);
     const bonus = Number(setBonus);
     const claimTtl = Number(setClaimTtl);
+    const compQuota = Number(setCompQuota);
     if (!(baht > 0) || !(redeem > 0) || !(bonus >= 0) || !Number.isFinite(bonus)) {
       setError("ค่าตั้งค่าไม่ถูกต้อง");
       return;
     }
     if (!(claimTtl >= 1) || claimTtl > 365 || !Number.isFinite(claimTtl)) {
       setError("อายุลิงก์ 1–365 วัน");
+      return;
+    }
+    if (
+      !Number.isFinite(compQuota) ||
+      compQuota < 0 ||
+      compQuota > 10000 ||
+      (setCompCoupon && !(compQuota > 0))
+    ) {
+      setError("โควต้า QR ให้แต้ม 1–10000 ต่อวัน (เมื่อเปิดใช้)");
       return;
     }
     setSaving(true);
@@ -326,10 +347,15 @@ function MembersView() {
           publicSignupEnabled: setPublic,
           receiptClaimEnabled: setReceiptClaim,
           claimTokenTtlDays: Math.floor(claimTtl),
+          compCouponEnabled: setCompCoupon,
+          compCouponPointsPerSlip: 1,
+          compCouponDailyQuota: Math.floor(compQuota),
         },
         actorId,
       );
       setSettings(next);
+      const daily = await getCompCouponDailyUsage();
+      setCompIssuedToday(daily.issued);
       setMsg("บันทึกแล้ว");
     } catch (err) {
       setError(mapFirestoreError(err, "บันทึกตั้งค่า"));
@@ -592,6 +618,9 @@ function MembersView() {
               {" · "}
               QR สลิป:{" "}
               <strong>{setReceiptClaim ? "เปิด (พิมพ์ทุกใบ)" : "ปิด"}</strong>
+              {" · "}
+              QR ให้แต้ม:{" "}
+              <strong>{setCompCoupon ? "เปิด" : "ปิด"}</strong>
             </p>
             <ul className="members-gate-list">
               <li>เทสเครื่องครบก่อนเปิด — ดู docs/members-p6-gate.md</li>
@@ -699,6 +728,33 @@ function MembersView() {
                 required
               />
             </label>
+            <label className="members-slim-check">
+              <input
+                type="checkbox"
+                checked={setCompCoupon}
+                disabled={!canManage || saving}
+                onChange={(e) => setSetCompCoupon(e.target.checked)}
+              />
+              <span>QR ให้แต้ม — พนักงานกดพิมพ์จากเครื่องขาย (1 แต้ม/ใบ · ใช้ครั้งเดียว)</span>
+            </label>
+            <label>
+              <span>โควต้า QR ให้แต้ม ต่อวัน</span>
+              <input
+                type="number"
+                min={0}
+                max={10000}
+                step={1}
+                value={setCompQuota}
+                disabled={!canManage || saving}
+                onChange={(e) => setSetCompQuota(e.target.value)}
+                required
+              />
+            </label>
+            <p className="muted members-slim-hint">
+              วันนี้ใช้ไปแล้ว {compIssuedToday}
+              {setCompQuota ? ` / ${setCompQuota}` : ""} ใบ · นับตอนพิมพ์ · รีเซ็ตเที่ยงคืน
+              (Asia/Bangkok) · แต้มต่อใบ = 1
+            </p>
             <label className="members-slim-check">
               <input
                 type="checkbox"

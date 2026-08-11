@@ -19,6 +19,10 @@ public final class MemberApi {
       "https://asia-southeast1-mypeer-501909.cloudfunctions.net/nposMemberLookup";
   public static final String CREATE_URL =
       "https://asia-southeast1-mypeer-501909.cloudfunctions.net/nposMemberQuickCreate";
+  public static final String COMP_STATUS_URL =
+      "https://asia-southeast1-mypeer-501909.cloudfunctions.net/nposCompCouponStatus";
+  public static final String COMP_ISSUE_URL =
+      "https://asia-southeast1-mypeer-501909.cloudfunctions.net/nposIssueCompCoupon";
 
   public interface Callback {
     void onResult(JSONObject res);
@@ -93,11 +97,58 @@ public final class MemberApi {
     callback.onResult(res);
   }
 
+  /** Remaining daily quota for QR ให้แต้ม. */
+  public static void compCouponStatus(Context context, Callback callback) {
+    Context app = context.getApplicationContext();
+    EXEC.execute(
+        () -> {
+          try {
+            JSONObject body = new JSONObject();
+            body.put("installId", DeviceIdentity.getOrCreateInstallId(app));
+            JSONObject res = MenuRepository.postJson(COMP_STATUS_URL, body, 6_000, 10_000);
+            MAIN.post(() -> deliver(res, callback));
+          } catch (Exception e) {
+            MAIN.post(
+                () -> {
+                  if (callback != null) {
+                    callback.onError(
+                        e.getMessage() == null ? "เช็คโควต้าไม่สำเร็จ" : e.getMessage());
+                  }
+                });
+          }
+        });
+  }
+
+  /** Issue one gift-point coupon (decrements quota). */
+  public static void issueCompCoupon(Context context, Callback callback) {
+    Context app = context.getApplicationContext();
+    EXEC.execute(
+        () -> {
+          try {
+            JSONObject body = new JSONObject();
+            body.put("installId", DeviceIdentity.getOrCreateInstallId(app));
+            JSONObject res = MenuRepository.postJson(COMP_ISSUE_URL, body, 6_000, 12_000);
+            MAIN.post(() -> deliver(res, callback));
+          } catch (Exception e) {
+            MAIN.post(
+                () -> {
+                  if (callback != null) {
+                    callback.onError(
+                        e.getMessage() == null ? "ออก QR ให้แต้มไม่สำเร็จ" : e.getMessage());
+                  }
+                });
+          }
+        });
+  }
+
   static String humanError(String code) {
     if (code == null || code.isEmpty()) return "ค้นหาสมาชิกไม่สำเร็จ";
     if ("invalid_phone".equals(code)) return "เบอร์ไม่ถูกต้อง";
     if ("disabled".equals(code)) return "ระบบสมาชิกยังไม่เปิด";
-    if ("lookup_failed".equals(code) || "create_failed".equals(code)) {
+    if ("comp_off".equals(code)) return "ยังไม่เปิด QR ให้แต้มที่หลังร้าน";
+    if ("quota_exhausted".equals(code)) return "โควต้าวันนี้หมดแล้ว";
+    if ("quota_zero".equals(code)) return "ยังไม่ได้ตั้งโควต้า QR ให้แต้ม";
+    if ("lookup_failed".equals(code) || "create_failed".equals(code) || "issue_failed".equals(code)) {
       return "เชื่อมต่อสมาชิกไม่สำเร็จ — ลองใหม่";
     }
     return code;

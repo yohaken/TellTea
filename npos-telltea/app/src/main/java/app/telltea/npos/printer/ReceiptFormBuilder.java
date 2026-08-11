@@ -272,6 +272,44 @@ public final class ReceiptFormBuilder {
     return sb.toString();
   }
 
+  /**
+   * Short gift-point slip (QR ให้แต้ม) — shop name, +N points, claim QR.
+   * Reuses {@link #CLAIM_QR_INVITE} so Sunmi bitmap path styles the invite line.
+   */
+  public static List<ReceiptSlipLine> buildGiftCouponLines(
+      JSONObject shop, int points, String claimUrl) {
+    List<ReceiptSlipLine> out = new ArrayList<>();
+    String shopEn = firstNonEmpty(opt(shop, "shopName"), DEFAULT_SHOP_EN);
+    String shopTh = firstNonEmpty(opt(shop, "shopNameTh"), DEFAULT_SHOP_TH);
+    String footerNote = firstNonEmpty(opt(shop, "receiptFooterNote"), DEFAULT_FOOTER);
+    int pts = Math.max(1, points);
+    if (shouldPrintShopLogo(shop)) {
+      out.add(ReceiptSlipLine.logoMark());
+      out.add(ReceiptSlipLine.blank());
+    }
+    out.add(ReceiptSlipLine.center(shopEn, true));
+    if (!shopTh.isEmpty() && !shopTh.equalsIgnoreCase(shopEn)) {
+      out.add(ReceiptSlipLine.center(shopTh, false));
+    }
+    out.add(ReceiptSlipLine.doubleRule());
+    out.add(ReceiptSlipLine.center("ของขวัญแต้ม", true));
+    out.add(ReceiptSlipLine.center("+" + pts + " แต้ม", true));
+    out.add(ReceiptSlipLine.rule());
+    if (claimUrl != null && !claimUrl.trim().isEmpty()) {
+      out.add(ReceiptSlipLine.blank());
+      out.add(ReceiptSlipLine.qrMark());
+      out.add(ReceiptSlipLine.center(CLAIM_QR_INVITE, true));
+      out.add(ReceiptSlipLine.center(CLAIM_QR_HINT, false));
+    }
+    out.add(ReceiptSlipLine.blank());
+    out.add(ReceiptSlipLine.center(footerNote, false));
+    return out;
+  }
+
+  public static String buildGiftCouponBody(JSONObject shop, int points, String claimUrl, int cols) {
+    return renderEscPos(buildGiftCouponLines(shop, points, claimUrl), cols);
+  }
+
   /** BO flag default ON when brandLogo exists (`receiptPrintLogo !== false`). */
   static boolean shouldPrintShopLogo(JSONObject shop) {
     if (shop == null) return false;
