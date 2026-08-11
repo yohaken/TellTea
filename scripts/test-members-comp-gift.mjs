@@ -37,7 +37,7 @@ assert.match(posMembers, /phone_otp_required/);
 assert.match(posMembers, /async function claimReceiptPoints/);
 assert.match(posMembers, /async function publicSignup/);
 // Load module — catch syntax errors before Functions deploy.
-const posMembersMod = await import(join(root, "functions/pos-members.js"));
+const posMembersMod = require(join(root, "functions/pos-members.js"));
 assert.equal(typeof posMembersMod.issueCompCoupon, "function");
 assert.equal(typeof posMembersMod.claimCompCoupon, "function");
 
