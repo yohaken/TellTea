@@ -113,7 +113,8 @@ export const DEFAULT_MEMBER_SETTINGS: MemberSettings = {
   claimTokenTtlDays: 30,
   compCouponEnabled: false,
   compCouponPointsPerSlip: 1,
-  compCouponDailyQuota: 100,
+  /** Suggested starting daily print budget for counter gift slips. */
+  compCouponDailyQuota: 200,
   updatedAt: 0,
   updatedBy: "",
 };

@@ -16,6 +16,14 @@ public final class WhatsNewCatalog {
   private WhatsNewCatalog() {}
 
   public static List<WhatsNewSlide> slidesFor(int versionCode) {
+    if (versionCode == 151) {
+      List<WhatsNewSlide> slides = new ArrayList<>();
+      slides.add(
+          new WhatsNewSlide(
+              "ปุ่มพิมพ์ให้แต้มชัดขึ้น",
+              "แถบส้มเต็มความกว้างเหนือชำระเงิน · ไม่ต้องมีบิลในตะกร้า · โชว์คงเหลือ"));
+      return slides;
+    }
     if (versionCode == 150) {
       List<WhatsNewSlide> slides = new ArrayList<>();
       slides.add(

@@ -336,22 +336,6 @@
                             android:visibility="gone" />
 
                         <TextView
-                            android:id="@+id/giftCouponButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="@font/prompt_regular"
-                            android:gravity="center"
-                            android:minHeight="36dp"
-                            android:paddingLeft="8dp"
-                            android:paddingRight="8dp"
-                            android:paddingTop="4dp"
-                            android:paddingBottom="4dp"
-                            android:text="@string/sell_hub_gift"
-                            android:textColor="@color/npos_ink"
-                            android:textSize="13sp"
-                            android:visibility="gone" />
-
-                        <TextView
                             android:id="@+id/discountButton"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
@@ -446,6 +430,27 @@
                             android:layout_height="wrap_content"
                             android:text="@string/cart_total_zero" />
                     </LinearLayout>
+
+                    <!-- Gift points: print anytime (no sale required) · above pay -->
+                    <TextView
+                        android:id="@+id/giftCouponButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:background="@drawable/npos_touch_secondary"
+                        android:ellipsize="end"
+                        android:fontFamily="@font/prompt_semibold"
+                        android:gravity="center"
+                        android:maxLines="2"
+                        android:minHeight="48dp"
+                        android:paddingLeft="10dp"
+                        android:paddingTop="10dp"
+                        android:paddingRight="10dp"
+                        android:paddingBottom="10dp"
+                        android:text="@string/sell_hub_gift"
+                        android:textColor="@color/npos_orange"
+                        android:textSize="15sp"
+                        android:visibility="gone" />
 
                     <!-- Footer: ชำระทั้งหมด | สมาชิก (เมื่อเปิด CRM) | บันทึก -->
                     <LinearLayout
