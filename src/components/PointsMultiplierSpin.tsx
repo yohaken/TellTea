@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   DEFAULT_SPIN_WEIGHTS,
   applyMultiplier,
@@ -48,17 +48,20 @@ export function PointsMultiplierSpin({
   const phaseRef = useRef<Phase>("idle");
   const targetCenterRef = useRef<number | null>(null);
   const resultRef = useRef<SpinResult | null>(null);
+  /** React 19.1 ไม่มี useEffectEvent — เก็บ callback ล่าสุดใน ref */
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [result, setResult] = useState<SpinResult | null>(null);
   const [offset, setOffset] = useState(0);
 
-  const finishSpin = useEffectEvent((res: SpinResult) => {
+  function finishSpin(res: SpinResult) {
     phaseRef.current = "done";
     setPhase("done");
     setResult(res);
-    onComplete?.(res);
-  });
+    onCompleteRef.current?.(res);
+  }
 
   useEffect(() => {
     const track = trackRef.current;

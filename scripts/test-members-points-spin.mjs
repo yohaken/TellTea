@@ -26,6 +26,11 @@ assert.match(read("src/components/PointsGamesAttractBg.tsx"), /PointsPourTeaGame
 assert.match(read("src/components/PointsGameOnce.tsx"), /เลือก 1 เกม/);
 assert.match(read("src/components/PointsGameOnce.tsx"), /เปลี่ยนเกมไม่ได้|รอบนี้เลือกเกมไปแล้ว/);
 
+// React 19.1 in this repo has no useEffectEvent — must not crash client bundle.
+const spinUi = read("src/components/PointsMultiplierSpin.tsx");
+assert.doesNotMatch(spinUi, /useEffectEvent/);
+assert.match(spinUi, /onCompleteRef/);
+
 const claim = read("src/app/claim/page.tsx");
 assert.match(claim, /POINTS_GAMES_CUSTOMER_LIVE/);
 assert.match(claim, /PointsGamesAttractBg/);
