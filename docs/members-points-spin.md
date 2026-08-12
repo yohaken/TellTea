@@ -50,12 +50,13 @@
 
 ต้องล็อกอินเจ้าของ / สิทธิ์สมาชิก
 
-**https://telltea-shop.web.app/members/spin-demo/**
+**https://telltea-bo.web.app/members/spin-demo/**
 
 - แท็บ **โฟลว์ลูกค้า** = พื้นหลังเคลื่อนไหว + เลือก 1 เกม (เหมือนของจริง แต่ไม่แตะแต้ม)
 - หรือเทสทีละเกมได้  
 
-ทางเข้า: https://telltea-shop.web.app/members/ → **จำลองคูณแต้ม (เทส)**
+ทางเข้า: https://telltea-bo.web.app/members/ → **จำลองคูณแต้ม (เทส)**  
+(โดเมนหลังร้านจริงคือ `telltea-bo.web.app` — `telltea-shop.web.app` ตายแล้ว)
 
 ## โฟลว์ (เมื่อเปิดจริง)
 

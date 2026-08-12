@@ -24,9 +24,9 @@
 
 ## ลิงก์หลังร้าน
 
-https://telltea-shop.web.app/members/
+https://telltea-bo.web.app/members/
 
-จำลองเกมคูณแต้ม: https://telltea-shop.web.app/members/spin-demo/ · ดู [members-points-spin.md](./members-points-spin.md)
+จำลองเกมคูณแต้ม: https://telltea-bo.web.app/members/spin-demo/ · ดู [members-points-spin.md](./members-points-spin.md)
 
 ## Deploy
 
