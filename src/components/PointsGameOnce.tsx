@@ -4,13 +4,13 @@ import { useState } from "react";
 import { PointsMultiplierSpin } from "@/components/PointsMultiplierSpin";
 import { PointsFeedBobaGame } from "@/components/PointsFeedBobaGame";
 import { PointsPourTeaGame } from "@/components/PointsPourTeaGame";
-import { SpinPrizeIcon } from "@/components/PointsSpinThemeIcons";
+import { PointsGameBrandLogo } from "@/components/PointsGameBrandLogo";
 import {
   POINTS_GAMES,
   pointsGameById,
   type PointsGameId,
 } from "@/lib/points-games";
-import { SPIN_MENU_PRIZES } from "@/lib/points-spin-theme";
+import { POINTS_ONLY_NOTE, prizeForMultiplier } from "@/lib/points-spin-theme";
 import type { SpinResult } from "@/lib/points-multiplier-spin";
 
 type Props = {
@@ -56,15 +56,18 @@ export function PointsGameOnce({
   }
 
   const info = game ? pointsGameById(game) : null;
+  const prize = result ? prizeForMultiplier(result.multiplier) : null;
 
   return (
-    <div className={`pts-once ${className}`.trim()} data-phase={phase}>
+    <div className={`pts-once pts-once--mobile ${className}`.trim()} data-phase={phase}>
       {phase === "pick" ? (
         <div className="pts-once-pick">
           <p className="pts-once-title">เลือก 1 เกมลุ้นคูณแต้ม</p>
           <p className="pts-once-sub muted">
-            แต้มฐาน <strong>{Math.max(0, Math.trunc(basePoints))}</strong> · เลือกแล้วเล่นเกมนั้นอย่างเดียว
+            แต้มฐาน <strong>{Math.max(0, Math.trunc(basePoints))}</strong> ·
+            เลือกแล้วเล่นเกมนั้นอย่างเดียว
           </p>
+          <p className="pts-spin-points-only">{POINTS_ONLY_NOTE}</p>
           <div className="pts-once-choices">
             {POINTS_GAMES.map((g) => (
               <button
@@ -85,36 +88,51 @@ export function PointsGameOnce({
         <div className="pts-once-play">
           <p className="pts-once-playing muted">กำลังเล่น · {info?.title}</p>
           {game === "spin" ? (
-            <PointsMultiplierSpin mode="play" basePoints={basePoints} onComplete={onComplete} />
+            <PointsMultiplierSpin
+              mode="play"
+              basePoints={basePoints}
+              onComplete={onComplete}
+            />
           ) : null}
           {game === "feed" ? (
-            <PointsFeedBobaGame mode="play" basePoints={basePoints} onComplete={onComplete} />
+            <PointsFeedBobaGame
+              mode="play"
+              basePoints={basePoints}
+              onComplete={onComplete}
+            />
           ) : null}
           {game === "pour" ? (
-            <PointsPourTeaGame mode="play" basePoints={basePoints} onComplete={onComplete} />
+            <PointsPourTeaGame
+              mode="play"
+              basePoints={basePoints}
+              onComplete={onComplete}
+            />
           ) : null}
         </div>
       ) : null}
 
       {phase === "done" && result && info ? (
         <div className="pts-once-done">
+          <PointsGameBrandLogo className="pts-result-brand" size={52} />
           <p className="pts-once-title">จบเกม · {info.shortTitle}</p>
-          <div className="pts-spin-result-prize">
-            <SpinPrizeIcon multiplier={result.multiplier} />
-          </div>
           <p className="pts-spin-result-mult">×{result.multiplier}</p>
-          <p className="pts-spin-result-flavor">
-            {SPIN_MENU_PRIZES[result.multiplier].label}
-          </p>
+          <p className="pts-spin-result-flavor">{prize?.label}</p>
           <p>
             {result.basePoints} → <strong>{result.finalPoints}</strong> แต้ม
             {result.bonusPoints > 0 ? (
               <span className="pts-spin-bonus"> (+{result.bonusPoints})</span>
             ) : null}
           </p>
-          <p className="muted pts-once-lock-note">รอบนี้เลือกเกมไปแล้ว · ไม่เปลี่ยนเกมได้</p>
+          <p className="pts-spin-points-only">{POINTS_ONLY_NOTE}</p>
+          <p className="muted pts-once-lock-note">
+            รอบนี้เลือกเกมไปแล้ว · ไม่เปลี่ยนเกมได้
+          </p>
           {allowReselect ? (
-            <button type="button" className="ghost-btn pts-spin-btn" onClick={resetPick}>
+            <button
+              type="button"
+              className="ghost-btn pts-spin-btn"
+              onClick={resetPick}
+            >
               จำลอง: เลือกเกมใหม่
             </button>
           ) : null}

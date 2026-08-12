@@ -2,252 +2,231 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  DEFAULT_SPIN_WEIGHTS,
   applyMultiplier,
-  normalizeWeights,
   type MultiplierTier,
   type SpinResult,
-  type SpinWeight,
 } from "@/lib/points-multiplier-spin";
-import { prizeForMultiplier, spinResultFlavorLine } from "@/lib/points-spin-theme";
-import { SpinPrizeIcon } from "@/components/PointsSpinThemeIcons";
+import { POINTS_ONLY_NOTE, prizeForMultiplier } from "@/lib/points-spin-theme";
+import { PointsGameBrandLogo } from "@/components/PointsGameBrandLogo";
 
-type Mode = "teaser" | "play" | "demo";
+export type PointsPourMode = "teaser" | "play" | "demo";
 
 type Props = {
-  mode: Mode;
+  mode?: PointsPourMode;
   basePoints: number;
-  weights?: readonly SpinWeight[];
   onComplete?: (result: SpinResult) => void;
-  className?: string;
+  onSkip?: () => void;
+  autoPlayMs?: number;
   hint?: string;
+  className?: string;
 };
 
-type Band = { multiplier: MultiplierTier; start: number; end: number };
+type Zone = { mult: MultiplierTier; from: number; to: number };
 
-function buildBands(weights: readonly SpinWeight[]): Band[] {
-  const norm = normalizeWeights(weights);
-  // จากก้นแก้วขึ้นบน: ×1 กว้าง → ×5 แคบที่ปากแก้ว
-  const order: MultiplierTier[] = [1, 2, 3, 4, 5];
-  const byM = new Map(norm.map((w) => [w.multiplier, w.weight]));
-  const sum = order.reduce((s, m) => s + (byM.get(m) || 0), 0) || 1;
-  let cursor = 0;
-  return order
-    .filter((m) => (byM.get(m) || 0) > 0)
-    .map((m) => {
-      const w = (byM.get(m) || 0) / sum;
-      const start = cursor;
-      const end = cursor + w;
-      cursor = end;
-      return { multiplier: m, start, end };
-    });
-}
+const ZONES: Zone[] = [
+  { mult: 1, from: 0, to: 0.38 },
+  { mult: 2, from: 0.38, to: 0.62 },
+  { mult: 3, from: 0.62, to: 0.8 },
+  { mult: 4, from: 0.8, to: 0.92 },
+  { mult: 5, from: 0.92, to: 1 },
+];
 
-function bandAt(bands: Band[], fill: number): MultiplierTier {
-  const x = Math.min(0.999, Math.max(0, fill));
-  for (const b of bands) {
-    if (x >= b.start && x < b.end) return b.multiplier;
+function multAt(fill: number): MultiplierTier {
+  const x = Math.max(0, Math.min(0.999, fill));
+  for (const z of ZONES) {
+    if (x >= z.from && x < z.to) return z.mult;
   }
-  return bands[bands.length - 1]?.multiplier ?? 1;
+  return 1;
 }
 
+/**
+ * กดค้างเทน้ำชา — ได้แค่คูณแต้ม (ไม่ใช่สินค้า)
+ * โลโก้จาก brandLogo ที่อัปโหลดในบิล/ใบเสร็จ
+ */
 export function PointsPourTeaGame({
-  mode,
+  mode = "play",
   basePoints,
-  weights = DEFAULT_SPIN_WEIGHTS,
   onComplete,
-  className = "",
+  onSkip,
+  autoPlayMs = 0,
   hint,
+  className = "",
 }: Props) {
-  const bands = buildBands(weights);
-  const [phase, setPhase] = useState<"idle" | "pouring" | "done">(
-    mode === "teaser" ? "pouring" : "idle",
-  );
-  const [fill, setFill] = useState(0.15);
+  const isTeaser = mode === "teaser";
+  const [fill, setFill] = useState(isTeaser ? 0.55 : 0);
+  const [holding, setHolding] = useState(false);
+  const [done, setDone] = useState<MultiplierTier | null>(null);
   const [result, setResult] = useState<SpinResult | null>(null);
-  const fillRef = useRef(0.15);
+  const raf = useRef(0);
+  const last = useRef(0);
+  const fillRef = useRef(isTeaser ? 0.55 : 0);
   const dirRef = useRef(1);
-  const phaseRef = useRef(phase);
-  const holdingRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
+  // ทีเซอร์: ระดับน้ำโยกขึ้นลงเอง
   useEffect(() => {
-    phaseRef.current = phase;
-  }, [phase]);
-
-  useEffect(() => {
-    if (mode !== "play") return;
-    if (phase !== "idle" || result) return;
-    const t = window.setTimeout(() => {
-      setResult(null);
-      fillRef.current = 0;
-      setFill(0);
-      setPhase("pouring");
-      phaseRef.current = "pouring";
-    }, 280);
-    return () => window.clearTimeout(t);
-  }, [mode, phase, result]);
-
-  useEffect(() => {
-    let last = performance.now();
-    let raf = 0;
+    if (!isTeaser) return;
+    last.current = performance.now();
     const tick = (now: number) => {
-      const dt = Math.min(0.05, (now - last) / 1000);
-      last = now;
-      if (mode === "teaser") {
-        let f = fillRef.current + dirRef.current * dt * 0.28;
-        if (f >= 0.92) {
-          f = 0.92;
-          dirRef.current = -1;
-        } else if (f <= 0.08) {
-          f = 0.08;
-          dirRef.current = 1;
-        }
-        fillRef.current = f;
-        setFill(f);
-      } else if (phaseRef.current === "pouring" && holdingRef.current) {
-        const f = Math.min(1, fillRef.current + dt * 0.55);
-        fillRef.current = f;
-        setFill(f);
-        if (f >= 1) {
-          // ล้น = ล็อกที่บนสุด
-          lockAt(f);
-          return;
-        }
+      const dt = (now - last.current) / 1000;
+      last.current = now;
+      let next = fillRef.current + dirRef.current * dt * 0.28;
+      if (next >= 0.92) {
+        next = 0.92;
+        dirRef.current = -1;
+      } else if (next <= 0.12) {
+        next = 0.12;
+        dirRef.current = 1;
       }
-      raf = requestAnimationFrame(tick);
+      fillRef.current = next;
+      setFill(next);
+      raf.current = requestAnimationFrame(tick);
     };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- loop
-  }, [mode]);
+    raf.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf.current);
+  }, [isTeaser]);
 
-  function lockAt(level: number) {
-    holdingRef.current = false;
-    const mult = bandAt(bands, level);
-    const res = applyMultiplier(basePoints, mult);
+  useEffect(() => {
+    if (isTeaser || !holding || done != null) return;
+    last.current = performance.now();
+    const tick = (now: number) => {
+      const dt = (now - last.current) / 1000;
+      last.current = now;
+      fillRef.current = Math.min(1, fillRef.current + dt * 0.42);
+      setFill(fillRef.current);
+      if (fillRef.current >= 1) {
+        stopPour();
+        return;
+      }
+      raf.current = requestAnimationFrame(tick);
+    };
+    raf.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [holding, done, isTeaser]);
+
+  useEffect(() => {
+    if (isTeaser || !autoPlayMs || done != null) return;
+    const start = window.setTimeout(() => setHolding(true), 200);
+    const stop = window.setTimeout(() => stopPour(), autoPlayMs);
+    return () => {
+      clearTimeout(start);
+      clearTimeout(stop);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoPlayMs, done, isTeaser]);
+
+  function stopPour() {
+    if (isTeaser || done != null) return;
+    cancelAnimationFrame(raf.current);
+    setHolding(false);
+    const m = multAt(fillRef.current);
+    const res = applyMultiplier(basePoints, m);
+    setDone(m);
     setResult(res);
-    setPhase("done");
-    phaseRef.current = "done";
-    onComplete?.(res);
+    window.setTimeout(() => {
+      onCompleteRef.current?.(res);
+    }, 900);
   }
 
-  function start() {
-    if (mode === "teaser") return;
-    setResult(null);
-    fillRef.current = 0;
-    setFill(0);
-    setPhase("pouring");
-    phaseRef.current = "pouring";
-  }
-
-  function onHoldStart() {
-    if (mode === "teaser" || phaseRef.current !== "pouring") return;
-    holdingRef.current = true;
-  }
-
-  function onHoldEnd() {
-    if (mode === "teaser" || phaseRef.current !== "pouring") return;
-    if (!holdingRef.current && fillRef.current <= 0) return;
-    holdingRef.current = false;
-    lockAt(fillRef.current);
-  }
-
-  const liveMult = bandAt(bands, fill);
-  const livePrize = prizeForMultiplier(liveMult);
+  const preview = multAt(fill);
+  const theme = done ? prizeForMultiplier(done) : null;
 
   return (
-    <div className={`pts-game pts-pour ${className}`.trim()} data-mode={mode} data-phase={phase}>
+    <div
+      className={`pts-game pts-pour pts-game--mobile ${className}`.trim()}
+      data-mode={mode}
+    >
       <div className="pts-game-head">
-        <p className="pts-spin-title">เทชาไทยให้พอดี</p>
-        <p className="pts-spin-sub">
-          {mode === "teaser"
-            ? "กดค้างเทชา · ปล่อยตอนโซนที่อยากได้"
-            : `แต้มฐาน ${Math.max(0, Math.trunc(basePoints))} · กดค้างแล้วปล่อย`}
+        <span className="pts-game-kicker">กดค้าง · คูณแต้ม</span>
+        <h3 className="pts-game-title">เทชาไทย</h3>
+        <p className="pts-game-sub">
+          {isTeaser
+            ? "ลุ้นคูณแต้ม ×1–×5 · ไม่ใช่ของแถม"
+            : "กดค้างเติมน้ำชา ปล่อยตอนระดับที่ต้องการ — ได้แค่คูณแต้ม"}
         </p>
+        {!isTeaser ? (
+          <p className="pts-spin-points-only">{POINTS_ONLY_NOTE}</p>
+        ) : null}
       </div>
 
-      <div className="pts-pour-stage">
-        <div className="pts-pour-cup" aria-hidden>
-          <div className="pts-pour-bands">
-            {bands.map((b) => {
-              const prize = prizeForMultiplier(b.multiplier);
-              return (
-                <div
-                  key={b.multiplier}
-                  className={`pts-pour-band pts-spin-seg--${prize.tone}`}
-                  style={{
-                    bottom: `${b.start * 100}%`,
-                    height: `${(b.end - b.start) * 100}%`,
-                  }}
-                >
-                  <span>
-                    ×{b.multiplier} {prize.shortLabel}
-                  </span>
-                </div>
-              );
-            })}
+      <div className="pts-pour-stage" aria-hidden={isTeaser}>
+        <div className="pts-pour-glass">
+          <div className="pts-pour-marks">
+            {ZONES.map((z) => (
+              <div
+                key={z.mult}
+                className={`pts-pour-mark pts-pour-mark--x${z.mult}`}
+                style={{
+                  bottom: `${z.from * 100}%`,
+                  height: `${(z.to - z.from) * 100}%`,
+                }}
+              >
+                <span>×{z.mult}</span>
+              </div>
+            ))}
           </div>
           <div className="pts-pour-liquid" style={{ height: `${fill * 100}%` }} />
-          <div className="pts-pour-rim" />
-          <div className="pts-pour-straw" />
+          <div className="pts-pour-glass-logo">
+            <PointsGameBrandLogo className="pts-game-brand-logo" size={48} />
+          </div>
         </div>
-        <p className="pts-feed-live muted">
-          ระดับชา: ×{liveMult} {livePrize.shortLabel}
-        </p>
+        {!isTeaser ? (
+          <div className="pts-pour-live" aria-live="polite">
+            ระดับนี้ → <strong>×{preview}</strong> แต้ม
+          </div>
+        ) : null}
       </div>
 
-      {mode !== "teaser" ? (
-        <div className="pts-spin-actions">
-          {phase === "idle" || phase === "done" ? (
-            <button type="button" className="primary-btn pts-spin-btn" onClick={start}>
-              {phase === "done" ? "เทอีกแก้ว" : "เตรียมเท"}
-            </button>
-          ) : null}
-          {phase === "pouring" ? (
+      {!isTeaser && done == null ? (
+        <div className="pts-game-actions pts-spin-actions">
+          <button
+            type="button"
+            className={`primary-btn pts-spin-btn pts-spin-btn--stop${holding ? " is-holding" : ""}`}
+            onPointerDown={(e) => {
+              e.preventDefault();
+              if (done != null) return;
+              fillRef.current = fill;
+              setHolding(true);
+            }}
+            onPointerUp={stopPour}
+            onPointerLeave={() => {
+              if (holding) stopPour();
+            }}
+            onPointerCancel={stopPour}
+          >
+            {holding ? "ปล่อยเพื่อล็อก!" : "กดค้างเทชา"}
+          </button>
+          {onSkip ? (
             <button
               type="button"
-              className="primary-btn pts-spin-btn pts-spin-btn--stop"
-              onPointerDown={(e) => {
-                e.preventDefault();
-                onHoldStart();
-              }}
-              onPointerUp={(e) => {
-                e.preventDefault();
-                onHoldEnd();
-              }}
-              onPointerLeave={() => {
-                if (holdingRef.current) onHoldEnd();
-              }}
-              onPointerCancel={() => {
-                if (holdingRef.current) onHoldEnd();
-              }}
+              className="ghost-btn pts-spin-btn"
+              onClick={onSkip}
             >
-              กดค้างเพื่อเท
+              ข้าม · ได้ ×1
             </button>
           ) : null}
         </div>
       ) : null}
 
-      {result ? (
-        <div className="pts-spin-result" role="status">
-          <div className="pts-spin-result-prize">
-            <SpinPrizeIcon multiplier={result.multiplier} />
-          </div>
-          <p className="pts-spin-result-mult">×{result.multiplier}</p>
-          <p className="pts-spin-result-flavor">{spinResultFlavorLine(result.multiplier)}</p>
+      {!isTeaser && done != null && result ? (
+        <div
+          className={`pts-spin-result pts-spin-result--${theme?.tone}`}
+          role="status"
+        >
+          <PointsGameBrandLogo className="pts-result-brand" size={44} />
+          <p className="pts-spin-result-mult">×{done}</p>
+          <p className="pts-spin-result-flavor">{theme?.label}</p>
           <p>
-            {result.basePoints} → <strong>{result.finalPoints}</strong> แต้ม
-            {result.bonusPoints > 0 ? (
-              <span className="pts-spin-bonus"> (+{result.bonusPoints})</span>
-            ) : null}
+            {result.basePoints.toLocaleString("th-TH")} →{" "}
+            <strong>{result.finalPoints.toLocaleString("th-TH")} แต้ม</strong>
           </p>
+          <p className="pts-spin-points-only">{POINTS_ONLY_NOTE}</p>
         </div>
       ) : null}
 
       {hint ? <p className="pts-spin-hint muted">{hint}</p> : null}
-      {mode === "teaser" && !hint ? (
-        <p className="pts-spin-hint muted">ปากแก้วแคบ = ×5 · อย่าล้น</p>
-      ) : null}
     </div>
   );
 }

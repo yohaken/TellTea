@@ -1,56 +1,36 @@
 import type { MultiplierTier } from "./points-multiplier-spin";
 
-/** สินค้าร้าน Tell Tea บนกระดาน — หายากขึ้นตามตัวคูณ */
-export type SpinMenuPrize = {
+/**
+ * สีตกแต่งบนวงล้อ — × คือคูณแต้มเท่านั้น ไม่ใช่รางวัลสินค้า
+ */
+export type SpinPointSlice = {
   multiplier: MultiplierTier;
-  /** ชื่อสั้นบนชิ้นกระดาน */
+  /** ข้อความบนชิ้น (สั้น) */
   shortLabel: string;
-  /** ชื่อเต็ม */
+  /** ข้อความผล */
   label: string;
-  /** คลาสสีธีม */
   tone: string;
 };
 
-export const SPIN_MENU_PRIZES: Record<MultiplierTier, SpinMenuPrize> = {
-  1: {
-    multiplier: 1,
-    shortLabel: "ชาไทย",
-    label: "ชาไทย",
-    tone: "thai",
-  },
-  2: {
-    multiplier: 2,
-    shortLabel: "ชานม",
-    label: "ชานมไข่มุก",
-    tone: "boba",
-  },
-  3: {
-    multiplier: 3,
-    shortLabel: "คุกกี้",
-    label: "ซอฟคุกกี้",
-    tone: "cookie",
-  },
-  4: {
-    multiplier: 4,
-    shortLabel: "บราวนี่",
-    label: "บราวนี่",
-    tone: "brownie",
-  },
-  5: {
-    multiplier: 5,
-    shortLabel: "ชิโอปัง",
-    label: "ชิโอปัง",
-    tone: "cheese",
-  },
+export const SPIN_MENU_PRIZES: Record<MultiplierTier, SpinPointSlice> = {
+  1: { multiplier: 1, shortLabel: "×1", label: "คูณ 1 แต้ม", tone: "thai" },
+  2: { multiplier: 2, shortLabel: "×2", label: "คูณ 2 แต้ม", tone: "boba" },
+  3: { multiplier: 3, shortLabel: "×3", label: "คูณ 3 แต้ม", tone: "cookie" },
+  4: { multiplier: 4, shortLabel: "×4", label: "คูณ 4 แต้ม", tone: "brownie" },
+  5: { multiplier: 5, shortLabel: "×5", label: "คูณ 5 แต้ม", tone: "cheese" },
 };
 
-export function prizeForMultiplier(m: MultiplierTier): SpinMenuPrize {
+/** @deprecated ใช้ SPIN_MENU_PRIZES — คงชื่อเดิมกันเทสเก่าพัง */
+export type SpinMenuPrize = SpinPointSlice;
+
+export function prizeForMultiplier(m: MultiplierTier): SpinPointSlice {
   return SPIN_MENU_PRIZES[m] || SPIN_MENU_PRIZES[1];
 }
 
 export function spinResultFlavorLine(multiplier: MultiplierTier): string {
-  const p = prizeForMultiplier(multiplier);
-  if (multiplier === 1) return `ได้เท่าเดิม · กลิ่น${p.label}`;
-  if (multiplier === 5) return `แจ็คพอต ${p.label}! คูณจัด`;
-  return `หอมๆ แบบ${p.label} · คูณ ${multiplier}`;
+  if (multiplier === 1) return "ได้แต้มเท่าเดิม";
+  if (multiplier === 5) return "แจ็คพอตคูณแต้ม!";
+  return `คูณแต้ม ×${multiplier}`;
 }
+
+export const POINTS_ONLY_NOTE = "× คือคูณแต้มเท่านั้น · ไม่ใช่ของแถมหรือสินค้า";

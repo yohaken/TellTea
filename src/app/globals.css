@@ -1535,51 +1535,201 @@ body.modal-open .main-panel {
   font-size: 0.78rem;
 }
 
-/* Feed boba */
-.pts-feed-logo-mark {
-  width: 2.6rem;
-  height: 2.6rem;
+.pts-spin-points-only,
+.pts-points-only-note {
+  margin: 0.35rem 0 0;
+  font-size: 0.72rem;
+  color: #6a5a48;
+  text-align: center;
+  line-height: 1.35;
 }
 
+.pts-game-kicker {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pts-blue);
+  margin-bottom: 0.15rem;
+}
+
+.pts-game-title {
+  margin: 0;
+  font-family: var(--font-display), sans-serif;
+  font-weight: 700;
+  font-size: 1.08rem;
+  color: var(--pts-navy);
+}
+
+.pts-game-sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.82rem;
+  color: #5a6b62;
+}
+
+.pts-game-logo {
+  display: block;
+  object-fit: contain;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.pts-game-logo--slot {
+  display: inline-block;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background: rgba(0, 59, 92, 0.08);
+}
+
+.pts-result-brand {
+  margin: 0 auto 0.35rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background: #fff;
+  padding: 0.2rem;
+  border: 1px solid rgba(0, 59, 92, 0.12);
+}
+
+/* Circular wheel */
+.pts-spin--wheel {
+  padding-left: 0.55rem;
+  padding-right: 0.55rem;
+}
+
+.pts-wheel-stage {
+  position: relative;
+  z-index: 1;
+  width: min(86vw, 19rem);
+  aspect-ratio: 1;
+  margin: 0.55rem auto 0.35rem;
+}
+
+.pts-wheel-pointer {
+  position: absolute;
+  top: -0.15rem;
+  left: 50%;
+  z-index: 4;
+  width: 0;
+  height: 0;
+  transform: translateX(-50%);
+  border-left: 0.55rem solid transparent;
+  border-right: 0.55rem solid transparent;
+  border-top: 0.85rem solid var(--pts-thai);
+  filter: drop-shadow(0 1px 1px rgba(0, 40, 60, 0.28));
+}
+
+.pts-wheel-disc {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  will-change: transform;
+  box-shadow:
+    0 0 0 0.35rem rgba(0, 59, 92, 0.12),
+    0 0.45rem 1.1rem rgba(0, 40, 60, 0.18);
+}
+
+.pts-wheel-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+
+.pts-wheel-label {
+  fill: #fff;
+  font-family: var(--font-display), sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  paint-order: stroke;
+  stroke: rgba(0, 30, 50, 0.25);
+  stroke-width: 0.6px;
+}
+
+.pts-wheel-hub {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  width: 28%;
+  height: 28%;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #fff6e8;
+  border: 2px solid var(--pts-navy);
+  overflow: hidden;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.pts-wheel-hub-logo {
+  width: 78%;
+  height: 78%;
+}
+
+.pts-spin--wheel .pts-spin-btn,
+.pts-game--mobile .pts-spin-btn {
+  min-width: min(100%, 16rem);
+  min-height: 3rem;
+  font-size: 1.05rem;
+}
+
+/* Feed boba — mobile-first */
 .pts-feed-stage {
   position: relative;
   z-index: 1;
   display: grid;
-  gap: 0.55rem;
+  gap: 0.65rem;
 }
 
-.pts-feed-guy {
+.pts-feed-cup {
   position: relative;
-  width: min(100%, 11rem);
+  width: min(42vw, 7.5rem);
+  aspect-ratio: 1;
   margin: 0 auto;
+  border-radius: 50% 50% 42% 42%;
+  background:
+    radial-gradient(circle at 40% 30%, rgba(255, 255, 255, 0.55), transparent 45%),
+    linear-gradient(180deg, #fff9f0, #e8f2f8 55%, #cfe3f0);
+  border: 2px solid rgba(0, 59, 92, 0.22);
+  display: grid;
+  place-items: center;
 }
 
-.pts-feed-logo {
-  width: 100%;
-  height: auto;
-  display: block;
+.pts-feed-cup-logo {
+  width: 62%;
+  height: 62%;
+  display: grid;
+  place-items: center;
 }
 
-.pts-feed-mouth-glow {
+.pts-feed-boba-stack {
   position: absolute;
-  left: 58%;
-  top: 52%;
-  width: 1.1rem;
-  height: 1.1rem;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(232, 145, 58, 0.55), transparent 70%);
-  animation: pts-pearl-float 1.6s ease-in-out infinite;
+  right: -0.35rem;
+  bottom: 0.35rem;
+  display: grid;
+  gap: 0.15rem;
 }
 
-.pts-feed-lane {
+.pts-feed-pearl-dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #4aa3d8, #003b5c 70%);
+  animation: pts-pearl-float 1.8s ease-in-out infinite;
+}
+
+.pts-feed-track {
   position: relative;
-  padding-top: 0.2rem;
 }
 
 .pts-feed-zones {
   position: relative;
-  height: 2.4rem;
-  border-radius: 0.65rem;
+  height: 2.75rem;
+  border-radius: 0.75rem;
   overflow: hidden;
   border: 2px solid rgba(0, 59, 92, 0.28);
   background: #002a42;
@@ -1593,64 +1743,105 @@ body.modal-open .main-panel {
   place-items: center;
   font-family: var(--font-display), sans-serif;
   font-weight: 700;
-  font-size: 0.78rem;
+  font-size: 0.85rem;
   color: #fff;
   border-right: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-.pts-feed-pearl {
+.pts-feed-zone--x1 {
+  background: linear-gradient(160deg, #e8913a, #c9852d);
+}
+.pts-feed-zone--x2 {
+  background: linear-gradient(160deg, #0077b6, #003b5c);
+}
+.pts-feed-zone--x3 {
+  background: linear-gradient(160deg, #d4a574, #b07d4a);
+}
+.pts-feed-zone--x4 {
+  background: linear-gradient(160deg, #7a4a38, #5c3a2e);
+}
+.pts-feed-zone--x5 {
+  background: linear-gradient(160deg, #f0d48a, #e8913a);
+  color: #003b5c;
+}
+
+.pts-feed-needle {
   position: absolute;
-  top: 0.55rem;
-  width: 1.35rem;
-  height: 1.35rem;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #4aa3d8, #003b5c 70%);
-  box-shadow: 0 2px 6px rgba(0, 40, 60, 0.35);
+  top: -0.2rem;
+  bottom: -0.2rem;
+  width: 0.18rem;
+  margin-left: -0.09rem;
+  background: #fff6e8;
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px rgba(0, 59, 92, 0.45);
   z-index: 2;
-  transition: left 0.05s linear;
+  pointer-events: none;
 }
 
-.pts-feed-live {
-  margin: 0.4rem 0 0;
+.pts-feed-live,
+.pts-pour-live {
+  margin: 0.15rem 0 0;
   text-align: center;
-  font-size: 0.8rem;
+  font-size: 0.88rem;
+  color: var(--pts-navy);
 }
 
-/* Pour Thai tea */
+/* Pour Thai tea — mobile-first */
 .pts-pour-stage {
   position: relative;
   z-index: 1;
   display: grid;
   justify-items: center;
-  gap: 0.4rem;
+  gap: 0.45rem;
 }
 
-.pts-pour-cup {
+.pts-pour-glass {
   position: relative;
-  width: 8.5rem;
-  height: 11rem;
+  width: min(46vw, 9rem);
+  height: min(58vw, 12rem);
   border: 3px solid var(--pts-navy);
   border-top: 0;
-  border-radius: 0 0 1.1rem 1.1rem;
-  background: rgba(255, 255, 255, 0.35);
+  border-radius: 0 0 1.25rem 1.25rem;
+  background: rgba(255, 255, 255, 0.4);
   overflow: hidden;
 }
 
-.pts-pour-bands {
+.pts-pour-marks {
   position: absolute;
   inset: 0;
+  z-index: 1;
 }
 
-.pts-pour-band {
+.pts-pour-mark {
   position: absolute;
   left: 0;
   right: 0;
   display: grid;
-  place-items: center;
-  font-size: 0.62rem;
+  align-items: center;
+  justify-items: end;
+  padding-right: 0.35rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.92);
-  opacity: 0.92;
+  color: rgba(255, 255, 255, 0.95);
+  opacity: 0.95;
+  border-top: 1px dashed rgba(255, 255, 255, 0.25);
+}
+
+.pts-pour-mark--x1 {
+  background: rgba(232, 145, 58, 0.28);
+}
+.pts-pour-mark--x2 {
+  background: rgba(0, 119, 182, 0.28);
+}
+.pts-pour-mark--x3 {
+  background: rgba(212, 165, 116, 0.3);
+}
+.pts-pour-mark--x4 {
+  background: rgba(92, 58, 46, 0.32);
+}
+.pts-pour-mark--x5 {
+  background: rgba(240, 212, 138, 0.4);
+  color: #003b5c;
 }
 
 .pts-pour-liquid {
@@ -1659,30 +1850,51 @@ body.modal-open .main-panel {
   right: 0;
   bottom: 0;
   background: linear-gradient(180deg, #f5c16c, #e8913a 40%, #c9852d);
-  opacity: 0.88;
+  opacity: 0.9;
   transition: height 0.05s linear;
   pointer-events: none;
+  z-index: 0;
 }
 
-.pts-pour-rim {
+.pts-pour-glass-logo {
   position: absolute;
-  top: 0;
-  left: -0.2rem;
-  right: -0.2rem;
-  height: 0.35rem;
-  background: var(--pts-navy);
-  border-radius: 0.2rem;
+  top: 0.55rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2.6rem;
+  height: 2.6rem;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 246, 232, 0.88);
+  border-radius: 50%;
+  border: 1px solid rgba(0, 59, 92, 0.18);
+  overflow: hidden;
 }
 
-.pts-pour-straw {
-  position: absolute;
-  top: -0.8rem;
-  right: 1.6rem;
-  width: 0.35rem;
-  height: 3.2rem;
-  border-radius: 999px;
-  background: var(--pts-blue);
-  transform: rotate(8deg);
+.pts-spin-btn.is-holding {
+  transform: scale(0.98);
+  filter: brightness(1.05);
+}
+
+.pts-once--mobile .pts-once-choice {
+  min-height: 4.25rem;
+  text-align: left;
+  padding: 0.85rem 0.95rem;
+}
+
+.pts-once--mobile .pts-once-choice-title {
+  font-size: 1rem;
+}
+
+@media (min-width: 720px) {
+  .pts-wheel-stage {
+    width: min(22rem, 100%);
+  }
+  .pts-spin--wheel .pts-spin-btn,
+  .pts-game--mobile .pts-spin-btn {
+    min-width: 10rem;
+  }
 }
 
 .pts-spin-demo-pick {
@@ -1869,16 +2081,27 @@ body.modal-open .main-panel {
 .pts-attract-panel .pts-spin-legend,
 .pts-attract-panel .pts-spin-hint,
 .pts-attract-panel .pts-spin-actions,
-.pts-attract-panel .pts-spin-brand {
+.pts-attract-panel .pts-spin-brand,
+.pts-attract-panel .pts-spin-points-only,
+.pts-attract-panel .pts-game-kicker,
+.pts-attract-panel .pts-game-sub,
+.pts-attract-panel .pts-feed-live,
+.pts-attract-panel .pts-pour-live {
   display: none;
 }
 
-.pts-attract-panel .pts-spin-title {
+.pts-attract-panel .pts-spin-title,
+.pts-attract-panel .pts-game-title {
   font-size: 0.92rem;
 }
 
 .pts-attract-panel .pts-spin-sub {
   font-size: 0.72rem;
+}
+
+.pts-attract-panel .pts-wheel-stage {
+  width: min(42vw, 9.5rem);
+  margin-top: 0.25rem;
 }
 
 .pts-attract-tag {
@@ -2079,7 +2302,7 @@ body.modal-open .main-panel {
 @media (prefers-reduced-motion: reduce) {
   .pts-spin-btn--stop,
   .pts-spin-pearl,
-  .pts-feed-mouth-glow,
+  .pts-feed-pearl-dot,
   .pts-attract-panel--spin,
   .pts-attract-panel--feed,
   .pts-attract-panel--pour {

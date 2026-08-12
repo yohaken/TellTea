@@ -169,6 +169,43 @@ export function pickTargetSegment(
   return matches[Math.min(matches.length - 1, Math.max(0, idx))]!;
 }
 
+/** ชิ้นบนวงล้อกลม — มุมตามน้ำหนัก (0° = ยอดบน หมุนตามเข็ม) */
+export type WheelSlice = {
+  multiplier: MultiplierTier;
+  startDeg: number;
+  endDeg: number;
+  midDeg: number;
+  weight: number;
+};
+
+export function buildWheelSlices(
+  weights: readonly SpinWeight[] = DEFAULT_SPIN_WEIGHTS,
+): WheelSlice[] {
+  const norm = normalizeWeights(weights);
+  const sum = norm.reduce((s, w) => s + w.weight, 0) || 1;
+  let cursor = 0;
+  return norm.map((w) => {
+    const span = (w.weight / sum) * 360;
+    const startDeg = cursor;
+    const endDeg = cursor + span;
+    cursor = endDeg;
+    return {
+      multiplier: w.multiplier,
+      startDeg,
+      endDeg,
+      midDeg: (startDeg + endDeg) / 2,
+      weight: w.weight,
+    };
+  });
+}
+
+/** มุมหมุนวงล้อ (ตามเข็ม) ให้ mid ของชิ้นอยู่ใต้เข็มที่ยอดบน */
+export function wheelTargetRotation(midDeg: number, extraSpins = 5): number {
+  const spins = Math.max(3, Math.min(10, Math.trunc(extraSpins) || 5));
+  const align = (360 - (midDeg % 360) + 360) % 360;
+  return spins * 360 + align;
+}
+
 /** จำลอง N ครั้ง — ใช้ดูสัดส่วนในหลังร้าน */
 export function simulateSpins(
   count: number,

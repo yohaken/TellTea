@@ -33,7 +33,9 @@ export function PointsGamesAttractBg({ basePoints = 5, className = "" }: Props) 
           <PointsPourTeaGame mode="teaser" basePoints={basePoints} hint="" />
         </div>
       </div>
-      <p className="pts-attract-banner">สมัครแล้วเลือกเล่นได้ 1 เกม · ลุ้นคูณแต้ม ×1–×5</p>
+      <p className="pts-attract-banner">
+        สมัครแล้วเลือกเล่นได้ 1 เกม · × คือคูณแต้มเท่านั้น ไม่ใช่ของแถม
+      </p>
     </div>
   );
 }

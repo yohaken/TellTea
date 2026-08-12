@@ -3,6 +3,8 @@
  *
  * สำคัญ: ปิดฝั่งลูกค้าจนกว่าเจ้าของตรวจหลังร้านผ่านแล้ว
  * เปิดจริง = เปลี่ยนค่านี้เป็น true หลังยืนยันที่ /members/spin-demo/
+ *
+ * × ในเกม = คูณแต้มเท่านั้น ไม่ใช่ของแถม/สินค้า
  */
 export const POINTS_GAMES_CUSTOMER_LIVE = false;
 
@@ -19,24 +21,24 @@ export type PointsGameInfo = {
 export const POINTS_GAMES: readonly PointsGameInfo[] = [
   {
     id: "spin",
-    title: "หมุนกระดานเมนู",
-    shortTitle: "หมุนเมนู",
-    blurb: "กดหยุดบนเมนูชา·ขนม · ชิ้นแคบ = × สูง",
-    attractLine: "เมนูกำลังหมุน…",
+    title: "หมุนวงล้อคูณแต้ม",
+    shortTitle: "หมุนวงล้อ",
+    blurb: "หมุนวงกลม · กดหยุดลุ้นคูณแต้ม ×1–×5",
+    attractLine: "วงล้อกำลังหมุน…",
   },
   {
     id: "feed",
-    title: "ป้อนไข่มุก",
+    title: "ป้อนไข่มุกลุ้นแต้ม",
     shortTitle: "ป้อนไข่มุก",
-    blurb: "แตะตอนไข่มุกใกล้ปากหนุ่ม Tell Tea",
+    blurb: "แตะตอนไข่มุกอยู่โซน · ได้คูณแต้ม ไม่ใช่ของแถม",
     attractLine: "ไข่มุกกำลังโยก…",
   },
   {
     id: "pour",
-    title: "เทชาไทยให้พอดี",
-    shortTitle: "เทชาไทย",
-    blurb: "กดค้างเทชา · ปล่อยตอนระดับที่อยากได้",
-    attractLine: "กำลังเทชาไทย…",
+    title: "เทชาลุ้นคูณแต้ม",
+    shortTitle: "เทชา",
+    blurb: "กดค้างเทชา · ปล่อยตอนโซนคูณแต้มที่อยากได้",
+    attractLine: "กำลังเทชา…",
   },
 ] as const;
 

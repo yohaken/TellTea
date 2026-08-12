@@ -2,221 +2,195 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  DEFAULT_SPIN_WEIGHTS,
   applyMultiplier,
-  normalizeWeights,
   type MultiplierTier,
   type SpinResult,
-  type SpinWeight,
 } from "@/lib/points-multiplier-spin";
-import { prizeForMultiplier, spinResultFlavorLine } from "@/lib/points-spin-theme";
-import { SpinPrizeIcon } from "@/components/PointsSpinThemeIcons";
+import { POINTS_ONLY_NOTE, prizeForMultiplier } from "@/lib/points-spin-theme";
+import { PointsGameBrandLogo } from "@/components/PointsGameBrandLogo";
 
-type Mode = "teaser" | "play" | "demo";
+export type PointsFeedMode = "teaser" | "play" | "demo";
 
 type Props = {
-  mode: Mode;
+  mode?: PointsFeedMode;
   basePoints: number;
-  weights?: readonly SpinWeight[];
   onComplete?: (result: SpinResult) => void;
-  className?: string;
+  onSkip?: () => void;
+  autoPlayMs?: number;
   hint?: string;
+  className?: string;
 };
 
-type Zone = { multiplier: MultiplierTier; start: number; end: number };
+type Zone = { mult: MultiplierTier; from: number; to: number };
 
-function buildZones(weights: readonly SpinWeight[]): Zone[] {
-  const norm = normalizeWeights(weights);
-  // เรียงจากปาก (ซ้าย/0) = ยาก → ขวา = ง่าย : ×5 ใกล้ปากที่สุด
-  const order: MultiplierTier[] = [5, 4, 3, 2, 1];
-  const byM = new Map(norm.map((w) => [w.multiplier, w.weight]));
-  const sum = order.reduce((s, m) => s + (byM.get(m) || 0), 0) || 1;
-  let cursor = 0;
-  return order
-    .filter((m) => (byM.get(m) || 0) > 0)
-    .map((m) => {
-      const w = (byM.get(m) || 0) / sum;
-      const start = cursor;
-      const end = cursor + w;
-      cursor = end;
-      return { multiplier: m, start, end };
-    });
-}
+const ZONES: Zone[] = [
+  { mult: 1, from: 0, to: 0.42 },
+  { mult: 2, from: 0.42, to: 0.68 },
+  { mult: 3, from: 0.68, to: 0.84 },
+  { mult: 4, from: 0.84, to: 0.94 },
+  { mult: 5, from: 0.94, to: 1 },
+];
 
-function zoneAt(zones: Zone[], t: number): MultiplierTier {
+function multAt(t: number): MultiplierTier {
   const x = ((t % 1) + 1) % 1;
-  for (const z of zones) {
-    if (x >= z.start && x < z.end) return z.multiplier;
+  for (const z of ZONES) {
+    if (x >= z.from && x < z.to) return z.mult;
   }
-  return zones[zones.length - 1]?.multiplier ?? 1;
+  return 1;
 }
 
+/**
+ * จับจังหวะป้อนไข่มุก — ได้แค่คูณแต้ม (ไม่ใช่สินค้า)
+ * โลโก้จาก brandLogo ที่อัปโหลดในบิล/ใบเสร็จ
+ */
 export function PointsFeedBobaGame({
-  mode,
+  mode = "play",
   basePoints,
-  weights = DEFAULT_SPIN_WEIGHTS,
   onComplete,
-  className = "",
+  onSkip,
+  autoPlayMs = 0,
   hint,
+  className = "",
 }: Props) {
-  const zones = buildZones(weights);
-  const [phase, setPhase] = useState<"idle" | "running" | "done">(
-    mode === "teaser" ? "running" : "idle",
-  );
-  const [pos, setPos] = useState(0.72);
+  const isTeaser = mode === "teaser";
+  const [running, setRunning] = useState(true);
+  const [pos, setPos] = useState(0);
+  const [done, setDone] = useState<MultiplierTier | null>(null);
   const [result, setResult] = useState<SpinResult | null>(null);
-  const posRef = useRef(0.72);
-  const dirRef = useRef(-1);
-  const phaseRef = useRef(phase);
+  const raf = useRef(0);
+  const t0 = useRef(0);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
-    phaseRef.current = phase;
-  }, [phase]);
-
-  useEffect(() => {
-    if (mode !== "play") return;
-    if (phase !== "idle" || result) return;
-    const t = window.setTimeout(() => {
-      setResult(null);
-      setPhase("running");
-      phaseRef.current = "running";
-    }, 280);
-    return () => window.clearTimeout(t);
-  }, [mode, phase, result]);
-
-  useEffect(() => {
-    let last = performance.now();
-    let raf = 0;
+    if ((!running && !isTeaser) || done != null) return;
+    t0.current = performance.now();
     const tick = (now: number) => {
-      const dt = Math.min(0.05, (now - last) / 1000);
-      last = now;
-      if (phaseRef.current === "running" || mode === "teaser") {
-        // โยกไป-มา เร็วพอสำหรับ Gen-Z
-        let p = posRef.current + dirRef.current * dt * (mode === "teaser" ? 0.22 : 0.38);
-        if (p <= 0.02) {
-          p = 0.02;
-          dirRef.current = 1;
-        } else if (p >= 0.98) {
-          p = 0.98;
-          dirRef.current = -1;
-        }
-        posRef.current = p;
-        setPos(p);
-      }
-      raf = requestAnimationFrame(tick);
+      const elapsed = (now - t0.current) / 1000;
+      setPos((elapsed * 0.55) % 1);
+      raf.current = requestAnimationFrame(tick);
     };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [mode]);
+    raf.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf.current);
+  }, [running, done, isTeaser]);
 
-  function start() {
-    if (mode === "teaser") return;
-    setResult(null);
-    setPhase("running");
-    phaseRef.current = "running";
-  }
+  useEffect(() => {
+    if (isTeaser || !autoPlayMs || done != null) return;
+    const id = window.setTimeout(() => feed(), autoPlayMs);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoPlayMs, done, isTeaser]);
 
   function feed() {
-    if (mode === "teaser") return;
-    if (phaseRef.current !== "running") return;
-    const mult = zoneAt(zones, posRef.current);
-    const res = applyMultiplier(basePoints, mult);
+    if (isTeaser || done != null) return;
+    cancelAnimationFrame(raf.current);
+    setRunning(false);
+    const m = multAt(pos);
+    const res = applyMultiplier(basePoints, m);
+    setDone(m);
     setResult(res);
-    setPhase("done");
-    phaseRef.current = "done";
-    onComplete?.(res);
+    window.setTimeout(() => {
+      onCompleteRef.current?.(res);
+    }, 900);
   }
 
-  const liveMult = zoneAt(zones, pos);
-  const livePrize = prizeForMultiplier(liveMult);
+  const preview = multAt(pos);
+  const theme = done ? prizeForMultiplier(done) : null;
 
   return (
-    <div className={`pts-game pts-feed ${className}`.trim()} data-mode={mode} data-phase={phase}>
+    <div
+      className={`pts-game pts-feed pts-game--mobile ${className}`.trim()}
+      data-mode={mode}
+    >
       <div className="pts-game-head">
-        <div className="pts-spin-brand">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-mark.svg" alt="" className="pts-feed-logo-mark" width={48} height={48} />
-        </div>
-        <p className="pts-spin-title">ป้อนไข่มุก</p>
-        <p className="pts-spin-sub">
-          {mode === "teaser"
-            ? "โยนไข่มุกเข้าปากหนุ่ม Tell Tea"
-            : `แต้มฐาน ${Math.max(0, Math.trunc(basePoints))} · แตะตอนไข่มุกอยู่โซนดี`}
+        <span className="pts-game-kicker">จับจังหวะ · คูณแต้ม</span>
+        <h3 className="pts-game-title">ป้อนไข่มุก</h3>
+        <p className="pts-game-sub">
+          {isTeaser
+            ? "ลุ้นคูณแต้ม ×1–×5 · ไม่ใช่ของแถม"
+            : "แตะตอนเข็มชี้โซนที่ต้องการ — ได้แค่คูณแต้ม"}
         </p>
+        {!isTeaser ? (
+          <p className="pts-spin-points-only">{POINTS_ONLY_NOTE}</p>
+        ) : null}
       </div>
 
-      <div className="pts-feed-stage">
-        <div className="pts-feed-guy" aria-hidden>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-telltea.svg" alt="" className="pts-feed-logo" />
-          <span className="pts-feed-mouth-glow" />
+      <div className="pts-feed-stage" aria-hidden={isTeaser}>
+        <div className="pts-feed-cup">
+          <div className="pts-feed-cup-logo">
+            <PointsGameBrandLogo className="pts-game-brand-logo" size={56} />
+          </div>
+          <div className="pts-feed-boba-stack">
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                className="pts-feed-pearl-dot"
+                style={{ animationDelay: `${i * 0.18}s` }}
+              />
+            ))}
+          </div>
         </div>
-
-        <div className="pts-feed-lane">
+        <div className="pts-feed-track">
           <div className="pts-feed-zones">
-            {zones.map((z) => {
-              const prize = prizeForMultiplier(z.multiplier);
-              return (
-                <div
-                  key={z.multiplier}
-                  className={`pts-feed-zone pts-spin-seg--${prize.tone}`}
-                  style={{
-                    left: `${z.start * 100}%`,
-                    width: `${(z.end - z.start) * 100}%`,
-                  }}
-                  title={`×${z.multiplier} ${prize.shortLabel}`}
-                >
-                  <span>×{z.multiplier}</span>
-                </div>
-              );
-            })}
+            {ZONES.map((z) => (
+              <div
+                key={z.mult}
+                className={`pts-feed-zone pts-feed-zone--x${z.mult}`}
+                style={{
+                  left: `${z.from * 100}%`,
+                  width: `${(z.to - z.from) * 100}%`,
+                }}
+              >
+                ×{z.mult}
+              </div>
+            ))}
           </div>
           <div
-            className="pts-feed-pearl"
-            style={{ left: `calc(${pos * 100}% - 0.7rem)` }}
-            data-mult={liveMult}
+            className="pts-feed-needle"
+            style={{ left: `${pos * 100}%` }}
           />
-          <p className="pts-feed-live muted">
-            ตอนนี้: ×{liveMult} {livePrize.shortLabel}
-          </p>
         </div>
+        {!isTeaser ? (
+          <div className="pts-feed-live" aria-live="polite">
+            ตอนนี้ → <strong>×{preview}</strong> แต้ม
+          </div>
+        ) : null}
       </div>
 
-      {mode !== "teaser" ? (
-        <div className="pts-spin-actions">
-          {phase === "idle" || phase === "done" ? (
-            <button type="button" className="primary-btn pts-spin-btn" onClick={start}>
-              {phase === "done" ? "ป้อนอีกเม็ด" : "เริ่มโยกไข่มุก"}
-            </button>
-          ) : null}
-          {phase === "running" ? (
-            <button type="button" className="primary-btn pts-spin-btn pts-spin-btn--stop" onClick={feed}>
-              ป้อน!
+      {!isTeaser && done == null ? (
+        <div className="pts-game-actions pts-spin-actions">
+          <button type="button" className="primary-btn pts-spin-btn pts-spin-btn--stop" onClick={feed}>
+            ป้อนเลย!
+          </button>
+          {onSkip ? (
+            <button
+              type="button"
+              className="ghost-btn pts-spin-btn"
+              onClick={onSkip}
+            >
+              ข้าม · ได้ ×1
             </button>
           ) : null}
         </div>
       ) : null}
 
-      {result ? (
-        <div className="pts-spin-result" role="status">
-          <div className="pts-spin-result-prize">
-            <SpinPrizeIcon multiplier={result.multiplier} />
-          </div>
-          <p className="pts-spin-result-mult">×{result.multiplier}</p>
-          <p className="pts-spin-result-flavor">{spinResultFlavorLine(result.multiplier)}</p>
+      {!isTeaser && done != null && result ? (
+        <div
+          className={`pts-spin-result pts-spin-result--${theme?.tone}`}
+          role="status"
+        >
+          <PointsGameBrandLogo className="pts-result-brand" size={44} />
+          <p className="pts-spin-result-mult">×{done}</p>
+          <p className="pts-spin-result-flavor">{theme?.label}</p>
           <p>
-            {result.basePoints} → <strong>{result.finalPoints}</strong> แต้ม
-            {result.bonusPoints > 0 ? (
-              <span className="pts-spin-bonus"> (+{result.bonusPoints})</span>
-            ) : null}
+            {result.basePoints.toLocaleString("th-TH")} →{" "}
+            <strong>{result.finalPoints.toLocaleString("th-TH")} แต้ม</strong>
           </p>
+          <p className="pts-spin-points-only">{POINTS_ONLY_NOTE}</p>
         </div>
       ) : null}
 
       {hint ? <p className="pts-spin-hint muted">{hint}</p> : null}
-      {mode === "teaser" && !hint ? (
-        <p className="pts-spin-hint muted">โซนแคบใกล้ปาก = × สูง · ชิโอปังหายาก</p>
-      ) : null}
     </div>
   );
 }

@@ -105,7 +105,8 @@ function SpinDemoView() {
         </p>
         <p className="members-slim-hint muted">
           ไม่แตะแต้มลูกค้าจริง · จำลองสถานการณ์เดียวกับลูกค้า: พื้นหลังเกม → เลือกได้{" "}
-          <strong>1 เกมเท่านั้น</strong> ต่อรอบ · ตรวจผ่านแล้วค่อยเปิดจริง
+          <strong>1 เกมเท่านั้น</strong> ต่อรอบ · × คือคูณแต้มเท่านั้น ไม่ใช่ของแถม ·
+          โลโก้จากที่อัปโหลดในบิล/ใบเสร็จ · ตรวจผ่านแล้วค่อยเปิดจริง
         </p>
 
         <p className="pts-spin-demo-weights-title">โหมดดู</p>
@@ -233,10 +234,10 @@ function SpinDemoView() {
             mode="demo"
             basePoints={basePoints}
             weights={weights}
-            hint="กดเริ่มหมุน → กดหยุด · เมนูชิ้นแคบ = ยาก"
+            hint="กดเริ่มหมุน → กดหยุด · ชิ้นแคบ = ยาก · ได้แค่คูณแต้ม"
             onComplete={(r) => {
               setLastNote(
-                `หมุนเมนู · ×${r.multiplier} ${SPIN_MENU_PRIZES[r.multiplier].label} · ${r.basePoints}→${r.finalPoints}`,
+                `หมุนวงล้อ · ×${r.multiplier} ${SPIN_MENU_PRIZES[r.multiplier].label} · ${r.basePoints}→${r.finalPoints}`,
               );
             }}
           />
@@ -246,8 +247,7 @@ function SpinDemoView() {
             key={gameKey}
             mode="demo"
             basePoints={basePoints}
-            weights={weights}
-            hint="แตะป้อนตอนไข่มุกอยู่ในโซน · ใกล้ปาก = × สูง"
+            hint="แตะตอนเข็มอยู่ในโซน · ได้แค่คูณแต้ม"
             onComplete={(r) => {
               setLastNote(
                 `ป้อนไข่มุก · ×${r.multiplier} ${SPIN_MENU_PRIZES[r.multiplier].label} · ${r.basePoints}→${r.finalPoints}`,
@@ -260,11 +260,10 @@ function SpinDemoView() {
             key={gameKey}
             mode="demo"
             basePoints={basePoints}
-            weights={weights}
-            hint="กดค้างเทชา แล้วปล่อย · อย่าล้นปากแก้ว"
+            hint="กดค้างเทชา แล้วปล่อย · ได้แค่คูณแต้ม"
             onComplete={(r) => {
               setLastNote(
-                `เทชาไทย · ×${r.multiplier} ${SPIN_MENU_PRIZES[r.multiplier].label} · ${r.basePoints}→${r.finalPoints}`,
+                `เทชา · ×${r.multiplier} ${SPIN_MENU_PRIZES[r.multiplier].label} · ${r.basePoints}→${r.finalPoints}`,
               );
             }}
           />
