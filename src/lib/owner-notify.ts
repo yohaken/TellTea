@@ -1,5 +1,5 @@
 /**
- * ตั้งค่าแจ้งเตือนเจ้าของ — LINE ส่วนตัว + สรุปรายวันเช้า
+ * ตั้งค่าแจ้งเตือนเจ้าของ → LINE โดยเฉพาะ
  * เก็บใน meta/ownerLineNotify (owner-only · มี token)
  */
 import { doc, getDoc, setDoc } from "firebase/firestore";
@@ -10,16 +10,22 @@ export type OwnerNotifySettings = {
   channelAccessToken: string;
   /** LINE userId ของเจ้าของ (U…) */
   lineUserId: string;
-  /** ส่งสรุปรายวันทาง LINE */
+  /** ส่วนที่ 1: แจ้งทันทีเมื่อเข้าเงื่อนไข (เช่น ยอดต่ำ) → LINE */
+  instantLineEnabled: boolean;
+  /** ชั่วโมงเริ่มส่งแจ้งทันที (Asia/Bangkok 0–23) */
+  instantHourStart: number;
+  /** ชั่วโมงสิ้นสุดส่งแจ้งทันที (รวมชั่วโมงนี้) */
+  instantHourEnd: number;
+  /** ส่วนที่ 2: สรุปรายวันทาง LINE */
   dailyDigestEnabled: boolean;
-  /** ชั่วโมง Asia/Bangkok 0–23 (ค่าเริ่ม 8) */
   digestHour: number;
   includeLowBalance: boolean;
   includeBillNotices: boolean;
   includeYesterdaySales: boolean;
   includeMemberCount: boolean;
-  /** ส่ง Web Push คู่กับ LINE ด้วย */
+  /** ช่องทางสำรอง (ปิดเป็นค่าเริ่ม — หลักคือ LINE) */
   webPushOnDigest: boolean;
+  webPushOnInstant: boolean;
   updatedAt: number;
   updatedBy: string;
 };
@@ -27,13 +33,17 @@ export type OwnerNotifySettings = {
 export const DEFAULT_OWNER_NOTIFY: OwnerNotifySettings = {
   channelAccessToken: "",
   lineUserId: "",
+  instantLineEnabled: true,
+  instantHourStart: 8,
+  instantHourEnd: 21,
   dailyDigestEnabled: true,
   digestHour: 8,
   includeLowBalance: true,
   includeBillNotices: true,
   includeYesterdaySales: true,
   includeMemberCount: true,
-  webPushOnDigest: true,
+  webPushOnDigest: false,
+  webPushOnInstant: false,
   updatedAt: 0,
   updatedBy: "",
 };
@@ -42,9 +52,9 @@ function ownerNotifyRef() {
   return doc(getDb(), "meta", "ownerLineNotify");
 }
 
-function clampHour(n: unknown): number {
+function clampHour(n: unknown, fallback = 8): number {
   const h = Math.round(Number(n));
-  if (!Number.isFinite(h)) return 8;
+  if (!Number.isFinite(h)) return fallback;
   return Math.min(23, Math.max(0, h));
 }
 
@@ -55,13 +65,17 @@ export function parseOwnerNotifySettings(
   return {
     channelAccessToken: String(data.channelAccessToken || "").trim(),
     lineUserId: String(data.lineUserId || "").trim(),
+    instantLineEnabled: data.instantLineEnabled !== false,
+    instantHourStart: clampHour(data.instantHourStart, 8),
+    instantHourEnd: clampHour(data.instantHourEnd, 21),
     dailyDigestEnabled: data.dailyDigestEnabled !== false,
-    digestHour: clampHour(data.digestHour),
+    digestHour: clampHour(data.digestHour, 8),
     includeLowBalance: data.includeLowBalance !== false,
     includeBillNotices: data.includeBillNotices !== false,
     includeYesterdaySales: data.includeYesterdaySales !== false,
     includeMemberCount: data.includeMemberCount !== false,
-    webPushOnDigest: data.webPushOnDigest !== false,
+    webPushOnDigest: data.webPushOnDigest === true,
+    webPushOnInstant: data.webPushOnInstant === true,
     updatedAt: Number(data.updatedAt) || 0,
     updatedBy: String(data.updatedBy || ""),
   };
@@ -73,17 +87,10 @@ export async function getOwnerNotifySettings(): Promise<OwnerNotifySettings> {
   return parseOwnerNotifySettings(snap.data() as Partial<OwnerNotifySettings>);
 }
 
-export type OwnerNotifySaveInput = {
-  channelAccessToken: string;
-  lineUserId: string;
-  dailyDigestEnabled: boolean;
-  digestHour: number;
-  includeLowBalance: boolean;
-  includeBillNotices: boolean;
-  includeYesterdaySales: boolean;
-  includeMemberCount: boolean;
-  webPushOnDigest: boolean;
-};
+export type OwnerNotifySaveInput = Omit<
+  OwnerNotifySettings,
+  "updatedAt" | "updatedBy"
+>;
 
 export async function saveOwnerNotifySettings(
   input: OwnerNotifySaveInput,
@@ -106,6 +113,9 @@ export async function saveOwnerNotifySettings(
     {
       channelAccessToken: next.channelAccessToken,
       lineUserId: next.lineUserId,
+      instantLineEnabled: next.instantLineEnabled,
+      instantHourStart: next.instantHourStart,
+      instantHourEnd: next.instantHourEnd,
       dailyDigestEnabled: next.dailyDigestEnabled,
       digestHour: next.digestHour,
       includeLowBalance: next.includeLowBalance,
@@ -113,6 +123,7 @@ export async function saveOwnerNotifySettings(
       includeYesterdaySales: next.includeYesterdaySales,
       includeMemberCount: next.includeMemberCount,
       webPushOnDigest: next.webPushOnDigest,
+      webPushOnInstant: next.webPushOnInstant,
       updatedAt: next.updatedAt,
       updatedBy: next.updatedBy,
     },
@@ -130,4 +141,8 @@ export function maskSecret(value: string): string {
 
 export function lineReady(settings: OwnerNotifySettings): boolean {
   return Boolean(settings.channelAccessToken && settings.lineUserId);
+}
+
+export function formatHourLabel(hour: number): string {
+  return `${String(clampHour(hour, 0)).padStart(2, "0")}:00`;
 }

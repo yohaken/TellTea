@@ -95,15 +95,14 @@ const VAPID_PUBLIC =
   "BI74S6JyDs61V0eqRuS9iy6XdhER9wtA-EXhLfWiEFZSeg2VBBQM1dnPnFsyVY2AQzcKF7gHZm-Eifpsc7cF0Zg";
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || "";
 
-const COOLDOWN_MS = 3 * 60 * 60 * 1000; // 3 hours between phone pushes while still low
-
-function formatBaht(n) {
-  return new Intl.NumberFormat("th-TH", {
-    style: "currency",
-    currency: "THB",
-    maximumFractionDigits: 0,
-  }).format(n);
-}
+const COOLDOWN_MS = 3 * 60 * 60 * 1000; // 3 hours between LINE alerts while still low
+const {
+  formatBaht,
+  hourInWindow,
+  loadOwnerNotify,
+  sendLinePush,
+  bangkokParts,
+} = require("./line-owner");
 
 async function sendToOwnerSubscriptions(payload) {
   if (!VAPID_PRIVATE) {
@@ -158,12 +157,17 @@ exports.onLedgerBalanceWritten = functions
     if (!Number.isFinite(balance)) return null;
 
     const db = getFirestore();
-    const settingsSnap = await db.doc("meta/settings").get();
+    const [settingsSnap, notify] = await Promise.all([
+      db.doc("meta/settings").get(),
+      loadOwnerNotify(db),
+    ]);
     const settings = settingsSnap.exists
       ? settingsSnap.data()
       : { lowBalanceEnabled: true, lowBalanceThreshold: 5000 };
 
-    const enabled = settings.lowBalanceEnabled !== false;
+    const thresholdEnabled = settings.lowBalanceEnabled !== false;
+    const lineInstantEnabled = notify.instantLineEnabled !== false;
+    const enabled = thresholdEnabled && lineInstantEnabled;
     const threshold = Number(settings.lowBalanceThreshold);
     const thresholdSafe = Number.isFinite(threshold) ? threshold : 5000;
 
@@ -181,31 +185,82 @@ exports.onLedgerBalanceWritten = functions
       return null;
     }
 
-    const lastPushAt = Number(alert.lastPushAt) || 0;
-    const stillCooling = Date.now() - lastPushAt < COOLDOWN_MS;
+    const hour = bangkokParts().hour;
+    const inWindow = hourInWindow(hour, notify.instantHourStart, notify.instantHourEnd);
+    if (!inWindow) {
+      await alertRef.set(
+        {
+          active: true,
+          balance,
+          threshold: thresholdSafe,
+          deferredOutsideHours: true,
+          hour,
+          window: `${notify.instantHourStart}-${notify.instantHourEnd}`,
+        },
+        { merge: true },
+      );
+      console.log("low balance LINE deferred (outside hours)", {
+        balance,
+        hour,
+        start: notify.instantHourStart,
+        end: notify.instantHourEnd,
+      });
+      return null;
+    }
+
+    const lastLineAt = Number(alert.lastLineAt || alert.lastPushAt) || 0;
+    const stillCooling = Date.now() - lastLineAt < COOLDOWN_MS;
     if (alert.active && stillCooling) {
       await alertRef.set({ active: true, balance, threshold: thresholdSafe }, { merge: true });
       return null;
     }
 
-    const result = await sendToOwnerSubscriptions({
-      title: "TellTea — เงินคงเหลือต่ำ",
-      body: `คงเหลือ ${formatBaht(balance)} (ต่ำกว่า ${formatBaht(thresholdSafe)}) — แตะเพื่อโอนเข้า`,
-      url: "https://telltea-bo.web.app/ledger/?transferIn=1",
-    });
+    const text = [
+      "TellTea — เงินคงเหลือต่ำ",
+      `คงเหลือ ${formatBaht(balance)}`,
+      `ต่ำกว่าเกณฑ์ ${formatBaht(thresholdSafe)}`,
+      "โอนเข้า: https://telltea-bo.web.app/ledger/?transferIn=1",
+    ].join("\n");
+
+    let lineResult = { ok: false, error: "missing_line_credentials" };
+    if (notify.channelAccessToken && notify.lineUserId) {
+      try {
+        await sendLinePush(notify.channelAccessToken, notify.lineUserId, text);
+        lineResult = { ok: true };
+      } catch (err) {
+        lineResult = { ok: false, error: String(err?.message || err) };
+      }
+    }
+
+    let pushResult = null;
+    if (notify.webPushOnInstant) {
+      pushResult = await sendToOwnerSubscriptions({
+        title: "TellTea — เงินคงเหลือต่ำ",
+        body: `คงเหลือ ${formatBaht(balance)} (ต่ำกว่า ${formatBaht(thresholdSafe)}) — แตะเพื่อโอนเข้า`,
+        url: "https://telltea-bo.web.app/ledger/?transferIn=1",
+      });
+    }
 
     await alertRef.set(
       {
         active: true,
         balance,
         threshold: thresholdSafe,
+        deferredOutsideHours: false,
+        lastLineAt: Date.now(),
         lastPushAt: Date.now(),
-        lastPushResult: result,
+        lastLineResult: lineResult,
+        lastPushResult: pushResult,
       },
       { merge: true },
     );
 
-    console.log("low balance push", { balance, threshold: thresholdSafe, ...result });
+    console.log("low balance LINE", {
+      balance,
+      threshold: thresholdSafe,
+      line: lineResult,
+      push: pushResult,
+    });
     return null;
   });
 

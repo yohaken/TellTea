@@ -1,38 +1,27 @@
 /**
- * Owner morning digest → LINE Messaging API (+ optional Web Push).
+ * Owner morning digest → LINE Messaging API.
  * Runs hourly; sends once when Asia/Bangkok hour matches digestHour (default 8).
  */
 const functions = require("firebase-functions/v1");
 const { getFirestore } = require("firebase-admin/firestore");
 const webpush = require("web-push");
+const {
+  bangkokParts,
+  bangkokDateKeyFromParts,
+  formatBaht,
+  hourInWindow,
+  parseNotify,
+  sendLinePush,
+  loadOwnerNotify,
+} = require("./line-owner");
+
+const LOW_BALANCE_COOLDOWN_MS = 3 * 60 * 60 * 1000;
 
 const REGION = "asia-southeast1";
 const VAPID_PUBLIC =
   process.env.VAPID_PUBLIC_KEY ||
   "BI74S6JyDs61V0eqRuS9iy6XdhER9wtA-EXhLfWiEFZSeg2VBBQM1dnPnFsyVY2AQzcKF7gHZm-Eifpsc7cF0Zg";
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || "";
-
-function bangkokParts(ms = Date.now()) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Bangkok",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    hour12: false,
-  }).formatToParts(new Date(ms));
-  const get = (t) => parts.find((p) => p.type === t)?.value || "0";
-  return {
-    y: Number(get("year")),
-    m: Number(get("month")),
-    d: Number(get("day")),
-    hour: Number(get("hour")),
-  };
-}
-
-function bangkokDateKeyFromParts({ y, m, d }) {
-  return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-}
 
 function yesterdayBangkokKey(now = Date.now()) {
   const p = bangkokParts(now);
@@ -44,54 +33,6 @@ function yesterdayBangkokKey(now = Date.now()) {
 function startMsFromDateKey(dateKey) {
   const [y, m, d] = dateKey.split("-").map(Number);
   return Date.UTC(y, m - 1, d) - 7 * 60 * 60 * 1000;
-}
-
-function formatBaht(n) {
-  return new Intl.NumberFormat("th-TH", {
-    style: "currency",
-    currency: "THB",
-    maximumFractionDigits: 0,
-  }).format(Number(n) || 0);
-}
-
-function clampHour(n) {
-  const h = Math.round(Number(n));
-  if (!Number.isFinite(h)) return 8;
-  return Math.min(23, Math.max(0, h));
-}
-
-function parseNotify(raw) {
-  const d = raw && typeof raw === "object" ? raw : {};
-  return {
-    channelAccessToken: String(d.channelAccessToken || "").trim(),
-    lineUserId: String(d.lineUserId || "").trim(),
-    dailyDigestEnabled: d.dailyDigestEnabled !== false,
-    digestHour: clampHour(d.digestHour),
-    includeLowBalance: d.includeLowBalance !== false,
-    includeBillNotices: d.includeBillNotices !== false,
-    includeYesterdaySales: d.includeYesterdaySales !== false,
-    includeMemberCount: d.includeMemberCount !== false,
-    webPushOnDigest: d.webPushOnDigest !== false,
-  };
-}
-
-async function sendLinePush(token, userId, text) {
-  const res = await fetch("https://api.line.me/v2/bot/message/push", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      to: userId,
-      messages: [{ type: "text", text: String(text).slice(0, 4900) }],
-    }),
-  });
-  const bodyText = await res.text().catch(() => "");
-  if (!res.ok) {
-    throw new Error(`LINE ${res.status}: ${bodyText.slice(0, 240)}`);
-  }
-  return { ok: true };
 }
 
 async function sendToOwnerSubscriptions(payload) {
@@ -136,7 +77,6 @@ function normalizePosPayment(raw) {
 async function sumYesterdayPosSales(db, dateKey) {
   const start = startMsFromDateKey(dateKey);
   const end = start + 24 * 60 * 60 * 1000 - 1;
-  // legacy shift-window docs sometimes offset +7h — scan both windows
   const windows = [
     [start, end],
     [start + 7 * 60 * 60 * 1000, end + 7 * 60 * 60 * 1000],
@@ -159,7 +99,6 @@ async function sumYesterdayPosSales(db, dateKey) {
       if (data.status === "voided") continue;
       const total = Number(data.total) || 0;
       if (!(total > 0)) continue;
-      // Prefer Bangkok calendar key when available via date ms
       const dateMs = typeof data.date === "number" ? data.date : 0;
       if (dateMs) {
         const key = bangkokDateKeyFromParts(bangkokParts(dateMs));
@@ -256,9 +195,7 @@ async function buildDigestText(db, notify, now = Date.now()) {
     const sales = await sumYesterdayPosSales(db, yKey);
     lines.push("");
     lines.push(`ยอดขายหน้าร้าน ${yKey}`);
-    lines.push(
-      `· รวม ${formatBaht(sales.gross)} · ${sales.bills} บิล`,
-    );
+    lines.push(`· รวม ${formatBaht(sales.gross)} · ${sales.bills} บิล`);
     lines.push(
       `· สด ${formatBaht(sales.cash)} · โอน/พร้อมเพย์ ${formatBaht(sales.transfer)}`,
     );
@@ -294,8 +231,7 @@ async function assertOwnerCallable(context) {
 
 async function runDigest({ force = false, now = Date.now() } = {}) {
   const db = getFirestore();
-  const notifySnap = await db.doc("meta/ownerLineNotify").get();
-  const notify = parseNotify(notifySnap.exists ? notifySnap.data() : {});
+  const notify = await loadOwnerNotify(db);
 
   if (!notify.dailyDigestEnabled && !force) {
     return { skip: true, reason: "digest_disabled" };
@@ -361,11 +297,78 @@ async function runDigest({ force = false, now = Date.now() } = {}) {
   return result;
 }
 
+/** If balance stayed low overnight, send LINE once we enter the configured hours. */
+async function flushDeferredLowBalanceLine(db, now = Date.now()) {
+  const [notify, settingsSnap, ledgerSnap, alertSnap] = await Promise.all([
+    loadOwnerNotify(db),
+    db.doc("meta/settings").get(),
+    db.doc("meta/ledger").get(),
+    db.doc("meta/lowBalanceAlert").get(),
+  ]);
+  if (notify.instantLineEnabled === false) {
+    return { skip: true, reason: "instant_disabled" };
+  }
+  const settings = settingsSnap.exists ? settingsSnap.data() : {};
+  if (settings.lowBalanceEnabled === false) {
+    return { skip: true, reason: "threshold_disabled" };
+  }
+  const threshold = Number(settings.lowBalanceThreshold);
+  const thresholdSafe = Number.isFinite(threshold) ? threshold : 5000;
+  const balance = Number(ledgerSnap.exists ? ledgerSnap.get("balance") : NaN);
+  if (!Number.isFinite(balance) || balance >= thresholdSafe) {
+    return { skip: true, reason: "not_low" };
+  }
+  const hour = bangkokParts(now).hour;
+  if (!hourInWindow(hour, notify.instantHourStart, notify.instantHourEnd)) {
+    return { skip: true, reason: "outside_hours", hour };
+  }
+  if (!notify.channelAccessToken || !notify.lineUserId) {
+    return { skip: true, reason: "missing_line_credentials" };
+  }
+  const alert = alertSnap.exists ? alertSnap.data() : {};
+  const lastLineAt = Number(alert.lastLineAt || alert.lastPushAt) || 0;
+  if (Date.now() - lastLineAt < LOW_BALANCE_COOLDOWN_MS) {
+    return { skip: true, reason: "cooldown" };
+  }
+
+  const text = [
+    "TellTea — เงินคงเหลือต่ำ",
+    `คงเหลือ ${formatBaht(balance)}`,
+    `ต่ำกว่าเกณฑ์ ${formatBaht(thresholdSafe)}`,
+    "โอนเข้า: https://telltea-bo.web.app/ledger/?transferIn=1",
+  ].join("\n");
+
+  let lineResult;
+  try {
+    await sendLinePush(notify.channelAccessToken, notify.lineUserId, text);
+    lineResult = { ok: true };
+  } catch (err) {
+    lineResult = { ok: false, error: String(err?.message || err) };
+  }
+
+  await db.doc("meta/lowBalanceAlert").set(
+    {
+      active: true,
+      balance,
+      threshold: thresholdSafe,
+      deferredOutsideHours: false,
+      lastLineAt: Date.now(),
+      lastLineResult: lineResult,
+      flushedByHourly: true,
+    },
+    { merge: true },
+  );
+  return { ok: lineResult.ok, line: lineResult, balance, threshold: thresholdSafe };
+}
+
 exports.ownerDailyDigestHourly = functions
   .region(REGION)
   .pubsub.schedule("5 * * * *")
   .timeZone("Asia/Bangkok")
   .onRun(async () => {
+    const db = getFirestore();
+    const deferred = await flushDeferredLowBalanceLine(db);
+    console.log("flushDeferredLowBalanceLine", deferred);
     const result = await runDigest({ force: false });
     console.log("ownerDailyDigestHourly", result);
     return null;
@@ -376,18 +379,18 @@ exports.ownerLineNotifyTest = functions
   .https.onCall(async (_data, context) => {
     await assertOwnerCallable(context);
     const db = getFirestore();
-    const notifySnap = await db.doc("meta/ownerLineNotify").get();
-    const notify = parseNotify(notifySnap.exists ? notifySnap.data() : {});
+    const notify = await loadOwnerNotify(db);
     if (!notify.channelAccessToken || !notify.lineUserId) {
       return {
         ok: false,
         detail: "ยังไม่ได้บันทึก Channel access token และ User ID",
       };
     }
+    const parts = bangkokParts();
     const text = [
       "TellTea ทดสอบ LINE",
-      `เวลา ${bangkokDateKeyFromParts(bangkokParts())} ${String(bangkokParts().hour).padStart(2, "0")}:xx`,
-      "ถ้าเห็นข้อความนี้ แสดงว่าเชื่อม LINE สำเร็จ — สรุปเช้าจะส่งตามเวลาที่ตั้งไว้",
+      `เวลา ${bangkokDateKeyFromParts(parts)} ${String(parts.hour).padStart(2, "0")}:${String(parts.minute).padStart(2, "0")}`,
+      "ถ้าเห็นข้อความนี้ แสดงว่าเชื่อม LINE สำเร็จ — แจ้งยอดต่ำและสรุปรายวันจะส่งมาที่นี่",
     ].join("\n");
     try {
       await sendLinePush(notify.channelAccessToken, notify.lineUserId, text);
@@ -411,4 +414,9 @@ exports.ownerDailyDigestRunNow = functions
     };
   });
 
-exports._ownerDailyDigestTestOnly = { parseNotify, buildDigestText, runDigest, sendLinePush };
+exports._ownerDailyDigestTestOnly = {
+  parseNotify,
+  buildDigestText,
+  runDigest,
+  sendLinePush,
+};
