@@ -2,10 +2,12 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { Bell } from "lucide-react";
+import { doc, getDoc } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { SettingsFold } from "@/components/SettingsFold";
 import { useAuth } from "@/lib/auth";
-import { getFirebaseFunctions } from "@/lib/firebase";
+import { getDb, getFirebaseFunctions } from "@/lib/firebase";
+import { getLedgerBalance } from "@/lib/ledger";
 import {
   DEFAULT_ALERT_SETTINGS,
   getAlertSettings,
@@ -26,7 +28,31 @@ type Props = {
   onError: (msg: string | null) => void;
 };
 
+type AlertStatus = {
+  balance: number | null;
+  active: boolean;
+  lastLineOk: boolean | null;
+  lastError: string;
+  lastAttemptAt: number;
+};
+
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, h) => h);
+
+async function loadAlertStatus(): Promise<AlertStatus> {
+  const [balance, snap] = await Promise.all([
+    getLedgerBalance().catch(() => null),
+    getDoc(doc(getDb(), "meta", "lowBalanceAlert")),
+  ]);
+  const data = snap.exists() ? snap.data() : {};
+  const last = data.lastLineResult as { ok?: boolean; error?: string } | undefined;
+  return {
+    balance: typeof balance === "number" && Number.isFinite(balance) ? balance : null,
+    active: Boolean(data.active),
+    lastLineOk: last ? Boolean(last.ok) : null,
+    lastError: String(last?.error || ""),
+    lastAttemptAt: Number(data.lastAttemptAt || data.lastLineAt || 0),
+  };
+}
 
 /** ตั้งค่าแจ้งเตือนเจ้าของ → LINE โดยเฉพาะ (ทันทีตามเงื่อนไข + สรุปรายวัน) */
 export function OwnerNotifySetup({ onError }: Props) {
@@ -43,14 +69,16 @@ export function OwnerNotifySetup({ onError }: Props) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [status, setStatus] = useState<AlertStatus | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {
-        const [alerts, line] = await Promise.all([
+        const [alerts, line, st] = await Promise.all([
           getAlertSettings(),
           getOwnerNotifySettings(),
+          loadAlertStatus(),
         ]);
         if (cancelled) return;
         setThreshold(String(alerts.lowBalanceThreshold));
@@ -58,6 +86,7 @@ export function OwnerNotifySetup({ onError }: Props) {
         setNotify(line);
         setTokenDraft("");
         setTokenDirty(false);
+        setStatus(st);
       } catch (err) {
         if (!cancelled) {
           onError((err as Error).message || "โหลดตั้งค่าแจ้งเตือนไม่สำเร็จ");
@@ -111,8 +140,31 @@ export function OwnerNotifySetup({ onError }: Props) {
       setTokenDraft("");
       setTokenDirty(false);
       setMsg("บันทึกตั้งค่าแจ้งเตือน LINE แล้ว");
+      setStatus(await loadAlertStatus());
     } catch (err) {
       onError((err as Error).message || "บันทึกไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onCheckLowBalanceNow() {
+    setBusy(true);
+    setMsg(null);
+    onError(null);
+    try {
+      const fn = httpsCallable(getFirebaseFunctions(), "ownerLowBalanceLineCheck");
+      const res = await fn({ force: true });
+      const data = (res.data || {}) as { ok?: boolean; detail?: string };
+      if (data.ok) {
+        setMsg(data.detail || "ส่ง LINE ยอดต่ำแล้ว — เปิดแชท LINE ตรวจข้อความ");
+      } else {
+        onError(data.detail || "ยังไม่ส่ง LINE (ดูเหตุผลด้านบน)");
+        setMsg(data.detail || null);
+      }
+      setStatus(await loadAlertStatus());
+    } catch (err) {
+      onError((err as Error).message || "ตรวจยอดต่ำไม่สำเร็จ");
     } finally {
       setBusy(false);
     }
@@ -329,6 +381,49 @@ export function OwnerNotifySetup({ onError }: Props) {
           <p className="field-hint">
             ค่าเริ่ม {formatHourLabel(8)}–{formatHourLabel(21)} · นอกช่วงนี้จะรอส่งเมื่อเข้าช่วง
           </p>
+          <div className="owner-notify-status">
+            <p className="muted" style={{ margin: 0, textAlign: "left" }}>
+              ยอดคงเหลือปัจจุบัน:{" "}
+              <strong>
+                {status?.balance == null ? "—" : formatBaht(status.balance)}
+              </strong>
+              {" · "}
+              เกณฑ์ {formatBaht(Number(threshold) || 0)}
+              {status?.balance != null &&
+              Number(threshold) >= 0 &&
+              status.balance < Number(threshold)
+                ? " · ตอนนี้ต่ำกว่าเกณฑ์"
+                : " · ยังไม่ต่ำกว่าเกณฑ์"}
+            </p>
+            {status?.lastLineOk === true ? (
+              <p className="ok-text" style={{ margin: "0.35rem 0 0" }}>
+                ส่ง LINE ยอดต่ำล่าสุดสำเร็จ
+                {status.lastAttemptAt
+                  ? ` · ${new Date(status.lastAttemptAt).toLocaleString("th-TH")}`
+                  : ""}
+              </p>
+            ) : null}
+            {status?.lastLineOk === false ? (
+              <p className="error-text" style={{ margin: "0.35rem 0 0" }}>
+                ส่ง LINE ล่าสุดไม่สำเร็จ
+                {status.lastError ? `: ${status.lastError}` : ""}
+              </p>
+            ) : null}
+            <p className="field-hint" style={{ marginTop: "0.45rem" }}>
+              วิธีเช็ค: ให้ยอดบัญชีต่ำกว่าเกณฑ์ (บันทึกรายการจ่าย / ลบรายการโอนเข้า)
+              แล้วกดปุ่มด้านล่าง — หรือกดเพื่อบังคับตรวจยอดปัจจุบันทันที
+            </p>
+            <div className="btn-row" style={{ marginTop: "0.35rem" }}>
+              <button
+                type="button"
+                className="ghost-btn"
+                disabled={busy || !ready}
+                onClick={() => void onCheckLowBalanceNow()}
+              >
+                ตรวจยอดต่ำ → ส่ง LINE ตอนนี้
+              </button>
+            </div>
+          </div>
 
           <h3 className="owner-notify-section">2) สรุปรายวัน → LINE</h3>
           <label className="check-row">

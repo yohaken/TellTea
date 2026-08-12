@@ -95,14 +95,8 @@ const VAPID_PUBLIC =
   "BI74S6JyDs61V0eqRuS9iy6XdhER9wtA-EXhLfWiEFZSeg2VBBQM1dnPnFsyVY2AQzcKF7gHZm-Eifpsc7cF0Zg";
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || "";
 
-const COOLDOWN_MS = 3 * 60 * 60 * 1000; // 3 hours between LINE alerts while still low
-const {
-  formatBaht,
-  hourInWindow,
-  loadOwnerNotify,
-  sendLinePush,
-  bangkokParts,
-} = require("./line-owner");
+const { evaluateAndSendLowBalanceLine } = require("./low-balance-line");
+const { formatBaht } = require("./line-owner");
 
 async function sendToOwnerSubscriptions(payload) {
   if (!VAPID_PRIVATE) {
@@ -156,112 +150,49 @@ exports.onLedgerBalanceWritten = functions
     const balance = Number(after.data().balance);
     if (!Number.isFinite(balance)) return null;
 
-    const db = getFirestore();
-    const [settingsSnap, notify] = await Promise.all([
-      db.doc("meta/settings").get(),
-      loadOwnerNotify(db),
-    ]);
-    const settings = settingsSnap.exists
-      ? settingsSnap.data()
-      : { lowBalanceEnabled: true, lowBalanceThreshold: 5000 };
-
-    const thresholdEnabled = settings.lowBalanceEnabled !== false;
-    const lineInstantEnabled = notify.instantLineEnabled !== false;
-    const enabled = thresholdEnabled && lineInstantEnabled;
-    const threshold = Number(settings.lowBalanceThreshold);
-    const thresholdSafe = Number.isFinite(threshold) ? threshold : 5000;
-
-    const alertRef = db.doc("meta/lowBalanceAlert");
-    const alertSnap = await alertRef.get();
-    const alert = alertSnap.exists ? alertSnap.data() : {};
-
-    if (!enabled || balance >= thresholdSafe) {
-      if (alert.active) {
-        await alertRef.set(
-          { active: false, clearedAt: Date.now(), balance, threshold: thresholdSafe },
-          { merge: true },
-        );
-      }
-      return null;
-    }
-
-    const hour = bangkokParts().hour;
-    const inWindow = hourInWindow(hour, notify.instantHourStart, notify.instantHourEnd);
-    if (!inWindow) {
-      await alertRef.set(
-        {
-          active: true,
-          balance,
-          threshold: thresholdSafe,
-          deferredOutsideHours: true,
-          hour,
-          window: `${notify.instantHourStart}-${notify.instantHourEnd}`,
-        },
-        { merge: true },
-      );
-      console.log("low balance LINE deferred (outside hours)", {
-        balance,
-        hour,
-        start: notify.instantHourStart,
-        end: notify.instantHourEnd,
-      });
-      return null;
-    }
-
-    const lastLineAt = Number(alert.lastLineAt || alert.lastPushAt) || 0;
-    const stillCooling = Date.now() - lastLineAt < COOLDOWN_MS;
-    if (alert.active && stillCooling) {
-      await alertRef.set({ active: true, balance, threshold: thresholdSafe }, { merge: true });
-      return null;
-    }
-
-    const text = [
-      "TellTea — เงินคงเหลือต่ำ",
-      `คงเหลือ ${formatBaht(balance)}`,
-      `ต่ำกว่าเกณฑ์ ${formatBaht(thresholdSafe)}`,
-      "โอนเข้า: https://telltea-bo.web.app/ledger/?transferIn=1",
-    ].join("\n");
-
-    let lineResult = { ok: false, error: "missing_line_credentials" };
-    if (notify.channelAccessToken && notify.lineUserId) {
-      try {
-        await sendLinePush(notify.channelAccessToken, notify.lineUserId, text);
-        lineResult = { ok: true };
-      } catch (err) {
-        lineResult = { ok: false, error: String(err?.message || err) };
-      }
-    }
-
-    let pushResult = null;
-    if (notify.webPushOnInstant) {
-      pushResult = await sendToOwnerSubscriptions({
-        title: "TellTea — เงินคงเหลือต่ำ",
-        body: `คงเหลือ ${formatBaht(balance)} (ต่ำกว่า ${formatBaht(thresholdSafe)}) — แตะเพื่อโอนเข้า`,
-        url: "https://telltea-bo.web.app/ledger/?transferIn=1",
-      });
-    }
-
-    await alertRef.set(
-      {
-        active: true,
-        balance,
-        threshold: thresholdSafe,
-        deferredOutsideHours: false,
-        lastLineAt: Date.now(),
-        lastPushAt: Date.now(),
-        lastLineResult: lineResult,
-        lastPushResult: pushResult,
-      },
-      { merge: true },
-    );
-
-    console.log("low balance LINE", {
-      balance,
-      threshold: thresholdSafe,
-      line: lineResult,
-      push: pushResult,
-    });
+    const result = await evaluateAndSendLowBalanceLine({ balance, force: false });
+    console.log("low balance LINE", result);
     return null;
+  });
+
+/** Owner: check current balance vs threshold and send LINE now (for testing). */
+exports.ownerLowBalanceLineCheck = functions
+  .region("asia-southeast1")
+  .https.onCall(async (data, context) => {
+    if (!context.auth?.uid) {
+      throw new functions.https.HttpsError("unauthenticated", "กรุณาเข้าสู่ระบบ");
+    }
+    const email = String(context.auth.token?.email || "").trim().toLowerCase();
+    const db = getFirestore();
+    let isOwner =
+      email === String(process.env.TELLTEA_OWNER_EMAIL || "yohaken@gmail.com").toLowerCase();
+    if (!isOwner && email) {
+      const staff = await db.collection("staff").doc(email).get();
+      isOwner = staff.exists && staff.get("role") === "owner";
+    }
+    if (!isOwner) {
+      throw new functions.https.HttpsError("permission-denied", "เฉพาะเจ้าของ");
+    }
+
+    const force = data?.force !== false;
+    const result = await evaluateAndSendLowBalanceLine({ force });
+    const reasonTh = {
+      sent: "ส่ง LINE ยอดต่ำแล้ว",
+      above_threshold: `ยอดยังไม่ต่ำกว่าเกณฑ์ (คงเหลือ ${formatBaht(result.balance ?? 0)} / เกณฑ์ ${formatBaht(result.threshold)})`,
+      outside_hours: `อยู่นอกช่วงเวลาส่ง (${result.window}) · ชั่วโมงนี้ ${String(result.hour).padStart(2, "0")}:xx`,
+      missing_line_credentials: "ยังไม่มี Channel access token / User ID",
+      threshold_disabled: "ปิดเกณฑ์ยอดต่ำอยู่",
+      instant_line_disabled: "ปิดแจ้งทันทีไป LINE อยู่",
+      cooldown: "ส่งไปแล้วเร็วๆ นี้ (คูลดาวน์ 3 ชม. ขณะยอดยังต่ำ)",
+      retry_wait: "รอสักครู่แล้วลองใหม่หลังส่งไม่สำเร็จครั้งก่อน",
+      line_error: `LINE ตอบผิดพลาด: ${result.line?.error || ""}`,
+      no_balance: "อ่านยอดคงเหลือไม่ได้",
+    };
+    return {
+      ok: Boolean(result.sent),
+      detail: reasonTh[result.reason] || result.reason || "ตรวจแล้ว",
+      result,
+    };
   });
 
 exports.syncTaskOccurrencesDaily = functions

@@ -9,13 +9,11 @@ const {
   bangkokParts,
   bangkokDateKeyFromParts,
   formatBaht,
-  hourInWindow,
   parseNotify,
   sendLinePush,
   loadOwnerNotify,
 } = require("./line-owner");
-
-const LOW_BALANCE_COOLDOWN_MS = 3 * 60 * 60 * 1000;
+const { evaluateAndSendLowBalanceLine } = require("./low-balance-line");
 
 const REGION = "asia-southeast1";
 const VAPID_PUBLIC =
@@ -297,77 +295,12 @@ async function runDigest({ force = false, now = Date.now() } = {}) {
   return result;
 }
 
-/** If balance stayed low overnight, send LINE once we enter the configured hours. */
-async function flushDeferredLowBalanceLine(db, now = Date.now()) {
-  const [notify, settingsSnap, ledgerSnap, alertSnap] = await Promise.all([
-    loadOwnerNotify(db),
-    db.doc("meta/settings").get(),
-    db.doc("meta/ledger").get(),
-    db.doc("meta/lowBalanceAlert").get(),
-  ]);
-  if (notify.instantLineEnabled === false) {
-    return { skip: true, reason: "instant_disabled" };
-  }
-  const settings = settingsSnap.exists ? settingsSnap.data() : {};
-  if (settings.lowBalanceEnabled === false) {
-    return { skip: true, reason: "threshold_disabled" };
-  }
-  const threshold = Number(settings.lowBalanceThreshold);
-  const thresholdSafe = Number.isFinite(threshold) ? threshold : 5000;
-  const balance = Number(ledgerSnap.exists ? ledgerSnap.get("balance") : NaN);
-  if (!Number.isFinite(balance) || balance >= thresholdSafe) {
-    return { skip: true, reason: "not_low" };
-  }
-  const hour = bangkokParts(now).hour;
-  if (!hourInWindow(hour, notify.instantHourStart, notify.instantHourEnd)) {
-    return { skip: true, reason: "outside_hours", hour };
-  }
-  if (!notify.channelAccessToken || !notify.lineUserId) {
-    return { skip: true, reason: "missing_line_credentials" };
-  }
-  const alert = alertSnap.exists ? alertSnap.data() : {};
-  const lastLineAt = Number(alert.lastLineAt || alert.lastPushAt) || 0;
-  if (Date.now() - lastLineAt < LOW_BALANCE_COOLDOWN_MS) {
-    return { skip: true, reason: "cooldown" };
-  }
-
-  const text = [
-    "TellTea — เงินคงเหลือต่ำ",
-    `คงเหลือ ${formatBaht(balance)}`,
-    `ต่ำกว่าเกณฑ์ ${formatBaht(thresholdSafe)}`,
-    "โอนเข้า: https://telltea-bo.web.app/ledger/?transferIn=1",
-  ].join("\n");
-
-  let lineResult;
-  try {
-    await sendLinePush(notify.channelAccessToken, notify.lineUserId, text);
-    lineResult = { ok: true };
-  } catch (err) {
-    lineResult = { ok: false, error: String(err?.message || err) };
-  }
-
-  await db.doc("meta/lowBalanceAlert").set(
-    {
-      active: true,
-      balance,
-      threshold: thresholdSafe,
-      deferredOutsideHours: false,
-      lastLineAt: Date.now(),
-      lastLineResult: lineResult,
-      flushedByHourly: true,
-    },
-    { merge: true },
-  );
-  return { ok: lineResult.ok, line: lineResult, balance, threshold: thresholdSafe };
-}
-
 exports.ownerDailyDigestHourly = functions
   .region(REGION)
   .pubsub.schedule("5 * * * *")
   .timeZone("Asia/Bangkok")
   .onRun(async () => {
-    const db = getFirestore();
-    const deferred = await flushDeferredLowBalanceLine(db);
+    const deferred = await evaluateAndSendLowBalanceLine({ force: false });
     console.log("flushDeferredLowBalanceLine", deferred);
     const result = await runDigest({ force: false });
     console.log("ownerDailyDigestHourly", result);
