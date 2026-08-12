@@ -75,6 +75,19 @@ export function PointsPourTeaGame({
   }, [phase]);
 
   useEffect(() => {
+    if (mode !== "play") return;
+    if (phase !== "idle" || result) return;
+    const t = window.setTimeout(() => {
+      setResult(null);
+      fillRef.current = 0;
+      setFill(0);
+      setPhase("pouring");
+      phaseRef.current = "pouring";
+    }, 280);
+    return () => window.clearTimeout(t);
+  }, [mode, phase, result]);
+
+  useEffect(() => {
     let last = performance.now();
     let raf = 0;
     const tick = (now: number) => {

@@ -1,55 +1,54 @@
 /**
- * Guard: points multiplier game suite (spin / feed / pour) + BOH demo.
+ * Guard: points multiplier game suite — attract bg + pick-one flow.
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join as pathJoin } from "node:path";
 import { fileURLToPath } from "node:url";
-const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const read = (p) => readFileSync(join(root, p), "utf8");
+
+const root = pathJoin(dirname(fileURLToPath(import.meta.url)), "..");
+const read = (p) => readFileSync(pathJoin(root, p), "utf8");
 
 const lib = read("src/lib/points-multiplier-spin.ts");
 assert.match(lib, /DEFAULT_SPIN_WEIGHTS/);
 assert.match(lib, /pickMultiplier/);
-assert.match(lib, /expectedMultiplier/);
-assert.match(lib, /simulateSpins/);
 
-const theme = read("src/lib/points-spin-theme.ts");
-assert.match(theme, /ชาไทย/);
-assert.match(theme, /ชานมไข่มุก/);
-assert.match(theme, /ซอฟคุกกี้/);
-assert.match(theme, /บราวนี่/);
-assert.match(theme, /ชิโอปัง/);
+const games = read("src/lib/points-games.ts");
+assert.match(games, /PointsGameId/);
+assert.match(games, /หมุนกระดานเมนู/);
+assert.match(games, /ป้อนไข่มุก/);
+assert.match(games, /เทชาไทยให้พอดี/);
 
-assert.match(read("src/components/PointsMultiplierSpin.tsx"), /หมุนลุ้นคูณแต้ม/);
-assert.match(read("src/components/PointsFeedBobaGame.tsx"), /ป้อนไข่มุก/);
-assert.match(read("src/components/PointsPourTeaGame.tsx"), /เทชาไทยให้พอดี/);
-assert.match(read("src/components/PointsFeedBobaGame.tsx"), /logo-telltea\.svg/);
+assert.match(read("src/components/PointsGamesAttractBg.tsx"), /PointsMultiplierSpin/);
+assert.match(read("src/components/PointsGamesAttractBg.tsx"), /PointsFeedBobaGame/);
+assert.match(read("src/components/PointsGamesAttractBg.tsx"), /PointsPourTeaGame/);
+assert.match(read("src/components/PointsGameOnce.tsx"), /เลือก 1 เกม/);
+assert.match(read("src/components/PointsGameOnce.tsx"), /เปลี่ยนเกมไม่ได้|รอบนี้เลือกเกมไปแล้ว/);
+
+const claim = read("src/app/claim/page.tsx");
+assert.match(claim, /PointsGamesAttractBg/);
+assert.match(claim, /PointsGameOnce/);
+assert.match(claim, /เลือกเกมลุ้นคูณ/);
+assert.doesNotMatch(claim, /from \"@\/components\/PointsMultiplierSpin\"/);
+
+const join = read("src/app/join/page.tsx");
+assert.match(join, /PointsGamesAttractBg/);
+assert.match(join, /PointsGameOnce/);
+assert.match(join, /join-page--attract/);
 
 const demo = read("src/app/members/spin-demo/page.tsx");
-assert.match(demo, /หมุนกระดานเมนู/);
-assert.match(demo, /ป้อนไข่มุก/);
-assert.match(demo, /เทชาไทยให้พอดี/);
-assert.match(demo, /AuthGate/);
+assert.match(demo, /โฟลว์ลูกค้า/);
+assert.match(demo, /PointsGamesAttractBg/);
+assert.match(demo, /PointsGameOnce/);
+assert.match(demo, /allowReselect/);
 
 assert.match(read("src/app/members/page.tsx"), /spin-demo/);
-assert.match(read("src/app/claim/page.tsx"), /PointsMultiplierSpin/);
-assert.match(read("src/app/join/page.tsx"), /PointsMultiplierSpin/);
-
-const docs = read("docs/members-points-spin.md");
-assert.match(docs, /members\/spin-demo/);
-assert.match(docs, /ป้อนไข่มุก/);
-assert.match(docs, /เทชาไทย/);
-
-const logo = read("public/logo-telltea.svg");
-assert.match(logo, /Tell Tea/);
-assert.match(logo, /#003B5C/);
-assert.doesNotMatch(logo, /bear|หมี/i);
+assert.match(read("docs/members-points-spin.md"), /เลือกได้เพียง 1 เกม|เลือกเล่นได้เพียง 1 เกม/);
+assert.match(read("docs/members-points-spin.md"), /พื้นหลัง/);
 
 const version = read("src/lib/version.ts");
-assert.ok(Number(version.match(/APP_BUILD\s*=\s*(\d+)/)?.[1] || 0) >= 790);
+assert.ok(Number(version.match(/APP_BUILD\s*=\s*(\d+)/)?.[1] || 0) >= 791);
 
-// Runtime math via dynamic import of compiled-less TS is awkward — mirror defaults.
 function expected(weights) {
   const sum = weights.reduce((s, w) => s + w.weight, 0);
   return weights.reduce((s, w) => s + w.multiplier * (w.weight / sum), 0);

@@ -3,7 +3,8 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import { PointsMultiplierSpin } from "@/components/PointsMultiplierSpin";
+import { PointsGamesAttractBg } from "@/components/PointsGamesAttractBg";
+import { PointsGameOnce } from "@/components/PointsGameOnce";
 
 const SIGNUP_URL =
   "https://asia-southeast1-mypeer-501909.cloudfunctions.net/publicMemberSignup";
@@ -62,17 +63,21 @@ function JoinForm() {
     }
   }
 
+  const showAttract = !done;
+
   return (
-    <main className="join-page">
+    <main className={`join-page${showAttract ? " join-page--attract" : ""}`}>
+      {showAttract ? <PointsGamesAttractBg basePoints={5} /> : null}
       <div className="join-card">
         <p className="join-brand">TellTea</p>
         <h1>สมัครสมาชิก</h1>
-        <p className="muted">สะสมแต้มเมื่อซื้อที่ร้าน · ลุ้นคูณแต้มทุกครั้งที่รับแต้ม</p>
-        <PointsMultiplierSpin
-          mode="teaser"
-          basePoints={done?.points && done.points > 0 ? done.points : 5}
-          hint="สมัครแล้วรับแต้ม · ลุ้นหมุนเมนู / ป้อนไข่มุก / เทชาทุกบิล"
-        />
+        {showAttract ? (
+          <p className="muted">
+            ด้านหลังมีเกมกำลังเล่นอยู่ · สมัครแล้วเลือกได้ <strong>1 เกม</strong> ลุ้นคูณแต้ม
+          </p>
+        ) : (
+          <p className="muted">สะสมแต้มเมื่อซื้อที่ร้าน · ลุ้นคูณทุกครั้งที่รับแต้ม</p>
+        )}
         {!token ? (
           <p className="join-error">ลิงก์ไม่ครบ — สแกน QR จากร้านอีกครั้ง</p>
         ) : done ? (
@@ -84,6 +89,13 @@ function JoinForm() {
             <p>
               แต้มปัจจุบัน <strong>{done.points}</strong>
             </p>
+            {done.points > 0 ? (
+              <PointsGameOnce basePoints={done.points} />
+            ) : (
+              <p className="muted" style={{ marginTop: "0.75rem" }}>
+                ครั้งหน้าซื้อแล้วสแกนสลิป — จะได้เลือก 1 เกมลุ้นคูณแต้ม
+              </p>
+            )}
           </div>
         ) : (
           <form onSubmit={onSubmit} className="join-form">

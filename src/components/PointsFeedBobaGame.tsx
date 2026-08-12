@@ -74,6 +74,17 @@ export function PointsFeedBobaGame({
   }, [phase]);
 
   useEffect(() => {
+    if (mode !== "play") return;
+    if (phase !== "idle" || result) return;
+    const t = window.setTimeout(() => {
+      setResult(null);
+      setPhase("running");
+      phaseRef.current = "running";
+    }, 280);
+    return () => window.clearTimeout(t);
+  }, [mode, phase, result]);
+
+  useEffect(() => {
     let last = performance.now();
     let raf = 0;
     const tick = (now: number) => {

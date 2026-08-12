@@ -11,7 +11,8 @@ import {
   sendPhoneOtp,
 } from "@/lib/phone-auth";
 import { ClaimPointsValueNote } from "@/components/ClaimPointsValueNote";
-import { PointsMultiplierSpin } from "@/components/PointsMultiplierSpin";
+import { PointsGamesAttractBg } from "@/components/PointsGamesAttractBg";
+import { PointsGameOnce } from "@/components/PointsGameOnce";
 import {
   completeMemberGoogleRedirect,
   mapFirebaseAuthError,
@@ -62,6 +63,7 @@ function ClaimForm() {
   /** auth = phone-only login · link_claim = first-time Google→phone OTP then claim */
   const [otpPurpose, setOtpPurpose] = useState<"auth" | "link_claim">("auth");
   const [popupOpen, setPopupOpen] = useState(false);
+  const [showGamePick, setShowGamePick] = useState(false);
   const [blockedCode, setBlockedCode] = useState<string | undefined>(undefined);
   const [done, setDone] = useState<{
     displayName: string;
@@ -369,9 +371,14 @@ function ClaimForm() {
 
   const pointsLabel = preview?.pointsPreview;
   const showBillMeta = preview?.ok || step === "used" || step === "no_points";
+  const attractSteps: Step[] = ["load", "auth", "phone_otp", "otp", "link_phone", "confirm"];
+  const showAttract = attractSteps.includes(step) && !showGamePick;
+  const teaserPoints =
+    typeof pointsLabel === "number" && pointsLabel > 0 ? pointsLabel : 5;
 
   return (
-    <main className="join-page">
+    <main className={`join-page${showAttract ? " join-page--attract" : ""}`}>
+      {showAttract ? <PointsGamesAttractBg basePoints={teaserPoints} /> : null}
       <div className="join-card">
         <p className="join-brand">TellTea</p>
         <h1>สะสมแต้มจากบิลนี้</h1>
@@ -394,19 +401,13 @@ function ClaimForm() {
           <p className="muted">สแกนจากสลิป TellTea — รับแต้มใช้เป็นส่วนลดได้เลย</p>
         )}
 
-        <ClaimPointsValueNote />
-
-        {step !== "load" && step !== "blocked" ? (
-          <PointsMultiplierSpin
-            mode="teaser"
-            basePoints={typeof pointsLabel === "number" ? pointsLabel : 1}
-            hint={
-              typeof pointsLabel === "number" && pointsLabel > 0
-                ? `แต้มจากบิลนี้ ${pointsLabel} · รับแล้วลุ้นหมุนเมนู / ป้อนไข่มุก / เทชา`
-                : "รับแต้มแล้วลุ้นคูณ ×1–×5 ธีมชา·ขนม"
-            }
-          />
+        {showAttract ? (
+          <p className="muted claim-bill-meta" style={{ marginTop: "0.35rem" }}>
+            ด้านหลังมีเกมกำลังเล่นอยู่ · สมัคร/เข้าแล้วเลือกได้ <strong>1 เกม</strong> ลุ้นคูณแต้ม
+          </p>
         ) : null}
+
+        <ClaimPointsValueNote />
 
         {step === "load" ? (
           <p className="muted" style={{ marginTop: "1rem" }}>
@@ -585,18 +586,22 @@ function ClaimForm() {
         ) : null}
 
         <div id="claim-recaptcha" />
-      </div>
 
-      {step === "done" && done && !popupOpen ? (
-        <div className="join-done" style={{ marginTop: "1rem" }}>
-          <p>
-            ได้แต้มแล้ว · รวม <strong>{done.balance}</strong>
-          </p>
-          <p className="muted">
-            <a href="/me/">ดูแต้มของฉัน</a>
-          </p>
-        </div>
-      ) : null}
+        {step === "done" && done && !popupOpen ? (
+          <div className="join-done" style={{ marginTop: "1rem" }}>
+            <p>
+              ได้แต้มฐาน <strong>{done.points}</strong> · รวม{" "}
+              <strong>{done.balance}</strong>
+            </p>
+            {showGamePick || done.points > 0 ? (
+              <PointsGameOnce basePoints={Math.max(1, done.points)} />
+            ) : null}
+            <p className="muted" style={{ marginTop: "0.75rem" }}>
+              <a href="/me/">ดูแต้มของฉัน</a>
+            </p>
+          </div>
+        ) : null}
+      </div>
 
       {popupOpen && done ? (
         <div className="claim-success-overlay" role="dialog" aria-modal="true">
@@ -615,22 +620,27 @@ function ClaimForm() {
             <p className="muted" style={{ marginTop: "0.35rem" }}>
               {done.displayName}
             </p>
-            <ClaimPointsValueNote />
-            <a
-              className="primary-btn claim-used-cta"
-              href="/me/"
-              style={{ marginTop: "1rem" }}
-            >
-              ดูแต้มของฉัน
-            </a>
+            <p className="muted" style={{ marginTop: "0.5rem", fontSize: "0.88rem" }}>
+              เลือกเล่นได้ <strong>1 เกม</strong> เพื่อลุ้นคูณแต้ม
+            </p>
             <button
               type="button"
-              className="claim-phone-link"
-              style={{ marginTop: "0.35rem" }}
-              onClick={() => setPopupOpen(false)}
+              className="primary-btn claim-used-cta"
+              style={{ marginTop: "1rem" }}
+              onClick={() => {
+                setPopupOpen(false);
+                setShowGamePick(true);
+              }}
             >
-              ปิด
+              เลือกเกมลุ้นคูณ
             </button>
+            <a
+              className="claim-phone-link"
+              href="/me/"
+              style={{ marginTop: "0.35rem", display: "block" }}
+            >
+              ข้าม · ดูแต้มของฉัน
+            </a>
           </div>
         </div>
       ) : null}

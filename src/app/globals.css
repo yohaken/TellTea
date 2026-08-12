@@ -987,21 +987,45 @@ body.modal-open .main-panel {
 
 /* QR สมัครสมาชิก (สาธารณะ) */
 .join-page {
+  position: relative;
+  isolation: isolate;
   min-height: 100dvh;
   display: grid;
   place-items: center;
   padding: 1.5rem;
+  overflow: hidden;
   background:
-    radial-gradient(120% 80% at 10% 0%, rgba(47, 107, 79, 0.16), transparent 55%),
-    linear-gradient(165deg, #f7f3ec 0%, #e7f0ea 45%, #f3eee6 100%);
+    radial-gradient(120% 80% at 10% 0%, rgba(0, 119, 182, 0.14), transparent 55%),
+    linear-gradient(165deg, #fff6e8 0%, #e7f0ea 45%, #f3eee6 100%);
+}
+
+.join-page--attract {
+  align-items: end;
+  padding-top: 1rem;
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+}
+
+@media (min-height: 720px) {
+  .join-page--attract {
+    align-items: center;
+  }
 }
 
 .join-card {
+  position: relative;
+  z-index: 2;
   width: min(100%, 22rem);
   padding: 1.5rem 1.35rem 1.75rem;
   border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.9);
   box-shadow: 0 12px 40px rgba(40, 60, 45, 0.08);
+  backdrop-filter: blur(10px);
+}
+
+.join-page--attract .join-card {
+  background: rgba(255, 252, 247, 0.92);
+  border: 1px solid rgba(0, 59, 92, 0.1);
+  box-shadow: 0 16px 48px rgba(0, 40, 60, 0.14);
 }
 
 .join-brand {
@@ -1803,10 +1827,250 @@ body.modal-open .main-panel {
   box-shadow: inset 0 0 0 1px rgba(0, 119, 182, 0.35);
 }
 
+/* Attract background — 3 games moving behind signup/login */
+.pts-attract {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.pts-attract-wash {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(90% 60% at 80% 10%, rgba(232, 145, 58, 0.22), transparent 55%),
+    radial-gradient(70% 50% at 10% 80%, rgba(0, 119, 182, 0.18), transparent 50%),
+    linear-gradient(180deg, rgba(255, 246, 232, 0.2), rgba(255, 255, 255, 0.55) 70%);
+}
+
+.pts-attract-stack {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.pts-attract-panel {
+  position: absolute;
+  width: min(92vw, 20.5rem);
+  opacity: 0.55;
+  filter: saturate(1.05);
+  transform-origin: center;
+}
+
+.pts-attract-panel .pts-spin,
+.pts-attract-panel .pts-game {
+  margin-top: 0;
+  box-shadow: 0 10px 28px rgba(0, 40, 60, 0.12);
+}
+
+.pts-attract-panel .pts-spin-legend,
+.pts-attract-panel .pts-spin-hint,
+.pts-attract-panel .pts-spin-actions,
+.pts-attract-panel .pts-spin-brand {
+  display: none;
+}
+
+.pts-attract-panel .pts-spin-title {
+  font-size: 0.92rem;
+}
+
+.pts-attract-panel .pts-spin-sub {
+  font-size: 0.72rem;
+}
+
+.pts-attract-tag {
+  margin: 0 0 0.25rem;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #003b5c;
+  letter-spacing: 0.02em;
+}
+
+.pts-attract-panel--spin {
+  top: 4%;
+  left: 50%;
+  transform: translateX(-50%) scale(0.92);
+  animation: pts-attract-drift-a 9s ease-in-out infinite;
+  z-index: 1;
+}
+
+.pts-attract-panel--feed {
+  top: 28%;
+  right: -8%;
+  transform: scale(0.78) rotate(3deg);
+  animation: pts-attract-drift-b 11s ease-in-out infinite;
+  opacity: 0.42;
+  z-index: 0;
+}
+
+.pts-attract-panel--pour {
+  bottom: 18%;
+  left: -10%;
+  transform: scale(0.76) rotate(-4deg);
+  animation: pts-attract-drift-c 10s ease-in-out infinite;
+  opacity: 0.4;
+  z-index: 0;
+}
+
+@keyframes pts-attract-drift-a {
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0) scale(0.92);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-0.55rem) scale(0.94);
+  }
+}
+
+@keyframes pts-attract-drift-b {
+  0%,
+  100% {
+    transform: scale(0.78) rotate(3deg) translateY(0);
+  }
+  50% {
+    transform: scale(0.8) rotate(1deg) translateY(0.6rem);
+  }
+}
+
+@keyframes pts-attract-drift-c {
+  0%,
+  100% {
+    transform: scale(0.76) rotate(-4deg) translateY(0);
+  }
+  50% {
+    transform: scale(0.78) rotate(-2deg) translateY(-0.45rem);
+  }
+}
+
+.pts-attract-banner {
+  position: absolute;
+  left: 50%;
+  bottom: max(0.75rem, env(safe-area-inset-bottom));
+  z-index: 1;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(0, 59, 92, 0.78);
+  color: #fff6e8;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+  max-width: calc(100vw - 2rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-height: 640px) {
+  .pts-attract-panel--feed,
+  .pts-attract-panel--pour {
+    opacity: 0.28;
+  }
+  .pts-attract-banner {
+    display: none;
+  }
+}
+
+/* Pick exactly one game after earning points */
+.pts-once {
+  margin-top: 0.75rem;
+}
+
+.pts-once-title {
+  margin: 0;
+  font-family: var(--font-display), sans-serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: #003b5c;
+  text-align: center;
+}
+
+.pts-once-sub {
+  margin: 0.3rem 0 0.75rem;
+  text-align: center;
+  font-size: 0.85rem;
+}
+
+.pts-once-choices {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.pts-once-choice {
+  display: grid;
+  gap: 0.2rem;
+  text-align: left;
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(0, 59, 92, 0.16);
+  background: linear-gradient(135deg, rgba(255, 246, 232, 0.95), rgba(255, 255, 255, 0.9));
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.pts-once-choice:hover,
+.pts-once-choice:focus-visible {
+  border-color: #0077b6;
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.pts-once-choice-title {
+  font-weight: 700;
+  color: #003b5c;
+  font-size: 0.95rem;
+}
+
+.pts-once-choice-blurb {
+  font-size: 0.78rem;
+  color: #5a6b62;
+}
+
+.pts-once-playing {
+  margin: 0 0 0.35rem;
+  text-align: center;
+  font-size: 0.82rem;
+}
+
+.pts-once-done {
+  text-align: center;
+  padding: 0.35rem 0 0.25rem;
+}
+
+.pts-once-lock-note {
+  margin: 0.55rem 0 0;
+  font-size: 0.78rem;
+}
+
+.pts-attract-demo-frame {
+  position: relative;
+  min-height: 22rem;
+  border-radius: 0.85rem;
+  overflow: hidden;
+  border: 1px solid rgba(0, 59, 92, 0.12);
+}
+
+.pts-attract-demo-frame .pts-attract {
+  position: absolute;
+}
+
+.pts-attract-demo-frame .pts-attract-banner {
+  bottom: 0.5rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pts-spin-btn--stop,
   .pts-spin-pearl,
-  .pts-feed-mouth-glow {
+  .pts-feed-mouth-glow,
+  .pts-attract-panel--spin,
+  .pts-attract-panel--feed,
+  .pts-attract-panel--pour {
     animation: none;
   }
 }

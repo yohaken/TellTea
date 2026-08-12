@@ -6,8 +6,11 @@ import { AuthGate } from "@/components/AuthGate";
 import { PointsMultiplierSpin } from "@/components/PointsMultiplierSpin";
 import { PointsFeedBobaGame } from "@/components/PointsFeedBobaGame";
 import { PointsPourTeaGame } from "@/components/PointsPourTeaGame";
+import { PointsGamesAttractBg } from "@/components/PointsGamesAttractBg";
+import { PointsGameOnce } from "@/components/PointsGameOnce";
 import { useAuth } from "@/lib/auth";
 import { canAccessMembersHub } from "@/lib/permissions";
+import { POINTS_GAMES, type PointsGameId } from "@/lib/points-games";
 import {
   DEFAULT_SPIN_WEIGHTS,
   MULTIPLIER_TIERS,
@@ -20,25 +23,7 @@ import {
 } from "@/lib/points-multiplier-spin";
 import { SPIN_MENU_PRIZES } from "@/lib/points-spin-theme";
 
-type GameId = "spin" | "feed" | "pour";
-
-const GAMES: { id: GameId; title: string; desc: string }[] = [
-  {
-    id: "spin",
-    title: "1) หมุนกระดานเมนู",
-    desc: "ชาไทย · ชานมไข่มุก · ซอฟคุกกี้ · บราวนี่ · ชิโอปัง — กดหยุด",
-  },
-  {
-    id: "feed",
-    title: "2) ป้อนไข่มุก",
-    desc: "โยนไข่มุกเข้าปากหนุ่มในโลโก้ Tell Tea — โซนแคบใกล้ปาก = × สูง",
-  },
-  {
-    id: "pour",
-    title: "3) เทชาไทยให้พอดี",
-    desc: "กดค้างเทชา · ปล่อยตอนระดับที่อยากได้ — ปากแก้ว = ×5",
-  },
-];
+type DemoTab = "customer" | PointsGameId;
 
 export default function MembersSpinDemoPage() {
   return (
@@ -52,7 +37,7 @@ function SpinDemoView() {
   const { staff } = useAuth();
   const canHub = canAccessMembersHub(staff);
 
-  const [game, setGame] = useState<GameId>("spin");
+  const [tab, setTab] = useState<DemoTab>("customer");
   const [basePoints, setBasePoints] = useState(8);
   const [w1, setW1] = useState(50);
   const [w2, setW2] = useState(28);
@@ -101,7 +86,7 @@ function SpinDemoView() {
     );
   }
 
-  const gameKey = `${game}-${basePoints}-${w1}-${w2}-${w3}-${w4}-${w5}`;
+  const gameKey = `${tab}-${basePoints}-${w1}-${w2}-${w3}-${w4}-${w5}`;
 
   return (
     <div className="staff-hub members-hub members-hub--slim pts-spin-demo">
@@ -116,24 +101,37 @@ function SpinDemoView() {
 
       <section className="staff-hub-panel members-slim-panel">
         <p className="members-slim-hint muted">
-          โหมดจำลองหลังร้าน — ไม่แตะแต้มลูกค้าจริง · ชุด 3 เกมธีมชาไข่มุก + ขนม Tell Tea
-          (กลุ่มอายุ ~15–25)
+          โหมดจำลองหลังร้าน — ไม่แตะแต้มลูกค้าจริง · ลูกค้าเลือกได้{" "}
+          <strong>1 เกมเท่านั้น</strong> ต่อรอบ
         </p>
 
-        <p className="pts-spin-demo-weights-title">เลือกเกม</p>
+        <p className="pts-spin-demo-weights-title">โหมดดู</p>
         <div className="pts-spin-demo-games">
-          {GAMES.map((g) => (
+          <button
+            type="button"
+            className={`pts-spin-demo-game-card${tab === "customer" ? " is-active" : ""}`}
+            onClick={() => {
+              setTab("customer");
+              setLastNote(null);
+            }}
+          >
+            <strong>โฟลว์ลูกค้า (แนะนำ)</strong>
+            <span>พื้นหลัง 3 เกมเคลื่อนไหว → เลือกเล่นได้แค่ 1 เกม</span>
+          </button>
+          {POINTS_GAMES.map((g, i) => (
             <button
               key={g.id}
               type="button"
-              className={`pts-spin-demo-game-card${game === g.id ? " is-active" : ""}`}
+              className={`pts-spin-demo-game-card${tab === g.id ? " is-active" : ""}`}
               onClick={() => {
-                setGame(g.id);
+                setTab(g.id);
                 setLastNote(null);
               }}
             >
-              <strong>{g.title}</strong>
-              <span>{g.desc}</span>
+              <strong>
+                {i + 1}) {g.title}
+              </strong>
+              <span>{g.blurb}</span>
             </button>
           ))}
         </div>
@@ -198,7 +196,35 @@ function SpinDemoView() {
       </section>
 
       <section className="staff-hub-panel members-slim-panel">
-        {game === "spin" ? (
+        {tab === "customer" ? (
+          <div>
+            <p className="pts-spin-demo-weights-title">1) พื้นหลังตอนสมัคร/ล็อกอิน</p>
+            <div className="pts-attract-demo-frame join-page join-page--attract">
+              <PointsGamesAttractBg key={`bg-${gameKey}`} basePoints={basePoints} />
+              <div className="join-card" style={{ margin: "2.5rem auto", position: "relative" }}>
+                <p className="join-brand">TellTea</p>
+                <h1 style={{ fontSize: "1.1rem", margin: 0 }}>สมัครสมาชิก</h1>
+                <p className="muted" style={{ marginTop: "0.35rem" }}>
+                  ด้านหลังมีเกมกำลังเล่นอยู่ · สมัครแล้วเลือกได้ <strong>1 เกม</strong>
+                </p>
+              </div>
+            </div>
+            <p className="pts-spin-demo-weights-title" style={{ marginTop: "1rem" }}>
+              2) หลังได้แต้ม — เลือกได้แค่ 1 เกม
+            </p>
+            <PointsGameOnce
+              key={`once-${gameKey}`}
+              basePoints={basePoints}
+              allowReselect
+              onFinished={({ game, result }) => {
+                setLastNote(
+                  `ลูกค้าเลือก ${game} · ×${result.multiplier} ${SPIN_MENU_PRIZES[result.multiplier].label} · ${result.basePoints}→${result.finalPoints}`,
+                );
+              }}
+            />
+          </div>
+        ) : null}
+        {tab === "spin" ? (
           <PointsMultiplierSpin
             key={gameKey}
             mode="demo"
@@ -212,7 +238,7 @@ function SpinDemoView() {
             }}
           />
         ) : null}
-        {game === "feed" ? (
+        {tab === "feed" ? (
           <PointsFeedBobaGame
             key={gameKey}
             mode="demo"
@@ -226,7 +252,7 @@ function SpinDemoView() {
             }}
           />
         ) : null}
-        {game === "pour" ? (
+        {tab === "pour" ? (
           <PointsPourTeaGame
             key={gameKey}
             mode="demo"
@@ -276,17 +302,11 @@ function SpinDemoView() {
       </section>
 
       <section className="staff-hub-panel members-slim-panel">
-        <p className="pts-spin-demo-weights-title">ทำไมชุดนี้เข้ากลุ่ม 15–25</p>
+        <p className="pts-spin-demo-weights-title">กฎลูกค้า</p>
         <ol className="pts-spin-demo-flow">
-          <li>
-            <strong>หมุนเมนู</strong> — เห็นสินค้าจริงของร้าน เล่นง่าย ถ่ายสตอรี่ได้
-          </li>
-          <li>
-            <strong>ป้อนไข่มุก</strong> — ใช้ตัวละครผู้ชายในโลโก้ · น่ารัก ไม่เด็กเกิน
-          </li>
-          <li>
-            <strong>เทชาไทย</strong> — ทักษะกดค้างแบบเกมมือถือสั้นๆ · จบใน 3 วินาที
-          </li>
+          <li>ก่อนสมัคร/ล็อกอิน — เห็น 3 เกมเคลื่อนไหวเป็นพื้นหลัง (ยังเล่นไม่ได้)</li>
+          <li>รับแต้มฐานแล้ว — เลือกได้ <strong>เพียง 1 เกม</strong> ต่อรอบ</li>
+          <li>เลือกแล้วเปลี่ยนเกมไม่ได้ · จบแล้วไปดูแต้ม</li>
         </ol>
         <p className="muted members-slim-hint">
           ลิงก์นี้: <code>/members/spin-demo/</code> · รายละเอียด{" "}
