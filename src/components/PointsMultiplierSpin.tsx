@@ -48,7 +48,7 @@ export function PointsMultiplierSpin({
   const phaseRef = useRef<Phase>("idle");
   const targetCenterRef = useRef<number | null>(null);
   const resultRef = useRef<SpinResult | null>(null);
-  /** React 19.1 ไม่มี useEffectEvent — เก็บ callback ล่าสุดใน ref */
+  /** เก็บ callback ล่าสุดใน ref (React 19.1 ในโปรเจกต์นี้ยังไม่มี Effect Event API) */
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
 
