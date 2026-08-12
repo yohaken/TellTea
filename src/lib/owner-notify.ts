@@ -99,7 +99,9 @@ export async function saveOwnerNotifySettings(
   const token = String(input.channelAccessToken || "").trim();
   const userId = String(input.lineUserId || "").trim();
   if (userId && !/^U[0-9a-f]{32}$/i.test(userId)) {
-    throw new Error("LINE User ID ไม่ถูกต้อง (ต้องขึ้นต้นด้วย U ตามด้วยตัวอักษร 32 ตัว)");
+    throw new Error(
+      "LINE User ID ไม่ถูกต้อง — อย่าใส่ชื่อเล่น (เช่น yohoken) ต้องเป็นรหัสยาวขึ้นต้นด้วย U ตามด้วยตัวอักษร/ตัวเลข 32 ตัว จาก LINE Developers",
+    );
   }
   const next = parseOwnerNotifySettings({
     ...input,

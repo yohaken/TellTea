@@ -20,7 +20,9 @@ const digestFn = read("functions/owner-daily-digest.js");
 const lineOwner = read("functions/line-owner.js");
 const more = read("src/app/more/page.tsx");
 
-assert.ok(Number(version.match(/APP_BUILD\s*=\s*(\d+)/)?.[1] || 0) >= 786);
+assert.ok(Number(version.match(/APP_BUILD\s*=\s*(\d+)/)?.[1] || 0) >= 787);
+assert.match(ownerNotify, /ไม่ใช่ชื่อเล่น|อย่าใส่ชื่อเล่น/);
+assert.match(setup, /yohoken/);
 
 assert.match(settingsLib, /saveAlertSettings/);
 assert.match(ownerNotify, /ownerLineNotify/);

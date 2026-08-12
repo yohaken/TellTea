@@ -383,7 +383,8 @@ exports.ownerLineNotifyTest = functions
     if (!notify.channelAccessToken || !notify.lineUserId) {
       return {
         ok: false,
-        detail: "ยังไม่ได้บันทึก Channel access token และ User ID",
+        detail:
+          "ยังไม่ได้บันทึก Channel access token และ User ID — ใส่ค่าจริงแล้วกดบันทึกก่อน (User ID ต้องขึ้นต้นด้วย U ไม่ใช่ชื่อเล่น)",
       };
     }
     const parts = bangkokParts();

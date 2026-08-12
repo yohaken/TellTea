@@ -198,18 +198,25 @@ export function OwnerNotifySetup({ onError }: Props) {
             >
               LINE Developers
             </a>
-            : Channel access token (ยาวอายุ) และ User ID ของคุณ (ขึ้นต้น U…)
+            : (1) Channel access token แบบยาวอายุ — วางทั้งก้อน (2){" "}
+            <strong>User ID</strong> ของคุณ ขึ้นต้นด้วยตัว <strong>U</strong>{" "}
+            ยาวๆ — <strong>ไม่ใช่ชื่อเล่น</strong> ใน LINE
           </p>
           <div className="field">
             <label htmlFor="owner-line-token">Channel access token</label>
             <input
               id="owner-line-token"
-              type="password"
+              name="telltea-line-channel-token"
+              type="text"
               autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              inputMode="text"
               placeholder={
                 notify.channelAccessToken
                   ? `บันทึกแล้ว (${maskSecret(notify.channelAccessToken)}) — วางใหม่ถ้าจะเปลี่ยน`
-                  : "วาง Channel access token"
+                  : "วาง Channel access token ทั้งก้อนที่นี่"
               }
               value={tokenDraft}
               onChange={(e) => {
@@ -217,18 +224,30 @@ export function OwnerNotifySetup({ onError }: Props) {
                 setTokenDirty(true);
               }}
             />
+            <p className="field-hint">
+              {notify.channelAccessToken && !tokenDirty
+                ? "มี token ในระบบแล้ว — ว่างไว้ได้ถ้าไม่เปลี่ยน"
+                : "ถ้าช่องมีจุดๆ จากเบราว์เซอร์ ให้ลบออกแล้ววาง token จริงจาก LINE Developers"}
+            </p>
           </div>
           <div className="field">
             <label htmlFor="owner-line-uid">LINE User ID ของคุณ</label>
             <input
               id="owner-line-uid"
+              name="telltea-line-user-id"
               type="text"
               autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
               spellCheck={false}
-              placeholder="Uxxxxxxxx…"
+              placeholder="U ตามด้วยตัวอักษร 32 ตัว เช่น Ua1b2c3…"
               value={notify.lineUserId}
               onChange={(e) => patchNotify("lineUserId", e.target.value.trim())}
             />
+            <p className="field-hint">
+              ตัวอย่างถูก: <code>U1234abcd…</code> · ตัวอย่างผิด: ชื่อ{" "}
+              <code>yohoken</code>
+            </p>
           </div>
           <div className="btn-row" style={{ marginBottom: "0.5rem" }}>
             <button
