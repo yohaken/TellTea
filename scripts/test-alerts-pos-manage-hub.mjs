@@ -25,10 +25,11 @@ const indexFn = read("functions/index.js");
 
 assert.ok(Number(version.match(/APP_BUILD\s*=\s*(\d+)/)?.[1] || 0) >= 581);
 
-assert.match(alerts, /router\.replace\("\/more\/"\)/);
+assert.match(alerts, /router\.replace\("\/settings\/"\)/);
 assert.doesNotMatch(more, /href: "\/alerts\/"/);
 assert.doesNotMatch(perms, /"alerts"/);
-assert.doesNotMatch(settingsLib, /balanceFontSize|actionBtnScale|saveAlertSettings/);
+assert.doesNotMatch(settingsLib, /balanceFontSize|actionBtnScale/);
+assert.match(settingsLib, /saveAlertSettings/);
 assert.doesNotMatch(shell, /UiSettingsProvider/);
 assert.match(shell, /"\/pos-sales"/);
 assert.doesNotMatch(shell, /"\/alerts"/);
@@ -38,12 +39,13 @@ assert.doesNotMatch(smoke, /"alerts"/);
 
 assert.doesNotMatch(settings, /PosDeviceSetup|PosShopPaySetup|PosPrinterSetup|MenuCatalogSetup|PosSalesSetup/);
 assert.match(settings, /BusinessProfileSetup/);
+assert.match(settings, /OwnerNotifySetup/);
 assert.doesNotMatch(settings, /ChecklistSetup/);
 
 assert.match(posSales, /Suspense/);
 assert.match(report, /จัดการ/);
 assert.match(report, /PosManagePanel/);
-assert.match(report, /tab=manage/);
+assert.match(report, /set\("tab", "manage"\)/);
 assert.doesNotMatch(manage, /MenuCatalogSetup/);
 assert.doesNotMatch(manage, /PosDeviceSetup/);
 assert.doesNotMatch(manage, /PosOpsNotesSetup/);

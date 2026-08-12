@@ -229,7 +229,7 @@ function MoreView() {
       {isOwner ? (
         <Link href="/settings/" className="more-card">
           <Settings size={18} aria-hidden />
-          <MoreCardBody title="ตั้งค่าโมดูล" desc="AI · เมนูหลัก · อัปเดตแอป" />
+          <MoreCardBody title="ตั้งค่าโมดูล" desc="LINE สรุปเช้า · AI · เมนูหลัก · อัปเดตแอป" />
         </Link>
       ) : null}
     </>

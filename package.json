@@ -122,6 +122,7 @@
     "test:cash-deposit-days": "node scripts/test-cash-deposit-days.mjs",
     "test:cash-deposit-ai": "node scripts/test-cash-deposit-ai.mjs",
     "test:alerts-pos-manage-hub": "node scripts/test-alerts-pos-manage-hub.mjs",
+    "test:owner-line-daily-digest": "node scripts/test-owner-line-daily-digest.mjs",
     "test:npos-bo-device-version-equip": "node scripts/test-npos-bo-device-version-equip.mjs",
     "test:check-sop-settings-fold": "node scripts/test-check-sop-settings-fold.mjs",
     "test:ledger-type-labels-unify": "node scripts/test-ledger-type-labels-unify.mjs",

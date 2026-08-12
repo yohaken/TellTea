@@ -10344,6 +10344,38 @@ body.modal-open .main-panel {
   gap: 1.25rem;
 }
 
+.owner-notify-form .owner-notify-section {
+  margin: 1.1rem 0 0.55rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: left;
+}
+
+.owner-notify-form .owner-notify-section:first-child {
+  margin-top: 0.25rem;
+}
+
+.owner-notify-help {
+  text-align: left;
+  font-size: 0.84rem;
+  margin: 0 0 0.75rem;
+  line-height: 1.45;
+}
+
+.owner-notify-includes {
+  margin: 0.5rem 0 0.75rem;
+  padding: 0.65rem 0.75rem 0.35rem;
+  border: 1px solid rgba(47, 107, 79, 0.14);
+  border-radius: 0.75rem;
+  text-align: left;
+}
+
+.owner-notify-includes legend {
+  padding: 0 0.25rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
 .settings-fold {
   border-radius: 1rem;
   background: var(--tea-card);

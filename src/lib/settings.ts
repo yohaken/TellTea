@@ -2,11 +2,12 @@ import {
   doc,
   getDoc,
   onSnapshot,
+  setDoc,
   type Unsubscribe,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
 
-/** เกณฑ์แจ้งเตือนยอดต่ำ (อ่านอย่างเดียว — ไม่มีหน้าตั้งค่าแล้ว) */
+/** เกณฑ์แจ้งเตือนยอดต่ำ (meta/settings) — ตั้งค่าที่ /settings/ หมวดแจ้งเตือนเจ้าของ */
 export type AlertSettings = {
   lowBalanceThreshold: number;
   lowBalanceEnabled: boolean;
@@ -27,8 +28,11 @@ function settingsRef() {
 
 function parseAlertSettings(data: Partial<AlertSettings> | undefined): AlertSettings {
   if (!data) return { ...DEFAULT_ALERT_SETTINGS };
+  const threshold = Number(data.lowBalanceThreshold);
   return {
-    lowBalanceThreshold: Number(data.lowBalanceThreshold) || DEFAULT_ALERT_SETTINGS.lowBalanceThreshold,
+    lowBalanceThreshold: Number.isFinite(threshold) && threshold >= 0
+      ? threshold
+      : DEFAULT_ALERT_SETTINGS.lowBalanceThreshold,
     lowBalanceEnabled: data.lowBalanceEnabled !== false,
     updatedAt: Number(data.updatedAt) || 0,
     updatedBy: String(data.updatedBy || ""),
@@ -39,6 +43,26 @@ export async function getAlertSettings(): Promise<AlertSettings> {
   const snap = await getDoc(settingsRef());
   if (!snap.exists()) return { ...DEFAULT_ALERT_SETTINGS };
   return parseAlertSettings(snap.data() as Partial<AlertSettings>);
+}
+
+export async function saveAlertSettings(
+  input: { lowBalanceThreshold: number; lowBalanceEnabled: boolean },
+  actorId: string,
+): Promise<void> {
+  const threshold = Number(input.lowBalanceThreshold);
+  if (!Number.isFinite(threshold) || threshold < 0) {
+    throw new Error("ยอดขั้นต่ำไม่ถูกต้อง");
+  }
+  await setDoc(
+    settingsRef(),
+    {
+      lowBalanceThreshold: Math.round(threshold),
+      lowBalanceEnabled: Boolean(input.lowBalanceEnabled),
+      updatedAt: Date.now(),
+      updatedBy: actorId || "owner",
+    },
+    { merge: true },
+  );
 }
 
 export function subscribeAlertSettings(

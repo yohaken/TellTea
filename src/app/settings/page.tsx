@@ -7,6 +7,7 @@ import { AppUpdateSetup } from "@/components/AppUpdateSetup";
 import { BusinessProfileSetup } from "@/components/BusinessProfileSetup";
 import { AuthGate } from "@/components/AuthGate";
 import { NavMenuOrderSetup } from "@/components/NavMenuOrderSetup";
+import { OwnerNotifySetup } from "@/components/OwnerNotifySetup";
 import { OwnerQuickDockSetup } from "@/components/OwnerQuickDockSetup";
 import { StaffNewsSetup } from "@/components/StaffNewsSetup";
 import { useAuth } from "@/lib/auth";
@@ -46,7 +47,7 @@ function SettingsView() {
         ตั้งค่าโมดูล
       </h1>
       <p className="muted" style={{ marginBottom: "1rem", textAlign: "left" }}>
-        โปรไฟล์กิจการ · แจ้งข่าวสาร/คลังโนต · เมนูหลัก · ไอคอนลอย · อัปเดตแอป — เฉพาะเจ้าของ · แตะหัวข้อเพื่อพับ/ขยาย
+        โปรไฟล์กิจการ · แจ้งเตือนเจ้าของ (LINE) · แจ้งข่าวสาร/คลังโนต · เมนูหลัก · ไอคอนลอย · อัปเดตแอป — เฉพาะเจ้าของ · แตะหัวข้อเพื่อพับ/ขยาย
         (SmartCheck อยู่หน้าเช็ค → รายการ SOP · คลังอยู่หน้า คลัง ·
         สินค้าผลิตอยู่หน้า ผลิต · เรทโบนัสอยู่หน้า สรุปโบนัส)
       </p>
@@ -56,6 +57,7 @@ function SettingsView() {
 
       {!loading ? (
         <div className="owner-settings-stack">
+          <OwnerNotifySetup onError={setError} />
           <BusinessProfileSetup onError={setError} />
           <StaffNewsSetup onError={setError} />
           <NavMenuOrderSetup onError={setError} />

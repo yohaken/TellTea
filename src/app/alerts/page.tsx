@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 
-/** หน้าแจ้งเตือนยอดต่ำถูกลบแล้ว — รีไดเรกต์ */
+/** ตั้งค่าแจ้งเตือนย้ายไป /settings/ หมวดแจ้งเตือนเจ้าของ */
 export default function AlertsPage() {
   return (
     <AuthGate>
@@ -16,11 +16,11 @@ export default function AlertsPage() {
 function AlertsRedirect() {
   const router = useRouter();
   useEffect(() => {
-    router.replace("/more/");
+    router.replace("/settings/");
   }, [router]);
   return (
     <div className="center-screen">
-      <p className="muted">กำลังพาไปอื่นๆ...</p>
+      <p className="muted">กำลังพาไปตั้งค่าแจ้งเตือน...</p>
     </div>
   );
 }
