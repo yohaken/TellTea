@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { PointsGamesAttractBg } from "@/components/PointsGamesAttractBg";
 import { PointsGameOnce } from "@/components/PointsGameOnce";
+import { POINTS_GAMES_CUSTOMER_LIVE } from "@/lib/points-games";
 
 const SIGNUP_URL =
   "https://asia-southeast1-mypeer-501909.cloudfunctions.net/publicMemberSignup";
@@ -63,7 +64,7 @@ function JoinForm() {
     }
   }
 
-  const showAttract = !done;
+  const showAttract = POINTS_GAMES_CUSTOMER_LIVE && !done;
 
   return (
     <main className={`join-page${showAttract ? " join-page--attract" : ""}`}>
@@ -71,13 +72,11 @@ function JoinForm() {
       <div className="join-card">
         <p className="join-brand">TellTea</p>
         <h1>สมัครสมาชิก</h1>
-        {showAttract ? (
-          <p className="muted">
-            ด้านหลังมีเกมกำลังเล่นอยู่ · สมัครแล้วเลือกได้ <strong>1 เกม</strong> ลุ้นคูณแต้ม
-          </p>
-        ) : (
-          <p className="muted">สะสมแต้มเมื่อซื้อที่ร้าน · ลุ้นคูณทุกครั้งที่รับแต้ม</p>
-        )}
+        <p className="muted">
+          {showAttract
+            ? "ด้านหลังมีเกมกำลังเล่นอยู่ · สมัครแล้วเลือกได้ 1 เกม ลุ้นคูณแต้ม"
+            : "สะสมแต้มเมื่อซื้อที่ร้าน · สาขาเดียว"}
+        </p>
         {!token ? (
           <p className="join-error">ลิงก์ไม่ครบ — สแกน QR จากร้านอีกครั้ง</p>
         ) : done ? (
@@ -89,13 +88,9 @@ function JoinForm() {
             <p>
               แต้มปัจจุบัน <strong>{done.points}</strong>
             </p>
-            {done.points > 0 ? (
+            {POINTS_GAMES_CUSTOMER_LIVE && done.points > 0 ? (
               <PointsGameOnce basePoints={done.points} />
-            ) : (
-              <p className="muted" style={{ marginTop: "0.75rem" }}>
-                ครั้งหน้าซื้อแล้วสแกนสลิป — จะได้เลือก 1 เกมลุ้นคูณแต้ม
-              </p>
-            )}
+            ) : null}
           </div>
         ) : (
           <form onSubmit={onSubmit} className="join-form">

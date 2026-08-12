@@ -100,9 +100,12 @@ function SpinDemoView() {
       </header>
 
       <section className="staff-hub-panel members-slim-panel">
+        <p className="pts-spin-demo-banner">
+          ทดลองหลังร้านเท่านั้น · ยังไม่เปิดในลิงก์ลูกค้า (/claim · /join)
+        </p>
         <p className="members-slim-hint muted">
-          โหมดจำลองหลังร้าน — ไม่แตะแต้มลูกค้าจริง · ลูกค้าเลือกได้{" "}
-          <strong>1 เกมเท่านั้น</strong> ต่อรอบ
+          ไม่แตะแต้มลูกค้าจริง · จำลองสถานการณ์เดียวกับลูกค้า: พื้นหลังเกม → เลือกได้{" "}
+          <strong>1 เกมเท่านั้น</strong> ต่อรอบ · ตรวจผ่านแล้วค่อยเปิดจริง
         </p>
 
         <p className="pts-spin-demo-weights-title">โหมดดู</p>

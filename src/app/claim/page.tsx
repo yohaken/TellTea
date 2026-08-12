@@ -18,6 +18,7 @@ import {
   mapFirebaseAuthError,
   signInMemberWithGoogle,
 } from "@/lib/member-auth";
+import { POINTS_GAMES_CUSTOMER_LIVE } from "@/lib/points-games";
 import {
   claimBlockedTitle,
   claimErrorLabel,
@@ -372,7 +373,8 @@ function ClaimForm() {
   const pointsLabel = preview?.pointsPreview;
   const showBillMeta = preview?.ok || step === "used" || step === "no_points";
   const attractSteps: Step[] = ["load", "auth", "phone_otp", "otp", "link_phone", "confirm"];
-  const showAttract = attractSteps.includes(step) && !showGamePick;
+  const showAttract =
+    POINTS_GAMES_CUSTOMER_LIVE && attractSteps.includes(step) && !showGamePick;
   const teaserPoints =
     typeof pointsLabel === "number" && pointsLabel > 0 ? pointsLabel : 5;
 
@@ -590,10 +592,9 @@ function ClaimForm() {
         {step === "done" && done && !popupOpen ? (
           <div className="join-done" style={{ marginTop: "1rem" }}>
             <p>
-              ได้แต้มฐาน <strong>{done.points}</strong> · รวม{" "}
-              <strong>{done.balance}</strong>
+              ได้แต้มแล้ว · รวม <strong>{done.balance}</strong>
             </p>
-            {showGamePick || done.points > 0 ? (
+            {POINTS_GAMES_CUSTOMER_LIVE && (showGamePick || done.points > 0) ? (
               <PointsGameOnce basePoints={Math.max(1, done.points)} />
             ) : null}
             <p className="muted" style={{ marginTop: "0.75rem" }}>
@@ -620,27 +621,50 @@ function ClaimForm() {
             <p className="muted" style={{ marginTop: "0.35rem" }}>
               {done.displayName}
             </p>
-            <p className="muted" style={{ marginTop: "0.5rem", fontSize: "0.88rem" }}>
-              เลือกเล่นได้ <strong>1 เกม</strong> เพื่อลุ้นคูณแต้ม
-            </p>
-            <button
-              type="button"
-              className="primary-btn claim-used-cta"
-              style={{ marginTop: "1rem" }}
-              onClick={() => {
-                setPopupOpen(false);
-                setShowGamePick(true);
-              }}
-            >
-              เลือกเกมลุ้นคูณ
-            </button>
-            <a
-              className="claim-phone-link"
-              href="/me/"
-              style={{ marginTop: "0.35rem", display: "block" }}
-            >
-              ข้าม · ดูแต้มของฉัน
-            </a>
+            <ClaimPointsValueNote />
+            {POINTS_GAMES_CUSTOMER_LIVE ? (
+              <>
+                <p className="muted" style={{ marginTop: "0.5rem", fontSize: "0.88rem" }}>
+                  เลือกเล่นได้ <strong>1 เกม</strong> เพื่อลุ้นคูณแต้ม
+                </p>
+                <button
+                  type="button"
+                  className="primary-btn claim-used-cta"
+                  style={{ marginTop: "1rem" }}
+                  onClick={() => {
+                    setPopupOpen(false);
+                    setShowGamePick(true);
+                  }}
+                >
+                  เลือกเกมลุ้นคูณ
+                </button>
+                <a
+                  className="claim-phone-link"
+                  href="/me/"
+                  style={{ marginTop: "0.35rem", display: "block" }}
+                >
+                  ข้าม · ดูแต้มของฉัน
+                </a>
+              </>
+            ) : (
+              <>
+                <a
+                  className="primary-btn claim-used-cta"
+                  href="/me/"
+                  style={{ marginTop: "1rem" }}
+                >
+                  ดูแต้มของฉัน
+                </a>
+                <button
+                  type="button"
+                  className="claim-phone-link"
+                  style={{ marginTop: "0.35rem" }}
+                  onClick={() => setPopupOpen(false)}
+                >
+                  ปิด
+                </button>
+              </>
+            )}
           </div>
         </div>
       ) : null}

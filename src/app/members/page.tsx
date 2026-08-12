@@ -426,8 +426,8 @@ function MembersView() {
               {label}
             </button>
           ))}
-          <a href="/members/spin-demo/" className="ghost-btn staff-btn-sm">
-            จำลองคูณแต้ม
+          <a href="/members/spin-demo/" className="ghost-btn staff-btn-sm" title="ทดลองหลังร้าน — ยังไม่เปิดลูกค้า">
+            จำลองคูณแต้ม (เทส)
           </a>
           {tab === "list" && canManage ? (
             <button
