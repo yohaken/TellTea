@@ -39,7 +39,7 @@ assert.match(aiPanel, /ledger-ai-fab/);
 assert.doesNotMatch(aiPanel, /นานๆ ครั้ง/);
 assert.match(aiPanel, /modal-backdrop/);
 
-const cf = read("functions/index.js");
+const cf = read("functions/low-balance-line.js");
 const sw = read("public/sw.js");
 assert.match(cf, /ledger\/\?transferIn=1/);
 assert.doesNotMatch(cf, /telltea-shop\.web\.app\/in\/"/);

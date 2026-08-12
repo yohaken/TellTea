@@ -59,8 +59,9 @@ assert.deepEqual(
 // Explicit hotspots must point at telltea-bo
 const push = readFileSync(join(root, "src/lib/push.ts"), "utf8");
 assert.match(push, /telltea-bo\.web\.app\/ledger\/\?transferIn=1/);
-const idx = readFileSync(join(root, "functions/index.js"), "utf8");
-assert.match(idx, /telltea-bo\.web\.app\/ledger\/\?transferIn=1/);
+const lowBal = readFileSync(join(root, "functions/low-balance-line.js"), "utf8");
+assert.match(lowBal, /telltea-bo\.web\.app\/ledger\/\?transferIn=1/);
+assert.doesNotMatch(lowBal, /telltea-shop\.web\.app/);
 const vat = readFileSync(join(root, "functions/vat-mail.js"), "utf8");
 assert.match(vat, /telltea-bo\.web\.app\/vat-sales\//);
 assert.doesNotMatch(vat, /telltea-shop\.web\.app/);
