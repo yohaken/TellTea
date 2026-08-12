@@ -1,14 +1,14 @@
 /**
- * แคตตาล็อกมินิเกมคูณแต้ม — ลูกค้าเลือกได้เพียง 1 เกมต่อรอบ
+ * เกมลุ้นแต้ม — เหลือเกมเดียว: หมุนวงล้อ
  *
  * สำคัญ: ปิดฝั่งลูกค้าจนกว่าเจ้าของตรวจหลังร้านผ่านแล้ว
  * เปิดจริง = เปลี่ยนค่านี้เป็น true หลังยืนยันที่ /members/spin-demo/
  *
- * × ในเกม = คูณแต้มเท่านั้น ไม่ใช่ของแถม/สินค้า
+ * ได้แต้มคงที่ 1–5 · ไม่ใช่ของแถม · ไม่ใช่ตัวคูณแต้มฐาน
  */
 export const POINTS_GAMES_CUSTOMER_LIVE = false;
 
-export type PointsGameId = "spin" | "feed" | "pour";
+export type PointsGameId = "spin";
 
 export type PointsGameInfo = {
   id: PointsGameId;
@@ -21,24 +21,10 @@ export type PointsGameInfo = {
 export const POINTS_GAMES: readonly PointsGameInfo[] = [
   {
     id: "spin",
-    title: "หมุนวงล้อคูณแต้ม",
+    title: "หมุนวงล้อลุ้นแต้ม",
     shortTitle: "หมุนวงล้อ",
-    blurb: "หมุนวงกลม · กดหยุดลุ้นคูณแต้ม ×1–×5",
+    blurb: "หมุนวงกลม · กดหยุดให้หน่วงเอง · ได้ 1–5 แต้ม",
     attractLine: "วงล้อกำลังหมุน…",
-  },
-  {
-    id: "feed",
-    title: "ป้อนไข่มุกลุ้นแต้ม",
-    shortTitle: "ป้อนไข่มุก",
-    blurb: "แตะตอนไข่มุกอยู่โซน · ได้คูณแต้ม ไม่ใช่ของแถม",
-    attractLine: "ไข่มุกกำลังโยก…",
-  },
-  {
-    id: "pour",
-    title: "เทชาลุ้นคูณแต้ม",
-    shortTitle: "เทชา",
-    blurb: "กดค้างเทชา · ปล่อยตอนโซนคูณแต้มที่อยากได้",
-    attractLine: "กำลังเทชา…",
   },
 ] as const;
 

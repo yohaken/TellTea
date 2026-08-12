@@ -4,26 +4,24 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { AuthGate } from "@/components/AuthGate";
 import { PointsMultiplierSpin } from "@/components/PointsMultiplierSpin";
-import { PointsFeedBobaGame } from "@/components/PointsFeedBobaGame";
-import { PointsPourTeaGame } from "@/components/PointsPourTeaGame";
 import { PointsGamesAttractBg } from "@/components/PointsGamesAttractBg";
 import { PointsGameOnce } from "@/components/PointsGameOnce";
 import { useAuth } from "@/lib/auth";
 import { canAccessMembersHub } from "@/lib/permissions";
-import { POINTS_GAMES, type PointsGameId } from "@/lib/points-games";
 import {
   DEFAULT_SPIN_WEIGHTS,
-  MULTIPLIER_TIERS,
-  expectedMultiplier,
+  POINT_TIERS,
+  expectedPoints,
   formatPercent,
   probabilityMap,
+  simulatePhysicsCoasts,
   simulateSpins,
-  type MultiplierTier,
+  type PointTier,
   type SpinWeight,
 } from "@/lib/points-multiplier-spin";
 import { SPIN_MENU_PRIZES } from "@/lib/points-spin-theme";
 
-type DemoTab = "customer" | PointsGameId;
+type DemoTab = "customer" | "spin";
 
 export default function MembersSpinDemoPage() {
   return (
@@ -38,36 +36,35 @@ function SpinDemoView() {
   const canHub = canAccessMembersHub(staff);
 
   const [tab, setTab] = useState<DemoTab>("customer");
-  const [basePoints, setBasePoints] = useState(8);
   const [w1, setW1] = useState(50);
   const [w2, setW2] = useState(28);
   const [w3, setW3] = useState(14);
   const [w4, setW4] = useState(6);
   const [w5, setW5] = useState(2);
-  const [simCount, setSimCount] = useState<Record<MultiplierTier, number> | null>(null);
+  const [simCount, setSimCount] = useState<Record<PointTier, number> | null>(null);
   const [lastNote, setLastNote] = useState<string | null>(null);
 
   const weights: SpinWeight[] = useMemo(
     () => [
-      { multiplier: 1, weight: w1 },
-      { multiplier: 2, weight: w2 },
-      { multiplier: 3, weight: w3 },
-      { multiplier: 4, weight: w4 },
-      { multiplier: 5, weight: w5 },
+      { points: 1, weight: w1 },
+      { points: 2, weight: w2 },
+      { points: 3, weight: w3 },
+      { points: 4, weight: w4 },
+      { points: 5, weight: w5 },
     ],
     [w1, w2, w3, w4, w5],
   );
 
   const probs = useMemo(() => probabilityMap(weights), [weights]);
-  const ev = useMemo(() => expectedMultiplier(weights), [weights]);
-  const setters: Record<MultiplierTier, (n: number) => void> = {
+  const ev = useMemo(() => expectedPoints(weights), [weights]);
+  const setters: Record<PointTier, (n: number) => void> = {
     1: setW1,
     2: setW2,
     3: setW3,
     4: setW4,
     5: setW5,
   };
-  const values: Record<MultiplierTier, number> = {
+  const values: Record<PointTier, number> = {
     1: w1,
     2: w2,
     3: w3,
@@ -86,12 +83,12 @@ function SpinDemoView() {
     );
   }
 
-  const gameKey = `${tab}-${basePoints}-${w1}-${w2}-${w3}-${w4}-${w5}`;
+  const gameKey = `${tab}-${w1}-${w2}-${w3}-${w4}-${w5}`;
 
   return (
     <div className="staff-hub members-hub members-hub--slim pts-spin-demo">
       <header className="staff-hub-head members-slim-head">
-        <h1 className="staff-hub-title">จำลองเกมคูณแต้ม</h1>
+        <h1 className="staff-hub-title">จำลองหมุนวงล้อลุ้นแต้ม</h1>
         <div className="staff-hub-head-actions">
           <Link href="/members/" className="ghost-btn staff-btn-sm">
             ← สมาชิก
@@ -104,9 +101,8 @@ function SpinDemoView() {
           ทดลองหลังร้านเท่านั้น · ยังไม่เปิดในลิงก์ลูกค้า (/claim · /join)
         </p>
         <p className="members-slim-hint muted">
-          ไม่แตะแต้มลูกค้าจริง · จำลองสถานการณ์เดียวกับลูกค้า: พื้นหลังเกม → เลือกได้{" "}
-          <strong>1 เกมเท่านั้น</strong> ต่อรอบ · × คือคูณแต้มเท่านั้น ไม่ใช่ของแถม ·
-          โลโก้จากที่อัปโหลดในบิล/ใบเสร็จ · ตรวจผ่านแล้วค่อยเปิดจริง
+          เกมเดียว: หมุนวงล้อ · กดหยุดแล้วหน่วงตามฟิสิกส์ · ได้แต้มคงที่ 1–5
+          (ไม่ใช่ตัวคูณ) · ชิ้นคะแนนเดียวกันถูกแบ่งย่อยกระจายรอบวง · โลโก้จากบิล/ใบเสร็จ
         </p>
 
         <p className="pts-spin-demo-weights-title">โหมดดู</p>
@@ -120,43 +116,28 @@ function SpinDemoView() {
             }}
           >
             <strong>โฟลว์ลูกค้า (แนะนำ)</strong>
-            <span>พื้นหลัง 3 เกมเคลื่อนไหว → เลือกเล่นได้แค่ 1 เกม</span>
+            <span>พื้นหลังวงล้อ → หมุนเล่นรอบเดียว</span>
           </button>
-          {POINTS_GAMES.map((g, i) => (
-            <button
-              key={g.id}
-              type="button"
-              className={`pts-spin-demo-game-card${tab === g.id ? " is-active" : ""}`}
-              onClick={() => {
-                setTab(g.id);
-                setLastNote(null);
-              }}
-            >
-              <strong>
-                {i + 1}) {g.title}
-              </strong>
-              <span>{g.blurb}</span>
-            </button>
-          ))}
+          <button
+            type="button"
+            className={`pts-spin-demo-game-card${tab === "spin" ? " is-active" : ""}`}
+            onClick={() => {
+              setTab("spin");
+              setLastNote(null);
+            }}
+          >
+            <strong>ทดสอบวงล้อ</strong>
+            <span>ปรับสัดส่วนชิ้นแล้วหมุนลอง</span>
+          </button>
         </div>
 
-        <label className="pts-spin-demo-field">
-          <span>แต้มฐาน (สมมติได้จากบิล)</span>
-          <input
-            type="number"
-            min={1}
-            max={9999}
-            step={1}
-            value={basePoints}
-            onChange={(e) => setBasePoints(Math.max(1, Math.trunc(Number(e.target.value) || 1)))}
-          />
-        </label>
-
         <div className="pts-spin-demo-weights">
-          <p className="pts-spin-demo-weights-title">ความกว้าง / โอกาสแต่ละขั้น</p>
-          {MULTIPLIER_TIERS.map((m) => (
+          <p className="pts-spin-demo-weights-title">
+            สัดส่วนมุมรวมแต่ละแต้ม (จะถูกแบ่งย่อยกระจายรอบวง)
+          </p>
+          {POINT_TIERS.map((m) => (
             <label key={m} className="pts-spin-demo-weight-row">
-              <span className="pts-spin-demo-weight-label">×{m}</span>
+              <span className="pts-spin-demo-weight-label">{m} แต้ม</span>
               <input
                 type="range"
                 min={0}
@@ -174,13 +155,14 @@ function SpinDemoView() {
                 onChange={(e) => setters[m](Math.max(0, Number(e.target.value) || 0))}
               />
               <span className="muted pts-spin-demo-pct">
-                {formatPercent(probs[m])} · {SPIN_MENU_PRIZES[m].shortLabel}
+                {formatPercent(probs[m])} · {SPIN_MENU_PRIZES[m].label}
               </span>
             </label>
           ))}
           <p className="members-slim-hint muted">
-            ค่าคาดหวังตัวคูณ ≈ <strong>{ev.toFixed(2)}</strong>× · ค่าเริ่ม EV ≈{" "}
-            {expectedMultiplier(DEFAULT_SPIN_WEIGHTS).toFixed(2)}×
+            ค่าคาดหวัง ≈ <strong>{ev.toFixed(2)}</strong> แต้ม · ค่าเริ่ม ≈{" "}
+            {expectedPoints(DEFAULT_SPIN_WEIGHTS).toFixed(2)} แต้ม · ผลจริงขึ้นกับจังหวะกดหยุด +
+            การหน่วง ไม่ได้สุ่มจากเปอร์เซ็นต์ล่วงหน้า
           </p>
           <button
             type="button"
@@ -194,7 +176,7 @@ function SpinDemoView() {
               setSimCount(null);
             }}
           >
-            รีเซ็ตน้ำหนักค่าเริ่ม
+            รีเซ็ตสัดส่วนค่าเริ่ม
           </button>
         </div>
       </section>
@@ -204,25 +186,24 @@ function SpinDemoView() {
           <div>
             <p className="pts-spin-demo-weights-title">1) พื้นหลังตอนสมัคร/ล็อกอิน</p>
             <div className="pts-attract-demo-frame join-page join-page--attract">
-              <PointsGamesAttractBg key={`bg-${gameKey}`} basePoints={basePoints} />
+              <PointsGamesAttractBg key={`bg-${gameKey}`} />
               <div className="join-card" style={{ margin: "2.5rem auto", position: "relative" }}>
                 <p className="join-brand">TellTea</p>
                 <h1 style={{ fontSize: "1.1rem", margin: 0 }}>สมัครสมาชิก</h1>
                 <p className="muted" style={{ marginTop: "0.35rem" }}>
-                  ด้านหลังมีเกมกำลังเล่นอยู่ · สมัครแล้วเลือกได้ <strong>1 เกม</strong>
+                  ด้านหลังมีวงล้อหมุนอยู่ · สมัครแล้วได้หมุนลุ้นแต้ม
                 </p>
               </div>
             </div>
             <p className="pts-spin-demo-weights-title" style={{ marginTop: "1rem" }}>
-              2) หลังได้แต้ม — เลือกได้แค่ 1 เกม
+              2) หลังเข้าสู่ระบบ — หมุนวงล้อ
             </p>
             <PointsGameOnce
               key={`once-${gameKey}`}
-              basePoints={basePoints}
               allowReselect
-              onFinished={({ game, result }) => {
+              onFinished={({ result }) => {
                 setLastNote(
-                  `ลูกค้าเลือก ${game} · ×${result.multiplier} ${SPIN_MENU_PRIZES[result.multiplier].label} · ${result.basePoints}→${result.finalPoints}`,
+                  `ได้ +${result.points} แต้ม (${SPIN_MENU_PRIZES[result.points].label})`,
                 );
               }}
             />
@@ -232,39 +213,10 @@ function SpinDemoView() {
           <PointsMultiplierSpin
             key={gameKey}
             mode="demo"
-            basePoints={basePoints}
             weights={weights}
-            hint="กดเริ่มหมุน → กดหยุด · ชิ้นแคบ = ยาก · ได้แค่คูณแต้ม"
+            hint="กดเริ่ม → กดหยุด → วงหน่วงเอง · แต้มตามชิ้นใต้เข็ม"
             onComplete={(r) => {
-              setLastNote(
-                `หมุนวงล้อ · ×${r.multiplier} ${SPIN_MENU_PRIZES[r.multiplier].label} · ${r.basePoints}→${r.finalPoints}`,
-              );
-            }}
-          />
-        ) : null}
-        {tab === "feed" ? (
-          <PointsFeedBobaGame
-            key={gameKey}
-            mode="demo"
-            basePoints={basePoints}
-            hint="แตะตอนเข็มอยู่ในโซน · ได้แค่คูณแต้ม"
-            onComplete={(r) => {
-              setLastNote(
-                `ป้อนไข่มุก · ×${r.multiplier} ${SPIN_MENU_PRIZES[r.multiplier].label} · ${r.basePoints}→${r.finalPoints}`,
-              );
-            }}
-          />
-        ) : null}
-        {tab === "pour" ? (
-          <PointsPourTeaGame
-            key={gameKey}
-            mode="demo"
-            basePoints={basePoints}
-            hint="กดค้างเทชา แล้วปล่อย · ได้แค่คูณแต้ม"
-            onComplete={(r) => {
-              setLastNote(
-                `เทชา · ×${r.multiplier} ${SPIN_MENU_PRIZES[r.multiplier].label} · ${r.basePoints}→${r.finalPoints}`,
-              );
+              setLastNote(`หมุนวงล้อ · ได้ +${r.points} แต้ม`);
             }}
           />
         ) : null}
@@ -272,43 +224,57 @@ function SpinDemoView() {
       </section>
 
       <section className="staff-hub-panel members-slim-panel">
-        <p className="pts-spin-demo-weights-title">จำลองสุ่ม 2,000 ครั้ง (น้ำหนักเดียวกันทั้ง 3 เกม)</p>
-        <button
-          type="button"
-          className="primary-btn staff-btn-sm"
-          onClick={() => setSimCount(simulateSpins(2000, weights))}
-        >
-          รันจำลอง
-        </button>
+        <p className="pts-spin-demo-weights-title">
+          จำลองตำแหน่งหยุด 2,000 ครั้ง (ตามสัดส่วนชิ้นบนวง)
+        </p>
+        <div className="pts-spin-demo-pick">
+          <button
+            type="button"
+            className="primary-btn staff-btn-sm"
+            onClick={() => setSimCount(simulateSpins(2000, weights))}
+          >
+            จำลองมุมสุ่ม
+          </button>
+          <button
+            type="button"
+            className="ghost-btn staff-btn-sm"
+            onClick={() => setSimCount(simulatePhysicsCoasts(2000, weights))}
+          >
+            จำลองหน่วงฟิสิกส์
+          </button>
+        </div>
         {simCount ? (
           <ul className="pts-spin-demo-hist">
-            {MULTIPLIER_TIERS.map((m) => {
+            {POINT_TIERS.map((m) => {
               const n = simCount[m];
               const pct = (n / 2000) * 100;
               return (
                 <li key={m}>
-                  <span>×{m}</span>
+                  <span>{m} แต้ม</span>
                   <span className="pts-spin-demo-bar">
                     <i style={{ width: `${Math.min(100, pct)}%` }} />
                   </span>
                   <span>
-                    {n} ({pct.toFixed(1)}%) · {SPIN_MENU_PRIZES[m].shortLabel}
+                    {n} ({pct.toFixed(1)}%) · เป้า {formatPercent(probs[m])}
                   </span>
                 </li>
               );
             })}
           </ul>
         ) : (
-          <p className="muted members-slim-hint">กดรันเพื่อเทียบกับเปอร์เซ็นต์ที่ตั้ง</p>
+          <p className="muted members-slim-hint">
+            กดจำลองเพื่อเทียบกับการกระจายชิ้นบนวงล้อ
+          </p>
         )}
       </section>
 
       <section className="staff-hub-panel members-slim-panel">
-        <p className="pts-spin-demo-weights-title">กฎลูกค้า</p>
+        <p className="pts-spin-demo-weights-title">กฎ</p>
         <ol className="pts-spin-demo-flow">
-          <li>ก่อนสมัคร/ล็อกอิน — เห็น 3 เกมเคลื่อนไหวเป็นพื้นหลัง (ยังเล่นไม่ได้)</li>
-          <li>รับแต้มฐานแล้ว — เลือกได้ <strong>เพียง 1 เกม</strong> ต่อรอบ</li>
-          <li>เลือกแล้วเปลี่ยนเกมไม่ได้ · จบแล้วไปดูแต้ม</li>
+          <li>เกมเดียว: หมุนวงล้อ</li>
+          <li>กดหยุดแล้ววงล้อหน่วงตามแรง — ไม่จับผลจากเปอร์เซ็นต์ล่วงหน้า</li>
+          <li>ได้แต้มคงที่ 1–5 ตามชิ้นใต้เข็ม · ไม่คูณแต้มฐาน</li>
+          <li>สัดส่วนมุมรวมปรับได้ แต่ชิ้นจะถูกแบ่งย่อยกระจายรอบวง</li>
         </ol>
         <p className="muted members-slim-hint">
           ลิงก์นี้: <code>/members/spin-demo/</code> · รายละเอียด{" "}

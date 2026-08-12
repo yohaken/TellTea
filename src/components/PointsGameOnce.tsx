@@ -2,138 +2,85 @@
 
 import { useState } from "react";
 import { PointsMultiplierSpin } from "@/components/PointsMultiplierSpin";
-import { PointsFeedBobaGame } from "@/components/PointsFeedBobaGame";
-import { PointsPourTeaGame } from "@/components/PointsPourTeaGame";
 import { PointsGameBrandLogo } from "@/components/PointsGameBrandLogo";
-import {
-  POINTS_GAMES,
-  pointsGameById,
-  type PointsGameId,
-} from "@/lib/points-games";
-import { POINTS_ONLY_NOTE, prizeForMultiplier } from "@/lib/points-spin-theme";
+import { POINTS_ONLY_NOTE, prizeForPoints } from "@/lib/points-spin-theme";
 import type { SpinResult } from "@/lib/points-multiplier-spin";
+import type { PointsGameId } from "@/lib/points-games";
 
 type Props = {
-  basePoints: number;
-  /** โหมดจำลองหลังร้าน — อนุญาตรีเซ็ตเลือกใหม่ */
+  basePoints?: number;
+  /** โหมดจำลองหลังร้าน — อนุญาตหมุนใหม่ */
   allowReselect?: boolean;
   onFinished?: (payload: { game: PointsGameId; result: SpinResult }) => void;
   className?: string;
 };
 
-type Phase = "pick" | "play" | "done";
+type Phase = "play" | "done";
 
 /**
- * ลูกค้าเลือกได้เพียง 1 เกมต่อรอบ แล้วเล่นจนจบ
+ * เล่นวงล้อเกมเดียวจนจบ (ไม่มีตัวเลือกหลายเกม)
  */
 export function PointsGameOnce({
-  basePoints,
+  basePoints = 0,
   allowReselect = false,
   onFinished,
   className = "",
 }: Props) {
-  const [phase, setPhase] = useState<Phase>("pick");
-  const [game, setGame] = useState<PointsGameId | null>(null);
+  const [phase, setPhase] = useState<Phase>("play");
   const [result, setResult] = useState<SpinResult | null>(null);
-
-  function pick(id: PointsGameId) {
-    setGame(id);
-    setResult(null);
-    setPhase("play");
-  }
+  const [playKey, setPlayKey] = useState(0);
 
   function onComplete(res: SpinResult) {
     setResult(res);
     setPhase("done");
-    if (game) onFinished?.({ game, result: res });
+    onFinished?.({ game: "spin", result: res });
   }
 
-  function resetPick() {
+  function resetPlay() {
     if (!allowReselect) return;
-    setPhase("pick");
-    setGame(null);
+    setPhase("play");
     setResult(null);
+    setPlayKey((k) => k + 1);
   }
 
-  const info = game ? pointsGameById(game) : null;
-  const prize = result ? prizeForMultiplier(result.multiplier) : null;
+  const prize = result ? prizeForPoints(result.points) : null;
 
   return (
     <div className={`pts-once pts-once--mobile ${className}`.trim()} data-phase={phase}>
-      {phase === "pick" ? (
-        <div className="pts-once-pick">
-          <p className="pts-once-title">เลือก 1 เกมลุ้นคูณแต้ม</p>
+      {phase === "play" ? (
+        <div className="pts-once-play">
+          <p className="pts-once-title">หมุนวงล้อลุ้นแต้ม</p>
           <p className="pts-once-sub muted">
-            แต้มฐาน <strong>{Math.max(0, Math.trunc(basePoints))}</strong> ·
-            เลือกแล้วเล่นเกมนั้นอย่างเดียว
+            กดหยุดแล้ววงล้อหน่วงตามแรง · ได้แต้มคงที่ 1–5
           </p>
           <p className="pts-spin-points-only">{POINTS_ONLY_NOTE}</p>
-          <div className="pts-once-choices">
-            {POINTS_GAMES.map((g) => (
-              <button
-                key={g.id}
-                type="button"
-                className="pts-once-choice"
-                onClick={() => pick(g.id)}
-              >
-                <span className="pts-once-choice-title">{g.title}</span>
-                <span className="pts-once-choice-blurb">{g.blurb}</span>
-              </button>
-            ))}
-          </div>
+          <PointsMultiplierSpin
+            key={playKey}
+            mode="play"
+            basePoints={basePoints}
+            onComplete={onComplete}
+          />
         </div>
       ) : null}
 
-      {phase === "play" && game ? (
-        <div className="pts-once-play">
-          <p className="pts-once-playing muted">กำลังเล่น · {info?.title}</p>
-          {game === "spin" ? (
-            <PointsMultiplierSpin
-              mode="play"
-              basePoints={basePoints}
-              onComplete={onComplete}
-            />
-          ) : null}
-          {game === "feed" ? (
-            <PointsFeedBobaGame
-              mode="play"
-              basePoints={basePoints}
-              onComplete={onComplete}
-            />
-          ) : null}
-          {game === "pour" ? (
-            <PointsPourTeaGame
-              mode="play"
-              basePoints={basePoints}
-              onComplete={onComplete}
-            />
-          ) : null}
-        </div>
-      ) : null}
-
-      {phase === "done" && result && info ? (
+      {phase === "done" && result ? (
         <div className="pts-once-done">
           <PointsGameBrandLogo className="pts-result-brand" size={52} />
-          <p className="pts-once-title">จบเกม · {info.shortTitle}</p>
-          <p className="pts-spin-result-mult">×{result.multiplier}</p>
+          <p className="pts-once-title">จบเกม · หมุนวงล้อ</p>
+          <p className="pts-spin-result-mult">+{result.points}</p>
           <p className="pts-spin-result-flavor">{prize?.label}</p>
           <p>
-            {result.basePoints} → <strong>{result.finalPoints}</strong> แต้ม
-            {result.bonusPoints > 0 ? (
-              <span className="pts-spin-bonus"> (+{result.bonusPoints})</span>
-            ) : null}
+            ได้ <strong>{result.finalPoints}</strong> แต้ม
           </p>
           <p className="pts-spin-points-only">{POINTS_ONLY_NOTE}</p>
-          <p className="muted pts-once-lock-note">
-            รอบนี้เลือกเกมไปแล้ว · ไม่เปลี่ยนเกมได้
-          </p>
+          <p className="muted pts-once-lock-note">รอบนี้หมุนไปแล้ว</p>
           {allowReselect ? (
             <button
               type="button"
               className="ghost-btn pts-spin-btn"
-              onClick={resetPick}
+              onClick={resetPlay}
             >
-              จำลอง: เลือกเกมใหม่
+              จำลอง: หมุนใหม่
             </button>
           ) : null}
         </div>

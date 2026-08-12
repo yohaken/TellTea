@@ -3,30 +3,37 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   DEFAULT_SPIN_WEIGHTS,
-  applyMultiplier,
+  WHEEL_SPIN_SPEED,
+  WHEEL_STOP_DECEL,
+  WHEEL_STOP_EPS,
+  awardSpinPoints,
   buildWheelSlices,
-  pickMultiplier,
-  wheelTargetRotation,
-  type MultiplierTier,
+  sliceAtPointer,
   type SpinResult,
   type SpinWeight,
+  type LegacySpinWeight,
   type WheelSlice,
 } from "@/lib/points-multiplier-spin";
-import { POINTS_ONLY_NOTE, prizeForMultiplier, spinResultFlavorLine } from "@/lib/points-spin-theme";
+import {
+  POINTS_ONLY_NOTE,
+  prizeForPoints,
+  spinResultFlavorLine,
+} from "@/lib/points-spin-theme";
 import { PointsGameBrandLogo } from "@/components/PointsGameBrandLogo";
 
 export type PointsMultiplierSpinMode = "teaser" | "play" | "demo";
 
 type Props = {
   mode: PointsMultiplierSpinMode;
-  basePoints: number;
-  weights?: readonly SpinWeight[];
+  /** แต้มฐานก่อนเล่น — แสดงบริบทอย่างเดียว ไม่นำไปคูณ */
+  basePoints?: number;
+  weights?: readonly (SpinWeight | LegacySpinWeight)[];
   onComplete?: (result: SpinResult) => void;
   className?: string;
   hint?: string;
 };
 
-type Phase = "idle" | "spinning" | "stopping" | "done";
+type Phase = "idle" | "spinning" | "coasting" | "done";
 
 const TONE_FILL: Record<string, string> = {
   thai: "#E8913A",
@@ -48,30 +55,51 @@ function slicePath(cx: number, cy: number, r: number, start: number, end: number
   return `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
 }
 
+/**
+ * วงล้อหมุนได้แต้ม 1–5
+ * กดหยุด = ปล่อยให้หน่วงตามฟิสิกส์ แล้วอ่านชิ้นใต้เข็ม (ไม่สุ่มผลล่วงหน้า)
+ */
 export function PointsMultiplierSpin({
   mode,
-  basePoints,
+  basePoints = 0,
   weights = DEFAULT_SPIN_WEIGHTS,
   onComplete,
   className = "",
   hint,
 }: Props) {
-  const slices = useMemo(() => buildWheelSlices(weights), [weights]);
+  const slices = useMemo(() => buildWheelSlices(weights, 40), [weights]);
+  const legendTiers = useMemo(() => {
+    const seen = new Set<number>();
+    const out: WheelSlice[] = [];
+    for (const s of slices) {
+      if (seen.has(s.points)) continue;
+      seen.add(s.points);
+      out.push(s);
+    }
+    return out.sort((a, b) => a.points - b.points);
+  }, [slices]);
+
   const rafRef = useRef(0);
   const rotationRef = useRef(0);
   const velocityRef = useRef(0);
   const phaseRef = useRef<Phase>("idle");
-  const targetRotRef = useRef<number | null>(null);
-  const resultRef = useRef<SpinResult | null>(null);
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
+  const baseRef = useRef(basePoints);
+  baseRef.current = basePoints;
+  const slicesRef = useRef(slices);
+  slicesRef.current = slices;
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [result, setResult] = useState<SpinResult | null>(null);
   const [rotation, setRotation] = useState(0);
 
-  function finishSpin(res: SpinResult) {
+  function finishAtCurrent() {
+    if (phaseRef.current === "done") return;
+    const slice = sliceAtPointer(rotationRef.current, slicesRef.current);
+    const res = awardSpinPoints(slice.points, baseRef.current);
     phaseRef.current = "done";
+    velocityRef.current = 0;
     setPhase("done");
     setResult(res);
     onCompleteRef.current?.(res);
@@ -84,35 +112,35 @@ export function PointsMultiplierSpin({
       last = now;
       let v = velocityRef.current;
       let r = rotationRef.current;
+      const ph = phaseRef.current;
 
-      if (phaseRef.current === "idle" && mode === "teaser") {
-        v = 55;
-      }
-      if (phaseRef.current === "spinning") {
-        v = Math.max(v, 420);
-      }
-      if (phaseRef.current === "stopping" && targetRotRef.current != null) {
-        const target = targetRotRef.current;
-        const dist = target - r;
-        if (dist < 2 && v < 40) {
-          r = target;
+      if (ph === "idle" && mode === "teaser") {
+        v = 48;
+      } else if (ph === "spinning") {
+        // รักษาความเร็วหมุนจนกว่าจะกดหยุด
+        const target = WHEEL_SPIN_SPEED;
+        v += (target - v) * Math.min(1, dt * 6);
+      } else if (ph === "coasting") {
+        // หน่วงมุมคงที่ (ฟิสิกส์ง่าย) — ผลอยู่ที่มุมสุดท้ายใต้เข็ม
+        const decel = Math.max(WHEEL_STOP_DECEL, Math.abs(v) * 0.85);
+        if (v > 0) {
+          v = Math.max(0, v - decel * dt);
+        } else if (v < 0) {
+          v = Math.min(0, v + decel * dt);
+        }
+        if (Math.abs(v) < WHEEL_STOP_EPS) {
           v = 0;
+          r += v * dt;
           rotationRef.current = r;
           velocityRef.current = 0;
           setRotation(r);
-          const res = resultRef.current;
-          if (res) finishSpin(res);
+          finishAtCurrent();
+          rafRef.current = requestAnimationFrame(tick);
           return;
         }
-        v = Math.min(v, Math.max(28, dist * 1.1));
-        v = Math.max(18, v * (1 - dt * 1.25));
       }
 
-      if (
-        phaseRef.current === "idle" ||
-        phaseRef.current === "spinning" ||
-        phaseRef.current === "stopping"
-      ) {
+      if (ph === "idle" || ph === "spinning" || ph === "coasting") {
         r += v * dt;
         rotationRef.current = r;
         velocityRef.current = v;
@@ -123,38 +151,24 @@ export function PointsMultiplierSpin({
     };
     rafRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loop binds mode only
   }, [mode]);
-
-  function beginToward(mult: MultiplierTier) {
-    const slice = slices.find((s) => s.multiplier === mult) || slices[0]!;
-    const res = applyMultiplier(basePoints, mult);
-    resultRef.current = res;
-    targetRotRef.current = wheelTargetRotation(slice.midDeg, 5);
-    // ต่อจากมุมปัจจุบัน — อย่าถอยหลัง
-    const cur = rotationRef.current;
-    let target = targetRotRef.current;
-    while (target < cur + 360) target += 360;
-    targetRotRef.current = target;
-    setResult(null);
-  }
 
   function startSpin() {
     if (mode === "teaser") return;
-    if (phaseRef.current === "spinning" || phaseRef.current === "stopping") return;
-    const mult = pickMultiplier(weights);
-    beginToward(mult);
+    if (phaseRef.current === "spinning" || phaseRef.current === "coasting") return;
+    setResult(null);
     phaseRef.current = "spinning";
     setPhase("spinning");
-    velocityRef.current = 480;
+    velocityRef.current = WHEEL_SPIN_SPEED * 0.85;
   }
 
   function stopSpin() {
     if (mode === "teaser") return;
     if (phaseRef.current !== "spinning") return;
-    const mult = pickMultiplier(weights);
-    beginToward(mult);
-    phaseRef.current = "stopping";
-    setPhase("stopping");
+    // ปล่อยให้หน่วง — ไม่กำหนดผลล่วงหน้า
+    phaseRef.current = "coasting";
+    setPhase("coasting");
   }
 
   function resetPlay() {
@@ -162,8 +176,6 @@ export function PointsMultiplierSpin({
     phaseRef.current = "idle";
     setPhase("idle");
     setResult(null);
-    resultRef.current = null;
-    targetRotRef.current = null;
     velocityRef.current = 0;
   }
 
@@ -172,7 +184,7 @@ export function PointsMultiplierSpin({
     if (phase !== "idle" || result) return;
     const t = window.setTimeout(() => startSpin(), 350);
     return () => window.clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount/play only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
 
   const canStop = phase === "spinning";
@@ -181,6 +193,7 @@ export function PointsMultiplierSpin({
   const cx = 100;
   const cy = 100;
   const radius = 92;
+  const labelMinSpan = 360 / slices.length;
 
   return (
     <div
@@ -189,11 +202,11 @@ export function PointsMultiplierSpin({
       data-phase={phase}
     >
       <div className="pts-spin-head">
-        <p className="pts-spin-title">หมุนวงล้อคูณแต้ม</p>
+        <p className="pts-spin-title">หมุนวงล้อลุ้นแต้ม</p>
         <p className="pts-spin-sub">
           {mode === "teaser"
-            ? "ลุ้นคูณแต้ม ×1–×5 · ไม่ใช่ของแถม"
-            : `แต้มฐาน ${Math.max(0, Math.trunc(basePoints))} · กดหยุดเมื่อพร้อม`}
+            ? "ลุ้นได้ 1–5 แต้ม · กดหยุดแล้วหมุนหน่วงตามแรง"
+            : "กดเริ่มหมุน แล้วกดหยุด — วงล้อหน่วงเอง แต้มตามชิ้นที่ชี้"}
         </p>
         <p className="pts-spin-points-only">{POINTS_ONLY_NOTE}</p>
       </div>
@@ -204,32 +217,47 @@ export function PointsMultiplierSpin({
           className="pts-wheel-disc"
           style={{ transform: `rotate(${rotation}deg)` }}
         >
-          <svg viewBox="0 0 200 200" className="pts-wheel-svg" role="img" aria-label="วงล้อคูณแต้ม">
-            {slices.map((slice: WheelSlice) => {
-              const tone = prizeForMultiplier(slice.multiplier).tone;
-              const [tx, ty] = polar(cx, cy, radius * 0.62, slice.midDeg);
+          <svg
+            viewBox="0 0 200 200"
+            className="pts-wheel-svg"
+            role="img"
+            aria-label="วงล้อลุ้นแต้ม"
+          >
+            {slices.map((slice) => {
+              const tone = prizeForPoints(slice.points).tone;
+              const span = slice.endDeg - slice.startDeg;
+              const [tx, ty] = polar(cx, cy, radius * 0.64, slice.midDeg);
               return (
-                <g key={slice.multiplier}>
+                <g key={slice.id}>
                   <path
                     d={slicePath(cx, cy, radius, slice.startDeg, slice.endDeg)}
                     fill={TONE_FILL[tone] || "#0077B6"}
-                    stroke="rgba(255,255,255,0.35)"
-                    strokeWidth="1.2"
+                    stroke="rgba(255,255,255,0.4)"
+                    strokeWidth="0.8"
                   />
-                  <text
-                    x={tx}
-                    y={ty}
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    className="pts-wheel-label"
-                    transform={`rotate(${slice.midDeg}, ${tx}, ${ty})`}
-                  >
-                    ×{slice.multiplier}
-                  </text>
+                  {span >= Math.min(14, labelMinSpan * 0.85) ? (
+                    <text
+                      x={tx}
+                      y={ty}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      className="pts-wheel-label"
+                      transform={`rotate(${slice.midDeg}, ${tx}, ${ty})`}
+                    >
+                      {slice.points}
+                    </text>
+                  ) : null}
                 </g>
               );
             })}
-            <circle cx={cx} cy={cy} r="28" fill="#FFF6E8" stroke="#003B5C" strokeWidth="2" />
+            <circle
+              cx={cx}
+              cy={cy}
+              r="28"
+              fill="#FFF6E8"
+              stroke="#003B5C"
+              strokeWidth="2"
+            />
           </svg>
           <div className="pts-wheel-hub">
             <PointsGameBrandLogo className="pts-wheel-hub-logo" />
@@ -237,13 +265,13 @@ export function PointsMultiplierSpin({
         </div>
       </div>
 
-      <ul className="pts-spin-legend" aria-label="คูณแต้มบนวงล้อ">
-        {slices.map((s) => (
+      <ul className="pts-spin-legend" aria-label="แต้มบนวงล้อ">
+        {legendTiers.map((s) => (
           <li
-            key={s.multiplier}
-            className={`pts-spin-legend-item pts-spin-legend-item--${prizeForMultiplier(s.multiplier).tone}`}
+            key={s.points}
+            className={`pts-spin-legend-item pts-spin-legend-item--${prizeForPoints(s.points).tone}`}
           >
-            <span>×{s.multiplier} แต้ม</span>
+            <span>{s.points} แต้ม</span>
           </li>
         ))}
       </ul>
@@ -251,7 +279,11 @@ export function PointsMultiplierSpin({
       {mode !== "teaser" ? (
         <div className="pts-spin-actions">
           {canStart ? (
-            <button type="button" className="primary-btn pts-spin-btn" onClick={startSpin}>
+            <button
+              type="button"
+              className="primary-btn pts-spin-btn"
+              onClick={startSpin}
+            >
               {phase === "done" ? "หมุนอีกครั้ง" : "เริ่มหมุน"}
             </button>
           ) : null}
@@ -264,11 +296,15 @@ export function PointsMultiplierSpin({
               หยุด!
             </button>
           ) : null}
-          {phase === "stopping" ? (
-            <p className="pts-spin-waiting muted">กำลังหยุด…</p>
+          {phase === "coasting" ? (
+            <p className="pts-spin-waiting muted">กำลังหน่วง…</p>
           ) : null}
           {phase === "done" && mode === "demo" ? (
-            <button type="button" className="ghost-btn pts-spin-btn" onClick={resetPlay}>
+            <button
+              type="button"
+              className="ghost-btn pts-spin-btn"
+              onClick={resetPlay}
+            >
               รีเซ็ต
             </button>
           ) : null}
@@ -277,15 +313,12 @@ export function PointsMultiplierSpin({
 
       {showResult && result ? (
         <div className="pts-spin-result" role="status">
-          <p className="pts-spin-result-mult">×{result.multiplier}</p>
-          <p className="pts-spin-result-flavor">{spinResultFlavorLine(result.multiplier)}</p>
+          <p className="pts-spin-result-mult">+{result.points}</p>
+          <p className="pts-spin-result-flavor">
+            {spinResultFlavorLine(result.points)}
+          </p>
           <p>
-            {result.basePoints} → <strong>{result.finalPoints}</strong> แต้ม
-            {result.bonusPoints > 0 ? (
-              <span className="pts-spin-bonus"> (+{result.bonusPoints})</span>
-            ) : (
-              <span className="muted"> · เท่าเดิม</span>
-            )}
+            ได้ <strong>{result.finalPoints}</strong> แต้ม
           </p>
           <p className="pts-spin-points-only">{POINTS_ONLY_NOTE}</p>
         </div>
@@ -293,7 +326,7 @@ export function PointsMultiplierSpin({
 
       {hint ? <p className="pts-spin-hint muted">{hint}</p> : null}
       {mode === "teaser" && !hint ? (
-        <p className="pts-spin-hint muted">ชิ้นแคบ = ยาก · ×5 แต้มหายากสุด</p>
+        <p className="pts-spin-hint muted">ชิ้นกระจายรอบวง · 5 แต้มหายากสุด</p>
       ) : null}
     </div>
   );

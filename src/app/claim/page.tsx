@@ -405,7 +405,7 @@ function ClaimForm() {
 
         {showAttract ? (
           <p className="muted claim-bill-meta" style={{ marginTop: "0.35rem" }}>
-            ด้านหลังมีเกมกำลังเล่นอยู่ · สมัคร/เข้าแล้วเลือกได้ <strong>1 เกม</strong> ลุ้นคูณแต้ม
+            ด้านหลังมีวงล้อหมุนอยู่ · สมัคร/เข้าแล้วหมุนลุ้นได้ 1–5 แต้ม
           </p>
         ) : null}
 
@@ -625,7 +625,7 @@ function ClaimForm() {
             {POINTS_GAMES_CUSTOMER_LIVE ? (
               <>
                 <p className="muted" style={{ marginTop: "0.5rem", fontSize: "0.88rem" }}>
-                  เลือกเล่นได้ <strong>1 เกม</strong> เพื่อลุ้นคูณแต้ม
+                  หมุนวงล้อลุ้นได้ <strong>1–5 แต้ม</strong>
                 </p>
                 <button
                   type="button"
@@ -636,7 +636,7 @@ function ClaimForm() {
                     setShowGamePick(true);
                   }}
                 >
-                  เลือกเกมลุ้นคูณ
+                  หมุนวงล้อลุ้นแต้ม
                 </button>
                 <a
                   className="claim-phone-link"

@@ -2064,6 +2064,14 @@ body.modal-open .main-panel {
   place-items: center;
 }
 
+.pts-attract-stack--single .pts-attract-panel--spin {
+  top: 10%;
+  left: 50%;
+  width: min(92vw, 22rem);
+  transform: translateX(-50%) scale(1);
+  animation: pts-attract-drift-a 9s ease-in-out infinite;
+}
+
 .pts-attract-panel {
   position: absolute;
   width: min(92vw, 20.5rem);
