@@ -26,6 +26,8 @@
 
 https://telltea-shop.web.app/members/
 
+จำลองเกมคูณแต้ม: https://telltea-shop.web.app/members/spin-demo/ · ดู [members-points-spin.md](./members-points-spin.md)
+
 ## Deploy
 
 1. Hosting หลังร้าน + Firestore rules/indexes  

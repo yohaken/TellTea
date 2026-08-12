@@ -3,6 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { PointsMultiplierSpin } from "@/components/PointsMultiplierSpin";
 
 const SIGNUP_URL =
   "https://asia-southeast1-mypeer-501909.cloudfunctions.net/publicMemberSignup";
@@ -66,7 +67,12 @@ function JoinForm() {
       <div className="join-card">
         <p className="join-brand">TellTea</p>
         <h1>สมัครสมาชิก</h1>
-        <p className="muted">สะสมแต้มเมื่อซื้อที่ร้าน · สาขาเดียว</p>
+        <p className="muted">สะสมแต้มเมื่อซื้อที่ร้าน · ลุ้นคูณแต้มทุกครั้งที่รับแต้ม</p>
+        <PointsMultiplierSpin
+          mode="teaser"
+          basePoints={done?.points && done.points > 0 ? done.points : 5}
+          hint="สมัครแล้วรับแต้ม · ลุ้นหมุนเมนู / ป้อนไข่มุก / เทชาทุกบิล"
+        />
         {!token ? (
           <p className="join-error">ลิงก์ไม่ครบ — สแกน QR จากร้านอีกครั้ง</p>
         ) : done ? (

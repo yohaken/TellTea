@@ -13,6 +13,7 @@
     "test:members-crm": "node scripts/test-members-crm-m0.mjs",
     "test:members-owner-delete": "node scripts/test-members-owner-delete.mjs",
     "test:members-howto-redeem": "node scripts/test-members-howto-redeem.mjs",
+    "test:members-points-spin": "node scripts/test-members-points-spin.mjs",
     "test:members-slip-points-line": "node scripts/test-members-slip-points-line.mjs",
     "test:members-receipt-claim": "node scripts/test-members-receipt-claim.mjs",
     "test:members-min-one-point": "node scripts/test-members-min-one-point.mjs",

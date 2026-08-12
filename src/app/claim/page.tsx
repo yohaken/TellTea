@@ -11,6 +11,7 @@ import {
   sendPhoneOtp,
 } from "@/lib/phone-auth";
 import { ClaimPointsValueNote } from "@/components/ClaimPointsValueNote";
+import { PointsMultiplierSpin } from "@/components/PointsMultiplierSpin";
 import {
   completeMemberGoogleRedirect,
   mapFirebaseAuthError,
@@ -394,6 +395,18 @@ function ClaimForm() {
         )}
 
         <ClaimPointsValueNote />
+
+        {step !== "load" && step !== "blocked" ? (
+          <PointsMultiplierSpin
+            mode="teaser"
+            basePoints={typeof pointsLabel === "number" ? pointsLabel : 1}
+            hint={
+              typeof pointsLabel === "number" && pointsLabel > 0
+                ? `แต้มจากบิลนี้ ${pointsLabel} · รับแล้วลุ้นหมุนเมนู / ป้อนไข่มุก / เทชา`
+                : "รับแต้มแล้วลุ้นคูณ ×1–×5 ธีมชา·ขนม"
+            }
+          />
+        ) : null}
 
         {step === "load" ? (
           <p className="muted" style={{ marginTop: "1rem" }}>
