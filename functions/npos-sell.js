@@ -977,7 +977,7 @@ exports.publicMemberMe = functions.region("asia-southeast1").https.onRequest(asy
   }
 });
 
-/** Credit spin-game bonus points (1–5) — Auth (claim) or one-time playToken (join). */
+/** Credit spin-game bonus points (0–5; 0 = no bonus) — Auth (claim) or playToken (join). */
 exports.publicSpinGameCredit = functions.region("asia-southeast1").https.onRequest(async (req, res) => {
   cors(res);
   if (req.method === "OPTIONS") {
