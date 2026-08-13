@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { PointsMultiplierSpin } from "@/components/PointsMultiplierSpin";
 import { POINTS_GAMES } from "@/lib/points-games";
 import {
-  DEFAULT_POINTS_SPIN_SETTINGS,
   loadPointsSpinSettings,
   subscribePointsSpinSettings,
   type PointsSpinSettings,
@@ -27,8 +26,8 @@ export function PointsGamesAttractBg({
   liveSettings = false,
   className = "",
 }: Props) {
-  const [settings, setSettings] = useState<PointsSpinSettings>(
-    settingsProp || DEFAULT_POINTS_SPIN_SETTINGS,
+  const [settings, setSettings] = useState<PointsSpinSettings | null>(
+    settingsProp || null,
   );
 
   useEffect(() => {
@@ -54,16 +53,20 @@ export function PointsGamesAttractBg({
       <div className="pts-attract-stack pts-attract-stack--single">
         <div className="pts-attract-panel pts-attract-panel--spin">
           <p className="pts-attract-tag">{POINTS_GAMES[0]!.attractLine}</p>
-          <PointsMultiplierSpin
-            key={`teaser-${settings.sliceCount}-${settings.spinSpeed}-${settings.stopDecel}`}
-            mode="teaser"
-            basePoints={basePoints}
-            weights={settings.weights}
-            sliceCount={settings.sliceCount}
-            spinSpeed={settings.spinSpeed}
-            stopDecel={settings.stopDecel}
-            hint=""
-          />
+          {settings ? (
+            <PointsMultiplierSpin
+              key={`teaser-${settings.sliceCount}-${settings.spinSpeed}-${settings.stopDecel}-${settings.updatedAt}`}
+              mode="teaser"
+              basePoints={basePoints}
+              weights={settings.weights}
+              sliceCount={settings.sliceCount}
+              spinSpeed={settings.spinSpeed}
+              stopDecel={settings.stopDecel}
+              hint=""
+            />
+          ) : (
+            <p className="muted pts-attract-tag">กำลังโหลดวงล้อ…</p>
+          )}
         </div>
       </div>
       <p className="pts-attract-banner">

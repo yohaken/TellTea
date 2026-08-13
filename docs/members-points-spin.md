@@ -41,6 +41,7 @@
 ### เครดิตแต้ม + จับตาผิดปกติ
 
 - CF `publicSpinGameCredit` — รับ 0–5 · เคลมใช้ Firebase Auth · สมัครใช้ `spinPlayToken` ครั้งเดียว
+- ลูกค้า: ล็อกค่าตั้งวงตอนเล่น · ปุ่มบันทึกแต้มอีกครั้งเมื่อเน็ตหลุด · join โชว์เกมเมื่อมี playToken · claim resume ถ้าเคลมแล้วแต่ยังไม่ `spinGameCredited`
 - ledger reason: `earn_spin_game`
 - สมาชิกมีฟิลด์ `lifetimeGameBonusPoints` — ตาราง `/members` คอลัมน์ **แต้มเกม** (ไฮไลต์เมื่อ ≥ 20)
 

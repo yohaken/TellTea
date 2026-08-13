@@ -26,8 +26,10 @@ import {
 } from "@/lib/points-spin-settings";
 import {
   creditSpinGamePoints,
+  isSpinCreditRetryable,
   spinCreditErrorLabel,
 } from "@/lib/points-spin-credit";
+import type { SpinResult } from "@/lib/points-multiplier-spin";
 import {
   claimBlockedTitle,
   claimErrorLabel,
@@ -84,11 +86,115 @@ function ClaimForm() {
   } | null>(null);
   const [spinSettings, setSpinSettings] = useState<PointsSpinSettings | null>(null);
   const [creditNote, setCreditNote] = useState<string | null>(null);
+  const [creditRetryable, setCreditRetryable] = useState(false);
+  const [lastSpinResult, setLastSpinResult] = useState<SpinResult | null>(null);
+  /** ล็อกสิทธิ์โชว์เกมในเซสชันนี้ — ไม่ให้ realtime ปิดเกมดึงวงล้อกลางคัน */
+  const [gameLatched, setGameLatched] = useState(false);
+  const [resumeChecked, setResumeChecked] = useState(false);
 
   useEffect(() => subscribePointsSpinSettings(setSpinSettings), []);
 
   const spinLive =
     !POINTS_GAMES_KILL_SWITCH && isPointsGameEnabled(spinSettings, "spin");
+  /** latch หลังเคลมสำเร็จ — รอ settings โหลดแล้วค่อยตัดถ้าเกมปิดจริง */
+  const offerSpin =
+    !POINTS_GAMES_KILL_SWITCH &&
+    (gameLatched
+      ? !spinSettings || isPointsGameEnabled(spinSettings, "spin")
+      : spinLive);
+
+  async function applySpinCredit(result: SpinResult) {
+    setCreditNote("กำลังบันทึกแต้ม…");
+    setCreditRetryable(false);
+    const r = await creditSpinGamePoints({
+      context: "claim",
+      contextId: saleId,
+      points: result.points,
+      gameId: "spin",
+    });
+    if (r.ok && !r.skipped && typeof r.balanceAfter === "number") {
+      setDone((prev) =>
+        prev ? { ...prev, balance: r.balanceAfter as number } : prev,
+      );
+      setCreditNote(
+        result.points === 0
+          ? `รอบนี้ไม่ได้แต้มเพิ่มจากเกม · คงเหลือ ${r.balanceAfter}`
+          : `บันทึกแล้ว +${result.points} · รวม ${r.balanceAfter} แต้ม`,
+      );
+      setLastSpinResult(null);
+      return;
+    }
+    if (r.skipped === "already_played") {
+      if (typeof r.balanceAfter === "number") {
+        setDone((prev) =>
+          prev ? { ...prev, balance: r.balanceAfter as number } : prev,
+        );
+        setCreditNote(`หมุนรอบนี้ไปแล้ว · คงเหลือ ${r.balanceAfter} แต้ม`);
+      } else {
+        setCreditNote("หมุนรอบนี้ไปแล้ว");
+      }
+      setLastSpinResult(null);
+      return;
+    }
+    setCreditNote(spinCreditErrorLabel(r.error));
+    setCreditRetryable(isSpinCreditRetryable(r.error));
+    setLastSpinResult(result);
+  }
+
+  /** เคลมแล้วแต่ยังไม่หมุน — ถ้าเข้าสู่ระบบอยู่ ให้กลับมาเล่นต่อ */
+  useEffect(() => {
+    if (step !== "used" || resumeChecked) return;
+    if (!spinSettings) return;
+    if (!spinLive) {
+      setResumeChecked(true);
+      return;
+    }
+    if (preview?.spinGameCredited === true) {
+      setResumeChecked(true);
+      return;
+    }
+    if (!saleId || !token) {
+      setResumeChecked(true);
+      return;
+    }
+    let cancelled = false;
+    setResumeChecked(true);
+    void (async () => {
+      try {
+        const info = await lookupReceiptClaimAuth({ saleId, token });
+        if (cancelled || !info.ok || !info.found || !info.member) return;
+        setAuthInfo(info);
+        setDone({
+          displayName: info.member.displayName || "เพื่อน TellTea",
+          cardNo: info.member.cardNo || "—",
+          points: 0,
+          balance:
+            typeof info.member.pointsBalance === "number"
+              ? info.member.pointsBalance
+              : 0,
+          isNew: false,
+        });
+        setGameLatched(true);
+        setPopupOpen(false);
+        setShowGamePick(true);
+        setCreditNote("บิลนี้รับแต้มแล้ว — หมุนลุ้นแต้มได้เพิ่มให้ครบก่อนนะ");
+        setStep("done");
+      } catch {
+        /* อยู่หน้า used ตามเดิม */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    step,
+    resumeChecked,
+    spinSettings,
+    spinLive,
+    preview?.spinGameCredited,
+    saleId,
+    token,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -239,6 +345,7 @@ function ClaimForm() {
             : 0,
       isNew: result.member?.isNew === true,
     });
+    setGameLatched(true);
     setPopupOpen(true);
     setStep("done");
     return true;
@@ -436,7 +543,11 @@ function ClaimForm() {
         {step === "used" ? (
           <div className="join-form claim-used">
             <p className="claim-used-title">ได้แต้มจากบิลนี้ไปแล้ว</p>
-            <p className="muted">QR ใบนี้ใช้แล้ว · ดูแต้มได้ทุกเมื่อ</p>
+            <p className="muted">
+              {spinLive && preview?.spinGameCredited !== true
+                ? "กำลังเช็คว่าหมุนลุ้นแต้มได้เพิ่มครบหรือยัง…"
+                : "QR ใบนี้ใช้แล้ว · ดูแต้มได้ทุกเมื่อ"}
+            </p>
             <a className="primary-btn claim-used-cta" href="/me/">
               ดูแต้มของฉัน
             </a>
@@ -610,38 +721,18 @@ function ClaimForm() {
             <p>
               ได้แต้มแล้ว · รวม <strong>{done.balance}</strong>
             </p>
-            {spinLive && (showGamePick || done.points >= 0) ? (
+            {offerSpin && spinSettings && (showGamePick || done.points >= 0) ? (
               <PointsGameOnce
-                liveSettings
-                basePoints={Math.max(1, done.points)}
+                settings={spinSettings}
+                basePoints={Math.max(1, done.points || done.balance)}
                 creditNote={creditNote}
+                creditRetryable={creditRetryable}
+                onRetryCredit={() => {
+                  if (!lastSpinResult) return;
+                  void applySpinCredit(lastSpinResult);
+                }}
                 onFinished={({ result }) => {
-                  setCreditNote("กำลังบันทึกแต้ม…");
-                  void creditSpinGamePoints({
-                    context: "claim",
-                    contextId: saleId,
-                    points: result.points,
-                    gameId: "spin",
-                  }).then((r) => {
-                    if (r.ok && !r.skipped && typeof r.balanceAfter === "number") {
-                      setDone((prev) =>
-                        prev
-                          ? { ...prev, balance: r.balanceAfter as number }
-                          : prev,
-                      );
-                      setCreditNote(
-                        result.points === 0
-                          ? `รอบนี้ไม่ได้แต้มเพิ่มจากเกม · คงเหลือ ${r.balanceAfter}`
-                          : `บันทึกแล้ว +${result.points} · รวม ${r.balanceAfter} แต้ม`,
-                      );
-                      return;
-                    }
-                    if (r.skipped === "already_played") {
-                      setCreditNote("หมุนรอบนี้ไปแล้ว");
-                      return;
-                    }
-                    setCreditNote(spinCreditErrorLabel(r.error));
-                  });
+                  void applySpinCredit(result);
                 }}
               />
             ) : null}
@@ -670,21 +761,22 @@ function ClaimForm() {
               {done.displayName}
             </p>
             <ClaimPointsValueNote />
-            {spinLive ? (
+            {offerSpin ? (
               <>
                 <p className="muted" style={{ marginTop: "0.5rem", fontSize: "0.88rem" }}>
-                  หมุนวงล้อลุ้นได้ <strong>0–5 แต้ม</strong>
+                  หมุนวงล้อลุ้น<strong>แต้มได้เพิ่ม</strong> 0–5
                 </p>
                 <button
                   type="button"
                   className="primary-btn claim-used-cta"
                   style={{ marginTop: "1rem" }}
                   onClick={() => {
+                    setGameLatched(true);
                     setPopupOpen(false);
                     setShowGamePick(true);
                   }}
                 >
-                  หมุนวงล้อลุ้นแต้ม
+                  หมุนวงล้อลุ้นแต้มได้เพิ่ม
                 </button>
                 <a
                   className="claim-phone-link"

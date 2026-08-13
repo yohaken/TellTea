@@ -73,3 +73,13 @@ export function spinCreditErrorLabel(code?: string): string {
   };
   return map[code || ""] || code || "บันทึกแต้มไม่สำเร็จ";
 }
+
+/** ข้อผิดพลาดที่ควรให้ลูกค้ากดบันทึกอีกครั้งได้ (ยังไม่ burn ผลหมุนฝั่ง UI) */
+export function isSpinCreditRetryable(code?: string): boolean {
+  return (
+    code === "network" ||
+    code === "credit_failed" ||
+    code === "auth_required" ||
+    code === "game_off"
+  );
+}

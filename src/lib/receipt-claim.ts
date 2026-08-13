@@ -167,6 +167,8 @@ export type ReceiptClaimPreview = {
   bahtPerPoint?: number;
   expiresAt?: number;
   claimStatus?: string;
+  /** true = เครดิตเกมหมุนจากบิลนี้ไปแล้ว */
+  spinGameCredited?: boolean;
 };
 
 export async function fetchReceiptClaimPreview(

@@ -526,6 +526,8 @@ function asSaleClaimView(saleId, data, settings) {
     bahtPerPoint: settings.bahtPerPoint,
     expiresAt: typeof data.claimTokenExpiresAt === "number" ? data.claimTokenExpiresAt : 0,
     claimStatus: asString(data.claimStatus, 24) || "open",
+    /** false = เคลมแล้วแต่ยังหมุนเกมไม่ครบ — หน้าลูกค้าเอาไป resume */
+    spinGameCredited: data.spinGameCredited === true,
   };
 }
 
@@ -1405,7 +1407,16 @@ async function creditSpinGamePoints(db, auth, {
     if (!playSnap.exists) return { ok: false, error: "bad_play" };
     const play = playSnap.data() || {};
     if (play.gameId !== game) return { ok: false, error: "bad_play" };
-    if (play.usedAt) return { ok: true, skipped: "already_played", points: 0 };
+    if (play.usedAt) {
+      memberId = normalizeMemberId(play.memberId);
+      let balanceAfter;
+      if (memberId) {
+        const mSnap = await db.collection("members").doc(memberId).get();
+        const m = mSnap.exists ? mSnap.data() || {} : {};
+        if (typeof m.pointsBalance === "number") balanceAfter = m.pointsBalance;
+      }
+      return { ok: true, skipped: "already_played", points: 0, balanceAfter };
+    }
     const exp = typeof play.exp === "number" ? play.exp : 0;
     if (exp && exp < Date.now()) return { ok: false, error: "bad_play" };
     memberId = normalizeMemberId(play.memberId);
@@ -1516,7 +1527,11 @@ async function creditSpinGamePoints(db, auth, {
 
     if (result.error) return { ok: false, error: result.error };
     if (result.skipped) {
-      return { ok: true, skipped: result.skipped, points: 0 };
+      const mSnap = await memberRef.get();
+      const m = mSnap.exists ? mSnap.data() || {} : {};
+      const balanceAfter =
+        typeof m.pointsBalance === "number" ? m.pointsBalance : undefined;
+      return { ok: true, skipped: result.skipped, points: 0, balanceAfter };
     }
     return {
       ok: true,

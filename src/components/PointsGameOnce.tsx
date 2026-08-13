@@ -15,14 +15,20 @@ import {
 
 type Props = {
   basePoints?: number;
-  /** ทับค่าตั้งจาก Firestore (โหมดจำลอง) */
-  settings?: PointsSpinSettings;
+  /** ทับค่าตั้งจาก Firestore (โหมดจำลอง / ล็อกตอนเล่นลูกค้า) */
+  settings?: PointsSpinSettings | null;
   allowReselect?: boolean;
-  /** เมื่อ true จะ subscribe ค่าตั้ง realtime (หน้าลูกค้า) */
+  /**
+   * โหลดค่าตั้ง realtime ครั้งแรกแล้วล็อก — ไม่เปลี่ยนวงกลางเกม
+   * (อย่าส่ง settings พร้อมกันถ้าต้องการโหมดนี้)
+   */
   liveSettings?: boolean;
   onFinished?: (payload: { game: PointsGameId; result: SpinResult }) => void;
   /** ข้อความสถานะหลังเครดิตแต้ม */
   creditNote?: string | null;
+  /** โชว์ปุ่มบันทึกอีกครั้งเมื่อเครดิตล้ม */
+  creditRetryable?: boolean;
+  onRetryCredit?: () => void;
   className?: string;
 };
 
@@ -38,33 +44,42 @@ export function PointsGameOnce({
   liveSettings = false,
   onFinished,
   creditNote = null,
+  creditRetryable = false,
+  onRetryCredit,
   className = "",
 }: Props) {
-  const [loaded, setLoaded] = useState<PointsSpinSettings | null>(
+  const [frozen, setFrozen] = useState<PointsSpinSettings | null>(
     settingsProp || null,
   );
+  const [settingsReady, setSettingsReady] = useState(!!settingsProp);
   const [phase, setPhase] = useState<Phase>("play");
   const [result, setResult] = useState<SpinResult | null>(null);
   const [playKey, setPlayKey] = useState(0);
 
   useEffect(() => {
     if (settingsProp) {
-      setLoaded(settingsProp);
+      setFrozen((prev) => prev ?? settingsProp);
+      setSettingsReady(true);
       return;
     }
     if (liveSettings) {
-      return subscribePointsSpinSettings((s) => setLoaded(s));
+      return subscribePointsSpinSettings((s) => {
+        setFrozen((prev) => prev ?? s);
+        setSettingsReady(true);
+      });
     }
     let cancelled = false;
     void loadPointsSpinSettings().then((s) => {
-      if (!cancelled) setLoaded(s);
+      if (cancelled) return;
+      setFrozen((prev) => prev ?? s);
+      setSettingsReady(true);
     });
     return () => {
       cancelled = true;
     };
   }, [settingsProp, liveSettings]);
 
-  const settings = loaded || DEFAULT_POINTS_SPIN_SETTINGS;
+  const settings = frozen || DEFAULT_POINTS_SPIN_SETTINGS;
 
   function onComplete(res: SpinResult) {
     setResult(res);
@@ -81,17 +96,25 @@ export function PointsGameOnce({
 
   const prize = result ? prizeForPoints(result.points) : null;
 
+  if (!settingsReady) {
+    return (
+      <div className={`pts-once pts-once--mobile ${className}`.trim()}>
+        <p className="muted pts-once-sub">กำลังโหลดวงล้อ…</p>
+      </div>
+    );
+  }
+
   return (
     <div className={`pts-once pts-once--mobile ${className}`.trim()} data-phase={phase}>
       {phase === "play" ? (
         <div className="pts-once-play">
-          <p className="pts-once-title">หมุนวงล้อลุ้นแต้ม</p>
+          <p className="pts-once-title">หมุนวงล้อลุ้นแต้มได้เพิ่ม</p>
           <p className="pts-once-sub muted">
             กะจังหวะกดหยุด · ลุ้นแต้มได้เพิ่ม 0–5 (+0 = ไม่ได้เพิ่มจากเกม)
           </p>
           <p className="pts-spin-points-only">{POINTS_ONLY_NOTE}</p>
           <PointsMultiplierSpin
-            key={`${playKey}-${settings.sliceCount}-${settings.spinSpeed}-${settings.stopDecel}`}
+            key={`${playKey}-${settings.sliceCount}-${settings.spinSpeed}-${settings.stopDecel}-${settings.updatedAt}`}
             mode="play"
             basePoints={basePoints}
             weights={settings.weights}
@@ -126,6 +149,15 @@ export function PointsGameOnce({
           <p className="pts-spin-points-only">{POINTS_ONLY_NOTE}</p>
           {creditNote ? <p className="muted pts-once-lock-note">{creditNote}</p> : null}
           {!creditNote ? <p className="muted pts-once-lock-note">รอบนี้หมุนไปแล้ว</p> : null}
+          {creditRetryable && onRetryCredit ? (
+            <button
+              type="button"
+              className="primary-btn pts-spin-btn"
+              onClick={onRetryCredit}
+            >
+              บันทึกแต้มอีกครั้ง
+            </button>
+          ) : null}
           {allowReselect ? (
             <button
               type="button"
