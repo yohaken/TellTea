@@ -96,7 +96,7 @@ assert.match(docs, /pointsSpinSettings|บันทึก/);
 assert.match(docs, /gamesEnabled|publicSpinGameCredit/);
 
 const version = read("src/lib/version.ts");
-assert.ok(Number(version.match(/APP_BUILD\s*=\s*(\d+)/)?.[1] || 0) >= 802);
+assert.ok(Number(version.match(/APP_BUILD\s*=\s*(\d+)/)?.[1] || 0) >= 803);
 
 assert.match(lib, /PointTier = 0 \| 1 \| 2 \| 3 \| 4 \| 5/);
 assert.match(lib, /points: 0, weight: 50/);
