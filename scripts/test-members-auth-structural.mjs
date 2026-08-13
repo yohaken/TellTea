@@ -50,10 +50,24 @@ assert.match(providers, /isPublicGift/);
 assert.match(providers, /isPublicClaim/);
 assert.match(providers, /isPublicJoin/);
 assert.match(providers, /isPublicMemberMe/);
+assert.match(providers, /isPublicShortLink/);
+// Public member surfaces must not mount staff AuthProvider (getRedirectResult race)
+assert.match(
+  providers,
+  /skipBoAuth[\s\S]*isPublicClaim[\s\S]*isPublicGift[\s\S]*isPublicMemberMe/,
+);
+assert.match(providers, /if \(skipBoAuth\) \{\s*return children;/);
+
+const staffAuth = read("src/lib/auth.tsx");
+assert.match(staffAuth, /telltea_member_google_pending/);
+assert.doesNotMatch(staffAuth, /from ["']\.\/member-auth["']/);
+assert.doesNotMatch(memberAuth, /exchangeLoginTicket/);
+assert.doesNotMatch(memberAuth, /collection\(["']loginTickets["']\)|doc\([^)]*loginTickets/);
 
 const readme = read("README.md");
 assert.match(readme, /src\/lib\/member-auth\.ts/);
 assert.match(readme, /ไม่พึ่ง/);
+assert.match(readme, /พนักงาน \(หลังร้าน/);
 
 const version = read("src/lib/version.ts");
 assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 755);

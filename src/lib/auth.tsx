@@ -379,6 +379,14 @@ async function completeStaffGoogleRedirect(): Promise<boolean> {
   if (typeof window === "undefined") return false;
   if (!staffRedirectInFlight) {
     staffRedirectInFlight = (async () => {
+      // กันแย่ง getRedirectResult จากสมาชิก (/claim · /me · /gift) — คนละ session key
+      try {
+        if (sessionStorage.getItem("telltea_member_google_pending")) {
+          return false;
+        }
+      } catch {
+        /* ignore */
+      }
       let pending = false;
       try {
         pending = sessionStorage.getItem(STAFF_GOOGLE_PENDING_KEY) === "1";

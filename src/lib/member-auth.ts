@@ -1,10 +1,12 @@
 /**
- * Member public auth (/claim, /me) — stable path owned by TellTea.
+ * Member public auth (/claim, /me, /gift) — stable path owned by TellTea.
  *
  * Google: Firebase native redirect on telltea-bo (same origin).
- * Does NOT use P-Note telltea-auth.html / loginTickets hop.
+ * Does NOT use P-Note auth bridge or Firestore login-ticket hop.
  *
- * Staff BO login still uses the legacy firebaseapp bridge in auth.tsx.
+ * Staff BO login (`src/lib/auth.tsx`) is separate: same-origin popup/redirect,
+ * and AppRootProviders skips AuthProvider on public member routes so the two
+ * never share getRedirectResult.
  */
 import {
   GoogleAuthProvider,
