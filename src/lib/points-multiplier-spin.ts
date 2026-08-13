@@ -127,7 +127,7 @@ export function expectedPoints(
   weights: readonly (SpinWeight | LegacySpinWeight)[] = DEFAULT_SPIN_WEIGHTS,
 ): number {
   const p = probabilityMap(weights);
-  return POINT_TIERS.reduce((s, t) => s + t * p[t], 0);
+  return POINT_TIERS.reduce<number>((s, t) => s + t * p[t], 0);
 }
 
 /** @deprecated ใช้ expectedPoints */
@@ -194,7 +194,7 @@ export function allocateSliceCounts(
 export function distributePointLabels(
   counts: Record<PointTier, number>,
 ): PointTier[] {
-  const total = POINT_TIERS.reduce((s, t) => s + (counts[t] || 0), 0);
+  const total = POINT_TIERS.reduce<number>((s, t) => s + (counts[t] || 0), 0);
   if (total <= 0) return [0];
   const slots: Array<PointTier | null> = Array.from({ length: total }, () => null);
   const order = POINT_TIERS.filter((t) => (counts[t] || 0) > 0).sort(
