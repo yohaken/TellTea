@@ -42,6 +42,7 @@ exports.publicReceiptClaimPreview = nposSell.publicReceiptClaimPreview;
 exports.publicReceiptClaimLookup = nposSell.publicReceiptClaimLookup;
 exports.publicReceiptClaim = nposSell.publicReceiptClaim;
 exports.publicMemberMe = nposSell.publicMemberMe;
+exports.publicSpinGameCredit = nposSell.publicSpinGameCredit;
 exports.publicCompCouponPreview = nposSell.publicCompCouponPreview;
 exports.publicCompCouponLookup = nposSell.publicCompCouponLookup;
 exports.publicCompCouponClaim = nposSell.publicCompCouponClaim;

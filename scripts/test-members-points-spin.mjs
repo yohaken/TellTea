@@ -86,6 +86,7 @@ assert.match(cf, /lifetimeGameBonusPoints/);
 assert.match(cf, /earn_spin_game/);
 
 assert.match(read("functions/npos-sell.js"), /publicSpinGameCredit/);
+assert.match(read("functions/index.js"), /exports\.publicSpinGameCredit/);
 
 assert.match(read("src/app/members/page.tsx"), /จำลองหมุนวงล้อ \(เทส\)/);
 
@@ -95,7 +96,7 @@ assert.match(docs, /pointsSpinSettings|บันทึก/);
 assert.match(docs, /gamesEnabled|publicSpinGameCredit/);
 
 const version = read("src/lib/version.ts");
-assert.ok(Number(version.match(/APP_BUILD\s*=\s*(\d+)/)?.[1] || 0) >= 800);
+assert.ok(Number(version.match(/APP_BUILD\s*=\s*(\d+)/)?.[1] || 0) >= 801);
 
 // Runtime: default 12 slices stay aimable (~30°)
 function allocate(weights, target = 12) {
