@@ -19,6 +19,7 @@ const STEPS = [
   { key: "openSopComplete", label: "เปิดกะ" },
   { key: "closeSopComplete", label: "ปิดกะ" },
   { key: "otComplete", label: "ยอด" },
+  { key: "photosComplete", label: "รูป" },
 ] as const;
 
 export function ShiftProgressSteps({

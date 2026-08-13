@@ -1,11 +1,12 @@
 import type { ChecklistItem, ChecklistRecord, CheckSessionSummary } from "./checklist";
 import { groupRecordsBySession, listItemsForTiming } from "./checklist";
 import type { CheckShiftId } from "./checklist";
+import { isOtShiftWorkWindowPast } from "./check-shift-window";
 import type { OtEntry } from "./ot";
-import { hasOtQuantities, isOtEntryPlanned } from "./ot";
+import { getOtImageUrls, hasOtQuantities, isOtEntryPlanned, labelOtShift } from "./ot";
 import type { OtShiftId } from "./ot";
-import { labelOtShift } from "./ot";
-import { startOfLocalDay } from "./utils";
+import { OT_SHIFT_DISPLAY_ORDER } from "./ot-grid";
+import { formatDateShort, startOfLocalDay } from "./utils";
 
 export type ShiftEntryMode = "single_batch" | "planned_then_closed" | "close_only";
 
@@ -22,6 +23,8 @@ export type ShiftProgress = {
   openSopComplete: boolean;
   closeSopComplete: boolean;
   otComplete: boolean;
+  /** แนบรูปอย่างน้อย 1 รูป */
+  photosComplete: boolean;
   completedCount: number;
   totalSteps: number;
   status: ShiftSlotStatus;
@@ -34,7 +37,18 @@ const STEP_LABELS = {
   openSop: "เช็คเปิดกะ",
   closeSop: "เช็คปิดกะ",
   ot: "ยอดชง",
+  photos: "รูปภาพ",
 } as const;
+
+export type PastIncompleteOtShift = {
+  date: number;
+  shift: OtShiftId;
+  dateLabel: string;
+  shiftLabel: string;
+  status: ShiftSlotStatus;
+  missingLabels: string[];
+  entry: OtEntry | null;
+};
 
 export function shiftSessionKey(date: number, shift: OtShiftId) {
   return `${startOfLocalDay(new Date(date))}_${shift}`;
@@ -144,6 +158,7 @@ export function computeLiveShiftProgress(input: {
   openingDraftsComplete: boolean;
   closingDraftsComplete: boolean;
   otComplete: boolean;
+  photosComplete: boolean;
   quality?: ShiftQualityFlags | null;
 }): ShiftProgress {
   const openSopComplete = input.openingItems.length === 0 || input.openingDraftsComplete;
@@ -153,12 +168,14 @@ export function computeLiveShiftProgress(input: {
   if (input.openingItems.length && !openSopComplete) missingLabels.push(STEP_LABELS.openSop);
   if (input.closingItems.length && !closeSopComplete) missingLabels.push(STEP_LABELS.closeSop);
   if (!input.otComplete) missingLabels.push(STEP_LABELS.ot);
+  if (!input.photosComplete) missingLabels.push(STEP_LABELS.photos);
 
   const steps = [
     input.workersSet,
     openSopComplete,
     closeSopComplete,
     input.otComplete,
+    input.photosComplete,
   ];
   const completedCount = steps.filter(Boolean).length;
   const totalSteps = steps.length;
@@ -173,6 +190,7 @@ export function computeLiveShiftProgress(input: {
     openSopComplete,
     closeSopComplete,
     otComplete: input.otComplete,
+    photosComplete: input.photosComplete,
     completedCount,
     totalSteps,
     status,
@@ -198,18 +216,21 @@ export function computeShiftProgress(input: {
   const openSopComplete = openingItems.length === 0 || sessionCoversItems(opening, openingItems);
   const closeSopComplete = closingItems.length === 0 || sessionCoversItems(closing, closingItems);
   const otComplete = entry ? hasOtQuantities(entry) : false;
+  const photosComplete = getOtImageUrls(entry).length > 0;
 
   const missingLabels: string[] = [];
   if (!workersSet) missingLabels.push(STEP_LABELS.workers);
   if (openingItems.length && !openSopComplete) missingLabels.push(STEP_LABELS.openSop);
   if (closingItems.length && !closeSopComplete) missingLabels.push(STEP_LABELS.closeSop);
   if (!otComplete) missingLabels.push(STEP_LABELS.ot);
+  if (!photosComplete) missingLabels.push(STEP_LABELS.photos);
 
   const steps = [
     workersSet,
     openingItems.length ? openSopComplete : true,
     closingItems.length ? closeSopComplete : true,
     otComplete,
+    photosComplete,
   ];
   const totalSteps = steps.length;
   const completedCount = steps.filter(Boolean).length;
@@ -232,12 +253,88 @@ export function computeShiftProgress(input: {
     openSopComplete,
     closeSopComplete,
     otComplete,
+    photosComplete,
     completedCount,
     totalSteps,
     status,
     missingLabels,
     quality,
   };
+}
+
+/**
+ * กะที่พ้นช่วงทำงานแล้วในเดือนที่เปิดดู และยังไม่ครบ
+ * (พนักงาน/เช็คเปิด-ปิด/ยอด/รูป — รวมช่องว่างเปล่า)
+ */
+export function listPastIncompleteOtShifts(input: {
+  /** วันแรกของช่วงเดือนที่เปิด (inclusive) */
+  gridMin: number;
+  /** วันสุดท้ายของช่วงที่แสดง — จะตัดเฉพาะวันใน periodMonth */
+  gridMax: number;
+  periodMonth: string;
+  entries: OtEntry[];
+  records: ChecklistRecord[];
+  openingItems: ChecklistItem[];
+  closingItems: ChecklistItem[];
+  recordsByDayShift?: Map<string, ChecklistRecord[]>;
+  /** false = มุมพนักงาน · ไม่เตือนช่องว่างที่ไม่มีชื่อตัวเอง */
+  includeEmptySlots?: boolean;
+  /** กรองเฉพาะกะที่มีชื่อตัวเอง (มุมพนักงาน) */
+  entryIncludesMe?: (entry: OtEntry) => boolean;
+  now?: Date;
+}): PastIncompleteOtShift[] {
+  const now = input.now ?? new Date();
+  const includeEmpty = input.includeEmptySlots !== false;
+  const { year, month } = (() => {
+    const [y, m] = input.periodMonth.split("-").map(Number);
+    return { year: y || now.getFullYear(), month: (m || 1) - 1 };
+  })();
+  const monthStart = new Date(year, month, 1).getTime();
+  const monthEnd = new Date(year, month + 1, 1).getTime() - 1;
+  const minDay = startOfLocalDay(new Date(Math.max(input.gridMin, monthStart)));
+  const maxDay = startOfLocalDay(new Date(Math.min(input.gridMax, monthEnd)));
+  if (minDay > maxDay) return [];
+
+  const bySlot = new Map<string, OtEntry>();
+  for (const row of input.entries) {
+    const key = `${startOfLocalDay(new Date(row.date))}_${row.shift}`;
+    const prev = bySlot.get(key);
+    if (!prev || row.createdAt > prev.createdAt) bySlot.set(key, row);
+  }
+
+  const out: PastIncompleteOtShift[] = [];
+  let day = maxDay;
+  while (day >= minDay) {
+    for (const shift of OT_SHIFT_DISPLAY_ORDER) {
+      if (!isOtShiftWorkWindowPast(day, shift, now)) continue;
+      const entry = bySlot.get(`${day}_${shift}`) || null;
+      if (!entry && !includeEmpty) continue;
+      if (entry && input.entryIncludesMe && !input.entryIncludesMe(entry)) continue;
+      const progress = computeShiftProgress({
+        entry,
+        records: input.records,
+        openingItems: input.openingItems,
+        closingItems: input.closingItems,
+        date: day,
+        shift,
+        recordsByDayShift: input.recordsByDayShift,
+      });
+      if (progress.status === "complete" || progress.missingLabels.length === 0) continue;
+      out.push({
+        date: day,
+        shift,
+        dateLabel: formatDateShort(day),
+        shiftLabel: labelOtShift(shift),
+        status: progress.status,
+        missingLabels: progress.missingLabels,
+        entry,
+      });
+    }
+    const prev = new Date(day);
+    prev.setDate(prev.getDate() - 1);
+    day = startOfLocalDay(prev);
+  }
+  return out;
 }
 
 export function labelShiftSlotStatus(status: ShiftSlotStatus) {

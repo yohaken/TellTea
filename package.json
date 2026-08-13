@@ -92,6 +92,7 @@
     "test:bonus-month-close": "node scripts/test-bonus-month-close.mjs",
     "test:ot-rate-settings-dedupe": "node scripts/test-ot-rate-settings-dedupe.mjs",
     "test:ot-load-perf": "node scripts/test-ot-load-perf.mjs",
+    "test:ot-incomplete-popup": "node scripts/test-ot-incomplete-popup.mjs",
     "test:scoped-firestore-loads": "node scripts/test-scoped-firestore-loads.mjs",
     "test:prod-catalog-owner": "node scripts/test-prod-catalog-owner.mjs",
     "test:boh-menu-mgmt": "node scripts/test-boh-menu-mgmt.mjs",

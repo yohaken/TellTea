@@ -12,6 +12,7 @@ const windowLib = readFileSync(join(root, "src/lib/check-shift-window.ts"), "utf
 
 assert.match(windowLib, /canStartCheck/);
 assert.match(windowLib, /วันนี้และย้อนหลัง/);
+assert.match(windowLib, /isOtShiftWorkWindowPast/);
 assert.match(checkPage, /canStartCheck/);
 assert.match(checkPage, /checkShiftWindowMessage/);
 

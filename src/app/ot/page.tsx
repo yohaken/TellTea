@@ -74,6 +74,7 @@ import {
 } from "@/lib/ot-grid";
 import { otViewWindow } from "@/lib/ot-view-window";
 import type { StaffMember } from "@/lib/types";
+import { OtIncompletePopup } from "@/components/OtIncompletePopup";
 import { ShiftOwnerFlags, ShiftProgressSteps, ShiftTodayBanner } from "@/components/ShiftProgressSteps";
 import {
   buildSopDrafts,
@@ -94,6 +95,7 @@ import {
   closingItemsFromCatalog,
   getCurrentShiftId,
   indexChecklistRecordsByDayShift,
+  listPastIncompleteOtShifts,
   openingItemsFromCatalog,
   ownerQualityHints,
   otIncompleteWarnTitle,
@@ -364,6 +366,39 @@ function OtView() {
     [todayEntry, checkRecords, checkRecordsByDayShift, openingItems, closingItems, todayMs, todayShift],
   );
 
+  const pastIncomplete = useMemo(() => {
+    if (loading) return [];
+    const linked = shopOtView ? null : resolveLinkedEmployee(workers, staff);
+    const me = shopOtView ? null : buildWorkEntryMineIdentity(linked, staff);
+    return listPastIncompleteOtShifts({
+      gridMin: viewWindow.gridMin,
+      gridMax: viewWindow.gridMax,
+      periodMonth: viewMonth,
+      entries,
+      records: checkRecords,
+      openingItems,
+      closingItems,
+      recordsByDayShift: checkRecordsByDayShift,
+      includeEmptySlots: shopOtView,
+      entryIncludesMe: me
+        ? (entry) => workEntryIncludesMe(entry, me)
+        : undefined,
+    });
+  }, [
+    loading,
+    shopOtView,
+    workers,
+    staff,
+    viewWindow.gridMin,
+    viewWindow.gridMax,
+    viewMonth,
+    entries,
+    checkRecords,
+    checkRecordsByDayShift,
+    openingItems,
+    closingItems,
+  ]);
+
   useBodyScrollLock(formOpen);
 
   if (!can(staff, "otBonus")) return null;
@@ -413,6 +448,16 @@ function OtView() {
 
       {!loading ? (
         <>
+          <OtIncompletePopup
+            items={pastIncomplete}
+            onOpenSlot={(item) => {
+              openSlot({
+                date: item.date,
+                shift: item.shift,
+                entry: item.entry,
+              });
+            }}
+          />
           <ShiftTodayBanner
             shiftLabel={todayShiftBannerLabel(todayShift)}
             progress={todayProgress}
@@ -679,6 +724,7 @@ function OtEntryForm({
         openingDraftsComplete: sopDraftsComplete(openingDrafts),
         closingDraftsComplete: sopDraftsComplete(closingDrafts),
         otComplete: preview.summaryQty > 0,
+        photosComplete: imageUrls.length > 0,
         quality: slotEntry ? computeShiftProgress({
           entry: slotEntry,
           records: checkRecords,
@@ -695,6 +741,7 @@ function OtEntryForm({
       openingDrafts,
       closingDrafts,
       preview.summaryQty,
+      imageUrls.length,
       slotEntry,
       checkRecords,
       dateMs,
@@ -824,6 +871,10 @@ function OtEntryForm({
       reportError("ยังไม่ใส่ยอด — กรอกเครื่องหรือรายการอื่นก่อนปิดกะ");
       return;
     }
+    if (imageUrls.length === 0) {
+      reportError("แนบรูปอย่างน้อย 1 รูปก่อนปิดกะ");
+      return;
+    }
 
     // Amend already-closed shift: update qty + photos only (no SmartCheck / SOP rewrite).
     if (amendClosed && entry) {
@@ -893,11 +944,12 @@ function OtEntryForm({
     if (!workers.length) return "ยังไม่มีรายชื่อพนักงาน";
     if (!selectedWorkers.length) return "เลือกพนักงานอย่างน้อย 1 คน";
     if (preview.summaryQty === 0) return "กรอกยอดเครื่องหรือรายการอื่นก่อนบันทึก";
+    if (imageUrls.length === 0) return "แนบรูปอย่างน้อย 1 รูปก่อนบันทึก";
     if (amendClosed) return "";
     if (checkLoading) return "กำลังตรวจสอบ SmartCheck...";
     if (!checkSession) return "ยังไม่เช็ค SmartCheck กะนี้ — ไปหน้าเช็คก่อน (รูปที่แนบยังไม่ถูกบันทึก)";
     if (liveProgress.missingLabels.length) {
-      return `ยังไม่ครบ: ${liveProgress.missingLabels.join(" · ")} — ติ๊กผ่าน/ไม่ผ่านให้ครบก่อนบันทึก (รูปที่แนบไว้รออยู่)`;
+      return `ยังไม่ครบ: ${liveProgress.missingLabels.join(" · ")} — ทำครบก่อนบันทึก (รวมเช็คลิสต์และรูป)`;
     }
     return "";
   }, [
@@ -906,6 +958,7 @@ function OtEntryForm({
     workers.length,
     selectedWorkers.length,
     preview.summaryQty,
+    imageUrls.length,
     amendClosed,
     checkLoading,
     checkSession,
@@ -917,6 +970,7 @@ function OtEntryForm({
     !!workers.length &&
     selectedWorkers.length > 0 &&
     preview.summaryQty > 0 &&
+    imageUrls.length > 0 &&
     (amendClosed || (!checkLoading && !!checkSession && liveProgress.missingLabels.length === 0));
 
   return (

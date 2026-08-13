@@ -46,6 +46,22 @@ export function isWithinCheckShiftWindow(
 }
 
 /**
+ * กะนี้พ้นช่วงทำงานแล้วหรือยัง — ดูวันที่ของช่องก่อน แล้วค่อยดู end ของช่วงกะ
+ * (วันล่วงหน้า = ยังไม่พ้น · วันก่อนหน้า = พ้นทุกกะ · วันนี้ = พ้นเมื่อ now >= endMs)
+ */
+export function isOtShiftWorkWindowPast(
+  dateMs: number,
+  shift: CheckShiftId,
+  now: Date = new Date(),
+): boolean {
+  const dayMs = startOfLocalDay(new Date(dateMs));
+  const todayMs = startOfLocalDay(now);
+  if (dayMs > todayMs) return false;
+  if (dayMs < todayMs) return true;
+  return checkShiftWindowMs(dayMs, shift).endMs <= now.getTime();
+}
+
+/**
  * เริ่มเช็คได้หรือยัง
  * — วันนี้และย้อนหลัง: เปิดได้ทุกกะของวันนั้น (ไม่ต้องรอเวลาเริ่มกะ)
  * — วันล่วงหน้า: ยังห้าม
