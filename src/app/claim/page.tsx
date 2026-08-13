@@ -421,7 +421,7 @@ function ClaimForm() {
 
         {showAttract ? (
           <p className="muted claim-bill-meta" style={{ marginTop: "0.35rem" }}>
-            ด้านหลังมีวงล้อหมุนอยู่ · สมัคร/เข้าแล้วหมุนลุ้นได้ 0–5 แต้ม
+            ด้านหลังมีวงล้อหมุนอยู่ · สมัคร/เข้าแล้วหมุนลุ้นแต้มได้เพิ่ม 0–5
           </p>
         ) : null}
 
@@ -631,7 +631,7 @@ function ClaimForm() {
                       );
                       setCreditNote(
                         result.points === 0
-                          ? `รอบนี้ไม่ได้แต้มเพิ่ม · คงเหลือ ${r.balanceAfter}`
+                          ? `รอบนี้ไม่ได้แต้มเพิ่มจากเกม · คงเหลือ ${r.balanceAfter}`
                           : `บันทึกแล้ว +${result.points} · รวม ${r.balanceAfter} แต้ม`,
                       );
                       return;

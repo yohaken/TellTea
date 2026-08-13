@@ -65,7 +65,7 @@ function slicePath(cx: number, cy: number, r: number, start: number, end: number
 }
 
 /**
- * วงล้อหมุนได้แต้ม 0–5 (0 = ไม่ได้เพิ่ม)
+ * วงล้อหมุนลุ้นแต้มได้เพิ่ม 0–5 (+0 = ไม่ได้เพิ่มจากเกม)
  * กดหยุด = หน่วงตามฟิสิกส์ แล้วอ่านชิ้นใต้เข็ม — ช่องใหญ่พอให้กะจังหวะได้
  */
 export function PointsMultiplierSpin({
@@ -226,7 +226,7 @@ export function PointsMultiplierSpin({
         <p className="pts-spin-title">หมุนวงล้อลุ้นแต้ม</p>
         <p className="pts-spin-sub">
           {mode === "teaser"
-            ? `ลุ้นได้ 0–5 แต้ม · ${slices.length} ช่อง (~${degEach}°) กะจังหวะได้`
+            ? `ลุ้นแต้มได้เพิ่ม 0–5 · ${slices.length} ช่อง (~${degEach}°) · ชิ้นคละรอบวง`
             : `กดหยุดตอนช่องที่อยากได้ · ${slices.length} ช่อง (~${degEach}°) · วงหน่วงเอง`}
         </p>
         <p className="pts-spin-points-only">{POINTS_ONLY_NOTE}</p>
@@ -263,7 +263,7 @@ export function PointsMultiplierSpin({
                     className="pts-wheel-label"
                     transform={`rotate(${slice.midDeg}, ${tx}, ${ty})`}
                   >
-                    {slice.points}
+                    {prizeForPoints(slice.points).shortLabel}
                   </text>
                 </g>
               );
@@ -283,13 +283,15 @@ export function PointsMultiplierSpin({
         </div>
       </div>
 
-      <ul className="pts-spin-legend" aria-label="แต้มบนวงล้อ">
+      <ul className="pts-spin-legend" aria-label="แต้มได้เพิ่มบนวงล้อ">
         {legendTiers.map((s) => (
           <li
             key={s.points}
             className={`pts-spin-legend-item pts-spin-legend-item--${prizeForPoints(s.points).tone}`}
           >
-            <span>{s.points} แต้ม</span>
+            <span>
+              {s.points === 0 ? "+0 ไม่เพิ่ม" : `+${s.points} แต้มเพิ่ม`}
+            </span>
           </li>
         ))}
       </ul>
@@ -332,7 +334,7 @@ export function PointsMultiplierSpin({
       {showResult && result ? (
         <div className="pts-spin-result" role="status">
           <p className="pts-spin-result-mult">
-            {result.points === 0 ? "0" : `+${result.points}`}
+            {result.points === 0 ? "+0" : `+${result.points}`}
           </p>
           <p className="pts-spin-result-flavor">
             {spinResultFlavorLine(result.points)}
@@ -340,11 +342,12 @@ export function PointsMultiplierSpin({
           <p>
             {result.points === 0 ? (
               <>
-                รอบนี้<strong>ไม่ได้แต้มเพิ่ม</strong>
+                รอบนี้<strong>ไม่ได้แต้มเพิ่มจากเกม</strong>
+                <span className="muted"> · แต้มเดิมยังอยู่ครบ</span>
               </>
             ) : (
               <>
-                ได้ <strong>{result.finalPoints}</strong> แต้ม
+                ได้เพิ่ม <strong>{result.finalPoints}</strong> แต้ม
               </>
             )}
           </p>

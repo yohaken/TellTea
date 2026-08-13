@@ -187,9 +187,28 @@ export function allocateSliceCounts(
   return counts;
 }
 
+/** ค่าความ「ติดกัน」รอบวง — คะแนนเดียวกัน / เลขเรียงติด (เช่น 3-4-5) ยิ่งมากยิ่งแย่ */
+function wheelNeighborCost(labels: readonly PointTier[]): number {
+  const n = labels.length;
+  if (n < 2) return 0;
+  let cost = 0;
+  for (let i = 0; i < n; i++) {
+    const a = labels[i]!;
+    const b = labels[(i + 1) % n]!;
+    const c = labels[(i + 2) % n]!;
+    if (a === b) cost += 6;
+    if (Math.abs(a - b) === 1) cost += 3;
+    // ลำดับเรียงขึ้น/ลง 3 ช่องติด เช่น 3-4-5
+    if (b === a + 1 && c === a + 2) cost += 8;
+    if (b === a - 1 && c === a - 2) cost += 8;
+  }
+  return cost;
+}
+
 /**
- * กระจายป้ายแต้มรอบวง — วางของหายากก่อนที่ช่องว่างสม่ำเสมอ
- * ไม่ให้ชิ้นคะแนนเดียวกันรวมเป็นแผงยาวต่อเนื่อง
+ * กระจายป้ายแต้มรอบวงแบบคละ
+ * 1) วางของหายากก่อนให้ห่างกัน
+ * 2) สลับช่องเพื่อลดเลขเรียงติด (เช่น 3-4-5) และแผงค่าเดียวกัน
  */
 export function distributePointLabels(
   counts: Record<PointTier, number>,
@@ -197,9 +216,15 @@ export function distributePointLabels(
   const total = POINT_TIERS.reduce<number>((s, t) => s + (counts[t] || 0), 0);
   if (total <= 0) return [0];
   const slots: Array<PointTier | null> = Array.from({ length: total }, () => null);
-  const order = POINT_TIERS.filter((t) => (counts[t] || 0) > 0).sort(
-    (a, b) => (counts[a] || 0) - (counts[b] || 0),
-  );
+  // สลับลำดับชั้นไม่ให้ไล่ 0→5 ตอนวาง — ช่วยคละตั้งแต่รอบแรก
+  const order = POINT_TIERS.filter((t) => (counts[t] || 0) > 0).sort((a, b) => {
+    const ca = counts[a] || 0;
+    const cb = counts[b] || 0;
+    if (ca !== cb) return ca - cb;
+    // เมื่อจำนวนเท่ากัน ใช้ลำดับคละคงที่ ไม่เรียงเลข
+    const mix = [0, 3, 1, 5, 2, 4] as const;
+    return mix.indexOf(a) - mix.indexOf(b);
+  });
 
   for (const tier of order) {
     const need = counts[tier] || 0;
@@ -213,7 +238,32 @@ export function distributePointLabels(
       free.splice(at, 1);
     }
   }
-  return slots.map((s) => s ?? 0);
+
+  let best = slots.map((s) => s ?? 0);
+  let bestCost = wheelNeighborCost(best);
+  // hill-climb สลับคู่ — n เล็ก (≈12–24) โอเค
+  let improved = true;
+  let guard = 0;
+  while (improved && guard < total * total) {
+    improved = false;
+    guard += 1;
+    for (let i = 0; i < total; i++) {
+      for (let j = i + 1; j < total; j++) {
+        if (best[i] === best[j]) continue;
+        const trial = best.slice();
+        const tmp = trial[i]!;
+        trial[i] = trial[j]!;
+        trial[j] = tmp;
+        const cost = wheelNeighborCost(trial);
+        if (cost < bestCost) {
+          best = trial;
+          bestCost = cost;
+          improved = true;
+        }
+      }
+    }
+  }
+  return best;
 }
 
 /**

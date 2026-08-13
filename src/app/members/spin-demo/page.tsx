@@ -275,11 +275,13 @@ function SpinDemoView() {
 
         <div className="pts-spin-demo-weights">
           <p className="pts-spin-demo-weights-title">
-            สัดส่วนมุมรวมแต่ละแต้ม 0–5 (0 = ไม่ได้แต้มเพิ่ม · ควรหนาที่สุด)
+            สัดส่วนมุมรวม「แต้มได้เพิ่ม」0–5 (+0 = ไม่ได้เพิ่มจากเกม · ควรหนาที่สุด)
           </p>
           {POINT_TIERS.map((m) => (
             <label key={m} className="pts-spin-demo-weight-row">
-              <span className="pts-spin-demo-weight-label">{m === 0 ? "0 · ไม่ได้เพิ่ม" : `${m} แต้ม`}</span>
+              <span className="pts-spin-demo-weight-label">
+                {m === 0 ? "+0 · ไม่เพิ่ม" : `+${m} แต้มเพิ่ม`}
+              </span>
               <input
                 type="range"
                 min={0}
@@ -376,7 +378,7 @@ function SpinDemoView() {
                 <p className="join-brand">TellTea</p>
                 <h1 style={{ fontSize: "1.1rem", margin: 0 }}>สมัครสมาชิก</h1>
                 <p className="muted" style={{ marginTop: "0.35rem" }}>
-                  ด้านหลังมีวงล้อหมุนอยู่ · สมัครแล้วหมุนลุ้นแต้มด้วยจังหวะตัวเอง
+                  ด้านหลังมีวงล้อหมุนอยู่ · สมัครแล้วหมุนลุ้นแต้มได้เพิ่ม
                 </p>
               </div>
             </div>
@@ -390,8 +392,8 @@ function SpinDemoView() {
               onFinished={({ result }) => {
                 setLastNote(
                   result.points === 0
-                  ? `ได้ 0 · ไม่ได้แต้มเพิ่ม`
-                  : `ได้ +${result.points} แต้ม (${SPIN_MENU_PRIZES[result.points].label})`,
+                  ? `+0 · ไม่ได้แต้มเพิ่มจากเกม`
+                  : `ได้เพิ่ม +${result.points} แต้ม (${SPIN_MENU_PRIZES[result.points].label})`,
                 );
               }}
             />
@@ -478,7 +480,8 @@ function SpinDemoView() {
           <li>เกมเดียว: หมุนวงล้อ · ใช้ความสามารถกะจังหวะกดหยุด</li>
           <li>จำนวนช่องตั้งได้ (ค่าเริ่ม {DEFAULT_SLICE_COUNT}) — ช่องใหญ่พอให้คาดเดา</li>
           <li>กดหยุดแล้ววงหน่วงตามแรง — ไม่จับผลจากเปอร์เซ็นต์ล่วงหน้า</li>
-          <li>ได้ 0–5 แต้มตามชิ้นใต้เข็ม (0 = ไม่ได้เพิ่ม)</li>
+          <li>ลุ้นแต้มได้เพิ่ม 0–5 ตามชิ้นใต้เข็ม (+0 = ไม่ได้เพิ่มจากเกม)</li>
+          <li>ชิ้นบนวงคละ ไม่เรียงเลขติดกัน (เช่น 3-4-5)</li>
         </ol>
       </section>
     </div>

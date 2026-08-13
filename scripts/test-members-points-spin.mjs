@@ -96,14 +96,18 @@ assert.match(docs, /pointsSpinSettings|บันทึก/);
 assert.match(docs, /gamesEnabled|publicSpinGameCredit/);
 
 const version = read("src/lib/version.ts");
-assert.ok(Number(version.match(/APP_BUILD\s*=\s*(\d+)/)?.[1] || 0) >= 803);
+assert.ok(Number(version.match(/APP_BUILD\s*=\s*(\d+)/)?.[1] || 0) >= 805);
 
 assert.match(lib, /PointTier = 0 \| 1 \| 2 \| 3 \| 4 \| 5/);
 assert.match(lib, /points: 0, weight: 50/);
 assert.match(read("src/lib/points-spin-theme.ts"), /ไม่ได้แต้มเพิ่ม/);
+assert.match(read("src/lib/points-spin-theme.ts"), /ได้เพิ่ม 1 แต้ม|แต้มได้เพิ่ม/);
+assert.match(read("src/lib/points-spin-theme.ts"), /shortLabel: "\+1"/);
+assert.match(lib, /wheelNeighborCost|3-4-5/);
 assert.match(read("src/lib/points-spin-credit.ts"), /points < 0 \|\| points > 5/);
 assert.match(read("functions/pos-members.js"), /pts < 0 \|\| pts > 5/);
 assert.match(read("src/app/members/spin-demo/page.tsx"), /w0|points: 0/);
+assert.match(read("src/components/PointsMultiplierSpin.tsx"), /shortLabel/);
 
 // Runtime: default 12 slices · 0 should be the thickest tier
 function allocate(weights, target = 12) {
@@ -159,5 +163,9 @@ const totalSlices = [0, 1, 2, 3, 4, 5].reduce((s, t) => s + counts[t], 0);
 assert.ok(counts[0] >= counts[1], "0 should be most common slice tier");
 assert.equal(totalSlices, 12);
 assert.ok(360 / totalSlices >= 25, "default slices should be >= ~25° for aiming");
+
+assert.match(lib, /wheelNeighborCost/);
+assert.match(lib, /hill-climb/);
+assert.match(lib, /\[0, 3, 1, 5, 2, 4\]/);
 
 console.log("OK test-members-points-spin");
