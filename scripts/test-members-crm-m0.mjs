@@ -29,7 +29,8 @@ assert.match(page, /สมัคร/);
 assert.match(page, /members-slim-table--list/);
 assert.match(page, /members-col-name/);
 assert.match(page, /members-col-phone/);
-assert.match(page, /members-col-card/);
+assert.match(page, /members-col-earned|members-col-used|members-col-points-when/);
+assert.match(page, /pointsUsedForDisplay|แต้มล่าสุด/);
 
 const css = read("src/app/globals.css");
 assert.match(css, /members-slim-table--list/);

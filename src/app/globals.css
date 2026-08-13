@@ -2558,22 +2558,32 @@ body.modal-open .main-panel {
 }
 
 .members-slim-table--list .members-col-name {
-  width: 28%;
+  width: 22%;
 }
 
 .members-slim-table--list .members-col-phone {
-  width: 26%;
-}
-
-.members-slim-table--list .members-col-card {
   width: 18%;
 }
 
-.members-slim-table--list .members-col-game {
-  width: 4.25rem;
+.members-slim-table--list .members-col-card {
+  width: 12%;
+}
+
+.members-slim-table--list .members-col-earned,
+.members-slim-table--list .members-col-used,
+.members-slim-table--list .members-col-game,
+.members-slim-table--list .members-col-pts {
+  width: 3.6rem;
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
+.members-slim-table--list .members-col-points-when {
+  width: 5.5rem;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
 .members-slim-table--list .members-col-game.is-hot,
 .members-slim-game-bonus.is-hot {
   color: var(--danger, #b42318);
@@ -2601,12 +2611,8 @@ body.modal-open .main-panel {
   background: color-mix(in srgb, #1f7a4c 14%, transparent);
   border-color: color-mix(in srgb, #1f7a4c 35%, transparent);
 }
-.members-slim-table--list .members-col-pts {
-  width: 14%;
-}
-
 .members-slim-table--list .members-col-status {
-  width: 14%;
+  width: 3.5rem;
 }
 
 .members-slim-table--claim .members-col-bill {

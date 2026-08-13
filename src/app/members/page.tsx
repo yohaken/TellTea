@@ -23,8 +23,10 @@ import {
   getMemberSettings,
   listMemberLedger,
   listMembers,
+  memberLastPointsAt,
   MEMBER_LEDGER_REASON_LABELS,
   MEMBER_SOURCE_LABELS,
+  pointsUsedForDisplay,
   saveMemberSettings,
   updateMember,
   type MemberLedgerEntry,
@@ -840,13 +842,35 @@ function MembersView() {
                         <tr>
                           <th className="members-col-name">ชื่อ</th>
                           <th className="members-col-phone">เบอร์</th>
-                          <th className="members-col-card">บัตร</th>
-                          <th className="num members-col-pts">แต้ม</th>
+                          <th
+                            className="num members-col-pts"
+                            title="แต้มคงเหลือใช้ได้ตอนนี้"
+                          >
+                            คงเหลือ
+                          </th>
+                          <th
+                            className="num members-col-earned"
+                            title="แต้มที่เคยได้ทั้งหมด (สะสม + เกม + ปรับเพิ่ม)"
+                          >
+                            รวม
+                          </th>
+                          <th
+                            className="num members-col-used"
+                            title="แต้มที่ใช้แลกไปแล้ว"
+                          >
+                            ใช้ไป
+                          </th>
                           <th
                             className="num members-col-game"
                             title="แต้มพิเศษจากเกมลุ้น (หมุนวงล้อ) — จับตาถ้าสูงผิดปกติ"
                           >
-                            แต้มเกม
+                            เกม
+                          </th>
+                          <th
+                            className="members-col-points-when"
+                            title="ความเคลื่อนไหวแต้มล่าสุด (สะสม / แลก / เกม / ปรับ)"
+                          >
+                            แต้มล่าสุด
                           </th>
                           <th className="members-col-status">สถานะ</th>
                         </tr>
@@ -866,14 +890,29 @@ function MembersView() {
                               <span className="members-cell-strong">{m.displayName || "—"}</span>
                             </td>
                             <td className="members-col-phone muted">{phoneLabel(m)}</td>
-                            <td className="members-col-card muted">{m.cardNo}</td>
                             <td className="num members-col-pts">{m.pointsBalance}</td>
+                            <td className="num members-col-earned muted">
+                              {m.lifetimePointsEarned || 0}
+                            </td>
+                            <td className="num members-col-used muted">
+                              {pointsUsedForDisplay(m)}
+                            </td>
                             <td
                               className={`num members-col-game${
                                 m.lifetimeGameBonusPoints >= 20 ? " is-hot" : ""
                               }`}
                             >
                               {m.lifetimeGameBonusPoints || 0}
+                            </td>
+                            <td
+                              className="members-col-points-when muted"
+                              title={
+                                memberLastPointsAt(m)
+                                  ? new Date(memberLastPointsAt(m)).toLocaleString("th-TH")
+                                  : ""
+                              }
+                            >
+                              {formatWhen(memberLastPointsAt(m))}
                             </td>
                             <td className="members-col-status muted">
                               {m.status === "active" ? "ปกติ" : "ระงับ"}
@@ -906,8 +945,13 @@ function MembersView() {
                   </div>
 
                   <p className="members-slim-points">
-                    <strong>{selected.pointsBalance}</strong> แต้ม
-                    <span className="muted"> · รวม {selected.lifetimePointsEarned}</span>
+                    <strong>{selected.pointsBalance}</strong> คงเหลือ
+                    <span className="muted">
+                      {" "}
+                      · รวม {selected.lifetimePointsEarned || 0}
+                      {" "}
+                      · ใช้ไป {pointsUsedForDisplay(selected)}
+                    </span>
                     <span
                       className={`members-slim-game-bonus${
                         selected.lifetimeGameBonusPoints >= 20 ? " is-hot" : ""
@@ -917,7 +961,19 @@ function MembersView() {
                       {" "}
                       · เกม {selected.lifetimeGameBonusPoints || 0}
                     </span>
+                    <span className="muted" title="ความเคลื่อนไหวแต้มล่าสุด">
+                      {" "}
+                      · แต้มล่าสุด {formatWhen(memberLastPointsAt(selected))}
+                    </span>
                   </p>
+                  {selected.cardNo ? (
+                    <p className="muted members-slim-hint" style={{ marginTop: "0.25rem" }}>
+                      บัตร {selected.cardNo}
+                      {selected.source
+                        ? ` · ${MEMBER_SOURCE_LABELS[selected.source] || selected.source}`
+                        : ""}
+                    </p>
+                  ) : null}
 
                   <form className="members-slim-settings" onSubmit={onSaveProfile}>
                     <label>

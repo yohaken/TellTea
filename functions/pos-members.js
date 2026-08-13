@@ -160,6 +160,7 @@ async function tryEarnPointsForSale(db, { saleId, memberId, total, actorId }) {
       tx.update(memberRef, {
         pointsBalance: balanceAfter,
         lifetimePointsEarned: lifetime + points,
+        lastPointsAt: now,
         updatedAt: now,
         updatedBy: actorId || "pos",
       });
@@ -216,9 +217,13 @@ async function tryReverseRedeemForVoid(db, { saleId, actorId }) {
       if (!mSnap.exists) return;
       const m = mSnap.data() || {};
       const balance = typeof m.pointsBalance === "number" ? m.pointsBalance : 0;
+      const redeemed =
+        typeof m.lifetimePointsRedeemed === "number" ? m.lifetimePointsRedeemed : 0;
       const balanceAfter = balance + spent;
       tx.update(memberRef, {
         pointsBalance: balanceAfter,
+        lifetimePointsRedeemed: Math.max(0, redeemed - spent),
+        lastPointsAt: now,
         updatedAt: now,
         updatedBy: actorId || "pos",
       });
@@ -284,6 +289,7 @@ async function tryReverseEarnForVoid(db, { saleId, actorId }) {
       tx.update(memberRef, {
         pointsBalance: balanceAfter,
         lifetimePointsEarned: Math.max(0, lifetime - points),
+        lastPointsAt: now,
         updatedAt: now,
         updatedBy: actorId || "pos",
       });
@@ -336,10 +342,13 @@ function planRedeemFromMemberSnap(mSnap, {
   }
   const balance = typeof m.pointsBalance === "number" ? m.pointsBalance : 0;
   if (balance < pts) throw new Error("แต้มไม่พอแลก");
+  const redeemed =
+    typeof m.lifetimePointsRedeemed === "number" ? m.lifetimePointsRedeemed : 0;
   return {
     redeemBaht,
     pointsRedeemed: pts,
     balanceAfter: balance - pts,
+    lifetimePointsRedeemedAfter: redeemed + pts,
     memberPhone: asString(m.phone, 20),
     memberId: mid,
   };
@@ -352,6 +361,11 @@ function writeRedeemInSaleTx(tx, db, plan, { saleId, actorId }) {
   const ledgerRef = db.collection("memberLedger").doc();
   tx.update(memberRef, {
     pointsBalance: plan.balanceAfter,
+    lifetimePointsRedeemed:
+      typeof plan.lifetimePointsRedeemedAfter === "number"
+        ? plan.lifetimePointsRedeemedAfter
+        : plan.pointsRedeemed,
+    lastPointsAt: now,
     updatedAt: now,
     updatedBy: actorId || "pos",
   });
@@ -430,7 +444,9 @@ async function quickCreateMember(db, { phone, displayName, actorId, source, goog
     status: "active",
     pointsBalance: 0,
     lifetimePointsEarned: 0,
+    lifetimePointsRedeemed: 0,
     lifetimeGameBonusPoints: 0,
+    lastPointsAt: 0,
     birthday: "",
     note: "",
     googleUid: asString(googleUid, 128),
@@ -461,10 +477,12 @@ async function quickCreateMember(db, { phone, displayName, actorId, source, goog
         typeof m.lifetimePointsEarned === "number" ? m.lifetimePointsEarned : 0;
       const bonus = settings.signupBonusPoints;
       const balanceAfter = balance + bonus;
+      const at = Date.now();
       tx.update(ref, {
         pointsBalance: balanceAfter,
         lifetimePointsEarned: lifetime + bonus,
-        updatedAt: Date.now(),
+        lastPointsAt: at,
+        updatedAt: at,
         updatedBy: actorId || "pos",
       });
       tx.set(ledgerRef, {
@@ -707,6 +725,7 @@ async function creditReceiptClaimToMember(db, {
       const memberPatch = {
         pointsBalance: balanceAfter,
         lifetimePointsEarned: lifetime + points,
+        lastPointsAt: now,
         updatedAt: now,
         updatedBy: "receipt_qr",
       };
@@ -1119,6 +1138,7 @@ async function creditCompCouponToMember(db, {
       const memberPatch = {
         pointsBalance: balanceAfter,
         lifetimePointsEarned: lifetime + points,
+        lastPointsAt: now,
         updatedAt: now,
         updatedBy: "comp_coupon",
       };
@@ -1492,6 +1512,7 @@ async function creditSpinGamePoints(db, auth, {
         typeof m.lifetimeGameBonusPoints === "number" ? m.lifetimeGameBonusPoints : 0;
       const balanceAfter = balance + pts;
       const memberPatch = {
+        lastPointsAt: now,
         updatedAt: now,
         updatedBy: "spin_game",
       };

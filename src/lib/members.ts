@@ -48,8 +48,15 @@ export type ShopMember = {
   status: MemberStatus;
   pointsBalance: number;
   lifetimePointsEarned: number;
+  /** รวมแต้มที่แลกใช้ไป (redeem) — คืนเมื่อยกเลิกบิล */
+  lifetimePointsRedeemed: number;
   /** รวมแต้มพิเศษจากเกมลุ้น (เช่น หมุนวงล้อ) — ใช้จับตาผิดปกติ */
   lifetimeGameBonusPoints: number;
+  /**
+   * ความเคลื่อนไหวแต้มล่าสุด (สะสม / แลก / เกม / ปรับมือ)
+   * ใช้ดูพฤติกรรมกลับมาใช้ซ้ำ
+   */
+  lastPointsAt: number;
   /** YYYY-MM-DD หรือว่าง */
   birthday: string;
   note: string;
@@ -191,8 +198,18 @@ function mapMember(snap: QueryDocumentSnapshot | { id: string; data: () => Recor
     pointsBalance: typeof d.pointsBalance === "number" ? d.pointsBalance : 0,
     lifetimePointsEarned:
       typeof d.lifetimePointsEarned === "number" ? d.lifetimePointsEarned : 0,
+    lifetimePointsRedeemed:
+      typeof d.lifetimePointsRedeemed === "number" ? d.lifetimePointsRedeemed : 0,
     lifetimeGameBonusPoints:
       typeof d.lifetimeGameBonusPoints === "number" ? d.lifetimeGameBonusPoints : 0,
+    lastPointsAt:
+      typeof d.lastPointsAt === "number" && d.lastPointsAt > 0
+        ? d.lastPointsAt
+        : typeof d.updatedAt === "number"
+          ? d.updatedAt
+          : typeof d.createdAt === "number"
+            ? d.createdAt
+            : 0,
     birthday: typeof d.birthday === "string" ? d.birthday : "",
     note: typeof d.note === "string" ? d.note : "",
     source:
@@ -204,6 +221,33 @@ function mapMember(snap: QueryDocumentSnapshot | { id: string; data: () => Recor
     createdBy: typeof d.createdBy === "string" ? d.createdBy : "",
     updatedBy: typeof d.updatedBy === "string" ? d.updatedBy : "",
   };
+}
+
+/**
+ * แต้มใช้ไปในตาราง CRM
+ * — ใช้ค่าสะสมตอนแลก ถ้ายัง 0 แต่ยอดรวม > คงเหลือ (ข้อมูลเก่า) ให้ประมาณจากผลต่าง
+ */
+export function pointsUsedForDisplay(m: {
+  lifetimePointsRedeemed?: number;
+  lifetimePointsEarned?: number;
+  pointsBalance?: number;
+}): number {
+  const redeemed = Math.max(0, Math.trunc(Number(m.lifetimePointsRedeemed) || 0));
+  if (redeemed > 0) return redeemed;
+  const earned = Math.max(0, Math.trunc(Number(m.lifetimePointsEarned) || 0));
+  const bal = Math.max(0, Math.trunc(Number(m.pointsBalance) || 0));
+  return Math.max(0, earned - bal);
+}
+
+/** เวลาความเคลื่อนไหวแต้มล่าสุด (fallback updatedAt) */
+export function memberLastPointsAt(m: {
+  lastPointsAt?: number;
+  updatedAt?: number;
+  createdAt?: number;
+}): number {
+  if (typeof m.lastPointsAt === "number" && m.lastPointsAt > 0) return m.lastPointsAt;
+  if (typeof m.updatedAt === "number" && m.updatedAt > 0) return m.updatedAt;
+  return typeof m.createdAt === "number" ? m.createdAt : 0;
 }
 
 function mapLedger(snap: QueryDocumentSnapshot): MemberLedgerEntry {
@@ -526,7 +570,9 @@ export async function createMember(
     status: "active",
     pointsBalance: 0,
     lifetimePointsEarned: 0,
+    lifetimePointsRedeemed: 0,
     lifetimeGameBonusPoints: 0,
+    lastPointsAt: 0,
     birthday: (input.birthday || "").trim(),
     note: (input.note || "").trim(),
     source: input.source || "staff_boh",
@@ -544,7 +590,9 @@ export async function createMember(
     status: member.status,
     pointsBalance: 0,
     lifetimePointsEarned: 0,
+    lifetimePointsRedeemed: 0,
     lifetimeGameBonusPoints: 0,
+    lastPointsAt: 0,
     birthday: member.birthday,
     note: member.note,
     source: member.source,
@@ -669,14 +717,27 @@ export async function adjustMemberPoints(
       typeof before.lifetimePointsEarned === "number"
         ? before.lifetimePointsEarned
         : 0;
+    const redeemed =
+      typeof before.lifetimePointsRedeemed === "number"
+        ? before.lifetimePointsRedeemed
+        : 0;
     const balanceAfter = balance + delta;
     if (balanceAfter < 0) throw new Error("แต้มไม่พอ (ยอดจะติดลบ)");
 
     const now = Date.now();
     const reason: MemberLedgerReason = input.reason || "adjust";
+    let nextRedeemed = redeemed;
+    if (reason === "redeem" && delta < 0) {
+      nextRedeemed = redeemed + Math.abs(delta);
+    } else if (reason === "redeem_void_reverse" && delta > 0) {
+      nextRedeemed = Math.max(0, redeemed - delta);
+    }
     tx.update(mRef, {
       pointsBalance: balanceAfter,
-      lifetimePointsEarned: delta > 0 ? lifetime + delta : lifetime,
+      lifetimePointsEarned:
+        delta > 0 && reason !== "redeem_void_reverse" ? lifetime + delta : lifetime,
+      lifetimePointsRedeemed: nextRedeemed,
+      lastPointsAt: now,
       updatedAt: now,
       updatedBy: actorId,
     });

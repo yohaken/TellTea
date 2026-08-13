@@ -94,6 +94,7 @@
     "test:ot-load-perf": "node scripts/test-ot-load-perf.mjs",
     "test:ot-incomplete-popup": "node scripts/test-ot-incomplete-popup.mjs",
     "test:customer-spin-resilience": "node scripts/test-customer-spin-resilience.mjs",
+    "test:members-points-columns": "node scripts/test-members-points-columns.mjs",
     "test:scoped-firestore-loads": "node scripts/test-scoped-firestore-loads.mjs",
     "test:prod-catalog-owner": "node scripts/test-prod-catalog-owner.mjs",
     "test:boh-menu-mgmt": "node scripts/test-boh-menu-mgmt.mjs",
