@@ -6,9 +6,6 @@ import { chromium, devices } from "playwright";
 
 const phone = devices["iPhone 13"];
 const LOGIN = "https://telltea-bo.web.app/login/";
-const BRIDGE =
-  "https://mypeer-501909.firebaseapp.com/telltea-auth.html?return=" +
-  encodeURIComponent(LOGIN);
 const LEDGER = "https://telltea-bo.web.app/ledger/";
 
 const errors = [];
@@ -43,31 +40,17 @@ async function mustSeeLoginReady() {
 await mustSeeLoginReady();
 
 await page.goto(LOGIN, { waitUntil: "domcontentloaded" });
-await page.getByRole("button", { name: /เข้าสู่ระบบ/ }).click();
-await page.waitForTimeout(2500);
+await page.getByRole("button", { name: /เข้าสู่ระบบด้วย Google/ }).click();
+await page.waitForTimeout(3500);
 const afterClick = page.url();
+// Long-term path: same-origin Google redirect (ไม่พึ่ง cross-domain bridge + ticket)
 if (
-  !afterClick.includes("mypeer-501909.firebaseapp.com") &&
-  !afterClick.includes("accounts.google.com")
+  !afterClick.includes("accounts.google.com") &&
+  !afterClick.includes("telltea-bo.web.app/__/auth")
 ) {
-  fail(`login click did not reach auth bridge/Google. url=${afterClick}`);
+  fail(`login click did not reach Google redirect. url=${afterClick}`);
 } else {
-  console.log("OK login routes to bridge/Google");
-}
-
-// Bridge should at least boot (may already be on Google accounts)
-await page.goto(BRIDGE, { waitUntil: "domcontentloaded", timeout: 45000 });
-await page.waitForTimeout(2000);
-const bridgeUrl = page.url();
-const bridgeText = await page.locator("body").innerText();
-if (
-  bridgeUrl.includes("accounts.google.com") ||
-  bridgeText.includes("TellTea") ||
-  bridgeText.includes("Sign in")
-) {
-  console.log("OK auth bridge starts Google flow");
-} else {
-  fail(`auth bridge unexpected: url=${bridgeUrl} text=${bridgeText.slice(0, 180)}`);
+  console.log("OK login routes to same-origin Google");
 }
 
 // Ledger redirects to login when signed out — still must not white-screen

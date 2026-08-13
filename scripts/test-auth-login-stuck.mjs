@@ -23,6 +23,17 @@ assert.match(auth, /อ่านตั๋วล็อกอินหมดเว
 assert.match(auth, /getDocFromServer/);
 assert.match(auth, /LOGIN_TICKET_SESSION_KEY|telltea_login_ticket/);
 assert.match(auth, /bridgeExchangeInFlight|exchangeBridgeTicketIfPresent/);
+assert.match(auth, /exchangeLoginTicket/);
+assert.match(auth, /signInWithRedirect/);
+assert.match(auth, /completeStaffGoogleRedirect|getRedirectResult/);
+assert.match(auth, /shouldPreferStaffGooglePopup/);
+assert.match(auth, /NEXT_PUBLIC_FORCE_AUTH_BRIDGE/);
+// Default path must not send staff to cross-domain bridge
+assert.match(auth, /shouldUseGoogleAuthBridge[\s\S]{0,200}return false/);
+const cf = read("functions/auth-login-ticket.js");
+assert.match(cf, /exchangeLoginTicket/);
+assert.match(cf, /loginTickets/);
+assert.match(read("functions/index.js"), /exchangeLoginTicket/);
 
 const login = read("src/app/login/page.tsx");
 assert.match(login, /busyReason/);

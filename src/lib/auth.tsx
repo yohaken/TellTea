@@ -11,16 +11,24 @@ import {
 } from "react";
 import {
   GoogleAuthProvider,
+  getRedirectResult,
   onAuthStateChanged,
   signInWithCredential,
   signInWithPopup,
+  signInWithRedirect,
   signOut as firebaseSignOut,
   type ConfirmationResult,
   type User,
 } from "firebase/auth";
 import { deleteDoc, doc, getDocFromServer } from "firebase/firestore";
+import { httpsCallable } from "firebase/functions";
 import { clearAppCaches, loadCachedStaff, saveCachedStaff } from "./cache";
-import { getDb, getFirebaseAuth, isFirebaseConfigured } from "./firebase";
+import {
+  getDb,
+  getFirebaseAuth,
+  getFirebaseFunctions,
+  isFirebaseConfigured,
+} from "./firebase";
 import { confirmPhoneOtp, resetPhoneRecaptcha, sendPhoneOtp } from "./phone-auth";
 import { migrateAllBonusCloseSideDocs } from "./bonus-close-migrate";
 import { migrateAllLegacyEmployeePay } from "./employees";
@@ -62,6 +70,8 @@ export const AUTH_STAFF_RESOLVE_TIMEOUT_MS = 12_000;
 export const AUTH_LOADING_ESCAPE_MS = 18_000;
 
 const LOGIN_TICKET_SESSION_KEY = "telltea_login_ticket";
+/** Same-origin Google redirect pending (staff BO — ไม่ใช้ตั๋วข้ามโดเมน). */
+const STAFF_GOOGLE_PENDING_KEY = "telltea_staff_google_pending";
 
 type AuthContextValue = {
   status: AuthStatus;
@@ -91,9 +101,8 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 /**
- * Long-term mobile-safe Google login:
- * OAuth completes on mypeer-501909.firebaseapp.com, stores a short-lived ticket,
- * then TellTea exchanges it with signInWithCredential.
+ * Legacy cross-domain bridge (P-Note). ไม่ใช่ทางหลักแล้ว —
+ * คง URL ไว้เผื่อแลกตั๋วเก่าที่ยังค้างในลิงก์
  */
 export const TELLTEA_AUTH_BRIDGE =
   "https://mypeer-501909.firebaseapp.com/telltea-auth.html";
@@ -153,11 +162,15 @@ function mapAuthError(error: unknown) {
   return mapFirebaseAuthError(error);
 }
 
-/** Production hosts use the firebaseapp OAuth bridge (popup breaks in LINE/WebView). */
+/**
+ * Legacy only — cross-domain bridge (P-Note / telltea-auth.html).
+ * ค่าเริ่มต้นปิด: พนักงานใช้ same-origin popup/redirect แทน
+ * เปิดด้วย NEXT_PUBLIC_FORCE_AUTH_BRIDGE=1 เท่านั้น
+ */
 export function shouldUseGoogleAuthBridge(): boolean {
-  if (typeof window === "undefined") return true;
-  const host = window.location.hostname;
-  return !(host === "localhost" || host === "127.0.0.1");
+  if (typeof window === "undefined") return false;
+  if (process.env.NEXT_PUBLIC_FORCE_AUTH_BRIDGE === "1") return true;
+  return false;
 }
 
 export function startGoogleAuthBridge(returnUrl: string) {
@@ -173,6 +186,21 @@ export function startGoogleAuthBridge(returnUrl: string) {
  */
 export async function completeGoogleAuthBridgeFromUrl(): Promise<boolean> {
   return exchangeBridgeTicketIfPresent();
+}
+
+/** Desktop / wide pointer: popup on same origin (ไม่พึ่ง Firestore ticket). */
+function shouldPreferStaffGooglePopup() {
+  if (typeof window === "undefined") return true;
+  if (process.env.NEXT_PUBLIC_FORCE_AUTH_BRIDGE === "1") return false;
+  if (process.env.NEXT_PUBLIC_FORCE_POPUP_AUTH === "1") return true;
+  const host = window.location.hostname;
+  if (host === "localhost" || host === "127.0.0.1") return true;
+  try {
+    if (window.matchMedia("(pointer: fine) and (min-width: 768px)").matches) return true;
+  } catch {
+    /* ignore */
+  }
+  return false;
 }
 
 function emailFromUser(user: User) {
@@ -248,7 +276,7 @@ function takeTicketFromUrl(): string | null {
   }
 }
 
-async function idTokenFromTicket(ticket: string): Promise<string> {
+async function idTokenFromTicketClient(ticket: string): Promise<string> {
   const ref = doc(getDb(), "loginTickets", ticket);
   let lastErr: unknown = null;
   // อ่านจากเซิร์ฟเวอร์ตรงๆ — เลี่ยง IndexedDB cache ที่เคยทำให้ getDoc ค้างจน timeout
@@ -297,12 +325,32 @@ async function idTokenFromTicket(ticket: string): Promise<string> {
   throw new Error("อ่านตั๋วล็อกอินไม่สำเร็จ — กดเข้าสู่ระบบอีกครั้ง");
 }
 
-function shouldUseAuthBridge() {
-  return shouldUseGoogleAuthBridge();
+/** Prefer Admin SDK callable (bypasses client Firestore/cache); fall back to client get. */
+async function idTokenFromTicket(ticket: string): Promise<string> {
+  try {
+    const fn = httpsCallable<{ ticket: string }, { idToken: string }>(
+      getFirebaseFunctions(),
+      "exchangeLoginTicket",
+    );
+    const res = await withTimeout(
+      fn({ ticket }),
+      AUTH_BRIDGE_TIMEOUT_MS,
+      "อ่านตั๋วล็อกอินหมดเวลา — กดเข้าสู่ระบบอีกครั้ง",
+    );
+    const idToken = String(res.data?.idToken || "").trim();
+    if (idToken) {
+      clearSavedLoginTicket();
+      return idToken;
+    }
+  } catch {
+    /* fall through to client Firestore read */
+  }
+  return idTokenFromTicketClient(ticket);
 }
 
 /** แชร์ข้าม remount — กัน effect cleanup ทิ้งตั๋วกลางคันแล้วล็อกอินไม่สำเร็จ */
 let bridgeExchangeInFlight: Promise<boolean> | null = null;
+let staffRedirectInFlight: Promise<boolean> | null = null;
 
 async function exchangeBridgeTicketIfPresent(): Promise<boolean> {
   const ticket = takeTicketFromUrl();
@@ -324,6 +372,64 @@ async function exchangeBridgeTicketIfPresent(): Promise<boolean> {
     });
   }
   return bridgeExchangeInFlight;
+}
+
+/** Same-origin Google redirect (มือถือ) — ไม่พึ่ง ticket ข้ามโดเมน */
+async function completeStaffGoogleRedirect(): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  if (!staffRedirectInFlight) {
+    staffRedirectInFlight = (async () => {
+      let pending = false;
+      try {
+        pending = sessionStorage.getItem(STAFF_GOOGLE_PENDING_KEY) === "1";
+      } catch {
+        /* ignore */
+      }
+      const auth = getFirebaseAuth();
+      try {
+        // ต้องเรียกทุกครั้งหลังกลับจาก Google (Firebase เก็บผลไว้จนกว่าจะ getRedirectResult)
+        const resultPromise = getRedirectResult(auth);
+        const result = pending
+          ? await withTimeout(
+              resultPromise,
+              AUTH_BRIDGE_TIMEOUT_MS,
+              "ยืนยันตัวตนหมดเวลา — กดเข้าสู่ระบบอีกครั้ง",
+            )
+          : await resultPromise;
+        if (result?.user) {
+          try {
+            sessionStorage.removeItem(STAFF_GOOGLE_PENDING_KEY);
+          } catch {
+            /* ignore */
+          }
+          return true;
+        }
+        if (pending && auth.currentUser) {
+          try {
+            sessionStorage.removeItem(STAFF_GOOGLE_PENDING_KEY);
+          } catch {
+            /* ignore */
+          }
+          return true;
+        }
+      } catch (err) {
+        const code = (err as { code?: string })?.code || "";
+        if (code === "auth/credential-already-in-use" || code === "auth/email-already-in-use") {
+          try {
+            sessionStorage.removeItem(STAFF_GOOGLE_PENDING_KEY);
+          } catch {
+            /* ignore */
+          }
+          return true;
+        }
+        if (pending) throw err;
+      }
+      return false;
+    })().finally(() => {
+      staffRedirectInFlight = null;
+    });
+  }
+  return staffRedirectInFlight;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -425,20 +531,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
           })(),
         );
-      if (!hasTicket && !bridgeExchangeInFlight) return;
-      bridgePending = true;
-      setBusyReason("bridge");
-      setStatus("loading");
-      setError(null);
+      let redirectPending = false;
       try {
-        await exchangeBridgeTicketIfPresent();
+        redirectPending = sessionStorage.getItem(STAFF_GOOGLE_PENDING_KEY) === "1";
+      } catch {
+        /* ignore */
+      }
+      // getRedirectResult ต้องรันทุกบูต; โชว์ bridge busy เฉพาะตอนมีตั๋ว/pending
+      const showBridgeBusy = hasTicket || redirectPending || Boolean(bridgeExchangeInFlight);
+      if (showBridgeBusy) {
+        bridgePending = true;
+        setBusyReason("bridge");
+        setStatus("loading");
+        setError(null);
+      }
+      try {
+        await completeStaffGoogleRedirect();
+        if (hasTicket || bridgeExchangeInFlight) {
+          await exchangeBridgeTicketIfPresent();
+        }
       } catch (err) {
         if (!cancelled) setError(mapAuthError(err));
       } finally {
-        bridgePending = false;
-        if (!cancelled && !auth.currentUser) {
-          setBusyReason(null);
-          setStatus("signedOut");
+        if (showBridgeBusy) {
+          bridgePending = false;
+          if (!cancelled && !auth.currentUser) {
+            setBusyReason(null);
+            setStatus("signedOut");
+          }
         }
       }
     })();
@@ -577,11 +697,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setError(null);
 
-    if (shouldUseAuthBridge()) {
+    // Legacy escape hatch only — ไม่ใช้เป็นค่าเริ่มต้น (ตั๋วข้ามโดเมนมัก timeout)
+    if (shouldUseGoogleAuthBridge()) {
       const returnTo = `${window.location.origin}/login/`;
-      window.location.assign(
-        `${TELLTEA_AUTH_BRIDGE}?return=${encodeURIComponent(returnTo)}`,
-      );
+      startGoogleAuthBridge(returnTo);
       return;
     }
 
@@ -591,8 +710,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     provider.addScope("profile");
     provider.setCustomParameters({ prompt: "select_account" });
     try {
-      await signInWithPopup(auth, provider);
+      if (shouldPreferStaffGooglePopup()) {
+        await signInWithPopup(auth, provider);
+        return;
+      }
+      // มือถือ / WebView: same-origin redirect (แบบสมาชิก) — ไม่พึ่ง bridge
+      try {
+        sessionStorage.setItem(STAFF_GOOGLE_PENDING_KEY, "1");
+      } catch {
+        /* private mode */
+      }
+      setBusyReason("bridge");
+      setStatus("loading");
+      await signInWithRedirect(auth, provider);
     } catch (err) {
+      try {
+        sessionStorage.removeItem(STAFF_GOOGLE_PENDING_KEY);
+      } catch {
+        /* ignore */
+      }
+      setBusyReason(null);
       setError(mapAuthError(err));
     }
   }, []);

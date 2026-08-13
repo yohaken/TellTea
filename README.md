@@ -40,9 +40,12 @@
 เปิดด้วย **Safari / Chrome** — LINE / Facebook in-app browser มักพัง OAuth/reCAPTCHA
 
 ### พนักงาน (หลังร้าน `/login`)
-ยังใช้ **auth bridge** บน  
-`https://mypeer-501909.firebaseapp.com/telltea-auth.html`  
-(ไฟล์อยู่ใน repo P-Note `frontend/telltea-auth.html` — คนละเส้นกับสมาชิก)
+- **ทางหลัก:** same-origin Google — เดสก์ท็อปใช้ popup · มือถือใช้ `signInWithRedirect` (เหมือนสมาชิก)
+- **ไม่พึ่ง** cross-domain `telltea-auth.html` + Firestore ticket เป็นค่าเริ่มต้น (เคย timeout บ่อยตอนพนักงานเข้าใช้)
+- **ทางสำรอง legacy:** `NEXT_PUBLIC_FORCE_AUTH_BRIDGE=1` ยังชี้ไป  
+  `https://mypeer-501909.firebaseapp.com/telltea-auth.html`  
+  และแลกตั๋วผ่าน Cloud Function `exchangeLoginTicket` (Admin SDK) ก่อน แล้วค่อยอ่าน Firestore ฝั่ง client
+- โค้ด: `src/lib/auth.tsx` · `functions/auth-login-ticket.js`
 
 ### โปรเจกต์ร่วม (TaxTag ฯลฯ)
 

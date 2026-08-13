@@ -207,6 +207,9 @@ exports.syncTaskOccurrencesDaily = functions
   });
 
 /** POS tablet sign-in — no Firebase Console Anonymous toggle required. */
+/** Staff Google bridge ticket → idToken (Admin SDK; legacy bridge fallback). */
+exports.exchangeLoginTicket = require("./auth-login-ticket").exchangeLoginTicket;
+
 exports.posDeviceAuth = functions
   .region("asia-southeast1")
   .https.onCall(async (data) => {
