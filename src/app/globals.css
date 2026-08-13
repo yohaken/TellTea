@@ -2578,8 +2578,21 @@ body.modal-open .main-panel {
   font-variant-numeric: tabular-nums;
 }
 
-.members-slim-table--list .members-col-points-when {
-  width: 5.5rem;
+.members-slim-table--list .members-col-points-when,
+.members-slim-table--list .members-col-signup {
+  width: 5.2rem;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.members-slim-table--list .members-col-visits {
+  width: 3rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.members-slim-table--list .members-col-source {
+  width: 4.2rem;
   font-size: 0.78rem;
   white-space: nowrap;
 }

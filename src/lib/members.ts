@@ -57,6 +57,11 @@ export type ShopMember = {
    * ใช้ดูพฤติกรรมกลับมาใช้ซ้ำ
    */
   lastPointsAt: number;
+  /**
+   * จำนวนครั้งที่สะสมจากบิลจริง (earn_sale + earn_receipt_claim)
+   * — ไม่นับเกม / QR ให้แต้ม / ปรับมือ
+   */
+  lifetimeEarnVisits: number;
   /** YYYY-MM-DD หรือว่าง */
   birthday: string;
   note: string;
@@ -210,6 +215,8 @@ function mapMember(snap: QueryDocumentSnapshot | { id: string; data: () => Recor
           : typeof d.createdAt === "number"
             ? d.createdAt
             : 0,
+    lifetimeEarnVisits:
+      typeof d.lifetimeEarnVisits === "number" ? d.lifetimeEarnVisits : 0,
     birthday: typeof d.birthday === "string" ? d.birthday : "",
     note: typeof d.note === "string" ? d.note : "",
     source:
@@ -248,6 +255,15 @@ export function memberLastPointsAt(m: {
   if (typeof m.lastPointsAt === "number" && m.lastPointsAt > 0) return m.lastPointsAt;
   if (typeof m.updatedAt === "number" && m.updatedAt > 0) return m.updatedAt;
   return typeof m.createdAt === "number" ? m.createdAt : 0;
+}
+
+/** ป้ายแหล่งสมัครสั้นในตาราง */
+export function memberSourceShort(source: MemberSource | string | undefined): string {
+  if (source === "staff_pos") return "หน้าร้าน";
+  if (source === "qr_self") return "QR";
+  if (source === "receipt_qr") return "สลิป";
+  if (source === "staff_boh") return "หลังร้าน";
+  return MEMBER_SOURCE_LABELS[(source as MemberSource) || "staff_boh"] || "—";
 }
 
 function mapLedger(snap: QueryDocumentSnapshot): MemberLedgerEntry {
@@ -573,6 +589,7 @@ export async function createMember(
     lifetimePointsRedeemed: 0,
     lifetimeGameBonusPoints: 0,
     lastPointsAt: 0,
+    lifetimeEarnVisits: 0,
     birthday: (input.birthday || "").trim(),
     note: (input.note || "").trim(),
     source: input.source || "staff_boh",
@@ -593,6 +610,7 @@ export async function createMember(
     lifetimePointsRedeemed: 0,
     lifetimeGameBonusPoints: 0,
     lastPointsAt: 0,
+    lifetimeEarnVisits: 0,
     birthday: member.birthday,
     note: member.note,
     source: member.source,

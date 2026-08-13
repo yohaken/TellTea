@@ -24,6 +24,7 @@ import {
   listMemberLedger,
   listMembers,
   memberLastPointsAt,
+  memberSourceShort,
   MEMBER_LEDGER_REASON_LABELS,
   MEMBER_SOURCE_LABELS,
   pointsUsedForDisplay,
@@ -61,6 +62,13 @@ function formatWhen(ms: number) {
   const hh = String(d.getHours()).padStart(2, "0");
   const mi = String(d.getMinutes()).padStart(2, "0");
   return `${dd}/${mm} ${hh}:${mi}`;
+}
+
+/** วันสมัครสั้น — ไม่ต้องมีเวลา */
+function formatSignupDay(ms: number) {
+  if (!ms) return "—";
+  const d = new Date(ms);
+  return `${d.getDate()}/${d.getMonth() + 1}/${String(d.getFullYear()).slice(-2)}`;
 }
 
 function phoneLabel(m: ShopMember) {
@@ -872,6 +880,24 @@ function MembersView() {
                           >
                             แต้มล่าสุด
                           </th>
+                          <th
+                            className="num members-col-visits"
+                            title="จำนวนครั้งที่สะสมจากบิล (ขายหน้าร้านหรือเคลมสลิป)"
+                          >
+                            ครั้ง
+                          </th>
+                          <th
+                            className="members-col-source"
+                            title="แหล่งสมัครสมาชิก"
+                          >
+                            แหล่ง
+                          </th>
+                          <th
+                            className="members-col-signup"
+                            title="วันสมัครสมาชิก"
+                          >
+                            สมัคร
+                          </th>
                           <th className="members-col-status">สถานะ</th>
                         </tr>
                       </thead>
@@ -913,6 +939,25 @@ function MembersView() {
                               }
                             >
                               {formatWhen(memberLastPointsAt(m))}
+                            </td>
+                            <td className="num members-col-visits muted">
+                              {m.lifetimeEarnVisits || 0}
+                            </td>
+                            <td
+                              className="members-col-source muted"
+                              title={MEMBER_SOURCE_LABELS[m.source] || m.source}
+                            >
+                              {memberSourceShort(m.source)}
+                            </td>
+                            <td
+                              className="members-col-signup muted"
+                              title={
+                                m.createdAt
+                                  ? new Date(m.createdAt).toLocaleString("th-TH")
+                                  : ""
+                              }
+                            >
+                              {formatSignupDay(m.createdAt)}
                             </td>
                             <td className="members-col-status muted">
                               {m.status === "active" ? "ปกติ" : "ระงับ"}
@@ -966,14 +1011,14 @@ function MembersView() {
                       · แต้มล่าสุด {formatWhen(memberLastPointsAt(selected))}
                     </span>
                   </p>
-                  {selected.cardNo ? (
-                    <p className="muted members-slim-hint" style={{ marginTop: "0.25rem" }}>
-                      บัตร {selected.cardNo}
-                      {selected.source
-                        ? ` · ${MEMBER_SOURCE_LABELS[selected.source] || selected.source}`
-                        : ""}
-                    </p>
-                  ) : null}
+                  <p className="muted members-slim-hint" style={{ marginTop: "0.25rem" }}>
+                    {selected.cardNo ? `บัตร ${selected.cardNo} · ` : ""}
+                    {MEMBER_SOURCE_LABELS[selected.source] || selected.source}
+                    {" · สมัคร "}
+                    {formatSignupDay(selected.createdAt)}
+                    {" · มาสะสม "}
+                    {selected.lifetimeEarnVisits || 0} ครั้ง
+                  </p>
 
                   <form className="members-slim-settings" onSubmit={onSaveProfile}>
                     <label>

@@ -156,10 +156,12 @@ async function tryEarnPointsForSale(db, { saleId, memberId, total, actorId }) {
       if (isMemberInactive(m)) return { skipped: memberStatusLabel(m) };
       const balance = typeof m.pointsBalance === "number" ? m.pointsBalance : 0;
       const lifetime = typeof m.lifetimePointsEarned === "number" ? m.lifetimePointsEarned : 0;
+      const visits = typeof m.lifetimeEarnVisits === "number" ? m.lifetimeEarnVisits : 0;
       const balanceAfter = balance + points;
       tx.update(memberRef, {
         pointsBalance: balanceAfter,
         lifetimePointsEarned: lifetime + points,
+        lifetimeEarnVisits: visits + 1,
         lastPointsAt: now,
         updatedAt: now,
         updatedBy: actorId || "pos",
@@ -286,9 +288,11 @@ async function tryReverseEarnForVoid(db, { saleId, actorId }) {
       const balanceAfter = Math.max(0, balance - points);
       const lifetime =
         typeof m.lifetimePointsEarned === "number" ? m.lifetimePointsEarned : 0;
+      const visits = typeof m.lifetimeEarnVisits === "number" ? m.lifetimeEarnVisits : 0;
       tx.update(memberRef, {
         pointsBalance: balanceAfter,
         lifetimePointsEarned: Math.max(0, lifetime - points),
+        lifetimeEarnVisits: Math.max(0, visits - 1),
         lastPointsAt: now,
         updatedAt: now,
         updatedBy: actorId || "pos",
@@ -447,6 +451,7 @@ async function quickCreateMember(db, { phone, displayName, actorId, source, goog
     lifetimePointsRedeemed: 0,
     lifetimeGameBonusPoints: 0,
     lastPointsAt: 0,
+    lifetimeEarnVisits: 0,
     birthday: "",
     note: "",
     googleUid: asString(googleUid, 128),
@@ -722,9 +727,11 @@ async function creditReceiptClaimToMember(db, {
       const lifetime = typeof m.lifetimePointsEarned === "number" ? m.lifetimePointsEarned : 0;
       const balanceAfter = balance + points;
       const namePatch = asString(displayName, 80);
+      const visits = typeof m.lifetimeEarnVisits === "number" ? m.lifetimeEarnVisits : 0;
       const memberPatch = {
         pointsBalance: balanceAfter,
         lifetimePointsEarned: lifetime + points,
+        lifetimeEarnVisits: visits + 1,
         lastPointsAt: now,
         updatedAt: now,
         updatedBy: "receipt_qr",

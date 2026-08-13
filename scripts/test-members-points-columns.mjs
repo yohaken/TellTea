@@ -15,19 +15,27 @@ const fn = read("functions/pos-members.js");
 
 assert.match(membersLib, /lifetimePointsRedeemed/);
 assert.match(membersLib, /lastPointsAt/);
+assert.match(membersLib, /lifetimeEarnVisits/);
 assert.match(membersLib, /pointsUsedForDisplay/);
 assert.match(membersLib, /memberLastPointsAt/);
+assert.match(membersLib, /memberSourceShort/);
 
 assert.match(page, /pointsUsedForDisplay/);
 assert.match(page, /memberLastPointsAt/);
 assert.match(page, /members-col-earned/);
 assert.match(page, /members-col-used/);
 assert.match(page, /members-col-points-when/);
+assert.match(page, /members-col-visits/);
+assert.match(page, /members-col-source/);
+assert.match(page, /members-col-signup/);
 assert.match(page, /แต้มล่าสุด/);
+assert.match(page, /formatSignupDay/);
 
 assert.match(fn, /lifetimePointsRedeemedAfter/);
 assert.match(fn, /lastPointsAt: now/);
 assert.match(fn, /lifetimePointsRedeemed: 0/);
+assert.match(fn, /lifetimeEarnVisits: visits \+ 1/);
+assert.match(fn, /lifetimeEarnVisits: 0/);
 
 // Display helper logic (mirror)
 function pointsUsedForDisplay(m) {
@@ -42,6 +50,6 @@ assert.equal(pointsUsedForDisplay({ lifetimePointsRedeemed: 0, lifetimePointsEar
 assert.equal(pointsUsedForDisplay({ lifetimePointsRedeemed: 0, lifetimePointsEarned: 10, pointsBalance: 10 }), 0);
 
 const version = read("src/lib/version.ts");
-assert.ok(Number(version.match(/APP_BUILD\s*=\s*(\d+)/)?.[1] || 0) >= 808);
+assert.ok(Number(version.match(/APP_BUILD\s*=\s*(\d+)/)?.[1] || 0) >= 809);
 
 console.log("OK test-members-points-columns");
