@@ -1643,7 +1643,7 @@ body.modal-open .main-panel {
   fill: #fff;
   font-family: var(--font-display), sans-serif;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 12px;
   paint-order: stroke;
   stroke: rgba(0, 30, 50, 0.25);
   stroke-width: 0.6px;
