@@ -96,11 +96,19 @@ assert.match(docs, /pointsSpinSettings|บันทึก/);
 assert.match(docs, /gamesEnabled|publicSpinGameCredit/);
 
 const version = read("src/lib/version.ts");
-assert.ok(Number(version.match(/APP_BUILD\s*=\s*(\d+)/)?.[1] || 0) >= 801);
+assert.ok(Number(version.match(/APP_BUILD\s*=\s*(\d+)/)?.[1] || 0) >= 802);
 
-// Runtime: default 12 slices stay aimable (~30°)
+assert.match(lib, /PointTier = 0 \| 1 \| 2 \| 3 \| 4 \| 5/);
+assert.match(lib, /points: 0, weight: 50/);
+assert.match(read("src/lib/points-spin-theme.ts"), /ไม่ได้แต้มเพิ่ม/);
+assert.match(read("src/lib/points-spin-credit.ts"), /points < 0 \|\| points > 5/);
+assert.match(read("functions/pos-members.js"), /pts < 0 \|\| pts > 5/);
+assert.match(read("src/app/members/spin-demo/page.tsx"), /w0|points: 0/);
+
+// Runtime: default 12 slices · 0 should be the thickest tier
 function allocate(weights, target = 12) {
   const map = new Map([
+    [0, 0],
     [1, 0],
     [2, 0],
     [3, 0],
@@ -108,11 +116,11 @@ function allocate(weights, target = 12) {
     [5, 0],
   ]);
   for (const w of weights) map.set(w.points, (map.get(w.points) || 0) + w.weight);
-  const norm = [1, 2, 3, 4, 5]
+  const norm = [0, 1, 2, 3, 4, 5]
     .map((points) => ({ points, weight: map.get(points) || 0 }))
     .filter((w) => w.weight > 0);
   const sum = norm.reduce((s, w) => s + w.weight, 0);
-  const counts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  const counts = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
   let assigned = 0;
   for (const w of norm) {
     const c = Math.max(1, Math.round((w.weight / sum) * target));
@@ -120,13 +128,17 @@ function allocate(weights, target = 12) {
     assigned += c;
   }
   while (assigned > target) {
-    const pool = [1, 2, 3, 4, 5].filter((t) => counts[t] > 1).sort((a, b) => counts[b] - counts[a]);
+    const pool = [0, 1, 2, 3, 4, 5]
+      .filter((t) => counts[t] > 1)
+      .sort((a, b) => counts[b] - counts[a]);
     if (!pool.length) break;
     counts[pool[0]] -= 1;
     assigned -= 1;
   }
   while (assigned < target) {
-    const pool = [1, 2, 3, 4, 5].filter((t) => counts[t] > 0).sort((a, b) => counts[b] - counts[a]);
+    const pool = [0, 1, 2, 3, 4, 5]
+      .filter((t) => counts[t] > 0)
+      .sort((a, b) => counts[b] - counts[a]);
     if (!pool.length) break;
     counts[pool[0]] += 1;
     assigned += 1;
@@ -135,14 +147,16 @@ function allocate(weights, target = 12) {
 }
 
 const defaults = [
-  { points: 1, weight: 50 },
-  { points: 2, weight: 28 },
-  { points: 3, weight: 14 },
-  { points: 4, weight: 6 },
+  { points: 0, weight: 50 },
+  { points: 1, weight: 25 },
+  { points: 2, weight: 12 },
+  { points: 3, weight: 7 },
+  { points: 4, weight: 4 },
   { points: 5, weight: 2 },
 ];
 const counts = allocate(defaults, 12);
-const totalSlices = [1, 2, 3, 4, 5].reduce((s, t) => s + counts[t], 0);
+const totalSlices = [0, 1, 2, 3, 4, 5].reduce((s, t) => s + counts[t], 0);
+assert.ok(counts[0] >= counts[1], "0 should be most common slice tier");
 assert.equal(totalSlices, 12);
 assert.ok(360 / totalSlices >= 25, "default slices should be >= ~25° for aiming");
 

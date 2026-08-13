@@ -51,10 +51,11 @@ function SpinDemoView() {
   const [spinSpeed, setSpinSpeed] = useState(DEFAULT_POINTS_SPIN_SETTINGS.spinSpeed);
   const [stopDecel, setStopDecel] = useState(DEFAULT_POINTS_SPIN_SETTINGS.stopDecel);
   const [spinEnabled, setSpinEnabled] = useState(false);
-  const [w1, setW1] = useState(50);
-  const [w2, setW2] = useState(28);
-  const [w3, setW3] = useState(14);
-  const [w4, setW4] = useState(6);
+  const [w0, setW0] = useState(50);
+  const [w1, setW1] = useState(25);
+  const [w2, setW2] = useState(12);
+  const [w3, setW3] = useState(7);
+  const [w4, setW4] = useState(4);
   const [w5, setW5] = useState(2);
   const [simCount, setSimCount] = useState<Record<PointTier, number> | null>(null);
   const [lastNote, setLastNote] = useState<string | null>(null);
@@ -74,8 +75,9 @@ function SpinDemoView() {
     setSpinSpeed(s.spinSpeed);
     setStopDecel(s.stopDecel);
     setSpinEnabled(s.gamesEnabled?.spin === true);
-    const map: Record<PointTier, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    const map: Record<PointTier, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
     for (const w of s.weights) map[w.points] = w.weight;
+    setW0(map[0] || 0);
     setW1(map[1] || 0);
     setW2(map[2] || 0);
     setW3(map[3] || 0);
@@ -85,13 +87,14 @@ function SpinDemoView() {
 
   const weights: SpinWeight[] = useMemo(
     () => [
+      { points: 0, weight: w0 },
       { points: 1, weight: w1 },
       { points: 2, weight: w2 },
       { points: 3, weight: w3 },
       { points: 4, weight: w4 },
       { points: 5, weight: w5 },
     ],
-    [w1, w2, w3, w4, w5],
+    [w0, w1, w2, w3, w4, w5],
   );
 
   const draft: PointsSpinSettings = useMemo(
@@ -111,6 +114,7 @@ function SpinDemoView() {
   const probs = useMemo(() => probabilityMap(draft.weights), [draft.weights]);
   const ev = useMemo(() => expectedPoints(draft.weights), [draft.weights]);
   const setters: Record<PointTier, (n: number) => void> = {
+    0: setW0,
     1: setW1,
     2: setW2,
     3: setW3,
@@ -118,6 +122,7 @@ function SpinDemoView() {
     5: setW5,
   };
   const values: Record<PointTier, number> = {
+    0: w0,
     1: w1,
     2: w2,
     3: w3,
@@ -166,7 +171,7 @@ function SpinDemoView() {
     );
   }
 
-  const gameKey = `${tab}-${draft.sliceCount}-${draft.spinSpeed}-${draft.stopDecel}-${w1}-${w2}-${w3}-${w4}-${w5}`;
+  const gameKey = `${tab}-${draft.sliceCount}-${draft.spinSpeed}-${draft.stopDecel}-${w0}-${w1}-${w2}-${w3}-${w4}-${w5}`;
   const degEach = approxSliceDegrees(draft.sliceCount);
 
   return (
@@ -270,11 +275,11 @@ function SpinDemoView() {
 
         <div className="pts-spin-demo-weights">
           <p className="pts-spin-demo-weights-title">
-            สัดส่วนมุมรวมแต่ละแต้ม (จะถูกแบ่งย่อยกระจายรอบวงตามจำนวนช่อง)
+            สัดส่วนมุมรวมแต่ละแต้ม 0–5 (0 = ไม่ได้แต้มเพิ่ม · ควรหนาที่สุด)
           </p>
           {POINT_TIERS.map((m) => (
             <label key={m} className="pts-spin-demo-weight-row">
-              <span className="pts-spin-demo-weight-label">{m} แต้ม</span>
+              <span className="pts-spin-demo-weight-label">{m === 0 ? "0 · ไม่ได้เพิ่ม" : `${m} แต้ม`}</span>
               <input
                 type="range"
                 min={0}
@@ -384,7 +389,9 @@ function SpinDemoView() {
               allowReselect
               onFinished={({ result }) => {
                 setLastNote(
-                  `ได้ +${result.points} แต้ม (${SPIN_MENU_PRIZES[result.points].label})`,
+                  result.points === 0
+                  ? `ได้ 0 · ไม่ได้แต้มเพิ่ม`
+                  : `ได้ +${result.points} แต้ม (${SPIN_MENU_PRIZES[result.points].label})`,
                 );
               }}
             />
@@ -471,7 +478,7 @@ function SpinDemoView() {
           <li>เกมเดียว: หมุนวงล้อ · ใช้ความสามารถกะจังหวะกดหยุด</li>
           <li>จำนวนช่องตั้งได้ (ค่าเริ่ม {DEFAULT_SLICE_COUNT}) — ช่องใหญ่พอให้คาดเดา</li>
           <li>กดหยุดแล้ววงหน่วงตามแรง — ไม่จับผลจากเปอร์เซ็นต์ล่วงหน้า</li>
-          <li>ได้แต้มคงที่ 1–5 ตามชิ้นใต้เข็ม</li>
+          <li>ได้ 0–5 แต้มตามชิ้นใต้เข็ม (0 = ไม่ได้เพิ่ม)</li>
         </ol>
       </section>
     </div>

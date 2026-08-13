@@ -44,6 +44,7 @@ type Props = {
 type Phase = "idle" | "spinning" | "coasting" | "done";
 
 const TONE_FILL: Record<string, string> = {
+  miss: "#8A9AA8",
   thai: "#E8913A",
   boba: "#0077B6",
   cookie: "#D4A574",
@@ -64,7 +65,7 @@ function slicePath(cx: number, cy: number, r: number, start: number, end: number
 }
 
 /**
- * วงล้อหมุนได้แต้ม 1–5
+ * วงล้อหมุนได้แต้ม 0–5 (0 = ไม่ได้เพิ่ม)
  * กดหยุด = หน่วงตามฟิสิกส์ แล้วอ่านชิ้นใต้เข็ม — ช่องใหญ่พอให้กะจังหวะได้
  */
 export function PointsMultiplierSpin({
@@ -225,7 +226,7 @@ export function PointsMultiplierSpin({
         <p className="pts-spin-title">หมุนวงล้อลุ้นแต้ม</p>
         <p className="pts-spin-sub">
           {mode === "teaser"
-            ? `ลุ้นได้ 1–5 แต้ม · ${slices.length} ช่อง (~${degEach}°) กะจังหวะได้`
+            ? `ลุ้นได้ 0–5 แต้ม · ${slices.length} ช่อง (~${degEach}°) กะจังหวะได้`
             : `กดหยุดตอนช่องที่อยากได้ · ${slices.length} ช่อง (~${degEach}°) · วงหน่วงเอง`}
         </p>
         <p className="pts-spin-points-only">{POINTS_ONLY_NOTE}</p>
@@ -330,12 +331,22 @@ export function PointsMultiplierSpin({
 
       {showResult && result ? (
         <div className="pts-spin-result" role="status">
-          <p className="pts-spin-result-mult">+{result.points}</p>
+          <p className="pts-spin-result-mult">
+            {result.points === 0 ? "0" : `+${result.points}`}
+          </p>
           <p className="pts-spin-result-flavor">
             {spinResultFlavorLine(result.points)}
           </p>
           <p>
-            ได้ <strong>{result.finalPoints}</strong> แต้ม
+            {result.points === 0 ? (
+              <>
+                รอบนี้<strong>ไม่ได้แต้มเพิ่ม</strong>
+              </>
+            ) : (
+              <>
+                ได้ <strong>{result.finalPoints}</strong> แต้ม
+              </>
+            )}
           </p>
           <p className="pts-spin-points-only">{POINTS_ONLY_NOTE}</p>
         </div>

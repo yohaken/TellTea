@@ -67,7 +67,7 @@ export function PointsGamesAttractBg({
         </div>
       </div>
       <p className="pts-attract-banner">
-        สมัครแล้วหมุนวงล้อ · กะจังหวะกดหยุดเอง · ได้ 1–5 แต้ม
+        สมัครแล้วหมุนวงล้อ · กะจังหวะกดหยุดเอง · ได้ 0–5 แต้ม
       </p>
     </div>
   );

@@ -421,7 +421,7 @@ function ClaimForm() {
 
         {showAttract ? (
           <p className="muted claim-bill-meta" style={{ marginTop: "0.35rem" }}>
-            ด้านหลังมีวงล้อหมุนอยู่ · สมัคร/เข้าแล้วหมุนลุ้นได้ 1–5 แต้ม
+            ด้านหลังมีวงล้อหมุนอยู่ · สมัคร/เข้าแล้วหมุนลุ้นได้ 0–5 แต้ม
           </p>
         ) : null}
 
@@ -629,7 +629,11 @@ function ClaimForm() {
                           ? { ...prev, balance: r.balanceAfter as number }
                           : prev,
                       );
-                      setCreditNote(`บันทึกแล้ว · รวม ${r.balanceAfter} แต้ม`);
+                      setCreditNote(
+                        result.points === 0
+                          ? `รอบนี้ไม่ได้แต้มเพิ่ม · คงเหลือ ${r.balanceAfter}`
+                          : `บันทึกแล้ว +${result.points} · รวม ${r.balanceAfter} แต้ม`,
+                      );
                       return;
                     }
                     if (r.skipped === "already_played") {
@@ -669,7 +673,7 @@ function ClaimForm() {
             {spinLive ? (
               <>
                 <p className="muted" style={{ marginTop: "0.5rem", fontSize: "0.88rem" }}>
-                  หมุนวงล้อลุ้นได้ <strong>1–5 แต้ม</strong>
+                  หมุนวงล้อลุ้นได้ <strong>0–5 แต้ม</strong>
                 </p>
                 <button
                   type="button"

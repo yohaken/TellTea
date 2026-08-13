@@ -87,7 +87,7 @@ export function PointsGameOnce({
         <div className="pts-once-play">
           <p className="pts-once-title">หมุนวงล้อลุ้นแต้ม</p>
           <p className="pts-once-sub muted">
-            กะจังหวะกดหยุด · ช่องใหญ่พอเห็น · ได้แต้มคงที่ 1–5
+            กะจังหวะกดหยุด · ช่องใหญ่พอเห็น · ได้ 0–5 แต้ม (0 = ไม่ได้เพิ่ม)
           </p>
           <p className="pts-spin-points-only">{POINTS_ONLY_NOTE}</p>
           <PointsMultiplierSpin
@@ -107,10 +107,18 @@ export function PointsGameOnce({
         <div className="pts-once-done">
           <PointsGameBrandLogo className="pts-result-brand" size={52} />
           <p className="pts-once-title">จบเกม · หมุนวงล้อ</p>
-          <p className="pts-spin-result-mult">+{result.points}</p>
+          <p className="pts-spin-result-mult">
+            {result.points === 0 ? "0" : `+${result.points}`}
+          </p>
           <p className="pts-spin-result-flavor">{prize?.label}</p>
           <p>
-            ได้ <strong>{result.finalPoints}</strong> แต้ม
+            {result.points === 0 ? (
+              <>รอบนี้<strong>ไม่ได้แต้มเพิ่ม</strong></>
+            ) : (
+              <>
+                ได้ <strong>{result.finalPoints}</strong> แต้ม
+              </>
+            )}
           </p>
           <p className="pts-spin-points-only">{POINTS_ONLY_NOTE}</p>
           {creditNote ? <p className="muted pts-once-lock-note">{creditNote}</p> : null}

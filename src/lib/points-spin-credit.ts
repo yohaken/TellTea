@@ -25,8 +25,8 @@ export async function creditSpinGamePoints(input: {
   /** ตั๋วจากสมัครสมาชิก — ใช้กับ context=join */
   playToken?: string;
 }): Promise<SpinGameCreditResult> {
-  const points = Math.trunc(Number(input.points) || 0);
-  if (points < 1 || points > 5) {
+  const points = Math.trunc(Number(input.points));
+  if (!Number.isFinite(points) || points < 0 || points > 5) {
     return { ok: false, error: "bad_points" };
   }
   const body: Record<string, unknown> = {

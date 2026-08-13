@@ -1,16 +1,17 @@
 /**
- * เกมหมุนวงล้อได้แต้มคงที่ (1–5 แต้ม)
+ * เกมหมุนวงล้อได้แต้มคงที่ (0–5 แต้ม)
+ * - 0 = ไม่ได้แต้มเพิ่ม (ค่าที่พบบ่อยที่สุดตามค่าเริ่ม)
  * - สัดส่วนบนวง = น้ำหนักที่ตั้ง (ปรับได้หลังร้าน)
  * - ชิ้นคะแนนเดียวกันถูกแบ่งย่อยแล้วกระจายรอบวง ไม่รวมเป็นแผงยาว
  * - ผลลัพธ์จากตำแหน่งที่หยุดหลังหน่วงตามฟิสิกส์ — ไม่สุ่มจากเปอร์เซ็นต์ล่วงหน้า
  */
 
-export type PointTier = 1 | 2 | 3 | 4 | 5;
+export type PointTier = 0 | 1 | 2 | 3 | 4 | 5;
 /** @deprecated ใช้ PointTier — คงชื่อเดิมกัน import เก่า */
 export type MultiplierTier = PointTier;
 
 export type SpinWeight = {
-  /** แต้มรางวัลบนชิ้น (1–5) */
+  /** แต้มรางวัลบนชิ้น (0–5) · 0 = ไม่ได้แต้มเพิ่ม */
   points: PointTier;
   /** สัดส่วนมุมรวมของแต้มนี้ (ไม่ต้องรวม 100) */
   weight: number;
@@ -23,7 +24,7 @@ export type LegacySpinWeight = {
 };
 
 export type SpinResult = {
-  /** แต้มที่ได้จากวงล้อ (คงที่ 1–5 ไม่ใช่ตัวคูณ) */
+  /** แต้มที่ได้จากวงล้อ (คงที่ 0–5 ไม่ใช่ตัวคูณ) */
   points: PointTier;
   /** alias = points (กันโค้ดเก่า) */
   multiplier: PointTier;
@@ -45,16 +46,21 @@ export type WheelSlice = {
   midDeg: number;
 };
 
-/** ค่าเริ่ม: สัดส่วนมุมรวม — 5 แต้มหายาก */
+function emptyTierRecord(): Record<PointTier, number> {
+  return { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+}
+
+/** ค่าเริ่ม: 0 แต้มมากที่สุด — ไม่บังคับ +1 ทุกครั้ง */
 export const DEFAULT_SPIN_WEIGHTS: readonly SpinWeight[] = [
-  { points: 1, weight: 50 },
-  { points: 2, weight: 28 },
-  { points: 3, weight: 14 },
-  { points: 4, weight: 6 },
+  { points: 0, weight: 50 },
+  { points: 1, weight: 25 },
+  { points: 2, weight: 12 },
+  { points: 3, weight: 7 },
+  { points: 4, weight: 4 },
   { points: 5, weight: 2 },
 ] as const;
 
-export const POINT_TIERS: readonly PointTier[] = [1, 2, 3, 4, 5];
+export const POINT_TIERS: readonly PointTier[] = [0, 1, 2, 3, 4, 5];
 export const MULTIPLIER_TIERS = POINT_TIERS;
 
 function asPoints(w: SpinWeight | LegacySpinWeight): PointTier | null {
@@ -80,6 +86,14 @@ export function normalizeWeights(
     if (!(n > 0) || !Number.isFinite(n)) continue;
     map.set(p, (map.get(p) || 0) + n);
   }
+  // ค่าตั้งเก่ารอบ 1–5 ไม่มีช่อง 0 — เติม 0 ให้หนาอย่างน้อยเท่าช่องที่หนาที่สุดเดิม
+  if ((map.get(0) || 0) === 0) {
+    const maxOther = Math.max(
+      0,
+      ...POINT_TIERS.filter((t) => t > 0).map((t) => map.get(t) || 0),
+    );
+    if (maxOther > 0) map.set(0, maxOther);
+  }
   let sum = 0;
   for (const v of map.values()) sum += v;
   if (!(sum > 0)) {
@@ -103,7 +117,7 @@ export function probabilityMap(
 ): Record<PointTier, number> {
   const norm = normalizeWeights(weights);
   const sum = norm.reduce((s, w) => s + w.weight, 0);
-  const out: Record<PointTier, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  const out = emptyTierRecord();
   for (const w of norm) out[w.points] = w.weight / sum;
   return out;
 }
@@ -148,7 +162,7 @@ export function allocateSliceCounts(
   const norm = normalizeWeights(weights);
   const sum = norm.reduce((s, w) => s + w.weight, 0) || 1;
   const target = clampWheelSliceCount(targetSlices);
-  const counts: Record<PointTier, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  const counts = emptyTierRecord();
   let assigned = 0;
   for (const w of norm) {
     const c = Math.max(1, Math.round((w.weight / sum) * target));
@@ -181,7 +195,7 @@ export function distributePointLabels(
   counts: Record<PointTier, number>,
 ): PointTier[] {
   const total = POINT_TIERS.reduce((s, t) => s + (counts[t] || 0), 0);
-  if (total <= 0) return [1];
+  if (total <= 0) return [0];
   const slots: Array<PointTier | null> = Array.from({ length: total }, () => null);
   const order = POINT_TIERS.filter((t) => (counts[t] || 0) > 0).sort(
     (a, b) => (counts[a] || 0) - (counts[b] || 0),
@@ -199,7 +213,7 @@ export function distributePointLabels(
       free.splice(at, 1);
     }
   }
-  return slots.map((s) => s ?? 1);
+  return slots.map((s) => s ?? 0);
 }
 
 /**
@@ -242,8 +256,8 @@ export function sliceAtPointer(
   if (!slices.length) {
     return {
       id: "fallback",
-      points: 1,
-      multiplier: 1,
+      points: 0,
+      multiplier: 0,
       startDeg: 0,
       endDeg: 360,
       midDeg: 180,
@@ -261,7 +275,7 @@ export function awardSpinPoints(
   points: PointTier,
   basePoints = 0,
 ): SpinResult {
-  const p = POINT_TIERS.includes(points) ? points : 1;
+  const p = POINT_TIERS.includes(points) ? points : 0;
   const base = Math.max(0, Math.trunc(Number(basePoints) || 0));
   return {
     points: p,
@@ -289,7 +303,7 @@ export function simulateSpins(
 ): Record<PointTier, number> {
   const n = Math.max(0, Math.min(100_000, Math.trunc(count) || 0));
   const slices = buildWheelSlices(weights, sliceCount);
-  const hist: Record<PointTier, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  const hist = emptyTierRecord();
   for (let i = 0; i < n; i++) {
     const rot = rng() * 360;
     hist[sliceAtPointer(rot, slices).points] += 1;
@@ -308,7 +322,7 @@ export function simulatePhysicsCoasts(
 ): Record<PointTier, number> {
   const n = Math.max(0, Math.min(20_000, Math.trunc(count) || 0));
   const slices = buildWheelSlices(weights, sliceCount);
-  const hist: Record<PointTier, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  const hist = emptyTierRecord();
   const speed = Math.max(160, spinSpeed);
   const decel = Math.max(180, stopDecel);
   for (let i = 0; i < n; i++) {

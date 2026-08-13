@@ -1372,7 +1372,7 @@ async function issueSpinPlayToken(db, { memberId, context, contextKey, gameId })
 }
 
 /**
- * Credit 1–5 game bonus points. Auth via Firebase idToken (claim) or playToken (join).
+ * Credit 0–5 game bonus points (0 = no bonus). Auth via idToken (claim) or playToken (join).
  */
 async function creditSpinGamePoints(db, auth, {
   idToken,
@@ -1383,8 +1383,10 @@ async function creditSpinGamePoints(db, auth, {
   contextId,
 }) {
   const game = gameId === "spin" ? "spin" : "";
-  const pts = Math.trunc(Number(points) || 0);
-  if (!game || pts < 1 || pts > 5) return { ok: false, error: "bad_points" };
+  const pts = Math.trunc(Number(points));
+  if (!game || !Number.isFinite(pts) || pts < 0 || pts > 5) {
+    return { ok: false, error: "bad_points" };
+  }
   const spin = await loadSpinGameSettings(db);
   if (!spin.spinEnabled) return { ok: false, error: "game_off" };
 
@@ -1478,20 +1480,23 @@ async function creditSpinGamePoints(db, auth, {
       const gameBonus =
         typeof m.lifetimeGameBonusPoints === "number" ? m.lifetimeGameBonusPoints : 0;
       const balanceAfter = balance + pts;
-      tx.update(memberRef, {
-        pointsBalance: balanceAfter,
-        lifetimePointsEarned: lifetime + pts,
-        lifetimeGameBonusPoints: gameBonus + pts,
+      const memberPatch = {
         updatedAt: now,
         updatedBy: "spin_game",
-      });
+      };
+      if (pts > 0) {
+        memberPatch.pointsBalance = balanceAfter;
+        memberPatch.lifetimePointsEarned = lifetime + pts;
+        memberPatch.lifetimeGameBonusPoints = gameBonus + pts;
+      }
+      tx.update(memberRef, memberPatch);
       tx.set(ledgerRef, {
         memberId,
         delta: pts,
         balanceAfter,
         reason: "earn_spin_game",
         saleId: saleId || "",
-        note,
+        note: pts === 0 ? `${note} · ได้ 0` : note,
         channel: "spin_game",
         gameId: game,
         idempotencyKey,
@@ -1505,7 +1510,7 @@ async function creditSpinGamePoints(db, auth, {
       return {
         points: pts,
         balanceAfter,
-        lifetimeGameBonusPoints: gameBonus + pts,
+        lifetimeGameBonusPoints: gameBonus + (pts > 0 ? pts : 0),
       };
     });
 

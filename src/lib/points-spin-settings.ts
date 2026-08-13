@@ -39,7 +39,7 @@ export type PointsGamesEnabled = Record<PointsGameId, boolean>;
 export type PointsSpinSettings = {
   /** จำนวนชิ้นบนวงล้อ (8–24) — น้อย = ช่องใหญ่ กะได้ */
   sliceCount: number;
-  /** สัดส่วนมุมรวมของแต้ม 1–5 */
+  /** สัดส่วนมุมรวมของแต้ม 0–5 (0 = ไม่ได้แต้มเพิ่ม) */
   weights: SpinWeight[];
   /** ความเร็วหมุนก่อนกดหยุด (deg/s) */
   spinSpeed: number;
@@ -186,7 +186,7 @@ export async function savePointsSpinSettings(
 }
 
 export function weightMap(settings: PointsSpinSettings): Record<PointTier, number> {
-  const out: Record<PointTier, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  const out: Record<PointTier, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
   for (const t of POINT_TIERS) out[t] = 0;
   for (const w of settings.weights) out[w.points] = w.weight;
   return out;

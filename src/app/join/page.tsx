@@ -97,7 +97,7 @@ function JoinForm() {
         <h1>สมัครสมาชิก</h1>
         <p className="muted">
           {showAttract
-            ? "ด้านหลังมีวงล้อหมุนอยู่ · สมัครแล้วหมุนลุ้นได้ 1–5 แต้ม"
+            ? "ด้านหลังมีวงล้อหมุนอยู่ · สมัครแล้วหมุนลุ้นได้ 0–5 แต้ม"
             : "สะสมแต้มเมื่อซื้อที่ร้าน · สาขาเดียว"}
         </p>
         {!token ? (
@@ -128,7 +128,11 @@ function JoinForm() {
                       setDone((prev) =>
                         prev ? { ...prev, points: r.balanceAfter as number } : prev,
                       );
-                      setCreditNote(`บันทึกแล้ว · รวม ${r.balanceAfter} แต้ม`);
+                      setCreditNote(
+                        result.points === 0
+                          ? `รอบนี้ไม่ได้แต้มเพิ่ม · คงเหลือ ${r.balanceAfter}`
+                          : `บันทึกแล้ว +${result.points} · รวม ${r.balanceAfter} แต้ม`,
+                      );
                       return;
                     }
                     if (r.skipped === "already_played") {
