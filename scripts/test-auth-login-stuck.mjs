@@ -20,6 +20,9 @@ assert.match(auth, /setBusyReason\("bridge"\)/);
 assert.match(auth, /setBusyReason\("staff"\)/);
 assert.match(auth, /ตรวจสิทธิ์หมดเวลา/);
 assert.match(auth, /อ่านตั๋วล็อกอินหมดเวลา/);
+assert.match(auth, /getDocFromServer/);
+assert.match(auth, /LOGIN_TICKET_SESSION_KEY|telltea_login_ticket/);
+assert.match(auth, /bridgeExchangeInFlight|exchangeBridgeTicketIfPresent/);
 
 const login = read("src/app/login/page.tsx");
 assert.match(login, /busyReason/);

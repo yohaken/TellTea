@@ -1297,20 +1297,19 @@ service cloud.firestore {
     }
 
     match /loginTickets/{ticketId} {
+      // ตั๋วสั้นอายุ · id ยาวแบบสุ่ม — อ่านได้เสมอเพื่อไม่ให้ client ค้าง permission-denied/timeout
+      // ตอนตั๋วหมดอายุ (client ตรวจ exp เอง)
       allow create: if hasEmail()
         && signedIn()
         && request.resource.data.keys().hasOnly(['idToken', 'createdAt', 'exp'])
         && request.resource.data.idToken is string
         && request.resource.data.idToken.size() > 20
-        && request.resource.data.idToken.size() < 5000
+        && request.resource.data.idToken.size() < 12000
         && request.resource.data.createdAt is number
         && request.resource.data.exp is number
         && request.resource.data.exp > request.time.toMillis()
-        && request.resource.data.exp < request.time.toMillis() + 300000;
-      // resource == null → ให้ client แยก “ไม่มีตั๋ว” จาก permission-denied
-      // (ตั๋วหมดอายุ/ใช้แล้วเคยทำให้หน้า login ค้างข้อความสิทธิ์พนักงานผิดๆ)
-      allow get: if resource == null
-        || resource.data.exp > request.time.toMillis();
+        && request.resource.data.exp < request.time.toMillis() + 600000;
+      allow get: if true;
       allow delete: if true;
       allow list, update: if false;
     }

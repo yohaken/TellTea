@@ -18,7 +18,7 @@ import {
   type ConfirmationResult,
   type User,
 } from "firebase/auth";
-import { deleteDoc, doc, getDoc } from "firebase/firestore";
+import { deleteDoc, doc, getDocFromServer } from "firebase/firestore";
 import { clearAppCaches, loadCachedStaff, saveCachedStaff } from "./cache";
 import { getDb, getFirebaseAuth, isFirebaseConfigured } from "./firebase";
 import { confirmPhoneOtp, resetPhoneRecaptcha, sendPhoneOtp } from "./phone-auth";
@@ -54,12 +54,14 @@ type AuthStatus = "loading" | "signedOut" | "denied" | "ready" | "unconfigured";
 /** Why status is loading — boot must not look like a stuck Google login. */
 export type AuthBusyReason = "boot" | "bridge" | "staff" | null;
 
-/** Firestore ticket read / Google credential hop — fail instead of infinite spinner. */
-export const AUTH_BRIDGE_TIMEOUT_MS = 15_000;
+/** One server read of login ticket — short; we retry a few times. */
+export const AUTH_BRIDGE_TIMEOUT_MS = 8_000;
 /** Staff doc resolve after Auth — fail instead of AuthGate forever. */
 export const AUTH_STAFF_RESOLVE_TIMEOUT_MS = 12_000;
 /** Escape hatch if loading never clears (AuthGate / login). */
-export const AUTH_LOADING_ESCAPE_MS = 14_000;
+export const AUTH_LOADING_ESCAPE_MS = 18_000;
+
+const LOGIN_TICKET_SESSION_KEY = "telltea_login_ticket";
 
 type AuthContextValue = {
   status: AuthStatus;
@@ -170,14 +172,7 @@ export function startGoogleAuthBridge(returnUrl: string) {
  * @returns true when a ticket was present (success or throw).
  */
 export async function completeGoogleAuthBridgeFromUrl(): Promise<boolean> {
-  const ticket = takeTicketFromUrl();
-  if (!ticket) return false;
-  const idToken = await idTokenFromTicket(ticket);
-  await signInWithCredential(
-    getFirebaseAuth(),
-    GoogleAuthProvider.credential(idToken),
-  );
-  return true;
+  return exchangeBridgeTicketIfPresent();
 }
 
 function emailFromUser(user: User) {
@@ -220,49 +215,115 @@ async function resolveStaff(user: User): Promise<StaffMember | null> {
   return member;
 }
 
+function clearSavedLoginTicket() {
+  try {
+    sessionStorage.removeItem(LOGIN_TICKET_SESSION_KEY);
+  } catch {
+    /* private mode */
+  }
+}
+
+/**
+ * เก็บ ticket ใน sessionStorage ก่อนลบจาก URL —
+ * กัน remount/effect ซ้ำแล้วทำตั๋วหายกลางคัน
+ */
 function takeTicketFromUrl(): string | null {
   if (typeof window === "undefined") return null;
   const url = new URL(window.location.href);
-  const ticket = url.searchParams.get("ticket");
-  if (!ticket) return null;
-  url.searchParams.delete("ticket");
-  window.history.replaceState(null, "", url.pathname + url.search + url.hash);
-  return ticket;
+  const fromQuery = (url.searchParams.get("ticket") || "").trim();
+  if (fromQuery) {
+    try {
+      sessionStorage.setItem(LOGIN_TICKET_SESSION_KEY, fromQuery);
+    } catch {
+      /* private mode */
+    }
+    url.searchParams.delete("ticket");
+    window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+    return fromQuery;
+  }
+  try {
+    return (sessionStorage.getItem(LOGIN_TICKET_SESSION_KEY) || "").trim() || null;
+  } catch {
+    return null;
+  }
 }
 
 async function idTokenFromTicket(ticket: string): Promise<string> {
   const ref = doc(getDb(), "loginTickets", ticket);
-  let snap;
-  try {
-    snap = await withTimeout(
-      getDoc(ref),
-      AUTH_BRIDGE_TIMEOUT_MS,
-      "อ่านตั๋วล็อกอินหมดเวลา — กดเข้าสู่ระบบอีกครั้ง",
-    );
-  } catch (err) {
-    const code = (err as { code?: string })?.code || "";
-    // ตั๋วหมดอายุ/ถูกลบ — rules เก่าเคยตอบ permission-denied จนข้อความหลอกว่าสิทธิ์พนักงาน
-    if (code === "permission-denied") {
-      throw new Error("ลิงก์ล็อกอินหมดอายุหรือใช้แล้ว — กดเข้าสู่ระบบอีกครั้ง");
+  let lastErr: unknown = null;
+  // อ่านจากเซิร์ฟเวอร์ตรงๆ — เลี่ยง IndexedDB cache ที่เคยทำให้ getDoc ค้างจน timeout
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const snap = await withTimeout(
+        getDocFromServer(ref),
+        AUTH_BRIDGE_TIMEOUT_MS,
+        "อ่านตั๋วล็อกอินหมดเวลา — กดเข้าสู่ระบบอีกครั้ง",
+      );
+      if (!snap.exists()) {
+        clearSavedLoginTicket();
+        throw new Error("ลิงก์ล็อกอินหมดอายุหรือใช้แล้ว — กดเข้าสู่ระบบอีกครั้ง");
+      }
+      const data = snap.data() as { idToken?: string; exp?: number };
+      void deleteDoc(ref).catch(() => undefined);
+      clearSavedLoginTicket();
+      if (!data.idToken) {
+        throw new Error("ลิงก์ล็อกอินไม่ถูกต้อง — กดเข้าสู่ระบบอีกครั้ง");
+      }
+      if (data.exp && data.exp < Date.now()) {
+        throw new Error("ลิงก์ล็อกอินหมดอายุ — กดเข้าสู่ระบบอีกครั้ง");
+      }
+      return data.idToken;
+    } catch (err) {
+      lastErr = err;
+      const code = (err as { code?: string })?.code || "";
+      const message = (err as Error)?.message || "";
+      if (code === "permission-denied" || /insufficient permissions/i.test(message)) {
+        clearSavedLoginTicket();
+        throw new Error("อ่านตั๋วล็อกอินไม่ได้ — กดเข้าสู่ระบบอีกครั้ง");
+      }
+      // หมดอายุ/ใช้แล้ว — ไม่ retry
+      if (/หมดอายุ|ใช้แล้ว|ไม่ถูกต้อง/.test(message) && !/อ่านตั๋วล็อกอินหมดเวลา/.test(message)) {
+        clearSavedLoginTicket();
+        throw err;
+      }
+      if (attempt < 3) {
+        await new Promise((r) => setTimeout(r, 400 * attempt));
+        continue;
+      }
     }
-    throw err;
   }
-  if (!snap.exists()) {
-    throw new Error("ลิงก์ล็อกอินหมดอายุ — กดเข้าสู่ระบบอีกครั้ง");
-  }
-  const data = snap.data() as { idToken?: string; exp?: number };
-  void deleteDoc(ref).catch(() => undefined);
-  if (!data.idToken) {
-    throw new Error("ลิงก์ล็อกอินไม่ถูกต้อง");
-  }
-  if (data.exp && data.exp < Date.now()) {
-    throw new Error("ลิงก์ล็อกอินหมดอายุ — กดเข้าสู่ระบบอีกครั้ง");
-  }
-  return data.idToken;
+  clearSavedLoginTicket();
+  if (lastErr instanceof Error) throw lastErr;
+  throw new Error("อ่านตั๋วล็อกอินไม่สำเร็จ — กดเข้าสู่ระบบอีกครั้ง");
 }
 
 function shouldUseAuthBridge() {
   return shouldUseGoogleAuthBridge();
+}
+
+/** แชร์ข้าม remount — กัน effect cleanup ทิ้งตั๋วกลางคันแล้วล็อกอินไม่สำเร็จ */
+let bridgeExchangeInFlight: Promise<boolean> | null = null;
+
+async function exchangeBridgeTicketIfPresent(): Promise<boolean> {
+  const ticket = takeTicketFromUrl();
+  if (!ticket) return false;
+  if (!bridgeExchangeInFlight) {
+    bridgeExchangeInFlight = (async () => {
+      const idToken = await idTokenFromTicket(ticket);
+      await withTimeout(
+        signInWithCredential(
+          getFirebaseAuth(),
+          GoogleAuthProvider.credential(idToken),
+        ),
+        AUTH_BRIDGE_TIMEOUT_MS,
+        "เข้า Google หมดเวลา — กดเข้าสู่ระบบอีกครั้ง",
+      );
+      return true;
+    })().finally(() => {
+      bridgeExchangeInFlight = null;
+    });
+  }
+  return bridgeExchangeInFlight;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -353,20 +414,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let bridgePending = false;
 
     void (async () => {
-      const ticket = takeTicketFromUrl();
-      if (!ticket) return;
+      const hasTicket =
+        Boolean(new URL(window.location.href).searchParams.get("ticket")) ||
+        Boolean(
+          (() => {
+            try {
+              return sessionStorage.getItem(LOGIN_TICKET_SESSION_KEY);
+            } catch {
+              return null;
+            }
+          })(),
+        );
+      if (!hasTicket && !bridgeExchangeInFlight) return;
       bridgePending = true;
       setBusyReason("bridge");
       setStatus("loading");
       setError(null);
       try {
-        const idToken = await idTokenFromTicket(ticket);
-        if (cancelled) return;
-        await withTimeout(
-          signInWithCredential(auth, GoogleAuthProvider.credential(idToken)),
-          AUTH_BRIDGE_TIMEOUT_MS,
-          "เข้า Google หมดเวลา — กดเข้าสู่ระบบอีกครั้ง",
-        );
+        await exchangeBridgeTicketIfPresent();
       } catch (err) {
         if (!cancelled) setError(mapAuthError(err));
       } finally {
