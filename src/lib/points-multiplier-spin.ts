@@ -123,17 +123,31 @@ export function expectedMultiplier(
   return expectedPoints(weights);
 }
 
+/** จำนวนช่องบนวง — น้อยพอให้กะจังหวะได้ (เจ้าของปรับได้) */
+export const WHEEL_SLICE_COUNT_MIN = 8;
+export const WHEEL_SLICE_COUNT_MAX = 24;
+export const DEFAULT_WHEEL_SLICE_COUNT = 12;
+
+export function clampWheelSliceCount(n: unknown): number {
+  const v = Math.trunc(Number(n) || DEFAULT_WHEEL_SLICE_COUNT);
+  return Math.max(
+    WHEEL_SLICE_COUNT_MIN,
+    Math.min(WHEEL_SLICE_COUNT_MAX, v),
+  );
+}
+
 /**
  * จำนวนชิ้นย่อยต่อแต้ม — รวมประมาณ targetSlices
  * แต้มที่มีน้ำหนักมาก = ชิ้นย่อยหลายชิ้น (จะกระจายรอบวง)
+ * ค่าเริ่ม 12 ช่อง (~30°) ให้ผู้เล่นกะจังหวะได้
  */
 export function allocateSliceCounts(
   weights: readonly (SpinWeight | LegacySpinWeight)[] = DEFAULT_SPIN_WEIGHTS,
-  targetSlices = 40,
+  targetSlices = DEFAULT_WHEEL_SLICE_COUNT,
 ): Record<PointTier, number> {
   const norm = normalizeWeights(weights);
   const sum = norm.reduce((s, w) => s + w.weight, 0) || 1;
-  const target = Math.max(16, Math.min(60, Math.trunc(targetSlices) || 40));
+  const target = clampWheelSliceCount(targetSlices);
   const counts: Record<PointTier, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
   let assigned = 0;
   for (const w of norm) {
@@ -190,12 +204,15 @@ export function distributePointLabels(
 
 /**
  * สร้างชิ้นวงล้อ — แบ่งสัดส่วนเป็นชิ้นย่อยกระจายรอบวง
+ * targetSlices น้อย = ช่องใหญ่ กะจังหวะหยุดได้
  */
 export function buildWheelSlices(
   weights: readonly (SpinWeight | LegacySpinWeight)[] = DEFAULT_SPIN_WEIGHTS,
-  targetSlices = 40,
+  targetSlices = DEFAULT_WHEEL_SLICE_COUNT,
 ): WheelSlice[] {
-  const labels = distributePointLabels(allocateSliceCounts(weights, targetSlices));
+  const labels = distributePointLabels(
+    allocateSliceCounts(weights, clampWheelSliceCount(targetSlices)),
+  );
   const n = labels.length || 1;
   const span = 360 / n;
   return labels.map((points, i) => {
@@ -268,9 +285,10 @@ export function simulateSpins(
   count: number,
   weights: readonly (SpinWeight | LegacySpinWeight)[] = DEFAULT_SPIN_WEIGHTS,
   rng: () => number = Math.random,
+  sliceCount = DEFAULT_WHEEL_SLICE_COUNT,
 ): Record<PointTier, number> {
   const n = Math.max(0, Math.min(100_000, Math.trunc(count) || 0));
-  const slices = buildWheelSlices(weights);
+  const slices = buildWheelSlices(weights, sliceCount);
   const hist: Record<PointTier, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
   for (let i = 0; i < n; i++) {
     const rot = rng() * 360;
@@ -284,22 +302,25 @@ export function simulatePhysicsCoasts(
   count: number,
   weights: readonly (SpinWeight | LegacySpinWeight)[] = DEFAULT_SPIN_WEIGHTS,
   rng: () => number = Math.random,
+  sliceCount = DEFAULT_WHEEL_SLICE_COUNT,
+  spinSpeed = WHEEL_SPIN_SPEED,
+  stopDecel = WHEEL_STOP_DECEL,
 ): Record<PointTier, number> {
   const n = Math.max(0, Math.min(20_000, Math.trunc(count) || 0));
-  const slices = buildWheelSlices(weights);
+  const slices = buildWheelSlices(weights, sliceCount);
   const hist: Record<PointTier, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-  const friction = 2.4; // 1/s
+  const speed = Math.max(160, spinSpeed);
+  const decel = Math.max(180, stopDecel);
   for (let i = 0; i < n; i++) {
     let rot = rng() * 360;
-    let v = 380 + rng() * 220; // deg/s
-    // กดหยุดหลัง 0–0.8s ขณะหมุนเร็ว
+    let v = speed * (0.85 + rng() * 0.3);
     const coastAfter = rng() * 0.8;
     rot += v * coastAfter;
-    // coast ด้วย friction แบบ exponential
     let t = 0;
-    while (v > 10 && t < 8) {
+    while (v > WHEEL_STOP_EPS && t < 8) {
       const dt = 1 / 60;
-      v *= Math.exp(-friction * dt);
+      const a = Math.max(decel, Math.abs(v) * 0.85);
+      v = Math.max(0, v - a * dt);
       rot += v * dt;
       t += dt;
     }
@@ -315,9 +336,9 @@ export function formatPercent(p: number): string {
   return `${Math.round(pct * 10) / 10}%`;
 }
 
-/** ค่าหน่วงมุมเมื่อกดหยุด (deg/s² ขั้นต่ำ) */
-export const WHEEL_STOP_DECEL = 520;
-/** ความเร็วหมุนขณะ "กำลังหมุน" ก่อนกดหยุด (deg/s) */
-export const WHEEL_SPIN_SPEED = 460;
+/** ค่าหน่วงมุมเมื่อกดหยุด (deg/s²) — ค่าเริ่มช้าลงให้กะได้ */
+export const WHEEL_STOP_DECEL = 380;
+/** ความเร็วหมุนขณะ "กำลังหมุน" ก่อนกดหยุด (deg/s) — ไม่เร็วเกินจนมองไม่ออก */
+export const WHEEL_SPIN_SPEED = 320;
 /** หยุดสนิทเมื่อช้ากว่านี้ (deg/s) */
 export const WHEEL_STOP_EPS = 12;

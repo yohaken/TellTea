@@ -3,11 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   DEFAULT_SPIN_WEIGHTS,
+  DEFAULT_WHEEL_SLICE_COUNT,
   WHEEL_SPIN_SPEED,
   WHEEL_STOP_DECEL,
   WHEEL_STOP_EPS,
   awardSpinPoints,
   buildWheelSlices,
+  clampWheelSliceCount,
   sliceAtPointer,
   type SpinResult,
   type SpinWeight,
@@ -28,6 +30,12 @@ type Props = {
   /** แต้มฐานก่อนเล่น — แสดงบริบทอย่างเดียว ไม่นำไปคูณ */
   basePoints?: number;
   weights?: readonly (SpinWeight | LegacySpinWeight)[];
+  /** จำนวนช่องบนวง (8–24) — น้อย = ช่องใหญ่ กะจังหวะได้ */
+  sliceCount?: number;
+  /** ความเร็วหมุนก่อนกดหยุด (deg/s) */
+  spinSpeed?: number;
+  /** ความหน่วงตอนกดหยุด (deg/s²) */
+  stopDecel?: number;
   onComplete?: (result: SpinResult) => void;
   className?: string;
   hint?: string;
@@ -57,17 +65,27 @@ function slicePath(cx: number, cy: number, r: number, start: number, end: number
 
 /**
  * วงล้อหมุนได้แต้ม 1–5
- * กดหยุด = ปล่อยให้หน่วงตามฟิสิกส์ แล้วอ่านชิ้นใต้เข็ม (ไม่สุ่มผลล่วงหน้า)
+ * กดหยุด = หน่วงตามฟิสิกส์ แล้วอ่านชิ้นใต้เข็ม — ช่องใหญ่พอให้กะจังหวะได้
  */
 export function PointsMultiplierSpin({
   mode,
   basePoints = 0,
   weights = DEFAULT_SPIN_WEIGHTS,
+  sliceCount = DEFAULT_WHEEL_SLICE_COUNT,
+  spinSpeed = WHEEL_SPIN_SPEED,
+  stopDecel = WHEEL_STOP_DECEL,
   onComplete,
   className = "",
   hint,
 }: Props) {
-  const slices = useMemo(() => buildWheelSlices(weights, 40), [weights]);
+  const slicesN = clampWheelSliceCount(sliceCount);
+  const speed = Math.max(160, Math.min(640, spinSpeed));
+  const decelBase = Math.max(180, Math.min(900, stopDecel));
+
+  const slices = useMemo(
+    () => buildWheelSlices(weights, slicesN),
+    [weights, slicesN],
+  );
   const legendTiers = useMemo(() => {
     const seen = new Set<number>();
     const out: WheelSlice[] = [];
@@ -89,6 +107,10 @@ export function PointsMultiplierSpin({
   baseRef.current = basePoints;
   const slicesRef = useRef(slices);
   slicesRef.current = slices;
+  const speedRef = useRef(speed);
+  speedRef.current = speed;
+  const decelRef = useRef(decelBase);
+  decelRef.current = decelBase;
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [result, setResult] = useState<SpinResult | null>(null);
@@ -115,14 +137,13 @@ export function PointsMultiplierSpin({
       const ph = phaseRef.current;
 
       if (ph === "idle" && mode === "teaser") {
-        v = 48;
+        // ทีเซอร์ช้า — มองเห็นช่องชัด
+        v = Math.min(42, speedRef.current * 0.14);
       } else if (ph === "spinning") {
-        // รักษาความเร็วหมุนจนกว่าจะกดหยุด
-        const target = WHEEL_SPIN_SPEED;
+        const target = speedRef.current;
         v += (target - v) * Math.min(1, dt * 6);
       } else if (ph === "coasting") {
-        // หน่วงมุมคงที่ (ฟิสิกส์ง่าย) — ผลอยู่ที่มุมสุดท้ายใต้เข็ม
-        const decel = Math.max(WHEEL_STOP_DECEL, Math.abs(v) * 0.85);
+        const decel = Math.max(decelRef.current, Math.abs(v) * 0.7);
         if (v > 0) {
           v = Math.max(0, v - decel * dt);
         } else if (v < 0) {
@@ -130,7 +151,6 @@ export function PointsMultiplierSpin({
         }
         if (Math.abs(v) < WHEEL_STOP_EPS) {
           v = 0;
-          r += v * dt;
           rotationRef.current = r;
           velocityRef.current = 0;
           setRotation(r);
@@ -151,7 +171,7 @@ export function PointsMultiplierSpin({
     };
     rafRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafRef.current);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- loop binds mode only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
 
   function startSpin() {
@@ -160,13 +180,12 @@ export function PointsMultiplierSpin({
     setResult(null);
     phaseRef.current = "spinning";
     setPhase("spinning");
-    velocityRef.current = WHEEL_SPIN_SPEED * 0.85;
+    velocityRef.current = speedRef.current * 0.85;
   }
 
   function stopSpin() {
     if (mode === "teaser") return;
     if (phaseRef.current !== "spinning") return;
-    // ปล่อยให้หน่วง — ไม่กำหนดผลล่วงหน้า
     phaseRef.current = "coasting";
     setPhase("coasting");
   }
@@ -193,20 +212,21 @@ export function PointsMultiplierSpin({
   const cx = 100;
   const cy = 100;
   const radius = 92;
-  const labelMinSpan = 360 / slices.length;
+  const degEach = Math.round((360 / slices.length) * 10) / 10;
 
   return (
     <div
       className={`pts-spin pts-spin--wheel ${className}`.trim()}
       data-mode={mode}
       data-phase={phase}
+      data-slices={slices.length}
     >
       <div className="pts-spin-head">
         <p className="pts-spin-title">หมุนวงล้อลุ้นแต้ม</p>
         <p className="pts-spin-sub">
           {mode === "teaser"
-            ? "ลุ้นได้ 1–5 แต้ม · กดหยุดแล้วหมุนหน่วงตามแรง"
-            : "กดเริ่มหมุน แล้วกดหยุด — วงล้อหน่วงเอง แต้มตามชิ้นที่ชี้"}
+            ? `ลุ้นได้ 1–5 แต้ม · ${slices.length} ช่อง (~${degEach}°) กะจังหวะได้`
+            : `กดหยุดตอนช่องที่อยากได้ · ${slices.length} ช่อง (~${degEach}°) · วงหน่วงเอง`}
         </p>
         <p className="pts-spin-points-only">{POINTS_ONLY_NOTE}</p>
       </div>
@@ -225,28 +245,25 @@ export function PointsMultiplierSpin({
           >
             {slices.map((slice) => {
               const tone = prizeForPoints(slice.points).tone;
-              const span = slice.endDeg - slice.startDeg;
               const [tx, ty] = polar(cx, cy, radius * 0.64, slice.midDeg);
               return (
                 <g key={slice.id}>
                   <path
                     d={slicePath(cx, cy, radius, slice.startDeg, slice.endDeg)}
                     fill={TONE_FILL[tone] || "#0077B6"}
-                    stroke="rgba(255,255,255,0.4)"
-                    strokeWidth="0.8"
+                    stroke="rgba(255,255,255,0.45)"
+                    strokeWidth="1.1"
                   />
-                  {span >= Math.min(14, labelMinSpan * 0.85) ? (
-                    <text
-                      x={tx}
-                      y={ty}
-                      textAnchor="middle"
-                      dominantBaseline="middle"
-                      className="pts-wheel-label"
-                      transform={`rotate(${slice.midDeg}, ${tx}, ${ty})`}
-                    >
-                      {slice.points}
-                    </text>
-                  ) : null}
+                  <text
+                    x={tx}
+                    y={ty}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    className="pts-wheel-label"
+                    transform={`rotate(${slice.midDeg}, ${tx}, ${ty})`}
+                  >
+                    {slice.points}
+                  </text>
                 </g>
               );
             })}
@@ -297,7 +314,7 @@ export function PointsMultiplierSpin({
             </button>
           ) : null}
           {phase === "coasting" ? (
-            <p className="pts-spin-waiting muted">กำลังหน่วง…</p>
+            <p className="pts-spin-waiting muted">กำลังหน่วง… กะช่องใต้เข็ม</p>
           ) : null}
           {phase === "done" && mode === "demo" ? (
             <button
@@ -326,7 +343,9 @@ export function PointsMultiplierSpin({
 
       {hint ? <p className="pts-spin-hint muted">{hint}</p> : null}
       {mode === "teaser" && !hint ? (
-        <p className="pts-spin-hint muted">ชิ้นกระจายรอบวง · 5 แต้มหายากสุด</p>
+        <p className="pts-spin-hint muted">
+          ช่องใหญ่พอให้กะ · กดหยุดใช้จังหวะตัวเอง
+        </p>
       ) : null}
     </div>
   );

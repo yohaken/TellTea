@@ -1165,6 +1165,8 @@ service cloud.firestore {
       // vatSalesSettings / vatMailOAuth — บัญชี VAT / token เมล — owner-only (พนักงานห้ามอ่าน)
       allow read: if docId == 'businessProfile'
         || docId == 'brandLogo'
+        // pointsSpinSettings = สัดส่วน/จำนวนช่องวงล้อ — ไม่มีความลับ อ่านได้เพื่อเล่นเกม
+        || docId == 'pointsSpinSettings'
         || (docId == 'aiSettings' && isOwner())
         || (docId == 'foodstoryAuth' && isOwner())
         || (docId == 'posStoreClaimSecret' && isOwner())
@@ -1203,6 +1205,7 @@ service cloud.firestore {
         || (hasPerm('ownerBooks') && docId == 'capitalBooks')
         || (isOwner() && docId == 'otSettings')
         || ((isOwner() || isOwnerEmail()) && docId == 'memberSettings')
+        || ((isOwner() || isOwnerEmail()) && docId == 'pointsSpinSettings')
         || (isPosDeviceAuth() && docId == 'pos' && posMetaBillWrite());
     }
 
