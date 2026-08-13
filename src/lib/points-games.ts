@@ -1,11 +1,14 @@
 /**
  * เกมลุ้นแต้ม — เหลือเกมเดียว: หมุนวงล้อ
  *
- * สำคัญ: ปิดฝั่งลูกค้าจนกว่าเจ้าของตรวจหลังร้านผ่านแล้ว
- * เปิดจริง = เปลี่ยนค่านี้เป็น true หลังยืนยันที่ /members/spin-demo/
+ * เปิด/ปิดจริงอยู่ที่ meta/pointsSpinSettings.gamesEnabled (หลังร้าน /members/spin-demo)
+ * ค่านี้เป็น kill-switch ฉุกเฉินฝั่ง build เท่านั้น — ปกติปล่อย false แล้วใช้ธงใน Firestore
  *
  * ได้แต้มคงที่ 1–5 · ไม่ใช่ของแถม · ไม่ใช่ตัวคูณแต้มฐาน
  */
+export const POINTS_GAMES_KILL_SWITCH = false;
+
+/** @deprecated ใช้ isPointsGameEnabled(settings) จาก points-spin-settings แทน */
 export const POINTS_GAMES_CUSTOMER_LIVE = false;
 
 export type PointsGameId = "spin";

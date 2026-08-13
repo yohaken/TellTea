@@ -43,6 +43,8 @@ const REQUIRED_MATCHES = [
   "employeePay",
   "members",
   "memberLedger",
+  "memberSpinPlays",
+  "pointCoupons",
   "payrollItems",
   "bonusLivePool",
   "bonusMonthCloses",

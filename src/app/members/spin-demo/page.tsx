@@ -50,6 +50,7 @@ function SpinDemoView() {
   const [sliceCount, setSliceCount] = useState(DEFAULT_SLICE_COUNT);
   const [spinSpeed, setSpinSpeed] = useState(DEFAULT_POINTS_SPIN_SETTINGS.spinSpeed);
   const [stopDecel, setStopDecel] = useState(DEFAULT_POINTS_SPIN_SETTINGS.stopDecel);
+  const [spinEnabled, setSpinEnabled] = useState(false);
   const [w1, setW1] = useState(50);
   const [w2, setW2] = useState(28);
   const [w3, setW3] = useState(14);
@@ -72,6 +73,7 @@ function SpinDemoView() {
     setSliceCount(s.sliceCount);
     setSpinSpeed(s.spinSpeed);
     setStopDecel(s.stopDecel);
+    setSpinEnabled(s.gamesEnabled?.spin === true);
     const map: Record<PointTier, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
     for (const w of s.weights) map[w.points] = w.weight;
     setW1(map[1] || 0);
@@ -99,10 +101,11 @@ function SpinDemoView() {
         weights,
         spinSpeed,
         stopDecel,
+        gamesEnabled: { spin: spinEnabled },
         updatedAt: loadedAt,
         updatedBy: "",
       }),
-    [sliceCount, weights, spinSpeed, stopDecel, loadedAt],
+    [sliceCount, weights, spinSpeed, stopDecel, spinEnabled, loadedAt],
   );
 
   const probs = useMemo(() => probabilityMap(draft.weights), [draft.weights]);
@@ -133,12 +136,17 @@ function SpinDemoView() {
           weights: draft.weights,
           spinSpeed: draft.spinSpeed,
           stopDecel: draft.stopDecel,
+          gamesEnabled: { spin: spinEnabled },
         },
         actor,
       );
       applySettingsToForm(saved);
       setLoadedAt(saved.updatedAt);
-      setSaveMsg("บันทึกค่าตั้งวงล้อแล้ว · ใช้กับเกมจริงเมื่อเปิดลูกค้า");
+      setSaveMsg(
+        saved.gamesEnabled.spin
+          ? "บันทึกแล้ว · เกมเปิดบน /claim · /join ทันที"
+          : "บันทึกแล้ว · เกมยังปิดฝั่งลูกค้า (เปิดสวิตช์ด้านบนแล้วบันทึกอีกครั้ง)",
+      );
       setSimCount(null);
     } catch (e) {
       setSaveMsg(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
@@ -173,13 +181,27 @@ function SpinDemoView() {
       </header>
 
       <section className="staff-hub-panel members-slim-panel">
-        <p className="pts-spin-demo-banner">
-          ทดลองหลังร้านเท่านั้น · ยังไม่เปิดในลิงก์ลูกค้า (/claim · /join)
+        <p className={`pts-spin-demo-banner${spinEnabled ? " is-live" : ""}`}>
+          {spinEnabled
+            ? "เกมเปิดฝั่งลูกค้าแล้ว · ค่าที่บันทึกมีผลบน /claim · /join ทันที"
+            : "เกมยังปิดฝั่งลูกค้า · ทดลองหลังร้านได้ตามปกติ"}
         </p>
         <p className="members-slim-hint muted">
           ผู้เล่นต้อง<strong>กะจังหวะกดหยุดเอง</strong> · ช่องต้องใหญ่พอเห็น ·
           จำนวนช่อง/สัดส่วน/ความเร็วตั้งได้ด้านล่างแล้วกดบันทึก
         </p>
+
+        <label className="pts-spin-demo-live-toggle">
+          <input
+            type="checkbox"
+            checked={spinEnabled}
+            onChange={(e) => setSpinEnabled(e.target.checked)}
+          />
+          <span>
+            <strong>เปิดเกม «หมุนวงล้อ»</strong> บนลิงก์สมาชิก (/claim · /join)
+            <span className="muted"> — ปิด/เปิดรายเกม · กดบันทึกด้านล่างเพื่อมีผลทันที</span>
+          </span>
+        </label>
 
         <p className="pts-spin-demo-weights-title">ค่าตั้งเกม (บันทึกใช้จริง)</p>
 

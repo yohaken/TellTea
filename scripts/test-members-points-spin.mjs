@@ -1,5 +1,5 @@
 /**
- * Guard: skill-aimable wheel + owner-configurable slice count.
+ * Guard: skill-aimable wheel + owner live toggle + server credit wiring.
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -25,17 +25,25 @@ const settings = read("src/lib/points-spin-settings.ts");
 assert.match(settings, /pointsSpinSettings/);
 assert.match(settings, /loadPointsSpinSettings/);
 assert.match(settings, /savePointsSpinSettings/);
+assert.match(settings, /subscribePointsSpinSettings/);
+assert.match(settings, /gamesEnabled/);
+assert.match(settings, /isPointsGameEnabled/);
 assert.match(settings, /sliceCount/);
 
 const rules = read("firestore.rules");
 assert.match(rules, /pointsSpinSettings/);
+assert.match(rules, /memberSpinPlays/);
 
 const games = read("src/lib/points-games.ts");
-assert.match(games, /POINTS_GAMES_CUSTOMER_LIVE\s*=\s*false/);
+assert.match(games, /POINTS_GAMES_KILL_SWITCH\s*=\s*false/);
 assert.doesNotMatch(games, /"feed"|"pour"/);
 
-assert.match(read("src/components/PointsGamesAttractBg.tsx"), /loadPointsSpinSettings|settings/);
-assert.match(read("src/components/PointsGameOnce.tsx"), /sliceCount|loadPointsSpinSettings/);
+const credit = read("src/lib/points-spin-credit.ts");
+assert.match(credit, /publicSpinGameCredit/);
+assert.match(credit, /creditSpinGamePoints/);
+
+assert.match(read("src/components/PointsGamesAttractBg.tsx"), /subscribePointsSpinSettings|liveSettings/);
+assert.match(read("src/components/PointsGameOnce.tsx"), /sliceCount|subscribePointsSpinSettings|liveSettings/);
 
 const spinUi = read("src/components/PointsMultiplierSpin.tsx");
 assert.doesNotMatch(spinUi, /\buseEffectEvent\s*\(/);
@@ -50,16 +58,44 @@ assert.match(demo, /บันทึกค่าตั้งวงล้อ/);
 assert.match(demo, /จำนวนช่อง/);
 assert.match(demo, /SLICE_COUNT_MIN|sliceCount/);
 assert.match(demo, /savePointsSpinSettings/);
+assert.match(demo, /gamesEnabled|spinEnabled/);
+assert.match(demo, /เปิดเกม/);
 assert.match(demo, /กะจังหวะ/);
+
+const join = read("src/app/join/page.tsx");
+assert.match(join, /isPointsGameEnabled|subscribePointsSpinSettings/);
+assert.match(join, /creditSpinGamePoints/);
+assert.match(join, /spinPlayToken/);
+
+const claim = read("src/app/claim/page.tsx");
+assert.match(claim, /isPointsGameEnabled|subscribePointsSpinSettings/);
+assert.match(claim, /creditSpinGamePoints/);
+
+const membersPage = read("src/app/members/page.tsx");
+assert.match(membersPage, /lifetimeGameBonusPoints/);
+assert.match(membersPage, /แต้มเกม/);
+
+const membersLib = read("src/lib/members.ts");
+assert.match(membersLib, /lifetimeGameBonusPoints/);
+assert.match(membersLib, /earn_spin_game/);
+
+const cf = read("functions/pos-members.js");
+assert.match(cf, /creditSpinGamePoints/);
+assert.match(cf, /issueSpinPlayToken/);
+assert.match(cf, /lifetimeGameBonusPoints/);
+assert.match(cf, /earn_spin_game/);
+
+assert.match(read("functions/npos-sell.js"), /publicSpinGameCredit/);
 
 assert.match(read("src/app/members/page.tsx"), /จำลองหมุนวงล้อ \(เทส\)/);
 
 const docs = read("docs/members-points-spin.md");
 assert.match(docs, /จำนวนช่อง|sliceCount|กะจังหวะ/);
 assert.match(docs, /pointsSpinSettings|บันทึก/);
+assert.match(docs, /gamesEnabled|publicSpinGameCredit/);
 
 const version = read("src/lib/version.ts");
-assert.ok(Number(version.match(/APP_BUILD\s*=\s*(\d+)/)?.[1] || 0) >= 796);
+assert.ok(Number(version.match(/APP_BUILD\s*=\s*(\d+)/)?.[1] || 0) >= 800);
 
 // Runtime: default 12 slices stay aimable (~30°)
 function allocate(weights, target = 12) {

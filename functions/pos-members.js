@@ -430,6 +430,7 @@ async function quickCreateMember(db, { phone, displayName, actorId, source, goog
     status: "active",
     pointsBalance: 0,
     lifetimePointsEarned: 0,
+    lifetimeGameBonusPoints: 0,
     birthday: "",
     note: "",
     googleUid: asString(googleUid, 128),
@@ -491,12 +492,27 @@ async function publicSignup(db, { token, phone, displayName }) {
   if (!expected || expected !== asString(token, 128)) {
     return { ok: false, error: "bad_token" };
   }
-  return quickCreateMember(db, {
+  const created = await quickCreateMember(db, {
     phone,
     displayName,
     actorId: "qr_self",
     source: "qr_self",
   });
+  if (!created || created.ok === false) return created;
+  const memberId = created.member && created.member.id
+    ? created.member.id
+    : phoneDigitsFromInput(phone);
+  const play = await issueSpinPlayToken(db, {
+    memberId,
+    context: "join",
+    contextKey: memberId,
+    gameId: "spin",
+  });
+  return {
+    ...created,
+    spinGameEnabled: play ? true : false,
+    spinPlayToken: play ? play.token : "",
+  };
 }
 
 
@@ -644,6 +660,8 @@ async function getMyMember(db, auth, { idToken }) {
       pointsBalance: typeof m.pointsBalance === "number" ? m.pointsBalance : 0,
       lifetimePointsEarned:
         typeof m.lifetimePointsEarned === "number" ? m.lifetimePointsEarned : 0,
+      lifetimeGameBonusPoints:
+        typeof m.lifetimeGameBonusPoints === "number" ? m.lifetimeGameBonusPoints : 0,
       email: asString(m.email, 120),
     },
   };
@@ -1293,6 +1311,220 @@ async function tryIssueReceiptClaimForSale(db, { saleId, total, actorId }) {
   }
 }
 
+
+const crypto = require("crypto");
+
+function loadSpinGameSettings(db) {
+  return db
+    .collection("meta")
+    .doc("pointsSpinSettings")
+    .get()
+    .then((snap) => {
+      const d = snap.exists ? snap.data() || {} : {};
+      const games = d.gamesEnabled && typeof d.gamesEnabled === "object" ? d.gamesEnabled : {};
+      return {
+        spinEnabled: games.spin === true,
+      };
+    })
+    .catch(() => ({ spinEnabled: false }));
+}
+
+function randomSpinPlayToken() {
+  return crypto.randomBytes(24).toString("hex");
+}
+
+/**
+ * One-time play ticket for join (no Firebase Auth on /join).
+ * Idempotent per contextKey — reuse unused token; skip if already used.
+ */
+async function issueSpinPlayToken(db, { memberId, context, contextKey, gameId }) {
+  const mid = normalizeMemberId(memberId);
+  const ctx = asString(context, 24);
+  const key = asString(contextKey, 80);
+  const game = gameId === "spin" ? "spin" : "";
+  if (!mid || !ctx || !key || !game) return null;
+  const spin = await loadSpinGameSettings(db);
+  if (!spin.spinEnabled) return null;
+  const contextFull = `${ctx}:${key}:${game}`;
+  const existing = await db
+    .collection("memberSpinPlays")
+    .where("contextKey", "==", contextFull)
+    .limit(1)
+    .get();
+  if (!existing.empty) {
+    const docSnap = existing.docs[0];
+    const data = docSnap.data() || {};
+    if (data.usedAt) return null;
+    return { token: docSnap.id };
+  }
+  const token = randomSpinPlayToken();
+  const now = Date.now();
+  await db.collection("memberSpinPlays").doc(token).set({
+    memberId: mid,
+    gameId: game,
+    context: ctx,
+    contextKey: contextFull,
+    createdAt: now,
+    exp: now + 2 * 60 * 60 * 1000,
+    usedAt: null,
+  });
+  return { token };
+}
+
+/**
+ * Credit 1–5 game bonus points. Auth via Firebase idToken (claim) or playToken (join).
+ */
+async function creditSpinGamePoints(db, auth, {
+  idToken,
+  playToken,
+  gameId,
+  points,
+  context,
+  contextId,
+}) {
+  const game = gameId === "spin" ? "spin" : "";
+  const pts = Math.trunc(Number(points) || 0);
+  if (!game || pts < 1 || pts > 5) return { ok: false, error: "bad_points" };
+  const spin = await loadSpinGameSettings(db);
+  if (!spin.spinEnabled) return { ok: false, error: "game_off" };
+
+  const ctx = asString(context, 24);
+  const ctxId = asString(contextId, 80);
+  let memberId = "";
+  let playRef = null;
+  let saleId = "";
+  let note = "แต้มจากเกมหมุนวงล้อ";
+
+  if (playToken) {
+    const tok = asString(playToken, 80);
+    if (!tok || tok.length < 16) return { ok: false, error: "bad_play" };
+    playRef = db.collection("memberSpinPlays").doc(tok);
+    const playSnap = await playRef.get();
+    if (!playSnap.exists) return { ok: false, error: "bad_play" };
+    const play = playSnap.data() || {};
+    if (play.gameId !== game) return { ok: false, error: "bad_play" };
+    if (play.usedAt) return { ok: true, skipped: "already_played", points: 0 };
+    const exp = typeof play.exp === "number" ? play.exp : 0;
+    if (exp && exp < Date.now()) return { ok: false, error: "bad_play" };
+    memberId = normalizeMemberId(play.memberId);
+    if (!memberId) return { ok: false, error: "not_member" };
+    note = "แต้มจากเกมหมุนวงล้อ (สมัครสมาชิก)";
+  } else {
+    const rawToken = asString(idToken, 4096);
+    if (!rawToken) return { ok: false, error: "auth_required" };
+    let decoded;
+    try {
+      decoded = await auth.verifyIdToken(rawToken);
+    } catch {
+      return { ok: false, error: "auth_required" };
+    }
+    const uid = asString(decoded.uid, 128);
+    const phoneDigits = phoneDigitsFromInput(decoded.phone_number);
+    let docSnap = null;
+    if (phoneDigits) {
+      const s = await db.collection("members").doc(phoneDigits).get();
+      if (s.exists) docSnap = s;
+    }
+    if (!docSnap && uid) docSnap = await findMemberByGoogleUid(db, uid);
+    if (!docSnap || !docSnap.exists) return { ok: false, error: "not_member" };
+    memberId = docSnap.id;
+    if (ctx === "claim") {
+      if (!ctxId) return { ok: false, error: "bad_claim" };
+      saleId = ctxId;
+      const saleSnap = await db.collection("posSales").doc(saleId).get();
+      if (!saleSnap.exists) return { ok: false, error: "bad_claim" };
+      const sale = saleSnap.data() || {};
+      if (sale.claimStatus !== "claimed") return { ok: false, error: "bad_claim" };
+      if (asString(sale.claimedByMemberId, 32) !== memberId) {
+        return { ok: false, error: "bad_claim" };
+      }
+      note = "แต้มจากเกมหมุนวงล้อ (เคลมสลิป)";
+    } else {
+      return { ok: false, error: "bad_claim" };
+    }
+  }
+
+  const memberRef = db.collection("members").doc(memberId);
+  const ledgerRef = db.collection("memberLedger").doc();
+  const now = Date.now();
+  const idempotencyKey = playRef
+    ? `play:${playRef.id}`
+    : `claim:${saleId}:${game}`;
+
+  try {
+    const result = await db.runTransaction(async (tx) => {
+      const mSnap = await tx.get(memberRef);
+      if (!mSnap.exists) return { error: "not_member" };
+      const m = mSnap.data() || {};
+      if (isMemberInactive(m)) return { error: memberStatusLabel(m) };
+
+      if (playRef) {
+        const pSnap = await tx.get(playRef);
+        if (!pSnap.exists) return { error: "bad_play" };
+        const play = pSnap.data() || {};
+        if (play.usedAt) return { skipped: "already_played" };
+        if (normalizeMemberId(play.memberId) !== memberId) return { error: "bad_play" };
+      } else if (saleId) {
+        // Idempotent: one spin credit per claimed sale (flag on sale doc)
+        const saleRef = db.collection("posSales").doc(saleId);
+        const sSnap = await tx.get(saleRef);
+        const sale = sSnap.exists ? sSnap.data() || {} : {};
+        if (sale.spinGameCredited === true) return { skipped: "already_played" };
+        tx.set(saleRef, { spinGameCredited: true, spinGamePoints: pts }, { merge: true });
+      }
+
+      const balance = typeof m.pointsBalance === "number" ? m.pointsBalance : 0;
+      const lifetime = typeof m.lifetimePointsEarned === "number" ? m.lifetimePointsEarned : 0;
+      const gameBonus =
+        typeof m.lifetimeGameBonusPoints === "number" ? m.lifetimeGameBonusPoints : 0;
+      const balanceAfter = balance + pts;
+      tx.update(memberRef, {
+        pointsBalance: balanceAfter,
+        lifetimePointsEarned: lifetime + pts,
+        lifetimeGameBonusPoints: gameBonus + pts,
+        updatedAt: now,
+        updatedBy: "spin_game",
+      });
+      tx.set(ledgerRef, {
+        memberId,
+        delta: pts,
+        balanceAfter,
+        reason: "earn_spin_game",
+        saleId: saleId || "",
+        note,
+        channel: "spin_game",
+        gameId: game,
+        idempotencyKey,
+        actorType: "customer",
+        actorId: memberId,
+        createdAt: now,
+      });
+      if (playRef) {
+        tx.set(playRef, { usedAt: now, creditedPoints: pts }, { merge: true });
+      }
+      return {
+        points: pts,
+        balanceAfter,
+        lifetimeGameBonusPoints: gameBonus + pts,
+      };
+    });
+
+    if (result.error) return { ok: false, error: result.error };
+    if (result.skipped) {
+      return { ok: true, skipped: result.skipped, points: 0 };
+    }
+    return {
+      ok: true,
+      points: result.points,
+      balanceAfter: result.balanceAfter,
+      lifetimeGameBonusPoints: result.lifetimeGameBonusPoints,
+    };
+  } catch (err) {
+    console.error("creditSpinGamePoints", err && err.message);
+    return { ok: false, error: "credit_failed" };
+  }
+}
+
 module.exports = {
   phoneDigitsFromInput,
   normalizeMemberId,
@@ -1321,6 +1553,8 @@ module.exports = {
   lookupReceiptClaimAuth,
   getMyMember,
   claimReceiptPoints,
+  creditSpinGamePoints,
+  issueSpinPlayToken,
   formatPhoneDisplay,
   cardNoFromDigits,
 };

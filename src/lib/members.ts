@@ -30,6 +30,7 @@ export type MemberLedgerReason =
   | "earn_sale"
   | "earn_receipt_claim"
   | "earn_comp_coupon"
+  | "earn_spin_game"
   | "redeem"
   | "redeem_void_reverse"
   | "adjust"
@@ -47,6 +48,8 @@ export type ShopMember = {
   status: MemberStatus;
   pointsBalance: number;
   lifetimePointsEarned: number;
+  /** รวมแต้มพิเศษจากเกมลุ้น (เช่น หมุนวงล้อ) — ใช้จับตาผิดปกติ */
+  lifetimeGameBonusPoints: number;
   /** YYYY-MM-DD หรือว่าง */
   birthday: string;
   note: string;
@@ -130,6 +133,7 @@ export const MEMBER_LEDGER_REASON_LABELS: Record<MemberLedgerReason, string> = {
   earn_sale: "สะสมจากบิล",
   earn_receipt_claim: "เคลมจากสลิป",
   earn_comp_coupon: "QR ให้แต้ม",
+  earn_spin_game: "เกมลุ้นแต้ม",
   redeem: "แลกแต้ม",
   redeem_void_reverse: "คืนแต้มที่แลก (ยกเลิกบิล)",
   adjust: "ปรับมือ",
@@ -187,6 +191,8 @@ function mapMember(snap: QueryDocumentSnapshot | { id: string; data: () => Recor
     pointsBalance: typeof d.pointsBalance === "number" ? d.pointsBalance : 0,
     lifetimePointsEarned:
       typeof d.lifetimePointsEarned === "number" ? d.lifetimePointsEarned : 0,
+    lifetimeGameBonusPoints:
+      typeof d.lifetimeGameBonusPoints === "number" ? d.lifetimeGameBonusPoints : 0,
     birthday: typeof d.birthday === "string" ? d.birthday : "",
     note: typeof d.note === "string" ? d.note : "",
     source:
@@ -212,7 +218,9 @@ function mapLedger(snap: QueryDocumentSnapshot): MemberLedgerEntry {
       reason === "earn_sale" ||
       reason === "earn_receipt_claim" ||
       reason === "earn_comp_coupon" ||
+      reason === "earn_spin_game" ||
       reason === "redeem" ||
+      reason === "redeem_void_reverse" ||
       reason === "signup_bonus" ||
       reason === "void_reverse"
         ? reason
@@ -518,6 +526,7 @@ export async function createMember(
     status: "active",
     pointsBalance: 0,
     lifetimePointsEarned: 0,
+    lifetimeGameBonusPoints: 0,
     birthday: (input.birthday || "").trim(),
     note: (input.note || "").trim(),
     source: input.source || "staff_boh",
@@ -535,6 +544,7 @@ export async function createMember(
     status: member.status,
     pointsBalance: 0,
     lifetimePointsEarned: 0,
+    lifetimeGameBonusPoints: 0,
     birthday: member.birthday,
     note: member.note,
     source: member.source,

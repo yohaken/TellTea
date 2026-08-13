@@ -18,7 +18,16 @@ import {
   mapFirebaseAuthError,
   signInMemberWithGoogle,
 } from "@/lib/member-auth";
-import { POINTS_GAMES_CUSTOMER_LIVE } from "@/lib/points-games";
+import { POINTS_GAMES_KILL_SWITCH } from "@/lib/points-games";
+import {
+  isPointsGameEnabled,
+  subscribePointsSpinSettings,
+  type PointsSpinSettings,
+} from "@/lib/points-spin-settings";
+import {
+  creditSpinGamePoints,
+  spinCreditErrorLabel,
+} from "@/lib/points-spin-credit";
 import {
   claimBlockedTitle,
   claimErrorLabel,
@@ -73,6 +82,13 @@ function ClaimForm() {
     balance: number;
     isNew: boolean;
   } | null>(null);
+  const [spinSettings, setSpinSettings] = useState<PointsSpinSettings | null>(null);
+  const [creditNote, setCreditNote] = useState<string | null>(null);
+
+  useEffect(() => subscribePointsSpinSettings(setSpinSettings), []);
+
+  const spinLive =
+    !POINTS_GAMES_KILL_SWITCH && isPointsGameEnabled(spinSettings, "spin");
 
   useEffect(() => {
     let cancelled = false;
@@ -374,13 +390,13 @@ function ClaimForm() {
   const showBillMeta = preview?.ok || step === "used" || step === "no_points";
   const attractSteps: Step[] = ["load", "auth", "phone_otp", "otp", "link_phone", "confirm"];
   const showAttract =
-    POINTS_GAMES_CUSTOMER_LIVE && attractSteps.includes(step) && !showGamePick;
+    spinLive && attractSteps.includes(step) && !showGamePick;
   const teaserPoints =
     typeof pointsLabel === "number" && pointsLabel > 0 ? pointsLabel : 5;
 
   return (
     <main className={`join-page${showAttract ? " join-page--attract" : ""}`}>
-      {showAttract ? <PointsGamesAttractBg basePoints={teaserPoints} /> : null}
+      {showAttract ? <PointsGamesAttractBg liveSettings basePoints={teaserPoints} /> : null}
       <div className="join-card">
         <p className="join-brand">TellTea</p>
         <h1>สะสมแต้มจากบิลนี้</h1>
@@ -594,8 +610,36 @@ function ClaimForm() {
             <p>
               ได้แต้มแล้ว · รวม <strong>{done.balance}</strong>
             </p>
-            {POINTS_GAMES_CUSTOMER_LIVE && (showGamePick || done.points > 0) ? (
-              <PointsGameOnce basePoints={Math.max(1, done.points)} />
+            {spinLive && (showGamePick || done.points >= 0) ? (
+              <PointsGameOnce
+                liveSettings
+                basePoints={Math.max(1, done.points)}
+                creditNote={creditNote}
+                onFinished={({ result }) => {
+                  setCreditNote("กำลังบันทึกแต้ม…");
+                  void creditSpinGamePoints({
+                    context: "claim",
+                    contextId: saleId,
+                    points: result.points,
+                    gameId: "spin",
+                  }).then((r) => {
+                    if (r.ok && !r.skipped && typeof r.balanceAfter === "number") {
+                      setDone((prev) =>
+                        prev
+                          ? { ...prev, balance: r.balanceAfter as number }
+                          : prev,
+                      );
+                      setCreditNote(`บันทึกแล้ว · รวม ${r.balanceAfter} แต้ม`);
+                      return;
+                    }
+                    if (r.skipped === "already_played") {
+                      setCreditNote("หมุนรอบนี้ไปแล้ว");
+                      return;
+                    }
+                    setCreditNote(spinCreditErrorLabel(r.error));
+                  });
+                }}
+              />
             ) : null}
             <p className="muted" style={{ marginTop: "0.75rem" }}>
               <a href="/me/">ดูแต้มของฉัน</a>
@@ -622,7 +666,7 @@ function ClaimForm() {
               {done.displayName}
             </p>
             <ClaimPointsValueNote />
-            {POINTS_GAMES_CUSTOMER_LIVE ? (
+            {spinLive ? (
               <>
                 <p className="muted" style={{ marginTop: "0.5rem", fontSize: "0.88rem" }}>
                   หมุนวงล้อลุ้นได้ <strong>1–5 แต้ม</strong>

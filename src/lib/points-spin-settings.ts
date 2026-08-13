@@ -1,8 +1,14 @@
 /**
  * ค่าตั้งเกมหมุนวงล้อ — เจ้าของปรับได้ที่ /members/spin-demo/
- * เก็บที่ meta/pointsSpinSettings
+ * เก็บที่ meta/pointsSpinSettings · หน้าสมาชิกลูกค้า subscribe แล้วมีผลทันทีหลังบันทึก
  */
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  onSnapshot,
+  setDoc,
+  type Unsubscribe,
+} from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import {
   DEFAULT_SPIN_WEIGHTS,
@@ -17,6 +23,7 @@ import {
   type PointTier,
   type SpinWeight,
 } from "@/lib/points-multiplier-spin";
+import type { PointsGameId } from "@/lib/points-games";
 
 export const POINTS_SPIN_SETTINGS_DOC = "pointsSpinSettings";
 
@@ -25,6 +32,9 @@ export {
   WHEEL_SLICE_COUNT_MAX as SLICE_COUNT_MAX,
   DEFAULT_WHEEL_SLICE_COUNT as DEFAULT_SLICE_COUNT,
 };
+
+/** เปิด/ปิดรายเกมบนลิงก์ลูกค้า — ค่าเริ่มปิดจนกว่าเจ้าของกดเปิด */
+export type PointsGamesEnabled = Record<PointsGameId, boolean>;
 
 export type PointsSpinSettings = {
   /** จำนวนชิ้นบนวงล้อ (8–24) — น้อย = ช่องใหญ่ กะได้ */
@@ -35,8 +45,14 @@ export type PointsSpinSettings = {
   spinSpeed: number;
   /** ความหน่วงตอนกดหยุด (deg/s²) */
   stopDecel: number;
+  /** เปิดเกมบน /claim · /join รายเกม */
+  gamesEnabled: PointsGamesEnabled;
   updatedAt: number;
   updatedBy: string;
+};
+
+export const DEFAULT_GAMES_ENABLED: PointsGamesEnabled = {
+  spin: false,
 };
 
 export const DEFAULT_POINTS_SPIN_SETTINGS: PointsSpinSettings = {
@@ -44,6 +60,7 @@ export const DEFAULT_POINTS_SPIN_SETTINGS: PointsSpinSettings = {
   weights: DEFAULT_SPIN_WEIGHTS.map((w) => ({ ...w })),
   spinSpeed: WHEEL_SPIN_SPEED,
   stopDecel: WHEEL_STOP_DECEL,
+  gamesEnabled: { ...DEFAULT_GAMES_ENABLED },
   updatedAt: 0,
   updatedBy: "",
 };
@@ -60,11 +77,32 @@ export function clampStopDecel(n: unknown): number {
   return Math.max(180, Math.min(900, Math.round(v)));
 }
 
+export function normalizeGamesEnabled(
+  raw: unknown,
+): PointsGamesEnabled {
+  const src =
+    raw && typeof raw === "object" && !Array.isArray(raw)
+      ? (raw as Record<string, unknown>)
+      : {};
+  return {
+    spin: src.spin === true,
+  };
+}
+
+export function isPointsGameEnabled(
+  settings: PointsSpinSettings | null | undefined,
+  gameId: PointsGameId = "spin",
+): boolean {
+  if (!settings) return false;
+  return settings.gamesEnabled?.[gameId] === true;
+}
+
 export function normalizeSpinSettings(
   raw: Partial<PointsSpinSettings> | Record<string, unknown> | null | undefined,
 ): PointsSpinSettings {
   const data = (raw || {}) as Partial<PointsSpinSettings> & {
     weights?: unknown;
+    gamesEnabled?: unknown;
   };
   let weightsIn: SpinWeight[] = DEFAULT_SPIN_WEIGHTS.map((w) => ({ ...w }));
   if (Array.isArray(data.weights)) {
@@ -75,6 +113,7 @@ export function normalizeSpinSettings(
     weights: normalizeWeights(weightsIn),
     spinSpeed: clampSpinSpeed(data.spinSpeed ?? WHEEL_SPIN_SPEED),
     stopDecel: clampStopDecel(data.stopDecel ?? WHEEL_STOP_DECEL),
+    gamesEnabled: normalizeGamesEnabled(data.gamesEnabled),
     updatedAt: typeof data.updatedAt === "number" ? data.updatedAt : 0,
     updatedBy: typeof data.updatedBy === "string" ? data.updatedBy : "",
   };
@@ -94,6 +133,27 @@ export async function loadPointsSpinSettings(): Promise<PointsSpinSettings> {
   }
 }
 
+/** Realtime — หน้าสมาชิกใช้หลังเจ้าของกดบันทึกจะมีผลทันที */
+export function subscribePointsSpinSettings(
+  onData: (settings: PointsSpinSettings) => void,
+  onError?: (err: Error) => void,
+): Unsubscribe {
+  return onSnapshot(
+    settingsRef(),
+    (snap) => {
+      if (!snap.exists()) {
+        onData({ ...DEFAULT_POINTS_SPIN_SETTINGS });
+        return;
+      }
+      onData(normalizeSpinSettings(snap.data() as Record<string, unknown>));
+    },
+    (err) => {
+      onError?.(err);
+      onData({ ...DEFAULT_POINTS_SPIN_SETTINGS });
+    },
+  );
+}
+
 export async function savePointsSpinSettings(
   patch: Partial<PointsSpinSettings>,
   actorId: string,
@@ -103,6 +163,9 @@ export async function savePointsSpinSettings(
     ...current,
     ...patch,
     weights: patch.weights ?? current.weights,
+    gamesEnabled: patch.gamesEnabled
+      ? { ...current.gamesEnabled, ...patch.gamesEnabled }
+      : current.gamesEnabled,
     updatedAt: Date.now(),
     updatedBy: actorId || current.updatedBy || "",
   });
@@ -113,6 +176,7 @@ export async function savePointsSpinSettings(
       weights: next.weights.map((w) => ({ points: w.points, weight: w.weight })),
       spinSpeed: next.spinSpeed,
       stopDecel: next.stopDecel,
+      gamesEnabled: { spin: next.gamesEnabled.spin === true },
       updatedAt: next.updatedAt,
       updatedBy: next.updatedBy,
     },

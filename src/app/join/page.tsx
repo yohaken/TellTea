@@ -1,11 +1,20 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { PointsGamesAttractBg } from "@/components/PointsGamesAttractBg";
 import { PointsGameOnce } from "@/components/PointsGameOnce";
-import { POINTS_GAMES_CUSTOMER_LIVE } from "@/lib/points-games";
+import { POINTS_GAMES_KILL_SWITCH } from "@/lib/points-games";
+import {
+  isPointsGameEnabled,
+  subscribePointsSpinSettings,
+  type PointsSpinSettings,
+} from "@/lib/points-spin-settings";
+import {
+  creditSpinGamePoints,
+  spinCreditErrorLabel,
+} from "@/lib/points-spin-credit";
 
 const SIGNUP_URL =
   "https://asia-southeast1-mypeer-501909.cloudfunctions.net/publicMemberSignup";
@@ -17,9 +26,19 @@ function JoinForm() {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<{ displayName: string; cardNo: string; points: number } | null>(
-    null,
-  );
+  const [spinSettings, setSpinSettings] = useState<PointsSpinSettings | null>(null);
+  const [spinPlayToken, setSpinPlayToken] = useState("");
+  const [creditNote, setCreditNote] = useState<string | null>(null);
+  const [done, setDone] = useState<{
+    displayName: string;
+    cardNo: string;
+    points: number;
+  } | null>(null);
+
+  useEffect(() => subscribePointsSpinSettings(setSpinSettings), []);
+
+  const spinLive =
+    !POINTS_GAMES_KILL_SWITCH && isPointsGameEnabled(spinSettings, "spin");
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -39,6 +58,8 @@ function JoinForm() {
         ok?: boolean;
         found?: boolean;
         error?: string;
+        spinPlayToken?: string;
+        spinGameEnabled?: boolean;
         member?: { displayName?: string; cardNo?: string; pointsBalance?: number };
       };
       if (!data.ok || data.error) {
@@ -52,6 +73,7 @@ function JoinForm() {
         return;
       }
       const m = data.member;
+      setSpinPlayToken(typeof data.spinPlayToken === "string" ? data.spinPlayToken : "");
       setDone({
         displayName: m?.displayName || name || phone,
         cardNo: m?.cardNo || "—",
@@ -64,11 +86,12 @@ function JoinForm() {
     }
   }
 
-  const showAttract = POINTS_GAMES_CUSTOMER_LIVE && !done;
+  const showAttract = spinLive && !done;
+  const showGame = spinLive && !!done && !!spinPlayToken;
 
   return (
     <main className={`join-page${showAttract ? " join-page--attract" : ""}`}>
-      {showAttract ? <PointsGamesAttractBg basePoints={5} /> : null}
+      {showAttract ? <PointsGamesAttractBg liveSettings basePoints={5} /> : null}
       <div className="join-card">
         <p className="join-brand">TellTea</p>
         <h1>สมัครสมาชิก</h1>
@@ -88,8 +111,34 @@ function JoinForm() {
             <p>
               แต้มปัจจุบัน <strong>{done.points}</strong>
             </p>
-            {POINTS_GAMES_CUSTOMER_LIVE && done.points > 0 ? (
-              <PointsGameOnce basePoints={done.points} />
+            {showGame ? (
+              <PointsGameOnce
+                liveSettings
+                basePoints={Math.max(1, done.points)}
+                creditNote={creditNote}
+                onFinished={({ result }) => {
+                  setCreditNote("กำลังบันทึกแต้ม…");
+                  void creditSpinGamePoints({
+                    context: "join",
+                    playToken: spinPlayToken,
+                    points: result.points,
+                    gameId: "spin",
+                  }).then((r) => {
+                    if (r.ok && !r.skipped && typeof r.balanceAfter === "number") {
+                      setDone((prev) =>
+                        prev ? { ...prev, points: r.balanceAfter as number } : prev,
+                      );
+                      setCreditNote(`บันทึกแล้ว · รวม ${r.balanceAfter} แต้ม`);
+                      return;
+                    }
+                    if (r.skipped === "already_played") {
+                      setCreditNote("หมุนรอบนี้ไปแล้ว");
+                      return;
+                    }
+                    setCreditNote(spinCreditErrorLabel(r.error));
+                  });
+                }}
+              />
             ) : null}
           </div>
         ) : (

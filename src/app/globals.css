@@ -2569,6 +2569,38 @@ body.modal-open .main-panel {
   width: 18%;
 }
 
+.members-slim-table--list .members-col-game {
+  width: 4.25rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.members-slim-table--list .members-col-game.is-hot,
+.members-slim-game-bonus.is-hot {
+  color: var(--danger, #b42318);
+  font-weight: 600;
+}
+.pts-spin-demo-live-toggle {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  margin: 0.75rem 0 1rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent, #2f6b4f) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent, #2f6b4f) 28%, transparent);
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+.pts-spin-demo-live-toggle input {
+  margin-top: 0.2rem;
+  width: 1.1rem;
+  height: 1.1rem;
+  flex-shrink: 0;
+}
+.pts-spin-demo-banner.is-live {
+  background: color-mix(in srgb, #1f7a4c 14%, transparent);
+  border-color: color-mix(in srgb, #1f7a4c 35%, transparent);
+}
 .members-slim-table--list .members-col-pts {
   width: 14%;
 }

@@ -9,6 +9,7 @@ import type { PointsGameId } from "@/lib/points-games";
 import {
   DEFAULT_POINTS_SPIN_SETTINGS,
   loadPointsSpinSettings,
+  subscribePointsSpinSettings,
   type PointsSpinSettings,
 } from "@/lib/points-spin-settings";
 
@@ -17,7 +18,11 @@ type Props = {
   /** ทับค่าตั้งจาก Firestore (โหมดจำลอง) */
   settings?: PointsSpinSettings;
   allowReselect?: boolean;
+  /** เมื่อ true จะ subscribe ค่าตั้ง realtime (หน้าลูกค้า) */
+  liveSettings?: boolean;
   onFinished?: (payload: { game: PointsGameId; result: SpinResult }) => void;
+  /** ข้อความสถานะหลังเครดิตแต้ม */
+  creditNote?: string | null;
   className?: string;
 };
 
@@ -30,7 +35,9 @@ export function PointsGameOnce({
   basePoints = 0,
   settings: settingsProp,
   allowReselect = false,
+  liveSettings = false,
   onFinished,
+  creditNote = null,
   className = "",
 }: Props) {
   const [loaded, setLoaded] = useState<PointsSpinSettings | null>(
@@ -45,6 +52,9 @@ export function PointsGameOnce({
       setLoaded(settingsProp);
       return;
     }
+    if (liveSettings) {
+      return subscribePointsSpinSettings((s) => setLoaded(s));
+    }
     let cancelled = false;
     void loadPointsSpinSettings().then((s) => {
       if (!cancelled) setLoaded(s);
@@ -52,7 +62,7 @@ export function PointsGameOnce({
     return () => {
       cancelled = true;
     };
-  }, [settingsProp]);
+  }, [settingsProp, liveSettings]);
 
   const settings = loaded || DEFAULT_POINTS_SPIN_SETTINGS;
 
@@ -81,7 +91,7 @@ export function PointsGameOnce({
           </p>
           <p className="pts-spin-points-only">{POINTS_ONLY_NOTE}</p>
           <PointsMultiplierSpin
-            key={playKey}
+            key={`${playKey}-${settings.sliceCount}-${settings.spinSpeed}-${settings.stopDecel}`}
             mode="play"
             basePoints={basePoints}
             weights={settings.weights}
@@ -103,7 +113,8 @@ export function PointsGameOnce({
             ได้ <strong>{result.finalPoints}</strong> แต้ม
           </p>
           <p className="pts-spin-points-only">{POINTS_ONLY_NOTE}</p>
-          <p className="muted pts-once-lock-note">รอบนี้หมุนไปแล้ว</p>
+          {creditNote ? <p className="muted pts-once-lock-note">{creditNote}</p> : null}
+          {!creditNote ? <p className="muted pts-once-lock-note">รอบนี้หมุนไปแล้ว</p> : null}
           {allowReselect ? (
             <button
               type="button"

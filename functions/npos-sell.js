@@ -16,6 +16,7 @@ const {
   lookupReceiptClaimAuth,
   getMyMember,
   claimReceiptPoints,
+  creditSpinGamePoints,
   getCompCouponStatus,
   issueCompCoupon,
   previewCompCoupon,
@@ -973,6 +974,44 @@ exports.publicMemberMe = functions.region("asia-southeast1").https.onRequest(asy
   } catch (err) {
     console.error("publicMemberMe", err);
     res.status(500).json({ ok: false, error: "me_failed" });
+  }
+});
+
+/** Credit spin-game bonus points (1–5) — Auth (claim) or one-time playToken (join). */
+exports.publicSpinGameCredit = functions.region("asia-southeast1").https.onRequest(async (req, res) => {
+  cors(res);
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
+  }
+  if (req.method !== "POST") {
+    res.status(405).json({ ok: false, error: "POST only" });
+    return;
+  }
+  const body = parseBody(req);
+  if (!body) {
+    res.status(400).json({ ok: false, error: "bad_body" });
+    return;
+  }
+  try {
+    const result = await creditSpinGamePoints(getFirestore(), getAuth(), {
+      idToken: body.idToken,
+      playToken: body.playToken,
+      gameId: body.gameId,
+      points: body.points,
+      context: body.context,
+      contextId: body.contextId || body.saleId,
+    });
+    const deny =
+      result.ok === false &&
+      (result.error === "auth_required" ||
+        result.error === "game_off" ||
+        result.error === "bad_play" ||
+        result.error === "bad_claim");
+    res.status(deny ? 403 : 200).json(result);
+  } catch (err) {
+    console.error("publicSpinGameCredit", err);
+    res.status(500).json({ ok: false, error: "credit_failed" });
   }
 });
 

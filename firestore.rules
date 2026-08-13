@@ -943,6 +943,11 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    /** One-time spin-game play tickets — Cloud Functions (Admin) only. */
+    match /memberSpinPlays/{playId} {
+      allow read, write: if false;
+    }
+
     /**
      * เงินเดือน / บัญชีรับโอน / เบิกค้าง — แยกจากรายชื่อร้าน
      * อ่าน: เจ้าของ · payrollPay · ของตัวเอง · เขียน: เจ้าของ / payrollPay / staffManage (ตั้งค่า)

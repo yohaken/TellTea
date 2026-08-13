@@ -6,12 +6,15 @@ import { POINTS_GAMES } from "@/lib/points-games";
 import {
   DEFAULT_POINTS_SPIN_SETTINGS,
   loadPointsSpinSettings,
+  subscribePointsSpinSettings,
   type PointsSpinSettings,
 } from "@/lib/points-spin-settings";
 
 type Props = {
   basePoints?: number;
   settings?: PointsSpinSettings;
+  /** หน้าลูกค้า — ตามค่าที่เจ้าของบันทึกแบบ realtime */
+  liveSettings?: boolean;
   className?: string;
 };
 
@@ -21,6 +24,7 @@ type Props = {
 export function PointsGamesAttractBg({
   basePoints = 5,
   settings: settingsProp,
+  liveSettings = false,
   className = "",
 }: Props) {
   const [settings, setSettings] = useState<PointsSpinSettings>(
@@ -32,6 +36,9 @@ export function PointsGamesAttractBg({
       setSettings(settingsProp);
       return;
     }
+    if (liveSettings) {
+      return subscribePointsSpinSettings((s) => setSettings(s));
+    }
     let cancelled = false;
     void loadPointsSpinSettings().then((s) => {
       if (!cancelled) setSettings(s);
@@ -39,7 +46,7 @@ export function PointsGamesAttractBg({
     return () => {
       cancelled = true;
     };
-  }, [settingsProp]);
+  }, [settingsProp, liveSettings]);
 
   return (
     <div className={`pts-attract ${className}`.trim()} aria-hidden>
@@ -48,6 +55,7 @@ export function PointsGamesAttractBg({
         <div className="pts-attract-panel pts-attract-panel--spin">
           <p className="pts-attract-tag">{POINTS_GAMES[0]!.attractLine}</p>
           <PointsMultiplierSpin
+            key={`teaser-${settings.sliceCount}-${settings.spinSpeed}-${settings.stopDecel}`}
             mode="teaser"
             basePoints={basePoints}
             weights={settings.weights}

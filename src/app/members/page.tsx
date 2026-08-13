@@ -842,6 +842,12 @@ function MembersView() {
                           <th className="members-col-phone">เบอร์</th>
                           <th className="members-col-card">บัตร</th>
                           <th className="num members-col-pts">แต้ม</th>
+                          <th
+                            className="num members-col-game"
+                            title="แต้มพิเศษจากเกมลุ้น (หมุนวงล้อ) — จับตาถ้าสูงผิดปกติ"
+                          >
+                            แต้มเกม
+                          </th>
                           <th className="members-col-status">สถานะ</th>
                         </tr>
                       </thead>
@@ -862,6 +868,13 @@ function MembersView() {
                             <td className="members-col-phone muted">{phoneLabel(m)}</td>
                             <td className="members-col-card muted">{m.cardNo}</td>
                             <td className="num members-col-pts">{m.pointsBalance}</td>
+                            <td
+                              className={`num members-col-game${
+                                m.lifetimeGameBonusPoints >= 20 ? " is-hot" : ""
+                              }`}
+                            >
+                              {m.lifetimeGameBonusPoints || 0}
+                            </td>
                             <td className="members-col-status muted">
                               {m.status === "active" ? "ปกติ" : "ระงับ"}
                             </td>
@@ -895,6 +908,15 @@ function MembersView() {
                   <p className="members-slim-points">
                     <strong>{selected.pointsBalance}</strong> แต้ม
                     <span className="muted"> · รวม {selected.lifetimePointsEarned}</span>
+                    <span
+                      className={`members-slim-game-bonus${
+                        selected.lifetimeGameBonusPoints >= 20 ? " is-hot" : ""
+                      }`}
+                      title="แต้มพิเศษจากเกมลุ้น"
+                    >
+                      {" "}
+                      · เกม {selected.lifetimeGameBonusPoints || 0}
+                    </span>
                   </p>
 
                   <form className="members-slim-settings" onSubmit={onSaveProfile}>

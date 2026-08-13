@@ -1,17 +1,20 @@
 # เกมหมุนวงล้อลุ้นแต้ม Tell Tea
 
-อัปเดต: 2026-08-12
+อัปเดต: 2026-08-13
 
 ## สถานะเปิดใช้ (สำคัญ)
 
 | พื้นที่ | สถานะ |
 |---------|--------|
-| **หลังร้านจำลอง** `/members/spin-demo/` | ✅ เปิดให้เจ้าของทดลอง + ตั้งค่า |
-| **ลิงก์ลูกค้า** `/claim` · `/join` | ❌ **ปิด** — ธง `POINTS_GAMES_CUSTOMER_LIVE = false` |
+| **หลังร้านจำลอง** `/members/spin-demo/` | ✅ ทดลอง + ตั้งค่า + สวิตช์เปิดเกม |
+| **ลิงก์ลูกค้า** `/claim` · `/join` | ✅ ควบคุมด้วย `meta/pointsSpinSettings.gamesEnabled.spin` |
+
+เปิด/ปิดรายเกมที่ `/members/spin-demo/` → ติ๊ก **เปิดเกม «หมุนวงล้อ»** → **บันทึกค่าตั้งวงล้อ**  
+หน้าสมาชิก subscribe ค่าตั้งแบบ realtime — มีผลทันทีหลังบันทึก
 
 ---
 
-เกมเดียว: **หมุนวงล้อ** ลุ้นได้แต้มคงที่ **1–5 แต้ม**
+เกมเดียว: **หมุนวงล้อ** ลุ้นได้แต้มคงที่ **1–5 แต้ม** (เครดิตผ่าน Cloud Function)
 
 ### หลักการเล่น (สกิล)
 
@@ -27,6 +30,7 @@
 
 | ค่า | ความหมาย | ค่าเริ่ม |
 |-----|----------|----------|
+| `gamesEnabled.spin` | เปิดเกมบน /claim · /join | `false` |
 | `sliceCount` | จำนวนช่องบนวง | 12 |
 | `weights` | สัดส่วนมุมรวมแต้ม 1–5 | 50/28/14/6/2 |
 | `spinSpeed` | ความเร็วหมุน (deg/s) | 320 |
@@ -34,11 +38,18 @@
 
 ตั้งที่: https://telltea-bo.web.app/members/spin-demo/ → **บันทึกค่าตั้งวงล้อ**
 
+### เครดิตแต้ม + จับตาผิดปกติ
+
+- CF `publicSpinGameCredit` — เคลมใช้ Firebase Auth · สมัครใช้ `spinPlayToken` ครั้งเดียว
+- ledger reason: `earn_spin_game`
+- สมาชิกมีฟิลด์ `lifetimeGameBonusPoints` — ตาราง `/members` คอลัมน์ **แต้มเกม** (ไฮไลต์เมื่อ ≥ 20)
+
 ## อื่นๆ
 
 - ไม่ใช่ของแถม/สินค้า · **ไม่ใช่ตัวคูณ** แต้มฐาน
 - ชิ้นคะแนนเดียวกันถูกแบ่งย่อยกระจายรอบวง (ไม่รวมเป็นแผงยาว)
 - โลโก้กลางวง = `meta/brandLogo`
+- kill-switch ฝั่ง build: `POINTS_GAMES_KILL_SWITCH` (ปกติ `false`)
 
 ## เฟส
 
@@ -46,12 +57,14 @@
 |-----|--------|
 | **S3e** | ✅ เกมเดียว · ฟิสิกส์ · แต้มคงที่ · ชิ้นกระจาย |
 | **S3f** | ✅ จำนวนช่องตั้งได้ · ค่าตั้งบันทึกได้ · ช่องใหญ่พอให้กะ |
-| **S4** | ⬜ เซิร์ฟเวอร์ล็อกผล + เครดิตแต้ม |
-| **S5** | ⬜ เปิด `POINTS_GAMES_CUSTOMER_LIVE` |
+| **S4** | ✅ เซิร์ฟเวอร์เครดิตแต้ม + idempotent |
+| **S5** | ✅ สวิตช์เปิดเกมใน Firestore · มีผลทันที |
 
 ## ไฟล์หลัก
 
-- `src/lib/points-spin-settings.ts` — โหลด/บันทึกค่าตั้ง
+- `src/lib/points-spin-settings.ts` — โหลด/บันทึก/subscribe ค่าตั้ง
+- `src/lib/points-spin-credit.ts` — เรียก CF เครดิต
 - `src/lib/points-multiplier-spin.ts` — สร้างชิ้น / อ่านผลจากมุม
 - `src/components/PointsMultiplierSpin.tsx` — UI + หน่วง
-- `src/app/members/spin-demo/page.tsx` — หลังร้านจำลอง + ตั้งค่า
+- `src/app/members/spin-demo/page.tsx` — หลังร้านจำลอง + ตั้งค่า + สวิตช์
+- `functions/pos-members.js` — `creditSpinGamePoints` / `issueSpinPlayToken`
