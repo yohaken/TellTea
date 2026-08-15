@@ -25284,6 +25284,12 @@ a.ghost-btn {
 .cash-in-pending-more {
   margin: 0.3rem 0 0;
   font-size: 0.66rem;
+  width: 100%;
+  justify-content: center;
+  min-height: 2rem;
+  padding: 0.35rem 0.5rem;
+  color: var(--muted, #5a6b5e);
+  border-style: dashed;
 }
 
 .cash-in-panel-body {

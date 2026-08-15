@@ -73,6 +73,8 @@ import {
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
 const OPEN_KEY = "telltea_cash_in_panel_open_v1";
+/** Preview cap for pending remit cards — rest via "ดูทุกใบ". */
+const PENDING_BILL_PREVIEW = 20;
 
 function readOpenPref() {
   try {
@@ -260,6 +262,8 @@ export function CashInLedgerPanel({
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /** Expand pending list past PENDING_BILL_PREVIEW so overflow bills are tappable. */
+  const [showAllPending, setShowAllPending] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<DraftRound | null>(null);
   const [busy, setBusy] = useState(false);
@@ -783,6 +787,12 @@ export function CashInLedgerPanel({
     () => pendingDepositSessions.filter((s) => !workingSessionIds.has(s.id)),
     [pendingDepositSessions, workingSessionIds],
   );
+
+  useEffect(() => {
+    if (pendingDepositSessions.length <= PENDING_BILL_PREVIEW) {
+      setShowAllPending(false);
+    }
+  }, [pendingDepositSessions.length]);
   const untickedPendingSum = useMemo(
     () => sumSessionRemits(untickedPendingSessions),
     [untickedPendingSessions],
@@ -1177,7 +1187,10 @@ export function CashInLedgerPanel({
                 </div>
               </header>
               <ul className="cash-in-pending-list">
-                {pendingDepositSessions.slice(0, 20).map((s) => {
+                {(showAllPending
+                  ? pendingDepositSessions
+                  : pendingDepositSessions.slice(0, PENDING_BILL_PREVIEW)
+                ).map((s) => {
                   const remit = sessionRemitAmount(s) || 0;
                   const handoff = deriveRemitStatus(s);
                   const opener = (s.openedByName || "").trim();
@@ -1311,10 +1324,23 @@ export function CashInLedgerPanel({
                   );
                 })}
               </ul>
-              {pendingDepositSessions.length > 20 ? (
-                <p className="muted cash-in-pending-more">
-                  +{pendingDepositSessions.length - 20} · กดทุกใบ
-                </p>
+              {pendingDepositSessions.length > PENDING_BILL_PREVIEW ? (
+                <button
+                  type="button"
+                  className="ghost-btn cash-in-pending-more"
+                  disabled={busy}
+                  aria-expanded={showAllPending}
+                  title={
+                    showAllPending
+                      ? "ย่อรายการบิลรอนำเข้า"
+                      : `แสดงอีก ${pendingDepositSessions.length - PENDING_BILL_PREVIEW} ใบ`
+                  }
+                  onClick={() => setShowAllPending((v) => !v)}
+                >
+                  {showAllPending
+                    ? "ย่อรายการ"
+                    : `+${pendingDepositSessions.length - PENDING_BILL_PREVIEW} · ดูทุกใบ`}
+                </button>
               ) : null}
             </section>
           ) : editingRound ? null : (
