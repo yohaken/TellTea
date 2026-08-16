@@ -403,9 +403,12 @@ export function CashInLedgerPanel({
         workingDays.map((d) => ({
           date: d.date,
           cashAmount: Number(d.cashAmount) || 0,
+          sessionIds: [...(d.sessionIds || [])],
         })),
         {
           occupiedByDepositId: occupancy.occupiedByDepositId,
+          occupiedSessionByDepositId: occupancy.occupiedSessionByDepositId,
+          occupiedMonthDayKeys: occupancy.occupiedMonthDayKeys,
           occupiedMonthCounts: occupancy.occupiedMonthCounts,
           excludeDepositId: selected?.id,
           allowGaps: true,
