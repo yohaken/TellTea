@@ -692,15 +692,29 @@ export type CashDayCoverage = {
 
 /**
  * มัดรวมบิล nPos · วันอาจไม่ต่อเนื่องได้เมื่อ allowGaps (ค่าเริ่มต้น true)
- * ตรวจ: ว่าง · ยอดติดลบ · วันซ้ำในรอบ · ชนรอบอื่น · เกินวันในเดือน
+ * ตรวจ: ว่าง · ยอดติดลบ · วันซ้ำในรอบ · บิล/วันชนรอบอื่น · เกินวันในเดือน
+ *
+ * Overlap is session-first: same sales day may appear in two rounds when they
+ * link different nPos bills. Whole-day lock applies only to legacy day lines
+ * that have cash but no sessionIds.
  */
 export function analyzeCashDepositDays(
-  days: Pick<CashDepositDayLine, "date" | "cashAmount">[],
+  days: Pick<CashDepositDayLine, "date" | "cashAmount" | "sessionIds">[],
   opts?: {
-    /** dateKey → deposit id that already claims it (non-void) */
+    /**
+     * dateKey → deposit id for legacy whole-day claims
+     * (day lines with cash and empty sessionIds)
+     */
     occupiedByDepositId?: Map<number, string>;
+    /** sessionId → deposit id that already linked this nPos bill */
+    occupiedSessionByDepositId?: Map<string, string>;
     excludeDepositId?: string;
-    /** Other deposits' day keys by month for month-cap (excluding self) */
+    /**
+     * Other deposits' unique day keys by month (excluding self) —
+     * used for month-cap via set union with local days
+     */
+    occupiedMonthDayKeys?: Map<string, Set<number>>;
+    /** @deprecated prefer occupiedMonthDayKeys — count of unique other days */
     occupiedMonthCounts?: Map<string, number>;
     /**
      * false = บังคับวันต่อเนื่องแบบระบบเดิม
@@ -773,10 +787,32 @@ export function analyzeCashDepositDays(
     }
   }
 
-  const occupied = opts?.occupiedByDepositId;
-  if (occupied) {
+  const occupiedSessions = opts?.occupiedSessionByDepositId;
+  if (occupiedSessions) {
+    const seenSession = new Set<string>();
+    for (const day of days) {
+      const dayKey = cashDepositDayKey(day.date);
+      for (const raw of day.sessionIds || []) {
+        const sid = String(raw || "").trim();
+        if (!sid || seenSession.has(sid)) continue;
+        seenSession.add(sid);
+        const otherId = occupiedSessions.get(sid);
+        if (otherId && otherId !== opts.excludeDepositId) {
+          issues.push({
+            code: "overlap",
+            message: `บิลในวันที่ ${formatCashDayShort(dayKey)} ถูกใช้ในรอบอื่นแล้ว — ห้ามบิลซ้ำข้ามรอบ`,
+            dateMs: dayKey || undefined,
+          });
+        }
+      }
+    }
+  }
+
+  const occupiedDays = opts?.occupiedByDepositId;
+  if (occupiedDays) {
     for (const key of sortedDates) {
-      const otherId = occupied.get(key);
+      const otherId = occupiedDays.get(key);
+      // Legacy whole-day claim (cash without sessionIds) blocks any reuse.
       if (otherId && otherId !== opts.excludeDepositId) {
         issues.push({
           code: "overlap",
@@ -787,17 +823,33 @@ export function analyzeCashDepositDays(
     }
   }
 
-  // Per-month: days in this round + other rounds ≤ calendar days in that month
-  const monthLocal = new Map<string, number>();
+  // Per-month unique calendar days (local ∪ other) ≤ days in that month
+  const monthLocalKeys = new Map<string, Set<number>>();
   for (const key of sortedDates) {
     const mk = monthKeyFromMs(key);
-    monthLocal.set(mk, (monthLocal.get(mk) || 0) + 1);
+    if (!monthLocalKeys.has(mk)) monthLocalKeys.set(mk, new Set());
+    monthLocalKeys.get(mk)!.add(key);
   }
-  for (const [mk, localCount] of monthLocal) {
-    const others = opts?.occupiedMonthCounts?.get(mk) || 0;
-    // When occupiedMonthCounts already excludes self, just add local.
-    // When built from all deposits including self, pass excludeDepositId path via buildOccupiedMaps.
-    const total = localCount + others;
+  for (const [mk, localKeys] of monthLocalKeys) {
+    const otherKeys = opts?.occupiedMonthDayKeys?.get(mk);
+    const unique = new Set<number>(localKeys);
+    if (otherKeys) {
+      for (const k of otherKeys) unique.add(k);
+    } else {
+      // Fallback for callers that still pass counts only
+      const others = opts?.occupiedMonthCounts?.get(mk) || 0;
+      const totalFallback = localKeys.size + others;
+      const sampleMs = sortedDates.find((d) => monthKeyFromMs(d) === mk) || periodStart;
+      const cap = daysInCalendarMonth(sampleMs);
+      if (totalFallback > cap) {
+        issues.push({
+          code: "month_overflow",
+          message: `เดือน ${mk} มีบิล ${totalFallback} วัน เกินจำนวนวันในเดือน (${cap})`,
+        });
+      }
+      continue;
+    }
+    const total = unique.size;
     const sampleMs = sortedDates.find((d) => monthKeyFromMs(d) === mk) || periodStart;
     const cap = daysInCalendarMonth(sampleMs);
     if (total > cap) {
@@ -830,28 +882,55 @@ export function buildCashDepositOccupancy(
   entries: Pick<CashDeposit, "id" | "status" | "days">[],
   excludeDepositId?: string,
 ): {
+  /**
+   * Legacy whole-day claims only — day lines with cashAmount > 0 and no
+   * sessionIds. Session-linked days do not lock the calendar day.
+   */
   occupiedByDepositId: Map<number, string>;
+  /** nPos remit bill → deposit that already linked it */
+  occupiedSessionByDepositId: Map<string, string>;
+  /** Unique sales-day keys per month (for month-cap union) */
+  occupiedMonthDayKeys: Map<string, Set<number>>;
+  /** Unique day counts per month — derived from occupiedMonthDayKeys */
   occupiedMonthCounts: Map<string, number>;
 } {
   const occupiedByDepositId = new Map<number, string>();
-  const occupiedMonthCounts = new Map<string, number>();
+  const occupiedSessionByDepositId = new Map<string, string>();
+  const occupiedMonthDayKeys = new Map<string, Set<number>>();
   for (const entry of entries) {
     if (entry.status === "void") continue;
     if (excludeDepositId && entry.id === excludeDepositId) continue;
-    const seenMonthDay = new Set<string>();
     for (const day of entry.days || []) {
       const key = cashDepositDayKey(day.date);
       if (!key) continue;
-      if (!occupiedByDepositId.has(key)) occupiedByDepositId.set(key, entry.id);
-      const mk = monthKeyFromMs(key);
-      const stamp = `${mk}:${key}`;
-      if (!seenMonthDay.has(stamp)) {
-        seenMonthDay.add(stamp);
-        occupiedMonthCounts.set(mk, (occupiedMonthCounts.get(mk) || 0) + 1);
+      const sessionIds = (day.sessionIds || [])
+        .map((id) => String(id || "").trim())
+        .filter(Boolean);
+      for (const sid of sessionIds) {
+        if (!occupiedSessionByDepositId.has(sid)) {
+          occupiedSessionByDepositId.set(sid, entry.id);
+        }
       }
+      // Whole-day lock only when this line claimed cash without nPos bills
+      const cash = Number(day.cashAmount) || 0;
+      if (cash > 0 && !sessionIds.length && !occupiedByDepositId.has(key)) {
+        occupiedByDepositId.set(key, entry.id);
+      }
+      const mk = monthKeyFromMs(key);
+      if (!occupiedMonthDayKeys.has(mk)) occupiedMonthDayKeys.set(mk, new Set());
+      occupiedMonthDayKeys.get(mk)!.add(key);
     }
   }
-  return { occupiedByDepositId, occupiedMonthCounts };
+  const occupiedMonthCounts = new Map<string, number>();
+  for (const [mk, keys] of occupiedMonthDayKeys) {
+    occupiedMonthCounts.set(mk, keys.size);
+  }
+  return {
+    occupiedByDepositId,
+    occupiedSessionByDepositId,
+    occupiedMonthDayKeys,
+    occupiedMonthCounts,
+  };
 }
 
 function normalizeInputDays(
@@ -879,6 +958,8 @@ function buildPayload(
   const days = normalizeInputDays(input.days);
   const coverage = analyzeCashDepositDays(days, {
     occupiedByDepositId: occupancy?.occupiedByDepositId,
+    occupiedSessionByDepositId: occupancy?.occupiedSessionByDepositId,
+    occupiedMonthDayKeys: occupancy?.occupiedMonthDayKeys,
     occupiedMonthCounts: occupancy?.occupiedMonthCounts,
     excludeDepositId,
   });

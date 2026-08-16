@@ -18,6 +18,7 @@ assert.ok(buildMatch);
 assert.ok(Number(buildMatch[1]) >= 653, `APP_BUILD >= 653, got ${buildMatch[1]}`);
 assert.match(lib, /CASH_DEPOSIT_DAY_MAX = 31/);
 assert.match(lib, /export function analyzeCashDepositDays/);
+assert.match(lib, /occupiedSessionByDepositId/);
 assert.match(lib, /export function buildCashDepositRoundDays/);
 assert.match(lib, /drawerCloseAmount/);
 assert.match(lib, /allowGaps|ข้ามวัน|month_overflow/);
@@ -69,19 +70,64 @@ const occupied = buildCashDepositOccupancy([
   {
     id: "a",
     status: "matched",
-    days: [{ date: end, cashAmount: 1, id: "x", slipKind: "daily", shiftLabel: "", note: "", slipUrls: [] }],
+    days: [{ date: end, cashAmount: 1, id: "x", slipKind: "daily", shiftLabel: "", note: "", slipUrls: [], sessionIds: [] }],
   },
 ]);
 const overlap = analyzeCashDepositDays(
-  [{ date: end, cashAmount: 50 }],
-  { occupiedByDepositId: occupied.occupiedByDepositId, occupiedMonthCounts: occupied.occupiedMonthCounts },
+  [{ date: end, cashAmount: 50, sessionIds: [] }],
+  {
+    occupiedByDepositId: occupied.occupiedByDepositId,
+    occupiedSessionByDepositId: occupied.occupiedSessionByDepositId,
+    occupiedMonthDayKeys: occupied.occupiedMonthDayKeys,
+    occupiedMonthCounts: occupied.occupiedMonthCounts,
+  },
 );
 assert.ok(overlap.issues.some((i) => i.code === "overlap"));
+
+// Same calendar day, different nPos bills → allowed (session-level lock)
+const partial = buildCashDepositOccupancy([
+  {
+    id: "dep1",
+    status: "matched",
+    days: [{
+      date: end,
+      cashAmount: 100,
+      id: "d1",
+      slipKind: "daily",
+      shiftLabel: "",
+      note: "",
+      slipUrls: [],
+      sessionIds: ["sess-a"],
+    }],
+  },
+]);
+assert.equal(partial.occupiedByDepositId.has(end), false);
+assert.equal(partial.occupiedSessionByDepositId.get("sess-a"), "dep1");
+const sameDayOk = analyzeCashDepositDays(
+  [{ date: end, cashAmount: 80, sessionIds: ["sess-b"] }],
+  {
+    occupiedByDepositId: partial.occupiedByDepositId,
+    occupiedSessionByDepositId: partial.occupiedSessionByDepositId,
+    occupiedMonthDayKeys: partial.occupiedMonthDayKeys,
+    occupiedMonthCounts: partial.occupiedMonthCounts,
+  },
+);
+assert.equal(sameDayOk.issues.filter((i) => i.code === "overlap").length, 0);
+const sameBillBlocked = analyzeCashDepositDays(
+  [{ date: end, cashAmount: 100, sessionIds: ["sess-a"] }],
+  {
+    occupiedByDepositId: partial.occupiedByDepositId,
+    occupiedSessionByDepositId: partial.occupiedSessionByDepositId,
+    occupiedMonthDayKeys: partial.occupiedMonthDayKeys,
+    occupiedMonthCounts: partial.occupiedMonthCounts,
+  },
+);
+assert.ok(sameBillBlocked.issues.some((i) => i.code === "overlap"));
 
 // 32 days in one month → overflow
 const janStart = cashDepositDayKey(new Date(2024, 0, 1).getTime());
 const tooMany = [];
-for (let i = 0; i < 32; i++) tooMany.push({ date: addCalendarDays(janStart, i), cashAmount: 1 });
+for (let i = 0; i < 32; i++) tooMany.push({ date: addCalendarDays(janStart, i), cashAmount: 1, sessionIds: [] });
 const overflow = analyzeCashDepositDays(tooMany);
 assert.ok(overflow.issues.some((i) => i.code === "too_long" || i.code === "month_overflow"));
 
