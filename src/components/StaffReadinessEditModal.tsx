@@ -28,14 +28,6 @@ type Props = {
   levels: PermissionLevel[];
   busy: boolean;
   hideElevated?: boolean;
-  /** เจ้าของตั้ง PIN เข้าใช้ (ชื่อเล่น+PIN) — เฉพาะแก้บัญชีที่มีอยู่ */
-  canSetLoginPin?: boolean;
-  onSetLoginPin?: (input: {
-    staffId: string;
-    pin?: string;
-    clear?: boolean;
-    nicknameHint?: string;
-  }) => Promise<void>;
   onClose: () => void;
   onSave: (input: {
     email: string;
@@ -53,8 +45,6 @@ export function StaffReadinessEditModal({
   levels,
   busy,
   hideElevated = false,
-  canSetLoginPin = false,
-  onSetLoginPin,
   onClose,
   onSave,
 }: Props) {
@@ -64,9 +54,6 @@ export function StaffReadinessEditModal({
   const [levelId, setLevelId] = useState("");
   const [perms, setPerms] = useState<StaffPermissions>({ ...DEFAULT_STAFF_PERMISSIONS });
   const [showCustomPerms, setShowCustomPerms] = useState(false);
-  const [loginPin, setLoginPin] = useState("");
-  const [pinBusy, setPinBusy] = useState(false);
-  const [pinMsg, setPinMsg] = useState<string | null>(null);
 
   const row = target?.row;
   const member = target?.member;
@@ -102,8 +89,6 @@ export function StaffReadinessEditModal({
       setShowCustomPerms(false);
       setLinkEmployeeId(row.employeeId || "");
     }
-    setLoginPin("");
-    setPinMsg(null);
   }, [row, member, levels]);
 
   if (!row) return null;
@@ -139,29 +124,6 @@ export function StaffReadinessEditModal({
       permissionsCustomized: customized,
     });
   }
-
-  async function saveLoginPin(clear = false) {
-    if (!member?.id || !onSetLoginPin) return;
-    setPinBusy(true);
-    setPinMsg(null);
-    try {
-      const emp = employees.find((e) => e.id === (linkEmployeeId || member.employeeId));
-      await onSetLoginPin({
-        staffId: member.id,
-        pin: clear ? undefined : loginPin,
-        clear,
-        nicknameHint: emp?.nickname || emp?.name || member.displayName,
-      });
-      setLoginPin("");
-      setPinMsg(clear ? "ล้าง PIN แล้ว" : "บันทึก PIN แล้ว — พนักงานเข้าแท็บ PIN ได้");
-    } catch (err) {
-      setPinMsg((err as Error).message || "ตั้ง PIN ไม่สำเร็จ");
-    } finally {
-      setPinBusy(false);
-    }
-  }
-
-  const pinAlreadySet = !!(member?.loginPinSetAt && Number(member.loginPinSetAt) > 0);
 
   return (
     <div className="modal-backdrop profile-modal-backdrop" role="presentation" onClick={onClose}>
@@ -253,65 +215,6 @@ export function StaffReadinessEditModal({
               />
             </div>
           ) : null}
-
-          {canSetLoginPin && member?.id && !isCreate ? (
-            <div
-              className="staff-pin-setup"
-              style={{
-                marginTop: "0.85rem",
-                paddingTop: "0.75rem",
-                borderTop: "1px solid var(--border, #ddd)",
-                textAlign: "left",
-              }}
-            >
-              <p className="staff-hub-panel-hint" style={{ marginBottom: "0.4rem" }}>
-                PIN เข้าใช้ (แนะนำสำหรับเตย/เจ — ไม่พึ่ง Google/LINE)
-                {pinAlreadySet ? " · มี PIN แล้ว" : " · ยังไม่มี PIN"}
-              </p>
-              <div className="field">
-                <label htmlFor="readiness-login-pin">ตั้ง PIN ใหม่ (4–6 ตัวเลข)</label>
-                <input
-                  id="readiness-login-pin"
-                  type="password"
-                  inputMode="numeric"
-                  pattern="\d{4,6}"
-                  placeholder="••••"
-                  value={loginPin}
-                  onChange={(e) => setLoginPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                  disabled={busy || pinBusy}
-                />
-              </div>
-              {pinMsg ? (
-                <p className="muted" style={{ fontSize: "0.85rem", margin: "0 0 0.4rem" }}>
-                  {pinMsg}
-                </p>
-              ) : null}
-              <div className="btn-row">
-                <button
-                  type="button"
-                  className="primary-btn staff-btn-sm"
-                  disabled={busy || pinBusy || loginPin.length < 4}
-                  onClick={() => void saveLoginPin(false)}
-                >
-                  {pinBusy ? "..." : "บันทึก PIN"}
-                </button>
-                {pinAlreadySet ? (
-                  <button
-                    type="button"
-                    className="ghost-btn staff-btn-sm"
-                    disabled={busy || pinBusy}
-                    onClick={() => {
-                      if (!window.confirm("ล้าง PIN ของบัญชีนี้?")) return;
-                      void saveLoginPin(true);
-                    }}
-                  >
-                    ล้าง PIN
-                  </button>
-                ) : null}
-              </div>
-            </div>
-          ) : null}
-
           <div className="btn-row staff-compact-actions" style={{ marginTop: "0.5rem" }}>
             <button type="button" className="ghost-btn staff-btn-sm" onClick={onClose} disabled={busy}>
               ยกเลิก

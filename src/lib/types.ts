@@ -29,8 +29,6 @@ export type StaffMember = {
   permissionsCustomized?: boolean;
   /** เข้าใช้แอปหลังสุด (heartbeat) — เจ้าของใช้ดูว่าใครอยู่ในระบบ */
   lastSeenAt?: number;
-  /** มี PIN เข้าใช้ (เจ้าของตั้ง) — ไม่มี hash บน client */
-  loginPinSetAt?: number;
 };
 
 /** ลำดับสิทธิ์ (แม่แบบ) — สร้าง/แก้ได้ที่ศูนย์พนักงาน */

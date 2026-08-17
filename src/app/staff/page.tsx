@@ -22,7 +22,6 @@ import {
   updateStaffProfile,
   upsertStaffWithLink,
 } from "@/lib/staff";
-import { setStaffLoginPin } from "@/lib/staff-pin-login";
 import type { PermissionLevel, StaffMember } from "@/lib/types";
 import {
   DEFAULT_STAFF_PERMISSIONS,
@@ -485,28 +484,6 @@ function StaffView() {
         levels={levels}
         busy={busy}
         hideElevated={!isOwner}
-        canSetLoginPin={!!isOwner}
-        onSetLoginPin={async (input) => {
-          const result = await setStaffLoginPin(input);
-          await reload();
-          setEditTarget((prev) => {
-            if (!prev?.member) return prev;
-            return {
-              ...prev,
-              member: {
-                ...prev.member,
-                loginPinSetAt: input.clear
-                  ? undefined
-                  : result.loginPinSetAt || Date.now(),
-              },
-            };
-          });
-          setSuccess(
-            input.clear
-              ? "ล้าง PIN แล้ว"
-              : "ตั้ง PIN แล้ว — ให้พนักงานเข้า telltea-bo.web.app แท็บ PIN",
-          );
-        }}
         onClose={() => setEditTarget(null)}
         onSave={saveReadinessEdit}
       />
