@@ -18,7 +18,7 @@ function isInAppBrowser() {
 type LoginMode = "google" | "phone";
 
 export default function LoginPage() {
-  const { status, busyReason, signIn, signOut, sendPhoneLoginOtp, confirmPhoneLoginOtp, error } =
+  const { status, busyReason, staff, signIn, signOut, sendPhoneLoginOtp, confirmPhoneLoginOtp, error } =
     useAuth();
   const router = useRouter();
   const [inApp, setInApp] = useState(false);
