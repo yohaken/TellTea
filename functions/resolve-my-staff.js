@@ -4,6 +4,10 @@
  * (Jay/เตย class) — client email-doc lookup misses, and token often has
  * no phone_number for staffPhones fallback.
  *
+ * When token has email + roster doc is p_* with that email field, migrate
+ * the staff doc to staff/{email} so EXISTING email-first Firestore rules
+ * grant hasPerm without waiting on Rules API deploys (often 503).
+ *
  * Also stamps auth custom claim `staffId` + ensures staffEmails index.
  */
 const functions = require("firebase-functions/v1");
@@ -51,7 +55,12 @@ function mapStaffPayload(id, data) {
 async function findStaffId(db, email, phone) {
   if (email) {
     const byId = await db.collection("staff").doc(email).get();
-    if (byId.exists) return email;
+    if (byId.exists) {
+      const migratedTo = asString(byId.get("migratedTo"), 160);
+      // Stale p_* leftover should not win — email doc is canonical
+      if (!migratedTo) return email;
+      return email;
+    }
 
     const emailIdx = await db.collection("staffEmails").doc(email).get();
     if (emailIdx.exists) {
@@ -60,7 +69,13 @@ async function findStaffId(db, email, phone) {
     }
 
     const q = await db.collection("staff").where("email", "==", email).limit(3).get();
-    if (!q.empty) return q.docs[0].id;
+    if (!q.empty) {
+      // Prefer non-migrated / email-id docs
+      const emailDoc = q.docs.find((d) => d.id === email);
+      if (emailDoc) return email;
+      const live = q.docs.find((d) => !asString(d.get("migratedTo"), 160));
+      return (live || q.docs[0]).id;
+    }
   }
 
   const digits = phoneDigits(phone);
@@ -72,7 +87,11 @@ async function findStaffId(db, email, phone) {
     }
     const pId = `p_${digits}`;
     const byPhoneId = await db.collection("staff").doc(pId).get();
-    if (byPhoneId.exists) return pId;
+    if (byPhoneId.exists) {
+      const migratedTo = asString(byPhoneId.get("migratedTo"), 160);
+      if (migratedTo) return migratedTo;
+      return pId;
+    }
   }
 
   return "";
@@ -88,6 +107,84 @@ async function ensureIndexes(db, staffId, email, phone) {
   if (digits) {
     await db.collection("staffPhones").doc(digits).set({ staffId: id }, { merge: true });
   }
+}
+
+/**
+ * Move phone-keyed roster → staff/{email} so email-first rules grant isStaff/hasPerm.
+ * Safe when email doc does not exist yet (or is the same migration target).
+ */
+async function migratePhoneKeyedToEmail(db, phoneStaffId, email) {
+  const fromId = asString(phoneStaffId, 160);
+  const toEmail = normalizeEmail(email);
+  if (!fromId || !toEmail || !fromId.startsWith("p_")) return { staffId: fromId, migrated: false };
+  if (fromId === toEmail) return { staffId: toEmail, migrated: false };
+
+  const fromRef = db.collection("staff").doc(fromId);
+  const toRef = db.collection("staff").doc(toEmail);
+  const fromSnap = await fromRef.get();
+  if (!fromSnap.exists) return { staffId: fromId, migrated: false };
+
+  const already = asString(fromSnap.get("migratedTo"), 160);
+  if (already === toEmail) {
+    const toSnap = await toRef.get();
+    if (toSnap.exists) return { staffId: toEmail, migrated: false };
+  }
+
+  const toSnap = await toRef.get();
+  if (toSnap.exists && !asString(toSnap.get("migratedFrom"), 160)) {
+    // Email doc already owned — use it; retarget indexes from phone id
+    const phone = asString(fromSnap.get("phone"), 32);
+    await ensureIndexes(db, toEmail, toEmail, phone);
+    await fromRef.set(
+      { migratedTo: toEmail, migratedAt: Date.now() },
+      { merge: true },
+    );
+    return { staffId: toEmail, migrated: true };
+  }
+
+  const data = { ...(fromSnap.data() || {}) };
+  delete data.migratedTo;
+  delete data.migratedAt;
+  const payload = {
+    ...data,
+    email: toEmail,
+    migratedFrom: fromId,
+    migratedAt: Date.now(),
+  };
+  await toRef.set(payload, { merge: true });
+
+  const phone = asString(data.phone, 32);
+  await ensureIndexes(db, toEmail, toEmail, phone);
+
+  // Roster links
+  const empQ = await db
+    .collection("employees")
+    .where("linkedStaffId", "==", fromId)
+    .limit(20)
+    .get();
+  for (const docSnap of empQ.docs) {
+    await docSnap.ref.set(
+      { linkedStaffId: toEmail, linkedEmail: toEmail, updatedAt: Date.now() },
+      { merge: true },
+    );
+  }
+
+  // Personal profile
+  const personal = await db.collection("staffPersonal").doc(fromId).get();
+  if (personal.exists) {
+    await db.collection("staffPersonal").doc(toEmail).set(personal.data() || {}, { merge: true });
+  }
+
+  await fromRef.set(
+    {
+      migratedTo: toEmail,
+      migratedAt: Date.now(),
+      email: toEmail,
+    },
+    { merge: true },
+  );
+
+  return { staffId: toEmail, migrated: true };
 }
 
 async function stampStaffClaim(uid, staffId) {
@@ -108,10 +205,18 @@ exports.resolveMyStaff = functions.region(REGION).https.onCall(async (_data, con
   const db = getFirestore();
   const email = normalizeEmail(context.auth.token?.email || "");
   const phone = asString(context.auth.token?.phone_number, 32);
-  const staffId = await findStaffId(db, email, phone);
+  let staffId = await findStaffId(db, email, phone);
   if (!staffId) {
     return { ok: false, staff: null };
   }
+
+  let migrated = false;
+  if (email && staffId.startsWith("p_")) {
+    const move = await migratePhoneKeyedToEmail(db, staffId, email);
+    staffId = move.staffId;
+    migrated = !!move.migrated;
+  }
+
   const snap = await db.collection("staff").doc(staffId).get();
   if (!snap.exists) {
     return { ok: false, staff: null };
@@ -125,9 +230,11 @@ exports.resolveMyStaff = functions.region(REGION).https.onCall(async (_data, con
     ok: true,
     staff: mapStaffPayload(staffId, data),
     claimUpdated,
+    migrated,
     staffId,
   };
 });
 
 exports._findStaffId = findStaffId;
 exports._mapStaffPayload = mapStaffPayload;
+exports._migratePhoneKeyedToEmail = migratePhoneKeyedToEmail;

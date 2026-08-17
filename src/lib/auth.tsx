@@ -267,12 +267,11 @@ async function resolveStaff(user: User): Promise<StaffMember | null> {
   if (!member && user.phoneNumber) {
     member = await getStaffByPhone(user.phoneNumber);
   }
-  // Admin resolve: finds email-on-phone-doc + stamps staffId claim for rules
-  if (!member) {
-    member = await resolveStaffViaCallable(user);
-  } else {
-    // Still stamp claim / backfill indexes when client path already found them
-    void resolveStaffViaCallable(user);
+  // Admin resolve: finds email-on-phone-doc, migrates p_* → staff/{email} for
+  // email-first rules, stamps staffId claim, backfills indexes.
+  const fromServer = await resolveStaffViaCallable(user);
+  if (fromServer) {
+    member = fromServer;
   }
   if (!member) return null;
   // ข้อมูลส่วนตัว (staffPersonal) ต้องไม่บล็อกการเข้าใช้ — อ่านไม่ได้ก็เข้าได้ก่อน
