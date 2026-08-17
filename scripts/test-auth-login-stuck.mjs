@@ -39,6 +39,10 @@ assert.match(auth, /getStaffByPhone\(user\.phoneNumber\)/);
 assert.match(auth, /getStaffByEmailIndex/);
 assert.match(auth, /resolveMyStaff/);
 assert.match(auth, /getIdToken\(true\)/);
+assert.match(auth, /resolveStaffLocal/);
+assert.match(auth, /AUTH_STAFF_CALLABLE_TIMEOUT_MS/);
+assert.match(auth, /ownerFallbackMember|isAppOwnerEmail/);
+assert.match(auth, /void resolveStaffViaCallable/);
 
 const login = read("src/app/login/page.tsx");
 assert.match(login, /busyReason/);

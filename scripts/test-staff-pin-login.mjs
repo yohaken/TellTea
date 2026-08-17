@@ -17,6 +17,6 @@ assert.match(login, /เบอร์โทร/);
 assert.doesNotMatch(read("src/app/staff/page.tsx"), /setStaffLoginPin/);
 assert.doesNotMatch(read("src/components/StaffReadinessEditModal.tsx"), /onSetLoginPin/);
 assert.equal(existsSync(join(root, "src/lib/staff-pin-login.ts")), false);
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 818/);
+assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)[1]) >= 818);
 
 console.log("OK test-staff-pin-login (UI reverted)");

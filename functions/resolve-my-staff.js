@@ -119,11 +119,14 @@ async function migratePhoneKeyedToEmail(db, phoneStaffId, email) {
   const toEmail = normalizeEmail(email);
   if (!fromId || !toEmail || !fromId.startsWith("p_")) return { staffId: fromId, migrated: false };
   if (fromId === toEmail) return { staffId: toEmail, migrated: false };
+  // Never move or overwrite the shop-owner roster row
+  if (toEmail === "yohaken@gmail.com") return { staffId: fromId, migrated: false };
 
   const fromRef = db.collection("staff").doc(fromId);
   const toRef = db.collection("staff").doc(toEmail);
   const fromSnap = await fromRef.get();
   if (!fromSnap.exists) return { staffId: fromId, migrated: false };
+  if (fromSnap.get("role") === "owner") return { staffId: fromId, migrated: false };
 
   const already = asString(fromSnap.get("migratedTo"), 160);
   if (already === toEmail) {
@@ -132,6 +135,9 @@ async function migratePhoneKeyedToEmail(db, phoneStaffId, email) {
   }
 
   const toSnap = await toRef.get();
+  if (toSnap.exists && toSnap.get("role") === "owner") {
+    return { staffId: toEmail, migrated: false };
+  }
   if (toSnap.exists && !asString(toSnap.get("migratedFrom"), 160)) {
     // Email doc already owned — use it; retarget indexes from phone id
     const phone = asString(fromSnap.get("phone"), 32);

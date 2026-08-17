@@ -27,6 +27,7 @@ import {
   getDb,
   getFirebaseAuth,
   getFirebaseFunctions,
+  isAppOwnerEmail,
   isFirebaseConfigured,
 } from "./firebase";
 import { confirmPhoneOtp, resetPhoneRecaptcha, sendPhoneOtp } from "./phone-auth";
@@ -67,6 +68,8 @@ export type AuthBusyReason = "boot" | "bridge" | "staff" | null;
 export const AUTH_BRIDGE_TIMEOUT_MS = 8_000;
 /** Staff doc resolve after Auth — fail instead of AuthGate forever. */
 export const AUTH_STAFF_RESOLVE_TIMEOUT_MS = 12_000;
+/** Admin callable is optional once Firestore already found the roster row. */
+export const AUTH_STAFF_CALLABLE_TIMEOUT_MS = 4_000;
 /** Escape hatch if loading never clears (AuthGate / login). */
 export const AUTH_LOADING_ESCAPE_MS = 18_000;
 
@@ -235,7 +238,7 @@ async function resolveStaffViaCallable(user: User): Promise<StaffMember | null> 
     >(getFirebaseFunctions(), "resolveMyStaff");
     const res = await withTimeout(
       fn({}),
-      AUTH_STAFF_RESOLVE_TIMEOUT_MS,
+      AUTH_STAFF_CALLABLE_TIMEOUT_MS,
       "ตรวจสิทธิ์หมดเวลา — รีเฟรชแล้วลองใหม่",
     );
     const payload = res.data;
@@ -253,36 +256,79 @@ async function resolveStaffViaCallable(user: User): Promise<StaffMember | null> 
   }
 }
 
-async function resolveStaff(user: User): Promise<StaffMember | null> {
+function ownerFallbackMember(user: User, email: string): StaffMember {
+  return {
+    id: email,
+    email,
+    role: "owner",
+    displayName: user.displayName || undefined,
+    profileComplete: true,
+    createdAt: Date.now(),
+  };
+}
+
+/** Firestore roster lookup — never throw (rules flake must not kick the user out). */
+async function resolveStaffLocal(user: User): Promise<StaffMember | null> {
   const email = emailFromUser(user);
-  let member: StaffMember | null = null;
   if (email) {
-    const bootstrapped = await ensureOwnerBootstrap(email, user.displayName);
-    member =
-      bootstrapped ||
-      (await getStaffMemberById(email)) ||
-      // Phone-keyed roster docs store email as a field — index like staffPhones
-      (await getStaffByEmailIndex(email));
-  }
-  if (!member && user.phoneNumber) {
-    member = await getStaffByPhone(user.phoneNumber);
-  }
-  // Admin resolve: finds email-on-phone-doc, migrates p_* → staff/{email} for
-  // email-first rules, stamps staffId claim, backfills indexes.
-  const fromServer = await resolveStaffViaCallable(user);
-  if (fromServer) {
-    member = fromServer;
-  }
-  if (!member) return null;
-  // ข้อมูลส่วนตัว (staffPersonal) ต้องไม่บล็อกการเข้าใช้ — อ่านไม่ได้ก็เข้าได้ก่อน
-  if (member.role === "staff") {
     try {
-      return await attachStaffPersonal(member);
+      const bootstrapped = await ensureOwnerBootstrap(email, user.displayName);
+      if (bootstrapped) return bootstrapped;
     } catch {
-      return member;
+      /* permission / offline */
+    }
+    try {
+      const byId = await getStaffMemberById(email);
+      if (byId) return byId;
+    } catch {
+      /* ignore */
+    }
+    try {
+      const byIdx = await getStaffByEmailIndex(email);
+      if (byIdx) return byIdx;
+    } catch {
+      /* ignore */
+    }
+    if (isAppOwnerEmail(email)) {
+      return ownerFallbackMember(user, email);
     }
   }
-  return member;
+  if (user.phoneNumber) {
+    try {
+      const byPhone = await getStaffByPhone(user.phoneNumber);
+      if (byPhone) return byPhone;
+    } catch {
+      /* ignore */
+    }
+  }
+  return null;
+}
+
+async function attachPersonalIfStaff(member: StaffMember): Promise<StaffMember> {
+  if (member.role !== "staff") return member;
+  try {
+    return await attachStaffPersonal(member);
+  } catch {
+    return member;
+  }
+}
+
+async function resolveStaff(user: User): Promise<StaffMember | null> {
+  const local = await resolveStaffLocal(user);
+  // Local hit (owner / email doc / phone index) — enter immediately.
+  // Callable is enhancement (claim + p_* migrate). Waiting on it during
+  // function deploys caused BOTH Google and phone logins to bounce.
+  if (local) {
+    void resolveStaffViaCallable(user);
+    return attachPersonalIfStaff(local);
+  }
+  const fromServer = await resolveStaffViaCallable(user);
+  if (fromServer) return attachPersonalIfStaff(fromServer);
+  const email = emailFromUser(user);
+  if (isAppOwnerEmail(email)) {
+    return ownerFallbackMember(user, email);
+  }
+  return null;
 }
 
 function clearSavedLoginTicket() {

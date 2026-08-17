@@ -17,6 +17,8 @@ assert.match(cf, /migratePhoneKeyedToEmail|migratedFrom/);
 assert.match(cf, /setCustomUserClaims/);
 assert.match(cf, /claimUpdated/);
 assert.match(cf, /token\?\.staffId/);
+assert.match(cf, /yohaken@gmail.com/);
+assert.match(cf, /get\("role"\) === "owner"/);
 
 assert.match(read("functions/index.js"), /resolveMyStaff/);
 assert.match(read("src/lib/staff.ts"), /getStaffByEmailIndex/);
