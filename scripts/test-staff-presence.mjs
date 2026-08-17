@@ -23,16 +23,22 @@ assert.match(read("firestore.rules"), /isOwnStaffDoc/);
 assert.match(read("firestore.rules"), /staffId == resolvedStaffId\(\) && staffPresenceTouch\(\)/);
 assert.match(read("firestore.rules"), /isOwnStaffDoc\(staffId\) && staffPresenceTouch\(\)/);
 assert.match(read("firestore.rules"), /isOwnStaffDoc\(staffId\) \|\| staffHubManage\(\)/);
-// Prefer existing email staff doc; else staffPhones (not blind token.email)
+assert.match(read("firestore.rules"), /function claimStaffId\(/);
 assert.match(read("firestore.rules"), /function emailStaffExists\(/);
+assert.match(read("firestore.rules"), /function emailMappedStaffId\(/);
 assert.match(read("firestore.rules"), /function phoneStaffId\(/);
+assert.match(read("firestore.rules"), /match \/staffEmails\/\{emailId\}/);
 assert.match(
   read("firestore.rules"),
-  /function resolvedStaffId\(\) \{\s*return emailStaffExists\(\)/,
+  /function resolvedStaffId\(\) \{\s*return claimStaffId\(\)/,
 );
-assert.match(read("src/lib/auth.tsx"), /getStaffByPhone\(user\.phoneNumber\)/);
+assert.match(read("src/lib/auth.tsx"), /resolveMyStaff/);
+assert.match(read("src/lib/auth.tsx"), /getStaffByEmailIndex/);
+assert.match(read("src/lib/staff.ts"), /getStaffByEmailIndex/);
 assert.match(read("src/app/login/page.tsx"), /staffHomeHref\(staff\)/);
 assert.match(read("src/app/page.tsx"), /AUTH_STAFF_RESOLVE_TIMEOUT_MS/);
+assert.match(read("functions/index.js"), /resolveMyStaff/);
+assert.match(read("functions/resolve-my-staff.js"), /setCustomUserClaims/);
 assert.match(read("src/components/StaffPresenceDock.tsx"), /กำลังใช้งาน/);
 assert.match(read("src/components/StaffPresenceDock.tsx"), /formatPresenceAge/);
 assert.match(read("src/components/StaffPresenceHeartbeat.tsx"), /touchStaffPresence/);

@@ -36,7 +36,9 @@ assert.match(cf, /loginTickets/);
 assert.match(read("functions/index.js"), /exchangeLoginTicket/);
 
 assert.match(auth, /getStaffByPhone\(user\.phoneNumber\)/);
-assert.match(auth, /Phone-rostered staff who later gain a Google email/);
+assert.match(auth, /getStaffByEmailIndex/);
+assert.match(auth, /resolveMyStaff/);
+assert.match(auth, /getIdToken\(true\)/);
 
 const login = read("src/app/login/page.tsx");
 assert.match(login, /busyReason/);

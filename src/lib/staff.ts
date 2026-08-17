@@ -38,6 +38,10 @@ function staffPhoneRef(phone: string) {
   return doc(getDb(), "staffPhones", phoneDigitsFromE164(phone));
 }
 
+function staffEmailRef(email: string) {
+  return doc(getDb(), "staffEmails", normalizeEmail(email));
+}
+
 function mapStaff(staffId: string, data: StaffMember): StaffMember {
   const {
     legalFirstName: _lf,
@@ -89,6 +93,16 @@ async function clearStaffPhoneIndex(phone?: string): Promise<void> {
   await deleteDoc(staffPhoneRef(phone)).catch(() => undefined);
 }
 
+async function syncStaffEmailIndex(staffId: string, email?: string | null): Promise<void> {
+  if (!email) return;
+  await setDoc(staffEmailRef(email), { staffId });
+}
+
+async function clearStaffEmailIndex(email?: string): Promise<void> {
+  if (!email) return;
+  await deleteDoc(staffEmailRef(email)).catch(() => undefined);
+}
+
 export async function getStaffMemberById(staffId: string): Promise<StaffMember | null> {
   const snap = await getDoc(staffRef(staffId));
   if (!snap.exists()) return null;
@@ -102,6 +116,20 @@ export async function getStaffMember(email: string): Promise<StaffMember | null>
 
 export async function getStaffByPhone(phone: string): Promise<StaffMember | null> {
   const index = await getDoc(staffPhoneRef(phone));
+  if (!index.exists()) return null;
+  const staffId = (index.data() as { staffId?: string }).staffId;
+  if (!staffId) return null;
+  return getStaffMemberById(staffId);
+}
+
+/**
+ * Phone-keyed staff docs store email as a field — look up via staffEmails index
+ * (same role as staffPhones for OTP).
+ */
+export async function getStaffByEmailIndex(email: string): Promise<StaffMember | null> {
+  const normalized = normalizeEmail(email);
+  if (!normalized) return null;
+  const index = await getDoc(staffEmailRef(normalized));
   if (!index.exists()) return null;
   const staffId = (index.data() as { staffId?: string }).staffId;
   if (!staffId) return null;
@@ -181,9 +209,13 @@ export async function upsertStaffAccount(input: StaffAccountInput): Promise<stri
   if (phone && existing?.phone && existing.phone !== phone) {
     await clearStaffPhoneIndex(existing.phone);
   }
+  if (email && existing?.email && existing.email !== email) {
+    await clearStaffEmailIndex(existing.email);
+  }
 
   await setDoc(staffRef(staffId), patch, { merge: true });
   if (phone) await syncStaffPhoneIndex(staffId, phone);
+  if (email) await syncStaffEmailIndex(staffId, email);
 
   return staffId;
 }
@@ -256,6 +288,7 @@ export async function removeStaffById(staffId: string): Promise<void> {
   const existing = await getStaffMemberById(staffId);
   await clearEmployeeLinkByStaffId(staffId);
   if (existing?.phone) await clearStaffPhoneIndex(existing.phone);
+  if (existing?.email) await clearStaffEmailIndex(existing.email);
   await deleteDoc(staffRef(staffId));
 }
 
