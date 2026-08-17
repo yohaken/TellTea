@@ -32,10 +32,11 @@ service cloud.firestore {
 
     /**
      * Resolve staff doc id for the signed-in Auth token.
-     * 1) custom claim staffId (set by resolveMyStaff)
-     * 2) email staff doc if it exists
-     * 3) staffEmails index (phone-keyed docs with email field)
-     * 4) staffPhones index
+     * Email roster doc always wins over a stale custom claim (owner lockout).
+     * 1) email staff doc if it exists
+     * 2) staffEmails index (phone-keyed docs with email field)
+     * 3) staffPhones index
+     * 4) custom claim staffId
      * Never treat a bare token email as staff id when that doc is missing.
      */
     function claimStaffId() {
@@ -65,13 +66,13 @@ service cloud.firestore {
     }
 
     function resolvedStaffId() {
-      return claimStaffId().size() > 0
-        ? claimStaffId()
-        : (emailStaffExists()
-            ? authEmail()
-            : (emailMappedStaffId().size() > 0
-                ? emailMappedStaffId()
-                : (phoneStaffId().size() > 0 ? phoneStaffId() : authEmail())));
+      return emailStaffExists()
+        ? authEmail()
+        : (emailMappedStaffId().size() > 0
+            ? emailMappedStaffId()
+            : (phoneStaffId().size() > 0
+                ? phoneStaffId()
+                : (claimStaffId().size() > 0 ? claimStaffId() : authEmail())));
     }
 
     function staffPath() {

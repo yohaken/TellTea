@@ -36,6 +36,7 @@ assert.match(cf, /loginTickets/);
 assert.match(read("functions/index.js"), /exchangeLoginTicket/);
 
 assert.match(auth, /getStaffByPhone\(user\.phoneNumber\)/);
+assert.match(read("src/lib/staff.ts"), /phoneDocId\(phone\)/);
 assert.match(auth, /getStaffByEmailIndex/);
 assert.match(auth, /resolveMyStaff/);
 assert.match(auth, /getIdToken\(true\)/);
@@ -43,6 +44,8 @@ assert.match(auth, /resolveStaffLocal/);
 assert.match(auth, /AUTH_STAFF_CALLABLE_TIMEOUT_MS/);
 assert.match(auth, /ownerFallbackMember|isAppOwnerEmail/);
 assert.match(auth, /void resolveStaffViaCallable/);
+assert.match(auth, /signInWithPopup/);
+assert.match(auth, /auth\.currentUser/);
 
 const login = read("src/app/login/page.tsx");
 assert.match(login, /busyReason/);

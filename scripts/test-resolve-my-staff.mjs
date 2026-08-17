@@ -19,6 +19,8 @@ assert.match(cf, /claimUpdated/);
 assert.match(cf, /token\?\.staffId/);
 assert.match(cf, /yohaken@gmail.com/);
 assert.match(cf, /get\("role"\) === "owner"/);
+assert.match(cf, /phoneKeyVariants|phoneFieldVariants/);
+assert.match(cf, /Email\/phone roster first|stale staffId claim/);
 
 assert.match(read("functions/index.js"), /resolveMyStaff/);
 assert.match(read("src/lib/staff.ts"), /getStaffByEmailIndex/);
@@ -26,5 +28,6 @@ assert.match(read("src/lib/staff.ts"), /syncStaffEmailIndex/);
 assert.match(read("src/lib/auth.tsx"), /resolveStaffViaCallable|resolveMyStaff/);
 assert.match(read("firestore.rules"), /match \/staffEmails\/\{emailId\}/);
 assert.match(read("firestore.rules"), /claimStaffId/);
+assert.match(read("firestore.rules"), /emailStaffExists\(\)\s*\n\s*\? authEmail\(\)/);
 
 console.log("OK test-resolve-my-staff");

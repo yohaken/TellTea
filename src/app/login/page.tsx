@@ -131,7 +131,9 @@ export default function LoginPage() {
         {displayError ? <p className="error-text">{displayError}</p> : null}
         {status === "denied" ? (
           <p className="muted" style={{ marginBottom: "0.75rem", textAlign: "left" }}>
-            บัญชีนี้ยังไม่อยู่ในรายชื่อพนักงาน ให้เจ้าของเพิ่มอีเมลหรือเบอร์โทรก่อน
+            บัญชีที่เข้าอยู่ยังไม่ตรงรายชื่อร้าน — เจ้าของร้านใช้ Google{" "}
+            <strong>yohaken@gmail.com</strong>
+            · พนักงานเลือกอีเมลหรือเบอร์ที่เจ้าของเพิ่มไว้แล้ว
           </p>
         ) : null}
         {busyReason === "bridge" ? (

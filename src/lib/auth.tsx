@@ -518,6 +518,15 @@ async function completeStaffGoogleRedirect(): Promise<boolean> {
           }
           return true;
         }
+        // Timeout / flake: if Google already left a session, keep it
+        if (auth.currentUser) {
+          try {
+            sessionStorage.removeItem(STAFF_GOOGLE_PENDING_KEY);
+          } catch {
+            /* ignore */
+          }
+          return true;
+        }
         if (pending) throw err;
       }
       return false;
@@ -809,11 +818,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     provider.addScope("profile");
     provider.setCustomParameters({ prompt: "select_account" });
     try {
-      if (shouldPreferStaffGooglePopup()) {
+      try {
         await signInWithPopup(auth, provider);
         return;
+      } catch (popupErr) {
+        const code = (popupErr as { code?: string })?.code || "";
+        if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
+          throw popupErr;
+        }
+        if (
+          shouldPreferStaffGooglePopup() &&
+          code !== "auth/popup-blocked" &&
+          code !== "auth/operation-not-supported-in-this-environment"
+        ) {
+          throw popupErr;
+        }
       }
-      // มือถือ / WebView: same-origin redirect (แบบสมาชิก) — ไม่พึ่ง bridge
+      // มือถือ / popup ถูกบล็อก: same-origin redirect
       try {
         sessionStorage.setItem(STAFF_GOOGLE_PENDING_KEY, "1");
       } catch {

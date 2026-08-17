@@ -53,7 +53,45 @@ function mapStaffPayload(id, data) {
   };
 }
 
+function phoneKeyVariants(phone) {
+  const digits = phoneDigits(phone);
+  const keys = new Set();
+  if (!digits) return [];
+  keys.add(digits);
+  if (digits.startsWith("66") && digits.length >= 11) {
+    keys.add(digits.slice(2));
+    keys.add(`0${digits.slice(2)}`);
+  }
+  if (digits.startsWith("0") && digits.length === 10) {
+    keys.add(`66${digits.slice(1)}`);
+  }
+  return [...keys];
+}
+
+function phoneFieldVariants(phone) {
+  const digits = phoneDigits(phone);
+  const out = new Set();
+  if (!digits) return [];
+  out.add(`+${digits}`);
+  out.add(digits);
+  if (digits.startsWith("66") && digits.length >= 11) {
+    const local = digits.slice(2);
+    out.add(`+66${local}`);
+    out.add(`0${local}`);
+    out.add(local);
+  }
+  if (digits.startsWith("0") && digits.length === 10) {
+    out.add(`+66${digits.slice(1)}`);
+    out.add(`66${digits.slice(1)}`);
+  }
+  return [...out];
+}
+
 async function findStaffId(db, email, phone) {
+  if (email === "yohaken@gmail.com") {
+    return email;
+  }
+
   if (email) {
     const byId = await db.collection("staff").doc(email).get();
     if (byId.exists) {
@@ -79,20 +117,28 @@ async function findStaffId(db, email, phone) {
     }
   }
 
-  const digits = phoneDigits(phone);
-  if (digits) {
-    const phoneIdx = await db.collection("staffPhones").doc(digits).get();
+  for (const key of phoneKeyVariants(phone)) {
+    const phoneIdx = await db.collection("staffPhones").doc(key).get();
     if (phoneIdx.exists) {
       const mapped = asString(phoneIdx.get("staffId"), 160);
       if (mapped) return mapped;
     }
-    const pId = `p_${digits}`;
+    const pId = `p_${key}`;
     const byPhoneId = await db.collection("staff").doc(pId).get();
     if (byPhoneId.exists) {
       const migratedTo = asString(byPhoneId.get("migratedTo"), 160);
       if (migratedTo) return migratedTo;
       return pId;
     }
+  }
+
+  for (const field of phoneFieldVariants(phone)) {
+    const q = await db.collection("staff").where("phone", "==", field).limit(3).get();
+    if (q.empty) continue;
+    const owner = q.docs.find((d) => d.get("role") === "owner" && !asString(d.get("migratedTo"), 160));
+    if (owner) return owner.id;
+    const live = q.docs.find((d) => !asString(d.get("migratedTo"), 160));
+    return (live || q.docs[0]).id;
   }
 
   return "";
@@ -212,19 +258,17 @@ exports.resolveMyStaff = functions.region(REGION).https.onCall(async (_data, con
   const db = getFirestore();
   const email = normalizeEmail(context.auth.token?.email || "");
   const phone = asString(context.auth.token?.phone_number, 32);
-  // PIN / custom-token sessions stamp staffId claim — prefer it (may have no email/phone)
-  let staffId = asString(context.auth.token?.staffId, 160);
-  if (staffId) {
-    const claimSnap = await db.collection("staff").doc(staffId).get();
-    if (!claimSnap.exists) {
-      staffId = "";
-    } else {
-      const migrated = asString(claimSnap.get("migratedTo"), 160);
-      if (migrated) staffId = migrated;
-    }
-  }
+  // Email/phone roster first — a stale staffId claim locked the owner out
+  let staffId = await findStaffId(db, email, phone);
   if (!staffId) {
-    staffId = await findStaffId(db, email, phone);
+    const claimed = asString(context.auth.token?.staffId, 160);
+    if (claimed) {
+      const claimSnap = await db.collection("staff").doc(claimed).get();
+      if (claimSnap.exists) {
+        const migratedTo = asString(claimSnap.get("migratedTo"), 160);
+        staffId = migratedTo || claimed;
+      }
+    }
   }
   if (!staffId) {
     return { ok: false, staff: null };
@@ -235,6 +279,23 @@ exports.resolveMyStaff = functions.region(REGION).https.onCall(async (_data, con
     const move = await migratePhoneKeyedToEmail(db, staffId, email);
     staffId = move.staffId;
     migrated = !!move.migrated;
+  }
+
+  if (email === "yohaken@gmail.com") {
+    staffId = email;
+    const ownerRef = db.collection("staff").doc(email);
+    const ownerSnap = await ownerRef.get();
+    if (!ownerSnap.exists) {
+      await ownerRef.set(
+        {
+          email,
+          role: "owner",
+          profileComplete: true,
+          createdAt: Date.now(),
+        },
+        { merge: true },
+      );
+    }
   }
 
   const snap = await db.collection("staff").doc(staffId).get();

@@ -115,11 +115,23 @@ export async function getStaffMember(email: string): Promise<StaffMember | null>
 }
 
 export async function getStaffByPhone(phone: string): Promise<StaffMember | null> {
-  const index = await getDoc(staffPhoneRef(phone));
-  if (!index.exists()) return null;
-  const staffId = (index.data() as { staffId?: string }).staffId;
-  if (!staffId) return null;
-  return getStaffMemberById(staffId);
+  try {
+    const index = await getDoc(staffPhoneRef(phone));
+    if (index.exists()) {
+      const staffId = (index.data() as { staffId?: string }).staffId;
+      if (staffId) {
+        const mapped = await getStaffMemberById(staffId);
+        if (mapped) return mapped;
+      }
+    }
+  } catch {
+    /* index unreadable */
+  }
+  try {
+    return await getStaffMemberById(phoneDocId(phone));
+  } catch {
+    return null;
+  }
 }
 
 /**
