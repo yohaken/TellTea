@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth";
+import { AUTH_LOADING_ESCAPE_MS, AUTH_STAFF_RESOLVE_TIMEOUT_MS, useAuth } from "@/lib/auth";
 import { AppBrand } from "@/components/AppBrand";
 import { staffHomeHref } from "@/lib/nav-menu";
 
@@ -22,10 +22,11 @@ export default function HomePage() {
   }, [status, staff, router]);
 
   useEffect(() => {
+    // อย่าเด้ง /login กลางคันตอน resolveStaff ยังไม่จบ (timeout จริง ~12s)
     if (status !== "loading") return;
     const timer = window.setTimeout(() => {
       router.replace("/login/");
-    }, 2500);
+    }, AUTH_STAFF_RESOLVE_TIMEOUT_MS + AUTH_LOADING_ESCAPE_MS);
     return () => window.clearTimeout(timer);
   }, [status, router]);
 

@@ -30,11 +30,28 @@ service cloud.firestore {
       return hasPhone() && authPhone().size() > 1 ? authPhone()[1:] : '';
     }
 
-    /** เดิมที่เคยใช้ได้: อีเมลก่อน · ไม่มีอีเมลค่อยอ่าน staffPhones (อย่าสลับลำดับ — กระทบ hasPerm ทั้งแอป) */
+    /**
+     * Resolve staff doc id for the signed-in Auth token.
+     * Prefer email staff doc when it exists; else staffPhones — do NOT treat a
+     * token email as staff id when that doc is missing (Jay/เตย bounce:
+     * phone-rostered account with a linked Google email).
+     * Calling get() only after exists() keeps rules safe on missing indexes.
+     */
+    function emailStaffExists() {
+      return hasEmail() && exists(/databases/$(database)/documents/staff/$(authEmail()));
+    }
+
+    function phoneStaffId() {
+      return hasPhone() && phoneDigits().size() > 0
+        && exists(/databases/$(database)/documents/staffPhones/$(phoneDigits()))
+        ? get(/databases/$(database)/documents/staffPhones/$(phoneDigits())).data.staffId
+        : '';
+    }
+
     function resolvedStaffId() {
-      return hasEmail()
+      return emailStaffExists()
         ? authEmail()
-        : get(/databases/$(database)/documents/staffPhones/$(phoneDigits())).data.staffId;
+        : (phoneStaffId().size() > 0 ? phoneStaffId() : authEmail());
     }
 
     function staffPath() {

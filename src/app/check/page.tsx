@@ -41,6 +41,7 @@ import { useAuth } from "@/lib/auth";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
 import { can } from "@/lib/permissions";
+import { staffHomeHref } from "@/lib/nav-menu";
 import {
   CHECK_IMAGE_MAX,
   CHECK_SHIFTS,
@@ -119,7 +120,7 @@ function CheckView() {
 
   useEffect(() => {
     if (staff && !can(staff, "checklist")) {
-      router.replace("/ledger/");
+      router.replace(staffHomeHref(staff));
     }
   }, [staff, router]);
 

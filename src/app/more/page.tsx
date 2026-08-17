@@ -29,6 +29,7 @@ import {
   DEFAULT_DOCK_TAB_MAX,
   DEFAULT_NAV_ORDER,
   resolveNavForUser,
+  staffHomeHref,
   subscribeNavUi,
   type NavUiSettings,
 } from "@/lib/nav-menu";
@@ -107,7 +108,7 @@ function MoreView() {
   const { moreModules, showMoreTab } = resolveNavForUser(staff, navUi);
 
   useEffect(() => {
-    if (staff && !showMoreTab) router.replace("/ledger/");
+    if (staff && !showMoreTab) router.replace(staffHomeHref(staff));
   }, [staff, showMoreTab, router]);
 
   if (!showMoreTab) return null;

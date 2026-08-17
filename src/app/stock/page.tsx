@@ -16,6 +16,7 @@ import { useAuth } from "@/lib/auth";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
 import { can } from "@/lib/permissions";
+import { staffHomeHref } from "@/lib/nav-menu";
 import {
   deleteStockCountSession,
   getSessionForRound,
@@ -71,7 +72,7 @@ function StockView() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (staff && !canUseStock) router.replace("/ledger/");
+    if (staff && !canUseStock) router.replace(staffHomeHref(staff));
   }, [staff, router, canUseStock]);
 
   useEffect(() => {
