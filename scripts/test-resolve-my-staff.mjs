@@ -16,6 +16,7 @@ assert.match(cf, /where\("email"/);
 assert.match(cf, /migratePhoneKeyedToEmail|migratedFrom/);
 assert.match(cf, /setCustomUserClaims/);
 assert.match(cf, /claimUpdated/);
+assert.match(cf, /token\?\.staffId/);
 
 assert.match(read("functions/index.js"), /resolveMyStaff/);
 assert.match(read("src/lib/staff.ts"), /getStaffByEmailIndex/);

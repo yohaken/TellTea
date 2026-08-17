@@ -621,6 +621,17 @@ service cloud.firestore {
       allow write: if staffHubManage();
     }
 
+    // PIN secrets / nickname index / attempt lock — Admin SDK only (callables)
+    match /staffLoginSecrets/{staffId} {
+      allow read, write: if false;
+    }
+    match /staffNicknames/{nickId} {
+      allow read, write: if false;
+    }
+    match /staffPinAttempts/{staffId} {
+      allow read, write: if false;
+    }
+
     // ข้อมูลส่วนตัวละเอียดอ่อน — เจ้าของอ่านได้, พนักงานอ่าน/เขียนเฉพาะของตัวเอง
     match /staffPersonal/{staffId} {
       allow get: if isOwner() || (signedIn() && staffId == resolvedStaffId());

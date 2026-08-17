@@ -49,6 +49,7 @@ function mapStaffPayload(id, data) {
     permissionLevelId: asString(d.permissionLevelId, 80) || undefined,
     permissionsCustomized: d.permissionsCustomized === true,
     lastSeenAt: Number(d.lastSeenAt) || undefined,
+    loginPinSetAt: Number(d.loginPinSetAt) || undefined,
   };
 }
 
@@ -205,7 +206,20 @@ exports.resolveMyStaff = functions.region(REGION).https.onCall(async (_data, con
   const db = getFirestore();
   const email = normalizeEmail(context.auth.token?.email || "");
   const phone = asString(context.auth.token?.phone_number, 32);
-  let staffId = await findStaffId(db, email, phone);
+  // PIN / custom-token sessions stamp staffId claim — prefer it (may have no email/phone)
+  let staffId = asString(context.auth.token?.staffId, 160);
+  if (staffId) {
+    const claimSnap = await db.collection("staff").doc(staffId).get();
+    if (!claimSnap.exists) {
+      staffId = "";
+    } else {
+      const migrated = asString(claimSnap.get("migratedTo"), 160);
+      if (migrated) staffId = migrated;
+    }
+  }
+  if (!staffId) {
+    staffId = await findStaffId(db, email, phone);
+  }
   if (!staffId) {
     return { ok: false, staff: null };
   }

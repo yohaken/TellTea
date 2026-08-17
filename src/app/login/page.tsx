@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { signInWithCustomToken } from "firebase/auth";
 import { AUTH_LOADING_ESCAPE_MS, useAuth } from "@/lib/auth";
 import { getFirebaseAuth } from "@/lib/firebase";
+import { signInWithStaffPin } from "@/lib/staff-pin-login";
 import { AppBrand } from "@/components/AppBrand";
 import { staffHomeHref } from "@/lib/nav-menu";
 import { cn } from "@/lib/utils";
@@ -15,23 +16,53 @@ function isInAppBrowser() {
   return /Line\//i.test(ua) || /FBAN|FBAV/i.test(ua) || /Instagram/i.test(ua);
 }
 
-type LoginMode = "google" | "phone";
+/** Try to escape LINE/FB/IG WebView into Chrome/Safari. */
+function openInExternalBrowser() {
+  if (typeof window === "undefined") return;
+  const url = window.location.href;
+  const ua = navigator.userAgent || "";
+  const httpsUrl = url.startsWith("http") ? url : `https://${url}`;
+
+  if (/Android/i.test(ua)) {
+    const stripped = httpsUrl.replace(/^https?:\/\//i, "");
+    window.location.href =
+      `intent://${stripped}#Intent;scheme=https;package=com.android.chrome;` +
+      `S.browser_fallback_url=${encodeURIComponent(httpsUrl)};end`;
+    return;
+  }
+
+  // iOS: prefer Chrome scheme, then copy + instructions
+  const noScheme = httpsUrl.replace(/^https:\/\//i, "");
+  try {
+    window.location.href = `googlechrome://${noScheme}`;
+  } catch {
+    /* fall through */
+  }
+  void navigator.clipboard?.writeText(httpsUrl).catch(() => undefined);
+}
+
+type LoginMode = "pin" | "google" | "phone";
 
 export default function LoginPage() {
   const { status, busyReason, staff, signIn, signOut, sendPhoneLoginOtp, confirmPhoneLoginOtp, error } =
     useAuth();
   const router = useRouter();
   const [inApp, setInApp] = useState(false);
-  const [mode, setMode] = useState<LoginMode>("google");
+  const [mode, setMode] = useState<LoginMode>("pin");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
+  const [nickname, setNickname] = useState("");
+  const [pin, setPin] = useState("");
   const [busy, setBusy] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [showEscape, setShowEscape] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    setInApp(isInAppBrowser());
+    const yes = isInAppBrowser();
+    setInApp(yes);
+    if (yes) setMode("pin");
   }, []);
 
   /** Agent/QA: /login/?qaToken=<firebase-custom-token>&next=/ledger/?transferIn=1 */
@@ -110,6 +141,31 @@ export default function LoginPage() {
     }
   }
 
+  async function onPinLogin(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setLocalError(null);
+    try {
+      await signInWithStaffPin(nickname, pin);
+    } catch (err) {
+      const msg = (err as { message?: string })?.message || "";
+      const cleaned = msg.replace(/^Firebase:\s*/i, "").replace(/\s*\([^)]*\)\s*$/, "");
+      setLocalError(cleaned || "เข้าใช้ด้วย PIN ไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function copyLoginLink() {
+    try {
+      await navigator.clipboard.writeText(window.location.origin + "/login/");
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2500);
+    } catch {
+      setLocalError("คัดลอกลิงก์ไม่สำเร็จ — พิมพ์ telltea-bo.web.app ด้วยมือ");
+    }
+  }
+
   return (
     <div className="hero-login">
       <div className="hero-copy">
@@ -118,10 +174,23 @@ export default function LoginPage() {
       </div>
       <div className="hero-actions">
         {inApp ? (
-          <p className="error-text" style={{ marginBottom: "0.75rem" }}>
-            เปิดจาก LINE/แชทมักล็อกอินไม่ได้ — กด ⋯ แล้วเลือก “เปิดในเบราว์เซอร์”
-            (Safari หรือ Chrome)
-          </p>
+          <div className="login-inapp-banner" style={{ marginBottom: "0.85rem", textAlign: "left" }}>
+            <p className="error-text" style={{ marginBottom: "0.5rem" }}>
+              เปิดจาก LINE/แชทมักเด้งออกหรือภาษาเพี้ยน — ต้องเปิดใน Chrome หรือ Safari
+            </p>
+            <div className="btn-row">
+              <button type="button" className="primary-btn" onClick={() => openInExternalBrowser()}>
+                เปิดใน Chrome / Safari
+              </button>
+              <button type="button" className="ghost-btn" onClick={() => void copyLoginLink()}>
+                {copied ? "คัดลอกแล้ว" : "คัดลอกลิงก์"}
+              </button>
+            </div>
+            <p className="muted" style={{ marginTop: "0.5rem", fontSize: "0.8rem" }}>
+              หรือกด ⋯ ใน LINE → “เปิดในเบราว์เซอร์” · แล้วใช้แท็บ <strong>PIN</strong> ด้านล่าง
+              (ไม่ต้องผ่านหน้า Google)
+            </p>
+          </div>
         ) : null}
         {status === "unconfigured" ? (
           <p className="error-text">
@@ -131,7 +200,7 @@ export default function LoginPage() {
         {displayError ? <p className="error-text">{displayError}</p> : null}
         {status === "denied" ? (
           <p className="muted" style={{ marginBottom: "0.75rem", textAlign: "left" }}>
-            บัญชีนี้ยังไม่อยู่ในรายชื่อพนักงาน ให้เจ้าของเพิ่มอีเมลหรือเบอร์โทรก่อน
+            บัญชีนี้ยังไม่อยู่ในรายชื่อพนักงาน ให้เจ้าของเพิ่มอีเมลหรือเบอร์โทรก่อน — หรือตั้ง PIN ให้เข้าแท็บ PIN
           </p>
         ) : null}
         {busyReason === "bridge" ? (
@@ -147,7 +216,7 @@ export default function LoginPage() {
         {showEscape ? (
           <div style={{ marginBottom: "0.75rem", textAlign: "left" }}>
             <p className="error-text" style={{ marginBottom: "0.5rem" }}>
-              ล็อกอินค้างนานผิดปกติ — ลองใหม่หรือออกจากระบบแล้วเข้าอีกครั้ง
+              ล็อกอินค้างนานผิดปกติ — ลองแท็บ PIN หรือออกจากระบบแล้วเข้าอีกครั้ง
             </p>
             <div className="btn-row">
               <button
@@ -167,12 +236,26 @@ export default function LoginPage() {
         ) : null}
 
         <p className="muted" style={{ marginBottom: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>
-          เลือกวิธีที่สะดวก — อีเมลต้องเป็น Google ที่เจ้าของเพิ่มไว้แล้ว · เบอร์โทรยืนยันด้วย OTP
+          แนะนำ: เข้าด้วย <strong>ชื่อเล่น + PIN</strong> (เจ้าของตั้งที่ศูนย์พนักงาน) — ไม่พึ่ง Google/LINE
           <br />
-          เปิดใน Chrome หรือ Safari (อย่าเปิดจาก LINE) · ถ้าเด้้อกลับมาหน้านี้ ให้กดเข้าสู่ระบบซ้ำได้
+          หน้าเลือกบัญชี Google อาจเป็นภาษาอังกฤษตามมือถือ · เลือกอีเมลที่ร้านผูกไว้
+          <br />
+          เปิดที่ <strong>telltea-bo.web.app</strong> ใน Chrome/Safari เท่านั้น
         </p>
 
         <div className="login-mode-tabs" role="tablist" aria-label="วิธีเข้าสู่ระบบ">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "pin"}
+            className={cn("login-mode-tab", mode === "pin" && "active")}
+            onClick={() => {
+              setMode("pin");
+              setLocalError(null);
+            }}
+          >
+            PIN
+          </button>
           <button
             type="button"
             role="tab"
@@ -199,6 +282,40 @@ export default function LoginPage() {
           </button>
         </div>
 
+        {mode === "pin" ? (
+          <form className="entry-form login-phone-panel" onSubmit={(e) => void onPinLogin(e)}>
+            <div className="field">
+              <label htmlFor="login-nickname">ชื่อเล่น / ชื่อในร้าน</label>
+              <input
+                id="login-nickname"
+                type="text"
+                autoComplete="username"
+                placeholder="เช่น เตย หรือ Namtoei"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                required
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="login-pin">PIN (4–6 ตัวเลข)</label>
+              <input
+                id="login-pin"
+                type="password"
+                inputMode="numeric"
+                autoComplete="current-password"
+                pattern="\d{4,6}"
+                placeholder="••••"
+                value={pin}
+                onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                required
+              />
+            </div>
+            <button type="submit" className="primary-btn" disabled={blocked || busy || signingIn}>
+              {busy || signingIn ? "กำลังเข้าสู่ระบบ..." : "เข้าใช้ด้วย PIN"}
+            </button>
+          </form>
+        ) : null}
+
         {mode === "google" ? (
           <button
             type="button"
@@ -208,7 +325,9 @@ export default function LoginPage() {
           >
             {signingIn ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบด้วย Google"}
           </button>
-        ) : (
+        ) : null}
+
+        {mode === "phone" ? (
           <div className="login-phone-panel">
             <div id="phone-recaptcha" />
             {!otpSent ? (
@@ -268,7 +387,7 @@ export default function LoginPage() {
               </form>
             )}
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

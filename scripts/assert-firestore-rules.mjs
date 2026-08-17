@@ -30,6 +30,8 @@ const REQUIRED_MATCHES = [
   "staff",
   "staffPhones",
   "staffEmails",
+  "staffLoginSecrets",
+  "staffNicknames",
   "permissionLevels",
   "ledger",
   "cashDeposits",
