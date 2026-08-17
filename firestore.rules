@@ -32,14 +32,29 @@ service cloud.firestore {
 
     /**
      * Resolve staff doc id for the signed-in Auth token.
-     * Prefer email staff doc when it exists; else staffPhones — do NOT treat a
-     * token email as staff id when that doc is missing (Jay/เตย bounce:
-     * phone-rostered account with a linked Google email).
-     * Calling get() only after exists() keeps rules safe on missing indexes.
-     * Retried ship: Rules API 503 often needs a dedicated push to land.
+     * 1) custom claim staffId (set by resolveMyStaff)
+     * 2) email staff doc if it exists
+     * 3) staffEmails index (phone-keyed docs with email field)
+     * 4) staffPhones index
+     * Never treat a bare token email as staff id when that doc is missing.
      */
+    function claimStaffId() {
+      return request.auth != null
+        && request.auth.token.keys().hasAny(['staffId'])
+        && request.auth.token.staffId is string
+        ? request.auth.token.staffId
+        : '';
+    }
+
     function emailStaffExists() {
       return hasEmail() && exists(/databases/$(database)/documents/staff/$(authEmail()));
+    }
+
+    function emailMappedStaffId() {
+      return hasEmail()
+        && exists(/databases/$(database)/documents/staffEmails/$(authEmail()))
+        ? get(/databases/$(database)/documents/staffEmails/$(authEmail())).data.staffId
+        : '';
     }
 
     function phoneStaffId() {
@@ -50,9 +65,13 @@ service cloud.firestore {
     }
 
     function resolvedStaffId() {
-      return emailStaffExists()
-        ? authEmail()
-        : (phoneStaffId().size() > 0 ? phoneStaffId() : authEmail());
+      return claimStaffId().size() > 0
+        ? claimStaffId()
+        : (emailStaffExists()
+            ? authEmail()
+            : (emailMappedStaffId().size() > 0
+                ? emailMappedStaffId()
+                : (phoneStaffId().size() > 0 ? phoneStaffId() : authEmail())));
     }
 
     function staffPath() {
@@ -591,6 +610,14 @@ service cloud.firestore {
 
     match /staffPhones/{phoneId} {
       allow get: if signedIn() && (phoneId == phoneDigits() || staffHubManage());
+      allow write: if staffHubManage();
+    }
+
+    // อีเมล → staffId (บัญชีที่ doc id เป็นเบอร์ แต่เก็บ email ในฟิลด์)
+    match /staffEmails/{emailId} {
+      allow get: if signedIn() && (
+        (hasEmail() && authEmail() == emailId) || staffHubManage()
+      );
       allow write: if staffHubManage();
     }
 

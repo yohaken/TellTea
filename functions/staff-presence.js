@@ -38,18 +38,31 @@ async function resolveStaffIdFromActor(db, actorId) {
 
 /**
  * Resolve the signed-in staff doc id.
- * Prefer email doc when it exists; else staffPhones — do NOT blindly trust token.email
- * when that doc is missing (email-first rules trap).
+ * Prefer email doc when it exists; else staffEmails / staffPhones / email field —
+ * do NOT blindly trust token.email when that doc is missing (email-first rules trap).
  */
 async function resolveCallerStaffId(auth) {
   if (!auth) return "";
   const db = getFirestore();
   const email = asString(auth.token?.email, 120).toLowerCase();
   const phone = asString(auth.token?.phone_number, 32);
+  const claimId = asString(auth.token?.staffId, 160);
+
+  if (claimId) {
+    const byClaim = await db.collection("staff").doc(claimId).get();
+    if (byClaim.exists) return claimId;
+  }
 
   if (email) {
     const byEmail = await db.collection("staff").doc(email).get();
     if (byEmail.exists) return email;
+    const emailIdx = await db.collection("staffEmails").doc(email).get();
+    if (emailIdx.exists) {
+      const mapped = asString(emailIdx.get("staffId"), 160);
+      if (mapped) return mapped;
+    }
+    const q = await db.collection("staff").where("email", "==", email).limit(1).get();
+    if (!q.empty) return q.docs[0].id;
   }
 
   if (phone) {

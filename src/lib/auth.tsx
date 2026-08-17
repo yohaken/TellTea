@@ -36,6 +36,7 @@ import { migrateAllLegacyStockCosts } from "./stock";
 import { withTimeout } from "./pos-timeout";
 import {
   ensureOwnerBootstrap,
+  getStaffByEmailIndex,
   getStaffByPhone,
   getStaffMemberById,
   attachStaffPersonal,
@@ -222,17 +223,56 @@ export function actorIdFromUser(user: User | null, staff: StaffMember | null): s
   return "";
 }
 
+async function resolveStaffViaCallable(user: User): Promise<StaffMember | null> {
+  try {
+    const fn = httpsCallable<
+      Record<string, never>,
+      {
+        ok?: boolean;
+        staff?: StaffMember | null;
+        claimUpdated?: boolean;
+      }
+    >(getFirebaseFunctions(), "resolveMyStaff");
+    const res = await withTimeout(
+      fn({}),
+      AUTH_STAFF_RESOLVE_TIMEOUT_MS,
+      "ตรวจสิทธิ์หมดเวลา — รีเฟรชแล้วลองใหม่",
+    );
+    const payload = res.data;
+    if (!payload?.ok || !payload.staff?.id) return null;
+    if (payload.claimUpdated) {
+      try {
+        await user.getIdToken(true);
+      } catch {
+        /* claim still applies on next refresh */
+      }
+    }
+    return payload.staff;
+  } catch {
+    return null;
+  }
+}
+
 async function resolveStaff(user: User): Promise<StaffMember | null> {
   const email = emailFromUser(user);
   let member: StaffMember | null = null;
   if (email) {
     const bootstrapped = await ensureOwnerBootstrap(email, user.displayName);
-    member = bootstrapped || (await getStaffMemberById(email));
+    member =
+      bootstrapped ||
+      (await getStaffMemberById(email)) ||
+      // Phone-keyed roster docs store email as a field — index like staffPhones
+      (await getStaffByEmailIndex(email));
   }
-  // Phone-rostered staff who later gain a Google email on the token must still
-  // resolve via staffPhones (same as functions/staff-presence resolveCallerStaffId).
   if (!member && user.phoneNumber) {
     member = await getStaffByPhone(user.phoneNumber);
+  }
+  // Admin resolve: finds email-on-phone-doc + stamps staffId claim for rules
+  if (!member) {
+    member = await resolveStaffViaCallable(user);
+  } else {
+    // Still stamp claim / backfill indexes when client path already found them
+    void resolveStaffViaCallable(user);
   }
   if (!member) return null;
   // ข้อมูลส่วนตัว (staffPersonal) ต้องไม่บล็อกการเข้าใช้ — อ่านไม่ได้ก็เข้าได้ก่อน
