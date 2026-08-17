@@ -36,6 +36,7 @@ service cloud.firestore {
      * token email as staff id when that doc is missing (Jay/เตย bounce:
      * phone-rostered account with a linked Google email).
      * Calling get() only after exists() keeps rules safe on missing indexes.
+     * Retried ship: Rules API 503 often needs a dedicated push to land.
      */
     function emailStaffExists() {
       return hasEmail() && exists(/databases/$(database)/documents/staff/$(authEmail()));
