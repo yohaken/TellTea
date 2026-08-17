@@ -13,6 +13,7 @@ const cf = read("functions/resolve-my-staff.js");
 assert.match(cf, /exports\.resolveMyStaff/);
 assert.match(cf, /staffEmails/);
 assert.match(cf, /where\("email"/);
+assert.match(cf, /migratePhoneKeyedToEmail|migratedFrom/);
 assert.match(cf, /setCustomUserClaims/);
 assert.match(cf, /claimUpdated/);
 
