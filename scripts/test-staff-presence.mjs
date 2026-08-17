@@ -23,11 +23,16 @@ assert.match(read("firestore.rules"), /isOwnStaffDoc/);
 assert.match(read("firestore.rules"), /staffId == resolvedStaffId\(\) && staffPresenceTouch\(\)/);
 assert.match(read("firestore.rules"), /isOwnStaffDoc\(staffId\) && staffPresenceTouch\(\)/);
 assert.match(read("firestore.rules"), /isOwnStaffDoc\(staffId\) \|\| staffHubManage\(\)/);
-// resolvedStaffId must stay email-first (don't reshuffle — breaks hasPerm app-wide)
+// Prefer existing email staff doc; else staffPhones (not blind token.email)
+assert.match(read("firestore.rules"), /function emailStaffExists\(/);
+assert.match(read("firestore.rules"), /function phoneStaffId\(/);
 assert.match(
   read("firestore.rules"),
-  /function resolvedStaffId\(\) \{\s*return hasEmail\(\)/,
+  /function resolvedStaffId\(\) \{\s*return emailStaffExists\(\)/,
 );
+assert.match(read("src/lib/auth.tsx"), /getStaffByPhone\(user\.phoneNumber\)/);
+assert.match(read("src/app/login/page.tsx"), /staffHomeHref\(staff\)/);
+assert.match(read("src/app/page.tsx"), /AUTH_STAFF_RESOLVE_TIMEOUT_MS/);
 assert.match(read("src/components/StaffPresenceDock.tsx"), /กำลังใช้งาน/);
 assert.match(read("src/components/StaffPresenceDock.tsx"), /formatPresenceAge/);
 assert.match(read("src/components/StaffPresenceHeartbeat.tsx"), /touchStaffPresence/);

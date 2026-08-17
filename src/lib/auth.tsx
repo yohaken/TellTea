@@ -228,7 +228,10 @@ async function resolveStaff(user: User): Promise<StaffMember | null> {
   if (email) {
     const bootstrapped = await ensureOwnerBootstrap(email, user.displayName);
     member = bootstrapped || (await getStaffMemberById(email));
-  } else if (user.phoneNumber) {
+  }
+  // Phone-rostered staff who later gain a Google email on the token must still
+  // resolve via staffPhones (same as functions/staff-presence resolveCallerStaffId).
+  if (!member && user.phoneNumber) {
     member = await getStaffByPhone(user.phoneNumber);
   }
   if (!member) return null;
@@ -606,7 +609,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(next);
 
       const cacheKey = cacheKeyFromUser(next);
-      const cached = cacheKey ? loadCachedStaff(cacheKey) : null;
+      const cached =
+        (cacheKey ? loadCachedStaff(cacheKey) : null) ||
+        (next.phoneNumber ? loadCachedStaff(next.phoneNumber) : null) ||
+        (emailFromUser(next) ? loadCachedStaff(emailFromUser(next)) : null);
       if (cached) {
         setStaff(cached);
         setBusyReason(null);

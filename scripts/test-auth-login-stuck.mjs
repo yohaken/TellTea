@@ -35,9 +35,13 @@ assert.match(cf, /exchangeLoginTicket/);
 assert.match(cf, /loginTickets/);
 assert.match(read("functions/index.js"), /exchangeLoginTicket/);
 
+assert.match(auth, /getStaffByPhone\(user\.phoneNumber\)/);
+assert.match(auth, /Phone-rostered staff who later gain a Google email/);
+
 const login = read("src/app/login/page.tsx");
 assert.match(login, /busyReason/);
 assert.match(login, /AUTH_LOADING_ESCAPE_MS/);
+assert.match(login, /staffHomeHref\(staff\)/);
 assert.match(login, /กำลังเข้าสู่ระบบ\.\.\./);
 assert.match(login, /ล็อกอินค้างนานผิดปกติ/);
 assert.doesNotMatch(login, /กำลังเตรียมระบบ/);

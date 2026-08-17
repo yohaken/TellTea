@@ -29,6 +29,7 @@ import {
   workEntryIncludesMe,
 } from "@/lib/work-entry-mine";
 import { can } from "@/lib/permissions";
+import { staffHomeHref } from "@/lib/nav-menu";
 import {
   entryHasPhotoFlag,
   type PhotoForensicsReport,
@@ -238,7 +239,7 @@ function OtView() {
 
   useEffect(() => {
     if (staff && !can(staff, "otBonus")) {
-      router.replace("/ledger/");
+      router.replace(staffHomeHref(staff));
     }
   }, [staff, router]);
 

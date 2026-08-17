@@ -6,6 +6,7 @@ import { signInWithCustomToken } from "firebase/auth";
 import { AUTH_LOADING_ESCAPE_MS, useAuth } from "@/lib/auth";
 import { getFirebaseAuth } from "@/lib/firebase";
 import { AppBrand } from "@/components/AppBrand";
+import { staffHomeHref } from "@/lib/nav-menu";
 import { cn } from "@/lib/utils";
 
 function isInAppBrowser() {
@@ -64,9 +65,10 @@ export default function LoginPage() {
     if (status === "ready") {
       const params = new URLSearchParams(window.location.search);
       if (params.get("qaToken")) return;
-      router.replace("/ledger/");
+      // ตามสิทธิ์ — พนักงานหน้าร้านมักไม่มี ledger; อย่าบังคับ /ledger แล้วเด้งวน
+      router.replace(staffHomeHref(staff));
     }
-  }, [status, router]);
+  }, [status, staff, router]);
 
   useEffect(() => {
     if (status !== "loading" || busyReason === "boot" || busyReason == null) {
