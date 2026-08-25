@@ -1920,6 +1920,17 @@ body.modal-open .main-panel {
   font: inherit;
 }
 
+.pts-spin-demo-range-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.55rem;
+}
+
+.pts-spin-demo-range-row input[type="number"] {
+  max-width: 5.5rem;
+}
+
 .pts-spin-demo-weights {
   display: grid;
   gap: 0.45rem;

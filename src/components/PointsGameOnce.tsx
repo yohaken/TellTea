@@ -9,13 +9,17 @@ import type { PointsGameId } from "@/lib/points-games";
 import {
   DEFAULT_POINTS_SPIN_SETTINGS,
   loadPointsSpinSettings,
+  resolvePlaySettings,
   subscribePointsSpinSettings,
   type PointsSpinSettings,
 } from "@/lib/points-spin-settings";
 
 type Props = {
   basePoints?: number;
-  /** ทับค่าตั้งจาก Firestore (โหมดจำลอง / ล็อกตอนเล่นลูกค้า) */
+  /**
+   * ทับค่าตั้งจาก Firestore (โหมดจำลอง)
+   * จะถูก resolvePlaySettings ครั้งแรกแล้วล็อกจนจบรอบ
+   */
   settings?: PointsSpinSettings | null;
   allowReselect?: boolean;
   /**
@@ -26,7 +30,7 @@ type Props = {
   onFinished?: (payload: { game: PointsGameId; result: SpinResult }) => void;
   /** ข้อความสถานะหลังเครดิตแต้ม */
   creditNote?: string | null;
-  /** โชว์ปุ่มบันทึกอีกครั้งเมื่อเครดิตล้ม */
+  /** โชว์ปุ่มบันทึกแต้มอีกครั้งเมื่อเครดิตล้ม */
   creditRetryable?: boolean;
   onRetryCredit?: () => void;
   className?: string;
@@ -34,8 +38,12 @@ type Props = {
 
 type Phase = "play" | "done";
 
+function latchPlay(base: PointsSpinSettings): PointsSpinSettings {
+  return resolvePlaySettings(base);
+}
+
 /**
- * เล่นวงล้อเกมเดียวจนจบ — ใช้ค่าตั้งที่เจ้าของบันทึกไว้
+ * เล่นวงล้อเกมเดียวจนจบ — สุ่มค่าเล่นจากช่วงที่เจ้าของตั้งไว้ แล้วล็อกในรอบ
  */
 export function PointsGameOnce({
   basePoints = 0,
@@ -48,30 +56,28 @@ export function PointsGameOnce({
   onRetryCredit,
   className = "",
 }: Props) {
-  const [frozen, setFrozen] = useState<PointsSpinSettings | null>(
-    settingsProp || null,
-  );
-  const [settingsReady, setSettingsReady] = useState(!!settingsProp);
+  const [frozen, setFrozen] = useState<PointsSpinSettings | null>(null);
+  const [settingsReady, setSettingsReady] = useState(false);
   const [phase, setPhase] = useState<Phase>("play");
   const [result, setResult] = useState<SpinResult | null>(null);
   const [playKey, setPlayKey] = useState(0);
 
   useEffect(() => {
     if (settingsProp) {
-      setFrozen((prev) => prev ?? settingsProp);
+      setFrozen((prev) => prev ?? latchPlay(settingsProp));
       setSettingsReady(true);
       return;
     }
     if (liveSettings) {
       return subscribePointsSpinSettings((s) => {
-        setFrozen((prev) => prev ?? s);
+        setFrozen((prev) => prev ?? latchPlay(s));
         setSettingsReady(true);
       });
     }
     let cancelled = false;
     void loadPointsSpinSettings().then((s) => {
       if (cancelled) return;
-      setFrozen((prev) => prev ?? s);
+      setFrozen((prev) => prev ?? latchPlay(s));
       setSettingsReady(true);
     });
     return () => {
@@ -89,6 +95,21 @@ export function PointsGameOnce({
 
   function resetPlay() {
     if (!allowReselect) return;
+    const base = settingsProp || frozen || DEFAULT_POINTS_SPIN_SETTINGS;
+    // สุ่มชุดใหม่จากช่วงเดิม (ไม่ล็อกค่าที่ resolve แล้ว)
+    const template: PointsSpinSettings = {
+      ...base,
+      sliceCountMin: base.sliceCountMin,
+      sliceCountMax: base.sliceCountMax,
+      spinSpeedMin: base.spinSpeedMin,
+      spinSpeedMax: base.spinSpeedMax,
+      stopDecelMin: base.stopDecelMin,
+      stopDecelMax: base.stopDecelMax,
+      shuffleLayout: base.shuffleLayout,
+      sliceSizing: base.sliceSizing,
+      layoutSeed: 0,
+    };
+    setFrozen(latchPlay(template));
     setPhase("play");
     setResult(null);
     setPlayKey((k) => k + 1);
@@ -114,13 +135,15 @@ export function PointsGameOnce({
           </p>
           <p className="pts-spin-points-only">{POINTS_ONLY_NOTE}</p>
           <PointsMultiplierSpin
-            key={`${playKey}-${settings.sliceCount}-${settings.spinSpeed}-${settings.stopDecel}-${settings.updatedAt}`}
+            key={`${playKey}-${settings.sliceCount}-${settings.spinSpeed}-${settings.stopDecel}-${settings.layoutSeed}-${settings.sliceSizing}`}
             mode="play"
             basePoints={basePoints}
             weights={settings.weights}
             sliceCount={settings.sliceCount}
             spinSpeed={settings.spinSpeed}
             stopDecel={settings.stopDecel}
+            sliceSizing={settings.sliceSizing}
+            layoutSeed={settings.layoutSeed}
             onComplete={onComplete}
           />
         </div>

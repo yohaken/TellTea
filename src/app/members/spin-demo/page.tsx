@@ -17,16 +17,24 @@ import {
   simulatePhysicsCoasts,
   simulateSpins,
   type PointTier,
+  type SliceSizingMode,
   type SpinWeight,
 } from "@/lib/points-multiplier-spin";
 import {
   DEFAULT_POINTS_SPIN_SETTINGS,
   DEFAULT_SLICE_COUNT,
+  DEFAULT_SLICE_COUNT_MAX,
+  DEFAULT_SLICE_COUNT_MIN,
+  DEFAULT_SPIN_SPEED_MAX,
+  DEFAULT_SPIN_SPEED_MIN,
+  DEFAULT_STOP_DECEL_MAX,
+  DEFAULT_STOP_DECEL_MIN,
   SLICE_COUNT_MAX,
   SLICE_COUNT_MIN,
   approxSliceDegrees,
   loadPointsSpinSettings,
   normalizeSpinSettings,
+  resolvePlaySettings,
   savePointsSpinSettings,
   type PointsSpinSettings,
 } from "@/lib/points-spin-settings";
@@ -47,9 +55,14 @@ function SpinDemoView() {
   const canHub = canAccessMembersHub(staff);
 
   const [tab, setTab] = useState<DemoTab>("customer");
-  const [sliceCount, setSliceCount] = useState(DEFAULT_SLICE_COUNT);
-  const [spinSpeed, setSpinSpeed] = useState(DEFAULT_POINTS_SPIN_SETTINGS.spinSpeed);
-  const [stopDecel, setStopDecel] = useState(DEFAULT_POINTS_SPIN_SETTINGS.stopDecel);
+  const [sliceCountMin, setSliceCountMin] = useState(DEFAULT_SLICE_COUNT_MIN);
+  const [sliceCountMax, setSliceCountMax] = useState(DEFAULT_SLICE_COUNT_MAX);
+  const [spinSpeedMin, setSpinSpeedMin] = useState(DEFAULT_SPIN_SPEED_MIN);
+  const [spinSpeedMax, setSpinSpeedMax] = useState(DEFAULT_SPIN_SPEED_MAX);
+  const [stopDecelMin, setStopDecelMin] = useState(DEFAULT_STOP_DECEL_MIN);
+  const [stopDecelMax, setStopDecelMax] = useState(DEFAULT_STOP_DECEL_MAX);
+  const [shuffleLayout, setShuffleLayout] = useState(true);
+  const [sliceSizing, setSliceSizing] = useState<SliceSizingMode>("byWeight");
   const [spinEnabled, setSpinEnabled] = useState(false);
   const [w0, setW0] = useState(50);
   const [w1, setW1] = useState(25);
@@ -62,6 +75,8 @@ function SpinDemoView() {
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [loadedAt, setLoadedAt] = useState(0);
+  const [preview, setPreview] = useState<PointsSpinSettings | null>(null);
+  const [previewKey, setPreviewKey] = useState(0);
 
   useEffect(() => {
     void loadPointsSpinSettings().then((s) => {
@@ -71,9 +86,14 @@ function SpinDemoView() {
   }, []);
 
   function applySettingsToForm(s: PointsSpinSettings) {
-    setSliceCount(s.sliceCount);
-    setSpinSpeed(s.spinSpeed);
-    setStopDecel(s.stopDecel);
+    setSliceCountMin(s.sliceCountMin);
+    setSliceCountMax(s.sliceCountMax);
+    setSpinSpeedMin(s.spinSpeedMin);
+    setSpinSpeedMax(s.spinSpeedMax);
+    setStopDecelMin(s.stopDecelMin);
+    setStopDecelMax(s.stopDecelMax);
+    setShuffleLayout(s.shuffleLayout !== false);
+    setSliceSizing(s.sliceSizing === "equal" ? "equal" : "byWeight");
     setSpinEnabled(s.gamesEnabled?.spin === true);
     const map: Record<PointTier, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
     for (const w of s.weights) map[w.points] = w.weight;
@@ -100,16 +120,39 @@ function SpinDemoView() {
   const draft: PointsSpinSettings = useMemo(
     () =>
       normalizeSpinSettings({
-        sliceCount,
+        sliceCountMin,
+        sliceCountMax,
         weights,
-        spinSpeed,
-        stopDecel,
+        spinSpeedMin,
+        spinSpeedMax,
+        stopDecelMin,
+        stopDecelMax,
+        shuffleLayout,
+        sliceSizing,
         gamesEnabled: { spin: spinEnabled },
         updatedAt: loadedAt,
         updatedBy: "",
       }),
-    [sliceCount, weights, spinSpeed, stopDecel, spinEnabled, loadedAt],
+    [
+      sliceCountMin,
+      sliceCountMax,
+      weights,
+      spinSpeedMin,
+      spinSpeedMax,
+      stopDecelMin,
+      stopDecelMax,
+      shuffleLayout,
+      sliceSizing,
+      spinEnabled,
+      loadedAt,
+    ],
   );
+
+  useEffect(() => {
+    setPreview(resolvePlaySettings(draft));
+    setPreviewKey((k) => k + 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reroll when draft ranges/weights change
+  }, [draft]);
 
   const probs = useMemo(() => probabilityMap(draft.weights), [draft.weights]);
   const ev = useMemo(() => expectedPoints(draft.weights), [draft.weights]);
@@ -130,6 +173,12 @@ function SpinDemoView() {
     5: w5,
   };
 
+  function rerollPreview() {
+    setPreview(resolvePlaySettings(draft));
+    setPreviewKey((k) => k + 1);
+    setSimCount(null);
+  }
+
   async function onSave() {
     setSaving(true);
     setSaveMsg(null);
@@ -137,10 +186,18 @@ function SpinDemoView() {
       const actor = user?.uid || staff?.id || "boh";
       const saved = await savePointsSpinSettings(
         {
+          sliceCountMin: draft.sliceCountMin,
+          sliceCountMax: draft.sliceCountMax,
           sliceCount: draft.sliceCount,
           weights: draft.weights,
+          spinSpeedMin: draft.spinSpeedMin,
+          spinSpeedMax: draft.spinSpeedMax,
           spinSpeed: draft.spinSpeed,
+          stopDecelMin: draft.stopDecelMin,
+          stopDecelMax: draft.stopDecelMax,
           stopDecel: draft.stopDecel,
+          shuffleLayout: draft.shuffleLayout,
+          sliceSizing: draft.sliceSizing,
           gamesEnabled: { spin: spinEnabled },
         },
         actor,
@@ -149,10 +206,11 @@ function SpinDemoView() {
       setLoadedAt(saved.updatedAt);
       setSaveMsg(
         saved.gamesEnabled.spin
-          ? "บันทึกแล้ว · เกมเปิดบน /claim · /join ทันที"
+          ? "บันทึกแล้ว · เกมเปิดบน /claim · /join ทันที · แต่ละรอบสุ่มในช่วงที่ตั้ง"
           : "บันทึกแล้ว · เกมยังปิดฝั่งลูกค้า (เปิดสวิตช์ด้านบนแล้วบันทึกอีกครั้ง)",
       );
       setSimCount(null);
+      rerollPreview();
     } catch (e) {
       setSaveMsg(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
     } finally {
@@ -171,8 +229,9 @@ function SpinDemoView() {
     );
   }
 
-  const gameKey = `${tab}-${draft.sliceCount}-${draft.spinSpeed}-${draft.stopDecel}-${w0}-${w1}-${w2}-${w3}-${w4}-${w5}`;
-  const degEach = approxSliceDegrees(draft.sliceCount);
+  const play = preview || draft;
+  const gameKey = `${tab}-${previewKey}-${play.sliceCount}-${play.spinSpeed}-${play.stopDecel}-${play.layoutSeed}-${play.sliceSizing}-${w0}-${w1}-${w2}-${w3}-${w4}-${w5}`;
+  const degEach = approxSliceDegrees(play.sliceCount);
 
   return (
     <div className="staff-hub members-hub members-hub--slim pts-spin-demo">
@@ -188,12 +247,12 @@ function SpinDemoView() {
       <section className="staff-hub-panel members-slim-panel">
         <p className={`pts-spin-demo-banner${spinEnabled ? " is-live" : ""}`}>
           {spinEnabled
-            ? "เกมเปิดฝั่งลูกค้าแล้ว · ค่าที่บันทึกมีผลบน /claim · /join ทันที"
+            ? "เกมเปิดฝั่งลูกค้าแล้ว · แต่ละรอบสุ่มในช่วงที่บันทึก · มีผลบน /claim · /join"
             : "เกมยังปิดฝั่งลูกค้า · ทดลองหลังร้านได้ตามปกติ"}
         </p>
         <p className="members-slim-hint muted">
-          ผู้เล่นต้อง<strong>กะจังหวะกดหยุดเอง</strong> · ช่องต้องใหญ่พอเห็น ·
-          จำนวนช่อง/สัดส่วน/ความเร็วตั้งได้ด้านล่างแล้วกดบันทึก
+          ผู้เล่นต้อง<strong>กะจังหวะกดหยุดเอง</strong> · แต่ละรอบสุ่มจำนวนช่อง /
+          ความเร็ว / ความหน่วง / ตำแหน่ง · กันจับทาง
         </p>
 
         <label className="pts-spin-demo-live-toggle">
@@ -212,70 +271,149 @@ function SpinDemoView() {
 
         <label className="pts-spin-demo-field">
           <span>
-            จำนวนช่องบนวงล้อ ({SLICE_COUNT_MIN}–{SLICE_COUNT_MAX}) · ตอนนี้ ~{degEach}°
-            ต่อช่อง
+            สุ่มจำนวนช่อง ({SLICE_COUNT_MIN}–{SLICE_COUNT_MAX}) · ค่าเริ่ม{" "}
+            {DEFAULT_SLICE_COUNT_MIN}–{DEFAULT_SLICE_COUNT_MAX}
           </span>
-          <input
-            type="range"
-            min={SLICE_COUNT_MIN}
-            max={SLICE_COUNT_MAX}
-            step={1}
-            value={sliceCount}
-            onChange={(e) => setSliceCount(Number(e.target.value))}
-          />
-          <input
-            type="number"
-            min={SLICE_COUNT_MIN}
-            max={SLICE_COUNT_MAX}
-            value={sliceCount}
-            onChange={(e) => setSliceCount(Number(e.target.value) || DEFAULT_SLICE_COUNT)}
-          />
+          <div className="pts-spin-demo-range-row">
+            <span className="muted">ต่ำ</span>
+            <input
+              type="number"
+              min={SLICE_COUNT_MIN}
+              max={SLICE_COUNT_MAX}
+              value={sliceCountMin}
+              onChange={(e) =>
+                setSliceCountMin(Number(e.target.value) || DEFAULT_SLICE_COUNT_MIN)
+              }
+            />
+            <span className="muted">สูง</span>
+            <input
+              type="number"
+              min={SLICE_COUNT_MIN}
+              max={SLICE_COUNT_MAX}
+              value={sliceCountMax}
+              onChange={(e) =>
+                setSliceCountMax(Number(e.target.value) || DEFAULT_SLICE_COUNT_MAX)
+              }
+            />
+          </div>
           <span className="muted pts-spin-demo-pct">
-            น้อย = ช่องใหญ่ กะง่าย · มาก = ยากขึ้น (สูงสุด {SLICE_COUNT_MAX})
+            รอบตัวอย่างตอนนี้ {play.sliceCount} ช่อง
+            {sliceSizing === "equal" ? ` (~${degEach}° เท่ากัน)` : " · ขนาดตาม %"}
           </span>
         </label>
 
         <label className="pts-spin-demo-field">
-          <span>ความเร็วหมุน (deg/s) · ช้าลงจะกะง่ายขึ้น</span>
-          <input
-            type="range"
-            min={160}
-            max={640}
-            step={10}
-            value={spinSpeed}
-            onChange={(e) => setSpinSpeed(Number(e.target.value))}
-          />
-          <input
-            type="number"
-            min={160}
-            max={640}
-            value={spinSpeed}
-            onChange={(e) => setSpinSpeed(Number(e.target.value) || 320)}
-          />
+          <span>
+            สุ่มความเร็วหมุน (deg/s) · ค่าเริ่ม {DEFAULT_SPIN_SPEED_MIN}–
+            {DEFAULT_SPIN_SPEED_MAX}
+          </span>
+          <div className="pts-spin-demo-range-row">
+            <span className="muted">ต่ำ</span>
+            <input
+              type="number"
+              min={160}
+              max={640}
+              value={spinSpeedMin}
+              onChange={(e) =>
+                setSpinSpeedMin(Number(e.target.value) || DEFAULT_SPIN_SPEED_MIN)
+              }
+            />
+            <span className="muted">สูง</span>
+            <input
+              type="number"
+              min={160}
+              max={640}
+              value={spinSpeedMax}
+              onChange={(e) =>
+                setSpinSpeedMax(Number(e.target.value) || DEFAULT_SPIN_SPEED_MAX)
+              }
+            />
+          </div>
+          <span className="muted pts-spin-demo-pct">
+            รอบตัวอย่าง · {play.spinSpeed} deg/s
+          </span>
         </label>
 
         <label className="pts-spin-demo-field">
-          <span>ความหน่วงตอนกดหยุด (deg/s²) · น้อย = ไหลนาน กะระยะได้</span>
-          <input
-            type="range"
-            min={180}
-            max={900}
-            step={10}
-            value={stopDecel}
-            onChange={(e) => setStopDecel(Number(e.target.value))}
-          />
-          <input
-            type="number"
-            min={180}
-            max={900}
-            value={stopDecel}
-            onChange={(e) => setStopDecel(Number(e.target.value) || 380)}
-          />
+          <span>
+            สุ่มความหน่วงตอนกดหยุด (deg/s²) · ค่าเริ่ม {DEFAULT_STOP_DECEL_MIN}–
+            {DEFAULT_STOP_DECEL_MAX}
+          </span>
+          <div className="pts-spin-demo-range-row">
+            <span className="muted">ต่ำ</span>
+            <input
+              type="number"
+              min={180}
+              max={900}
+              value={stopDecelMin}
+              onChange={(e) =>
+                setStopDecelMin(Number(e.target.value) || DEFAULT_STOP_DECEL_MIN)
+              }
+            />
+            <span className="muted">สูง</span>
+            <input
+              type="number"
+              min={180}
+              max={900}
+              value={stopDecelMax}
+              onChange={(e) =>
+                setStopDecelMax(Number(e.target.value) || DEFAULT_STOP_DECEL_MAX)
+              }
+            />
+          </div>
+          <span className="muted pts-spin-demo-pct">
+            รอบตัวอย่าง · {play.stopDecel} deg/s² · น้อย = ไหลนาน
+          </span>
         </label>
+
+        <label className="pts-spin-demo-live-toggle">
+          <input
+            type="checkbox"
+            checked={shuffleLayout}
+            onChange={(e) => setShuffleLayout(e.target.checked)}
+          />
+          <span>
+            <strong>สลับตำแหน่งชิ้นอัตโนมัติ</strong> ทุกครั้งที่เริ่มเล่น
+            <span className="muted"> — ยังกระจายไม่ให้แผงเดียวกันติดยาว</span>
+          </span>
+        </label>
+
+        <label className="pts-spin-demo-live-toggle">
+          <input
+            type="checkbox"
+            checked={sliceSizing === "byWeight"}
+            onChange={(e) =>
+              setSliceSizing(e.target.checked ? "byWeight" : "equal")
+            }
+          />
+          <span>
+            <strong>ขนาดช่องตามสัดส่วน %</strong>
+            <span className="muted">
+              {" "}
+              — +0 ที่ % สูงได้ช่องใหญ่ · ปิดแล้วช่องเท่ากันทุกชิ้น
+            </span>
+          </span>
+        </label>
+
+        <div className="pts-spin-demo-pick" style={{ marginBottom: "0.75rem" }}>
+          <button
+            type="button"
+            className="ghost-btn staff-btn-sm"
+            onClick={() => rerollPreview()}
+          >
+            สุ่มตัวอย่างรอบนี้ใหม่
+          </button>
+          <span className="muted pts-spin-demo-pct">
+            {play.sliceCount} ช่อง · {play.spinSpeed}°/s · หน่วง {play.stopDecel}
+            {shuffleLayout ? " · สลับตำแหน่ง" : ""}
+            {sliceSizing === "byWeight" ? " · ตาม %" : " · ช่องเท่ากัน"}
+          </span>
+        </div>
 
         <div className="pts-spin-demo-weights">
           <p className="pts-spin-demo-weights-title">
             สัดส่วนมุมรวม「แต้มได้เพิ่ม」0–5 (+0 = ไม่ได้เพิ่มจากเกม · ควรหนาที่สุด)
+            <span className="muted"> — ไม่สุ่ม · ตั้งเอง</span>
           </p>
           {POINT_TIERS.map((m) => (
             <label key={m} className="pts-spin-demo-weight-row">
@@ -363,7 +501,7 @@ function SpinDemoView() {
             }}
           >
             <strong>ทดสอบวงล้อ</strong>
-            <span>ลองกะจังหวะด้วยค่าที่ตั้งไว้</span>
+            <span>ลองกะจังหวะด้วยค่าที่สุ่มตัวอย่าง</span>
           </button>
         </div>
       </section>
@@ -392,8 +530,8 @@ function SpinDemoView() {
               onFinished={({ result }) => {
                 setLastNote(
                   result.points === 0
-                  ? `+0 · ไม่ได้แต้มเพิ่มจากเกม`
-                  : `ได้เพิ่ม +${result.points} แต้ม (${SPIN_MENU_PRIZES[result.points].label})`,
+                    ? `+0 · ไม่ได้แต้มเพิ่มจากเกม`
+                    : `ได้เพิ่ม +${result.points} แต้ม (${SPIN_MENU_PRIZES[result.points].label})`,
                 );
               }}
             />
@@ -403,10 +541,12 @@ function SpinDemoView() {
           <PointsMultiplierSpin
             key={gameKey}
             mode="demo"
-            weights={draft.weights}
-            sliceCount={draft.sliceCount}
-            spinSpeed={draft.spinSpeed}
-            stopDecel={draft.stopDecel}
+            weights={play.weights}
+            sliceCount={play.sliceCount}
+            spinSpeed={play.spinSpeed}
+            stopDecel={play.stopDecel}
+            sliceSizing={play.sliceSizing}
+            layoutSeed={play.layoutSeed}
             hint="มองช่องที่อยากได้ → กดหยุด → วงหน่วงเองตามแรง"
             onComplete={(r) => {
               setLastNote(`หมุนวงล้อ · ได้ +${r.points} แต้ม`);
@@ -425,7 +565,12 @@ function SpinDemoView() {
             type="button"
             className="primary-btn staff-btn-sm"
             onClick={() =>
-              setSimCount(simulateSpins(2000, draft.weights, Math.random, draft.sliceCount))
+              setSimCount(
+                simulateSpins(2000, play.weights, Math.random, play.sliceCount, {
+                  sliceSizing: play.sliceSizing,
+                  layoutSeed: play.layoutSeed,
+                }),
+              )
             }
           >
             จำลองมุมสุ่ม
@@ -437,11 +582,15 @@ function SpinDemoView() {
               setSimCount(
                 simulatePhysicsCoasts(
                   2000,
-                  draft.weights,
+                  play.weights,
                   Math.random,
-                  draft.sliceCount,
-                  draft.spinSpeed,
-                  draft.stopDecel,
+                  play.sliceCount,
+                  play.spinSpeed,
+                  play.stopDecel,
+                  {
+                    sliceSizing: play.sliceSizing,
+                    layoutSeed: play.layoutSeed,
+                  },
                 ),
               )
             }
@@ -478,10 +627,15 @@ function SpinDemoView() {
         <p className="pts-spin-demo-weights-title">กฎ</p>
         <ol className="pts-spin-demo-flow">
           <li>เกมเดียว: หมุนวงล้อ · ใช้ความสามารถกะจังหวะกดหยุด</li>
-          <li>จำนวนช่องตั้งได้ (ค่าเริ่ม {DEFAULT_SLICE_COUNT}) — ช่องใหญ่พอให้คาดเดา</li>
+          <li>
+            แต่ละรอบสุ่มจำนวนช่อง (ค่าเริ่ม {DEFAULT_SLICE_COUNT_MIN}–
+            {DEFAULT_SLICE_COUNT_MAX} · mid ≈ {DEFAULT_SLICE_COUNT}) · ความเร็ว ·
+            ความหน่วง
+          </li>
+          <li>ขนาดช่องตาม % ได้ — +0 ที่หนาจะกว้างกว่าช่องหายาก</li>
           <li>กดหยุดแล้ววงหน่วงตามแรง — ไม่จับผลจากเปอร์เซ็นต์ล่วงหน้า</li>
           <li>ลุ้นแต้มได้เพิ่ม 0–5 ตามชิ้นใต้เข็ม (+0 = ไม่ได้เพิ่มจากเกม)</li>
-          <li>ชิ้นบนวงคละ ไม่เรียงเลขติดกัน (เช่น 3-4-5)</li>
+          <li>ชิ้นบนวงคละ / สลับตำแหน่งได้ — ไม่เรียงเลขติดกัน (เช่น 3-4-5)</li>
         </ol>
       </section>
     </div>

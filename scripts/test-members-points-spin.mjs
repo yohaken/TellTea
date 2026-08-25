@@ -29,6 +29,14 @@ assert.match(settings, /subscribePointsSpinSettings/);
 assert.match(settings, /gamesEnabled/);
 assert.match(settings, /isPointsGameEnabled/);
 assert.match(settings, /sliceCount/);
+assert.match(settings, /sliceCountMin|sliceCountMax/);
+assert.match(settings, /resolvePlaySettings/);
+assert.match(settings, /shuffleLayout/);
+assert.match(settings, /sliceSizing|byWeight/);
+assert.match(settings, /spinSpeedMin|stopDecelMin/);
+
+assert.match(lib, /SliceSizingMode|byWeight/);
+assert.match(lib, /layoutSeed|mulberry32/);
 
 const rules = read("firestore.rules");
 assert.match(rules, /pointsSpinSettings/);
@@ -43,7 +51,7 @@ assert.match(credit, /publicSpinGameCredit/);
 assert.match(credit, /creditSpinGamePoints/);
 
 assert.match(read("src/components/PointsGamesAttractBg.tsx"), /subscribePointsSpinSettings|liveSettings/);
-assert.match(read("src/components/PointsGameOnce.tsx"), /sliceCount|subscribePointsSpinSettings|liveSettings/);
+assert.match(read("src/components/PointsGameOnce.tsx"), /resolvePlaySettings|sliceCount|subscribePointsSpinSettings|liveSettings/);
 
 const spinUi = read("src/components/PointsMultiplierSpin.tsx");
 assert.doesNotMatch(spinUi, /\buseEffectEvent\s*\(/);
@@ -57,6 +65,8 @@ const demo = read("src/app/members/spin-demo/page.tsx");
 assert.match(demo, /บันทึกค่าตั้งวงล้อ/);
 assert.match(demo, /จำนวนช่อง/);
 assert.match(demo, /SLICE_COUNT_MIN|sliceCount/);
+assert.match(demo, /sliceCountMin|สุ่มจำนวนช่อง/);
+assert.match(demo, /ขนาดช่องตามสัดส่วน|shuffleLayout|สลับตำแหน่ง/);
 assert.match(demo, /savePointsSpinSettings/);
 assert.match(demo, /gamesEnabled|spinEnabled/);
 assert.match(demo, /เปิดเกม/);
@@ -73,7 +83,7 @@ assert.match(claim, /creditSpinGamePoints/);
 
 const membersPage = read("src/app/members/page.tsx");
 assert.match(membersPage, /lifetimeGameBonusPoints/);
-assert.match(membersPage, /แต้มเกม/);
+assert.match(membersPage, /เกม|แต้มเกม/);
 
 const membersLib = read("src/lib/members.ts");
 assert.match(membersLib, /lifetimeGameBonusPoints/);
@@ -94,6 +104,7 @@ const docs = read("docs/members-points-spin.md");
 assert.match(docs, /จำนวนช่อง|sliceCount|กะจังหวะ/);
 assert.match(docs, /pointsSpinSettings|บันทึก/);
 assert.match(docs, /gamesEnabled|publicSpinGameCredit/);
+assert.match(docs, /resolvePlaySettings|sliceCountMin|byWeight/);
 
 const version = read("src/lib/version.ts");
 assert.ok(Number(version.match(/APP_BUILD\s*=\s*(\d+)/)?.[1] || 0) >= 806);

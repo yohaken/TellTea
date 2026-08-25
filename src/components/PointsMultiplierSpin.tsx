@@ -11,6 +11,7 @@ import {
   buildWheelSlices,
   clampWheelSliceCount,
   sliceAtPointer,
+  type SliceSizingMode,
   type SpinResult,
   type SpinWeight,
   type LegacySpinWeight,
@@ -36,6 +37,10 @@ type Props = {
   spinSpeed?: number;
   /** ความหน่วงตอนกดหยุด (deg/s²) */
   stopDecel?: number;
+  /** equal = ช่องเท่ากัน · byWeight = กว้างตาม % */
+  sliceSizing?: SliceSizingMode;
+  /** >0 = สุ่มตำแหน่งจาก seed (ล็อกในรอบ) */
+  layoutSeed?: number;
   onComplete?: (result: SpinResult) => void;
   className?: string;
   hint?: string;
@@ -75,6 +80,8 @@ export function PointsMultiplierSpin({
   sliceCount = DEFAULT_WHEEL_SLICE_COUNT,
   spinSpeed = WHEEL_SPIN_SPEED,
   stopDecel = WHEEL_STOP_DECEL,
+  sliceSizing = "byWeight",
+  layoutSeed = 0,
   onComplete,
   className = "",
   hint,
@@ -82,10 +89,17 @@ export function PointsMultiplierSpin({
   const slicesN = clampWheelSliceCount(sliceCount);
   const speed = Math.max(160, Math.min(640, spinSpeed));
   const decelBase = Math.max(180, Math.min(900, stopDecel));
+  const sizing: SliceSizingMode =
+    sliceSizing === "equal" ? "equal" : "byWeight";
+  const seed = layoutSeed > 0 ? Math.floor(layoutSeed) : 0;
 
   const slices = useMemo(
-    () => buildWheelSlices(weights, slicesN),
-    [weights, slicesN],
+    () =>
+      buildWheelSlices(weights, slicesN, {
+        sliceSizing: sizing,
+        layoutSeed: seed,
+      }),
+    [weights, slicesN, sizing, seed],
   );
   const legendTiers = useMemo(() => {
     const seen = new Set<number>();

@@ -5,6 +5,7 @@ import { PointsMultiplierSpin } from "@/components/PointsMultiplierSpin";
 import { POINTS_GAMES } from "@/lib/points-games";
 import {
   loadPointsSpinSettings,
+  resolvePlaySettings,
   subscribePointsSpinSettings,
   type PointsSpinSettings,
 } from "@/lib/points-spin-settings";
@@ -18,7 +19,7 @@ type Props = {
 };
 
 /**
- * พื้นหลังดึงดูดก่อนสมัคร/ล็อกอิน — โชว์วงล้อตามค่าตั้งร้าน
+ * พื้นหลังดึงดูดก่อนสมัคร/ล็อกอิน — โชว์วงล้อตามช่วงค่าตั้งร้าน (สุ่มชุดหนึ่ง)
  */
 export function PointsGamesAttractBg({
   basePoints = 5,
@@ -26,21 +27,21 @@ export function PointsGamesAttractBg({
   liveSettings = false,
   className = "",
 }: Props) {
-  const [settings, setSettings] = useState<PointsSpinSettings | null>(
-    settingsProp || null,
-  );
+  const [settings, setSettings] = useState<PointsSpinSettings | null>(null);
 
   useEffect(() => {
     if (settingsProp) {
-      setSettings(settingsProp);
+      setSettings(resolvePlaySettings(settingsProp));
       return;
     }
     if (liveSettings) {
-      return subscribePointsSpinSettings((s) => setSettings(s));
+      return subscribePointsSpinSettings((s) => {
+        setSettings(resolvePlaySettings(s));
+      });
     }
     let cancelled = false;
     void loadPointsSpinSettings().then((s) => {
-      if (!cancelled) setSettings(s);
+      if (!cancelled) setSettings(resolvePlaySettings(s));
     });
     return () => {
       cancelled = true;
@@ -55,13 +56,15 @@ export function PointsGamesAttractBg({
           <p className="pts-attract-tag">{POINTS_GAMES[0]!.attractLine}</p>
           {settings ? (
             <PointsMultiplierSpin
-              key={`teaser-${settings.sliceCount}-${settings.spinSpeed}-${settings.stopDecel}-${settings.updatedAt}`}
+              key={`teaser-${settings.sliceCount}-${settings.spinSpeed}-${settings.stopDecel}-${settings.layoutSeed}-${settings.sliceSizing}-${settings.updatedAt}`}
               mode="teaser"
               basePoints={basePoints}
               weights={settings.weights}
               sliceCount={settings.sliceCount}
               spinSpeed={settings.spinSpeed}
               stopDecel={settings.stopDecel}
+              sliceSizing={settings.sliceSizing}
+              layoutSeed={settings.layoutSeed}
               hint=""
             />
           ) : (

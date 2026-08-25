@@ -205,13 +205,65 @@ function wheelNeighborCost(labels: readonly PointTier[]): number {
   return cost;
 }
 
+/** RNG จาก seed — layout เดิมในรอบเล่นเดียวกัน */
+export function mulberry32(seed: number): () => number {
+  let t = (seed >>> 0) || 1;
+  return () => {
+    t = (t + 0x6d2b79f5) >>> 0;
+    let r = Math.imul(t ^ (t >>> 15), 1 | t);
+    r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function hillClimbLabels(start: PointTier[]): PointTier[] {
+  const total = start.length;
+  let best = start.slice();
+  let bestCost = wheelNeighborCost(best);
+  let improved = true;
+  let guard = 0;
+  while (improved && guard < total * total) {
+    improved = false;
+    guard += 1;
+    for (let i = 0; i < total; i++) {
+      for (let j = i + 1; j < total; j++) {
+        if (best[i] === best[j]) continue;
+        const trial = best.slice();
+        const tmp = trial[i]!;
+        trial[i] = trial[j]!;
+        trial[j] = tmp;
+        const cost = wheelNeighborCost(trial);
+        if (cost < bestCost) {
+          best = trial;
+          bestCost = cost;
+          improved = true;
+        }
+      }
+    }
+  }
+  return best;
+}
+
+function fisherYates<T>(arr: T[], rng: () => number): T[] {
+  const out = arr.slice();
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    const tmp = out[i]!;
+    out[i] = out[j]!;
+    out[j] = tmp;
+  }
+  return out;
+}
+
 /**
  * กระจายป้ายแต้มรอบวงแบบคละ
  * 1) วางของหายากก่อนให้ห่างกัน
  * 2) สลับช่องเพื่อลดเลขเรียงติด (เช่น 3-4-5) และแผงค่าเดียวกัน
+ * 3) ถ้ามี rng — สุ่มจุดเริ่มแล้ว hill-climb ใหม่ (ตำแหน่งไม่ซ้ำรอบ)
  */
 export function distributePointLabels(
   counts: Record<PointTier, number>,
+  rng?: () => number,
 ): PointTier[] {
   const total = POINT_TIERS.reduce<number>((s, t) => s + (counts[t] || 0), 0);
   if (total <= 0) return [0];
@@ -239,56 +291,84 @@ export function distributePointLabels(
     }
   }
 
-  let best = slots.map((s) => s ?? 0);
-  let bestCost = wheelNeighborCost(best);
-  // hill-climb สลับคู่ — n เล็ก (≈12–24) โอเค
-  let improved = true;
-  let guard = 0;
-  while (improved && guard < total * total) {
-    improved = false;
-    guard += 1;
-    for (let i = 0; i < total; i++) {
-      for (let j = i + 1; j < total; j++) {
-        if (best[i] === best[j]) continue;
-        const trial = best.slice();
-        const tmp = trial[i]!;
-        trial[i] = trial[j]!;
-        trial[j] = tmp;
-        const cost = wheelNeighborCost(trial);
-        if (cost < bestCost) {
-          best = trial;
-          bestCost = cost;
-          improved = true;
-        }
-      }
-    }
+  let start = slots.map((s) => s ?? 0);
+  if (rng) {
+    start = fisherYates(start, rng);
+    // หมุนวงสุ่ม — คนละจุดเริ่มแม้ลำดับคล้าย
+    const rot = Math.floor(rng() * total);
+    if (rot > 0) start = start.slice(rot).concat(start.slice(0, rot));
   }
-  return best;
+  return hillClimbLabels(start);
 }
+
+/** equal = ทุกช่องมุมเท่ากัน · byWeight = ช่องกว้างตาม % สัดส่วน */
+export type SliceSizingMode = "equal" | "byWeight";
+
+export type WheelBuildOptions = {
+  sliceSizing?: SliceSizingMode;
+  /** >0 = สุ่มตำแหน่งจาก seed นี้ (ล็อกในรอบเล่น) */
+  layoutSeed?: number;
+};
 
 /**
  * สร้างชิ้นวงล้อ — แบ่งสัดส่วนเป็นชิ้นย่อยกระจายรอบวง
  * targetSlices น้อย = ช่องใหญ่ กะจังหวะหยุดได้
+ * byWeight: มุมรวมต่อแต้มตาม weights · ชิ้นย่อยของแต้ม % สูงกว้างกว่า
  */
 export function buildWheelSlices(
   weights: readonly (SpinWeight | LegacySpinWeight)[] = DEFAULT_SPIN_WEIGHTS,
   targetSlices = DEFAULT_WHEEL_SLICE_COUNT,
+  options?: WheelBuildOptions,
 ): WheelSlice[] {
-  const labels = distributePointLabels(
-    allocateSliceCounts(weights, clampWheelSliceCount(targetSlices)),
-  );
+  const nTarget = clampWheelSliceCount(targetSlices);
+  const counts = allocateSliceCounts(weights, nTarget);
+  const rng =
+    options?.layoutSeed && options.layoutSeed > 0
+      ? mulberry32(options.layoutSeed)
+      : undefined;
+  const labels = distributePointLabels(counts, rng);
   const n = labels.length || 1;
-  const span = 360 / n;
+  const sizing = options?.sliceSizing === "byWeight" ? "byWeight" : "equal";
+
+  if (sizing === "equal") {
+    const span = 360 / n;
+    return labels.map((points, i) => {
+      const startDeg = i * span;
+      const endDeg = (i + 1) * span;
+      return {
+        id: `s${i}-p${points}`,
+        points,
+        multiplier: points,
+        startDeg,
+        endDeg,
+        midDeg: startDeg + span / 2,
+      };
+    });
+  }
+
+  const norm = normalizeWeights(weights);
+  const sum = norm.reduce((s, w) => s + w.weight, 0) || 1;
+  const spanOf: Record<PointTier, number> = emptyTierRecord();
+  for (const w of norm) {
+    const c = counts[w.points] || 0;
+    spanOf[w.points] = c > 0 ? (w.weight / sum) * (360 / c) : 0;
+  }
+
+  const rawSpans = labels.map((points) => spanOf[points] || 360 / n);
+  const rawSum = rawSpans.reduce((s, x) => s + x, 0) || 1;
+  let cursor = 0;
   return labels.map((points, i) => {
-    const startDeg = i * span;
-    const endDeg = (i + 1) * span;
+    const span = (rawSpans[i]! / rawSum) * 360;
+    const startDeg = cursor;
+    const endDeg = i === n - 1 ? 360 : cursor + span;
+    cursor = endDeg;
     return {
       id: `s${i}-p${points}`,
       points,
       multiplier: points,
       startDeg,
       endDeg,
-      midDeg: startDeg + span / 2,
+      midDeg: startDeg + (endDeg - startDeg) / 2,
     };
   });
 }
@@ -350,9 +430,10 @@ export function simulateSpins(
   weights: readonly (SpinWeight | LegacySpinWeight)[] = DEFAULT_SPIN_WEIGHTS,
   rng: () => number = Math.random,
   sliceCount = DEFAULT_WHEEL_SLICE_COUNT,
+  buildOpts?: WheelBuildOptions,
 ): Record<PointTier, number> {
   const n = Math.max(0, Math.min(100_000, Math.trunc(count) || 0));
-  const slices = buildWheelSlices(weights, sliceCount);
+  const slices = buildWheelSlices(weights, sliceCount, buildOpts);
   const hist = emptyTierRecord();
   for (let i = 0; i < n; i++) {
     const rot = rng() * 360;
@@ -369,9 +450,10 @@ export function simulatePhysicsCoasts(
   sliceCount = DEFAULT_WHEEL_SLICE_COUNT,
   spinSpeed = WHEEL_SPIN_SPEED,
   stopDecel = WHEEL_STOP_DECEL,
+  buildOpts?: WheelBuildOptions,
 ): Record<PointTier, number> {
   const n = Math.max(0, Math.min(20_000, Math.trunc(count) || 0));
-  const slices = buildWheelSlices(weights, sliceCount);
+  const slices = buildWheelSlices(weights, sliceCount, buildOpts);
   const hist = emptyTierRecord();
   const speed = Math.max(160, spinSpeed);
   const decel = Math.max(180, stopDecel);
