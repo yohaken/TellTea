@@ -369,8 +369,6 @@ function OtView() {
 
   const pastIncomplete = useMemo(() => {
     if (loading) return [];
-    const linked = shopOtView ? null : resolveLinkedEmployee(workers, staff);
-    const me = shopOtView ? null : buildWorkEntryMineIdentity(linked, staff);
     return listPastIncompleteOtShifts({
       gridMin: viewWindow.gridMin,
       gridMax: viewWindow.gridMax,
@@ -380,16 +378,11 @@ function OtView() {
       openingItems,
       closingItems,
       recordsByDayShift: checkRecordsByDayShift,
-      includeEmptySlots: shopOtView,
-      entryIncludesMe: me
-        ? (entry) => workEntryIncludesMe(entry, me)
-        : undefined,
+      /** ทุกคนเห็นกะค้างทั้งร้าน — ช่วยกันใส่เป็นทีม */
+      includeEmptySlots: true,
     });
   }, [
     loading,
-    shopOtView,
-    workers,
-    staff,
     viewWindow.gridMin,
     viewWindow.gridMax,
     viewMonth,

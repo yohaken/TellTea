@@ -2,6 +2,7 @@ import type { ChecklistItem, ChecklistRecord, CheckSessionSummary } from "./chec
 import { groupRecordsBySession, listItemsForTiming } from "./checklist";
 import type { CheckShiftId } from "./checklist";
 import { isOtShiftWorkWindowPast } from "./check-shift-window";
+import { enrichPastIncompleteShift, sortPastIncompleteShifts } from "./shift-deadline";
 import type { OtEntry } from "./ot";
 import { getOtImageUrls, hasOtQuantities, isOtEntryPlanned, labelOtShift } from "./ot";
 import type { OtShiftId } from "./ot";
@@ -48,6 +49,13 @@ export type PastIncompleteOtShift = {
   status: ShiftSlotStatus;
   missingLabels: string[];
   entry: OtEntry | null;
+  /** เวลาหมดเขตใส่ครบ (จบกะ + 24 ชม.) */
+  deadlineMs: number;
+  /** ms เหลือก่อนหมดเขต · 0 = เลยกำหนดแล้ว */
+  countdownMs: number;
+  overdue: boolean;
+  /** 0.3% ต่อกะที่เลยกำหนด — แสดงตัวอย่างก่อนหักจริง */
+  previewDeductPct: number;
 };
 
 export function shiftSessionKey(date: number, shift: OtShiftId) {
@@ -320,21 +328,30 @@ export function listPastIncompleteOtShifts(input: {
         recordsByDayShift: input.recordsByDayShift,
       });
       if (progress.status === "complete" || progress.missingLabels.length === 0) continue;
-      out.push({
-        date: day,
-        shift,
-        dateLabel: formatDateShort(day),
-        shiftLabel: labelOtShift(shift),
-        status: progress.status,
-        missingLabels: progress.missingLabels,
-        entry,
-      });
+      out.push(
+        enrichPastIncompleteShift(
+          {
+            date: day,
+            shift,
+            dateLabel: formatDateShort(day),
+            shiftLabel: labelOtShift(shift),
+            status: progress.status,
+            missingLabels: progress.missingLabels,
+            entry,
+            deadlineMs: 0,
+            countdownMs: 0,
+            overdue: false,
+            previewDeductPct: 0,
+          },
+          now,
+        ),
+      );
     }
     const prev = new Date(day);
     prev.setDate(prev.getDate() - 1);
     day = startOfLocalDay(prev);
   }
-  return out;
+  return sortPastIncompleteShifts(out);
 }
 
 export function labelShiftSlotStatus(status: ShiftSlotStatus) {

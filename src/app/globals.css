@@ -9874,8 +9874,131 @@ body.modal-open .main-panel {
 
 .ot-incomplete-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
+  gap: 0.4rem;
   margin-top: 0.45rem;
+}
+
+.ot-incomplete-grace {
+  margin: 0.15rem 0 0;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.55rem;
+  background: #eff6ff;
+  border: 1px solid rgba(37, 99, 235, 0.22);
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: #1e3a8a;
+}
+
+.ot-incomplete-grace--live {
+  background: #fef2f2;
+  border-color: rgba(185, 28, 28, 0.25);
+  color: #991b1b;
+}
+
+.ot-incomplete-deduct {
+  margin: 0.35rem 0 0;
+  font-size: 0.84rem;
+  line-height: 1.4;
+  color: #9a3412;
+}
+
+.ot-incomplete-deduct-note {
+  font-weight: 500;
+  opacity: 0.92;
+}
+
+.ot-incomplete-hero {
+  margin: 0.5rem 0 0.15rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%);
+  border: 1px solid rgba(234, 88, 12, 0.28);
+  text-align: center;
+}
+
+.ot-incomplete-hero--overdue {
+  background: linear-gradient(180deg, #fef2f2 0%, #fee2e2 100%);
+  border-color: rgba(220, 38, 38, 0.28);
+}
+
+.ot-incomplete-hero-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  margin: 0;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #9a3412;
+}
+
+.ot-incomplete-hero-time {
+  margin: 0.2rem 0 0;
+  font-size: 1.85rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  color: #c2410c;
+  line-height: 1.1;
+}
+
+.ot-incomplete-hero-time--warn {
+  font-size: 1.45rem;
+  color: #b91c1c;
+}
+
+.ot-incomplete-hero-slot {
+  margin: 0.15rem 0 0;
+  font-size: 0.78rem;
+}
+
+.ot-incomplete-section-label {
+  margin: 0.55rem 0 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #ea580c;
+}
+
+.ot-incomplete-section-label--overdue {
+  color: #b91c1c;
+}
+
+.ot-incomplete-item.is-overdue .ot-incomplete-item-btn {
+  background: #fef2f2;
+  border-color: rgba(185, 28, 28, 0.22);
+}
+
+.ot-incomplete-item-workers {
+  font-size: 0.76rem;
+  line-height: 1.3;
+}
+
+.ot-incomplete-item-deduct {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #b91c1c;
+  background: rgba(254, 226, 226, 0.85);
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+}
+
+.ot-incomplete-item-countdown {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #c2410c;
+}
+
+.ot-incomplete-item-countdown.is-overdue {
+  color: #b91c1c;
+}
+
+.ot-incomplete-actions .primary-btn {
+  flex: 1 1 auto;
+  min-width: 9rem;
 }
 
 .modal-backdrop.edit-modal {
