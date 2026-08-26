@@ -77,25 +77,52 @@ function pad2(n: number) {
   return String(n).padStart(2, "0");
 }
 
-/** ข้อความนับถอยหลัง — สั้นสำหรับรายการ */
-export function formatShiftCountdownShort(ms: number): string {
-  if (ms <= 0) return "เลย 24 ชม. แล้ว";
-  const totalSec = Math.ceil(ms / 1000);
-  const h = Math.floor(totalSec / 3600);
-  const m = Math.floor((totalSec % 3600) / 60);
-  if (h >= 1) return `อีก ${h} ชม. ${m} น.`;
-  if (m >= 1) return `อีก ${m} น.`;
-  return `อีก ${totalSec} วินาที`;
+function pad3(n: number) {
+  return String(n).padStart(3, "0");
 }
 
-/** ตัวเลขใหญ่ HH:MM:SS สำหรับ hero */
+export type ShiftCountdownParts = {
+  hours: number;
+  minutes: number;
+  seconds: number;
+  millis: number;
+};
+
+export function splitShiftCountdown(ms: number): ShiftCountdownParts {
+  if (ms <= 0) return { hours: 0, minutes: 0, seconds: 0, millis: 0 };
+  const totalMs = Math.floor(ms);
+  return {
+    hours: Math.floor(totalMs / 3_600_000),
+    minutes: Math.floor((totalMs % 3_600_000) / 60_000),
+    seconds: Math.floor((totalMs % 60_000) / 1000),
+    millis: totalMs % 1000,
+  };
+}
+
+/** HH:MM:SS.mmm — ใช้ทั้ง hero และรายการ */
+export function formatShiftCountdownPrecise(ms: number): string {
+  if (ms <= 0) return "00:00:00.000";
+  const { hours, minutes, seconds, millis } = splitShiftCountdown(ms);
+  return `${pad2(hours)}:${pad2(minutes)}:${pad2(seconds)}.${pad3(millis)}`;
+}
+
+/** @deprecated ใช้ formatShiftCountdownPrecise */
+export function formatShiftCountdownShort(ms: number): string {
+  if (ms <= 0) return "เลย 24 ชม. แล้ว";
+  return formatShiftCountdownPrecise(ms);
+}
+
+/** @deprecated ใช้ formatShiftCountdownPrecise */
 export function formatShiftCountdownHero(ms: number): string {
-  if (ms <= 0) return "00:00:00";
-  const totalSec = Math.ceil(ms / 1000);
-  const h = Math.floor(totalSec / 3600);
-  const m = Math.floor((totalSec % 3600) / 60);
-  const s = totalSec % 60;
-  return `${pad2(h)}:${pad2(m)}:${pad2(s)}`;
+  return formatShiftCountdownPrecise(ms);
+}
+
+/** ระดับความเร่งด่วน — ใช้ pulse UI */
+export function shiftCountdownUrgency(ms: number): "calm" | "warn" | "critical" {
+  if (ms <= 0) return "critical";
+  if (ms < 600_000) return "critical";
+  if (ms < 3_600_000) return "warn";
+  return "calm";
 }
 
 export function fmtDeductPct(n: number) {

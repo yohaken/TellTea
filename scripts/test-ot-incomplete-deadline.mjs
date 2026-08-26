@@ -14,13 +14,17 @@ const shiftSession = readFileSync(join(root, "src/lib/shift-session.ts"), "utf8"
 
 assert.match(deadlineLib, /OT_INCOMPLETE_DEADLINE_HOURS = 24/);
 assert.match(deadlineLib, /OT_INCOMPLETE_DEDUCT_PCT_PER_SHIFT = 0.3/);
-assert.match(deadlineLib, /shiftCompletionDeadlineMs/);
+assert.match(deadlineLib, /formatShiftCountdownPrecise/);
+assert.match(deadlineLib, /splitShiftCountdown/);
+assert.match(deadlineLib, /shiftCountdownUrgency/);
 assert.match(deadlineLib, /isOtIncompleteEnforcementActive/);
 assert.match(deadlineLib, /sumIncompletePreviewDeductPct/);
 
 assert.match(popup, /ทีมยังใส่ข้อมูลกะไม่ครบ/);
 assert.match(popup, /ยังไม่หักโบนัสจริง/);
-assert.match(popup, /formatShiftCountdownHero/);
+assert.match(popup, /ShiftCountdownClock/);
+assert.match(popup, /requestAnimationFrame/);
+assert.match(popup, /ot-countdown-ms/);
 assert.match(popup, /sumIncompletePreviewDeductPct/);
 
 assert.match(otPage, /includeEmptySlots: true/);

@@ -9918,6 +9918,30 @@ body.modal-open .main-panel {
   text-align: center;
 }
 
+.ot-incomplete-hero.is-warn {
+  background: linear-gradient(180deg, #fff1f2 0%, #ffe4e6 100%);
+  border-color: rgba(225, 29, 72, 0.35);
+  animation: ot-incomplete-hero-pulse 1.6s ease-in-out infinite;
+}
+
+.ot-incomplete-hero.is-critical {
+  background: linear-gradient(180deg, #fef2f2 0%, #fecaca 100%);
+  border-color: rgba(220, 38, 38, 0.55);
+  animation: ot-incomplete-hero-pulse 0.85s ease-in-out infinite;
+}
+
+@keyframes ot-incomplete-hero-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.38);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(220, 38, 38, 0);
+    transform: scale(1.008);
+  }
+}
+
 .ot-incomplete-hero--overdue {
   background: linear-gradient(180deg, #fef2f2 0%, #fee2e2 100%);
   border-color: rgba(220, 38, 38, 0.28);
@@ -9934,6 +9958,11 @@ body.modal-open .main-panel {
   color: #9a3412;
 }
 
+.ot-incomplete-hero.is-critical .ot-incomplete-hero-label {
+  color: #b91c1c;
+  font-size: 0.82rem;
+}
+
 .ot-incomplete-hero-time {
   margin: 0.2rem 0 0;
   font-size: 1.85rem;
@@ -9942,6 +9971,68 @@ body.modal-open .main-panel {
   letter-spacing: 0.04em;
   color: #c2410c;
   line-height: 1.1;
+}
+
+.ot-countdown-clock {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.ot-countdown-clock.is-hero {
+  margin: 0.25rem 0 0;
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.ot-countdown-clock.is-row {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.ot-countdown-hms {
+  color: #c2410c;
+}
+
+.ot-countdown-ms {
+  color: #dc2626;
+  font-weight: 900;
+}
+
+.ot-countdown-clock.is-hero .ot-countdown-ms {
+  font-size: 0.72em;
+  min-width: 3.2em;
+}
+
+.ot-countdown-clock.is-row .ot-countdown-ms {
+  font-size: 0.95em;
+}
+
+.ot-countdown-clock.is-warn .ot-countdown-hms,
+.ot-countdown-clock.is-warn .ot-countdown-ms {
+  color: #be123c;
+}
+
+.ot-countdown-clock.is-critical .ot-countdown-hms {
+  color: #b91c1c;
+}
+
+.ot-countdown-clock.is-critical .ot-countdown-ms {
+  color: #ef4444;
+  animation: ot-countdown-ms-blink 0.55s step-end infinite;
+}
+
+@keyframes ot-countdown-ms-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
 }
 
 .ot-incomplete-hero-time--warn {

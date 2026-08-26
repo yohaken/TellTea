@@ -5,11 +5,11 @@ import { AlertTriangle, Clock, Users, X } from "lucide-react";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import {
   fmtDeductPct,
-  formatShiftCountdownHero,
-  formatShiftCountdownShort,
   isOtIncompleteEnforcementActive,
   otIncompleteEnforcementLabel,
   OT_INCOMPLETE_DEDUCT_PCT_PER_SHIFT,
+  shiftCountdownUrgency,
+  splitShiftCountdown,
   sumIncompletePreviewDeductPct,
 } from "@/lib/shift-deadline";
 import type { PastIncompleteOtShift } from "@/lib/shift-session";
@@ -49,13 +49,14 @@ export function OtIncompletePopup({
 
   useEffect(() => {
     if (!open) return;
-    const hasUrgent = items.some((i) => !i.overdue);
-    const intervalMs = hasUrgent && items.some((i) => !i.overdue && i.countdownMs < 3_600_000)
-      ? 1000
-      : 30_000;
-    const id = window.setInterval(() => setNowMs(Date.now()), intervalMs);
-    return () => window.clearInterval(id);
-  }, [open, items]);
+    let raf = 0;
+    const tick = () => {
+      setNowMs(Date.now());
+      raf = window.requestAnimationFrame(tick);
+    };
+    raf = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(raf);
+  }, [open]);
 
   const liveItems = useMemo(() => {
     const now = new Date(nowMs);
@@ -152,12 +153,17 @@ export function OtIncompletePopup({
         ) : null}
 
         {hero ? (
-          <div className="ot-incomplete-hero" aria-live="polite">
+          <div
+            className={`ot-incomplete-hero is-${shiftCountdownUrgency(hero.countdownMs)}`}
+            aria-live="polite"
+          >
             <p className="ot-incomplete-hero-label">
               <Clock size={14} aria-hidden />
-              เหลือเวลาใส่ครบ
+              {shiftCountdownUrgency(hero.countdownMs) === "critical"
+                ? "รีบ! เหลือเวลาน้อย"
+                : "เหลือเวลาใส่ครบ"}
             </p>
-            <p className="ot-incomplete-hero-time">{formatShiftCountdownHero(hero.countdownMs)}</p>
+            <ShiftCountdownClock ms={hero.countdownMs} size="hero" />
             <p className="ot-incomplete-hero-slot muted">
               {hero.dateLabel} · {hero.shiftLabel}
             </p>
@@ -231,6 +237,23 @@ export function OtIncompletePopup({
   }
 }
 
+function ShiftCountdownClock({ ms, size }: { ms: number; size: "hero" | "row" }) {
+  const { hours, minutes, seconds, millis } = splitShiftCountdown(ms);
+  const urgency = shiftCountdownUrgency(ms);
+  return (
+    <span
+      className={`ot-countdown-clock is-${size} is-${urgency}`}
+      aria-label={`เหลือ ${hours} ชั่วโมง ${minutes} นาที ${seconds} วินาที ${millis} มิลลิวินาที`}
+    >
+      <span className="ot-countdown-hms">
+        {String(hours).padStart(2, "0")}:{String(minutes).padStart(2, "0")}:
+        {String(seconds).padStart(2, "0")}
+      </span>
+      <span className="ot-countdown-ms">.{String(millis).padStart(3, "0")}</span>
+    </span>
+  );
+}
+
 function IncompleteShiftRow({
   item,
   onPick,
@@ -269,9 +292,11 @@ function IncompleteShiftRow({
           ต้องทำ: {item.missingLabels.join(" · ")}
         </span>
         <span className={`ot-incomplete-item-countdown${overdueRow ? " is-overdue" : ""}`}>
-          {overdueRow
-            ? `เลย 24 ชม. · สะสม −${fmtDeductPct(item.previewDeductPct)}`
-            : formatShiftCountdownShort(item.countdownMs)}
+          {overdueRow ? (
+            `เลย 24 ชม. · สะสม −${fmtDeductPct(item.previewDeductPct)}`
+          ) : (
+            <ShiftCountdownClock ms={item.countdownMs} size="row" />
+          )}
         </span>
       </button>
     </li>
