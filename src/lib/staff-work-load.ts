@@ -116,7 +116,7 @@ async function resolveStaffLinkedEmployee(
   return { employees, linked };
 }
 
-function useIdentityPrefetch(prefetched: StaffIdentityPrefetch | null): boolean {
+function isIdentityPrefetchFresh(prefetched: StaffIdentityPrefetch | null): boolean {
   return (
     prefetched != null &&
     prefetched.linked != null &&
@@ -144,7 +144,7 @@ export async function loadStaffBonusBundleFromServer(
   const prefetched = identityPrefetch;
   let employees: Employee[];
   let linked: Employee | null;
-  if (useIdentityPrefetch(prefetched)) {
+  if (isIdentityPrefetchFresh(prefetched)) {
     employees = prefetched!.employees;
     linked = prefetched!.linked;
   } else {
@@ -288,7 +288,7 @@ export async function loadStaffProductionBundleFromServer(
   const prefetched = identityPrefetch;
   let workers: Employee[];
   let linked: Employee | null;
-  if (useIdentityPrefetch(prefetched)) {
+  if (isIdentityPrefetchFresh(prefetched)) {
     workers = prefetched!.employees;
     linked = prefetched!.linked;
   } else {
