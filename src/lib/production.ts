@@ -14,6 +14,7 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
+import { subscribeQueryWithRetry } from "./firestore-subscribe";
 import { daysAgoMs } from "./query-window";
 
 /** หน้าผลิตพนักงาน — โหลดช่วงนี้แทนประวัติทั้งก้อน */
@@ -304,8 +305,8 @@ export function subscribeProdEntries(
       orderBy("createdAt", "desc"),
     );
   }
-  return onSnapshot(
-    q,
+  return subscribeQueryWithRetry(
+    () => q,
     (snap) => {
       onRows(
         snap.docs.map((d) => ({
@@ -314,7 +315,7 @@ export function subscribeProdEntries(
         })),
       );
     },
-    (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
+    (err) => onError?.(err),
   );
 }
 

@@ -316,17 +316,9 @@ function BonusView() {
         unsubProd();
       };
     }
-    if (!employees.length) {
-      setOtEntries([]);
-      setProdEntries([]);
-      return;
-    }
+    if (!employees.length) return;
     const linked = resolveLinkedEmployee(employees, staff);
-    if (!linked) {
-      setOtEntries([]);
-      setProdEntries([]);
-      return;
-    }
+    if (!linked) return;
     const unsubOt = subscribeOtEntries(
       (rows) => onSubData(setOtEntries, rows),
       (err) => onSubError(err),

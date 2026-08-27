@@ -1283,6 +1283,7 @@ service cloud.firestore {
         || (docId == 'vatSalesAlertState' && isOwner())
         || (docId == 'ownerLineNotify' && isOwner())
         || (docId == 'ownerDailyDigestState' && isOwner())
+        || (docId == 'rateSchedule' && (hasPerm('production') || hasPerm('otBonus') || hasPerm('bonus')))
         || (docId != 'aiSettings' && docId != 'foodstoryAuth' && docId != 'posStoreClaimSecret' && docId != 'vatSalesSettings' && docId != 'vatImportAiNotes' && docId != 'vatDeliverySourceNotes' && docId != 'vatMailStudyNotes' && docId != 'vatAgentApi' && docId != 'vatMailStudyPass' && docId != 'vatDeliveryFreshStart' && docId != 'businessNotes' && docId != 'vatAgentChatPresence' && docId != 'vatMonthlySettings' && docId != 'personalTaxSettings' && docId != 'vatMailOAuth' && docId != 'vatMailOAuthLineman' && docId != 'vatMailOAuthConfig' && docId != 'vatMailOAuthState' && docId != 'vatMailOAuthOutlook' && docId != 'vatMailOAuthConfigOutlook' && docId != 'vatMailOAuthStateOutlook' && docId != 'vatMailDrive' && docId != 'vatSalesAlertState' && docId != 'ownerLineNotify' && docId != 'ownerDailyDigestState' && isStaff())
         || (isPosDeviceAuth() && (docId == 'ui' || docId == 'pos' || docId == 'posNativeRelease' || docId == 'posOpsNotes' || docId == 'posMenuRank'));
       allow write: if isOwner()

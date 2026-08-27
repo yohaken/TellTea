@@ -5,9 +5,9 @@ import { IdCard } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { PersonalDataConsentField } from "@/components/PersonalDataConsentField";
+import { isPlausiblePersonName, needsPersonalProfileSetup } from "@/lib/profile";
 import { useAuth } from "@/lib/auth";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
-import { needsPersonalProfileSetup } from "@/lib/profile";
 import { updateStaffProfile } from "@/lib/staff";
 import {
   getIdCardPhotoUrls,
@@ -50,6 +50,13 @@ export function PersonalProfileModal() {
     if (!staff) return;
     if (!legalFirstName.trim() || !legalLastName.trim()) {
       setError("ใส่ชื่อจริงและนามสกุล");
+      return;
+    }
+    if (
+      !isPlausiblePersonName(legalFirstName) ||
+      !isPlausiblePersonName(legalLastName)
+    ) {
+      setError("ชื่อ–นามสกุลต้องเป็นตัวอักษร ไม่ใช่เบอร์โทรหรือตัวเลข");
       return;
     }
     const urls = idCardPhotoUrls.filter(Boolean).slice(0, STAFF_ID_CARD_MAX);

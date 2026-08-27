@@ -14,6 +14,7 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
+import { subscribeQueryWithRetry } from "./firestore-subscribe";
 import { assertBonusMonthOpenForDate } from "./bonus-month-guard";
 import { startOfLocalDay, toEpochMs } from "./utils";
 
@@ -446,12 +447,12 @@ export function subscribeOtEntries(
       orderBy("createdAt", "desc"),
     );
   }
-  return onSnapshot(
-    q,
+  return subscribeQueryWithRetry(
+    () => q,
     (snap) => {
       onRows(snap.docs.map((d) => mapOtEntryDoc(d.id, d.data() as Record<string, unknown>)));
     },
-    (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
+    (err) => onError?.(err),
   );
 }
 

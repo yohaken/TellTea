@@ -29,11 +29,24 @@ export function profileSnoozeUntilNow() {
   return Date.now() + SNOOZE_MS;
 }
 
+/** กันชื่อจริงที่กรอกเป็นเบอร์/เลขบัตร — โชว์ displayName แทน */
+export function isPlausiblePersonName(name: string): boolean {
+  const t = name.trim();
+  if (!t || t.length < 2) return false;
+  const compact = t.replace(/\s/g, "");
+  if (/^\+?\d{9,}$/.test(compact)) return false;
+  const digits = (compact.match(/\d/g) || []).length;
+  if (digits >= 8 || digits / compact.length > 0.5) return false;
+  return true;
+}
+
 export function personalProfileLabel(staff: StaffMember | null | undefined): string {
   if (!staff) return "";
   const p = staff.personal;
-  if (p?.legalFirstName && p?.legalLastName) {
-    return `${p.legalFirstName} ${p.legalLastName}`;
+  const first = (p?.legalFirstName || "").trim();
+  const last = (p?.legalLastName || "").trim();
+  if (first && last && isPlausiblePersonName(first) && isPlausiblePersonName(last)) {
+    return `${first} ${last}`;
   }
   return "";
 }

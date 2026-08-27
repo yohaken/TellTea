@@ -111,7 +111,11 @@ function ProductionView() {
     let unsubEntries: (() => void) | undefined;
     const unsubSchedule = subscribeRateSchedule(
       (doc) => setRateSchedule(doc.entries),
-      (err) => setError(mapFirestoreError(err, "โหลดตารางเรท")),
+      (err) => {
+        if (shopProdView || isOwner) {
+          setError(mapFirestoreError(err, "โหลดตารางเรท"));
+        }
+      },
     );
 
     void reloadCatalog()

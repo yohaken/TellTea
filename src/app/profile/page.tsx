@@ -12,7 +12,7 @@ import {
   listEmployeesForProfile,
   type Employee,
 } from "@/lib/employees";
-import { needsPersonalProfileSetup, needsRosterLink } from "@/lib/profile";
+import { isPlausiblePersonName, needsPersonalProfileSetup, needsRosterLink } from "@/lib/profile";
 import { updateStaffProfile, attachStaffPersonal } from "@/lib/staff";
 import {
   getIdCardPhotoUrls,
@@ -91,6 +91,13 @@ function ProfileView() {
     if (!staff) return;
     if (!legalFirstName.trim() || !legalLastName.trim()) {
       setError("ใส่ชื่อจริงและนามสกุล");
+      return;
+    }
+    if (
+      !isPlausiblePersonName(legalFirstName) ||
+      !isPlausiblePersonName(legalLastName)
+    ) {
+      setError("ชื่อ–นามสกุลต้องเป็นตัวอักษร ไม่ใช่เบอร์โทรหรือตัวเลข");
       return;
     }
     const urls = idCardPhotoUrls.filter(Boolean).slice(0, STAFF_ID_CARD_MAX);
