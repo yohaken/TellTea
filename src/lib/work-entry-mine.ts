@@ -7,6 +7,8 @@ import { namesMatch } from "./bonus";
 export type WorkEntryMineShape = {
   workerIds?: string[];
   workerNames: string[];
+  /** staff/{id} ของคนที่บันทึก — fallback เมื่อ workerIds/ชื่อค้าง */
+  createdBy?: string;
 };
 
 export type WorkEntryMineIdentity = {
@@ -15,6 +17,8 @@ export type WorkEntryMineIdentity = {
   displayName?: string;
   nickname?: string;
   previousNames?: string[];
+  /** staff/{id} บัญชีที่ล็อกอิน */
+  staffId?: string;
 };
 
 export function workEntryIncludesName(entry: WorkEntryMineShape, name: string): boolean {
@@ -31,6 +35,8 @@ export function workEntryIncludesMe(
   const id = (me.employeeId || "").trim();
   const ids = entry.workerIds || [];
   if (id && ids.includes(id)) return true;
+  const staffId = (me.staffId || "").trim();
+  if (staffId && (entry.createdBy || "").trim() === staffId) return true;
   // id ค้าง/ว่าง — ยังเทียบชื่อในกะ (กันโบนัส/ตารางฝั่งพนักงานเป็น 0 ทั้งที่ลงแล้ว)
   const aliases = [
     me.name,
@@ -53,6 +59,7 @@ export function buildWorkEntryMineIdentity(
   staff?: {
     employeeId?: string;
     displayName?: string;
+    id?: string;
   } | null,
 ): WorkEntryMineIdentity {
   return {
@@ -61,5 +68,6 @@ export function buildWorkEntryMineIdentity(
     nickname: linked?.nickname || "",
     previousNames: linked?.previousNames || [],
     displayName: staff?.displayName || "",
+    staffId: staff?.id || "",
   };
 }

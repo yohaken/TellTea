@@ -203,17 +203,45 @@ export function subscribeRateSchedule(
   onDoc: (doc: RateScheduleDoc) => void,
   onError?: (err: Error) => void,
 ): Unsubscribe {
-  return onSnapshot(
-    scheduleRef(),
-    (snap) => {
-      if (!snap.exists()) {
-        onDoc({ entries: [], updatedAt: 0 });
-        return;
-      }
-      onDoc(normalizeRateSchedule(snap.data() as Partial<RateScheduleDoc>));
-    },
-    (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
-  );
+  let retryTimer: ReturnType<typeof setTimeout> | undefined;
+  let stopped = false;
+  let unsub: Unsubscribe = () => undefined;
+
+  const start = (attempt = 0) => {
+    if (stopped) return;
+    unsub = onSnapshot(
+      scheduleRef(),
+      (snap) => {
+        if (stopped) return;
+        if (!snap.exists()) {
+          onDoc({ entries: [], updatedAt: 0 });
+          return;
+        }
+        onDoc(normalizeRateSchedule(snap.data() as Partial<RateScheduleDoc>));
+      },
+      (err) => {
+        if (stopped) return;
+        const e = err instanceof Error ? err : new Error(String(err));
+        const code = (err as { code?: string })?.code || "";
+        const retryable =
+          code === "permission-denied" ||
+          /insufficient permissions|unavailable|network/i.test(e.message);
+        if (retryable && attempt < 3) {
+          unsub();
+          retryTimer = setTimeout(() => start(attempt + 1), 1200 * (attempt + 1));
+          return;
+        }
+        onError?.(e);
+      },
+    );
+  };
+
+  start();
+  return () => {
+    stopped = true;
+    if (retryTimer) clearTimeout(retryTimer);
+    unsub();
+  };
 }
 
 export type RateScheduleAddInput = {

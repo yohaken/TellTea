@@ -28,5 +28,7 @@ assert.match(page, /canOpenRow/);
 assert.match(page, /staffHomeHref/);
 assert.match(page, /mineOnly=\{!shopProdView\}/);
 assert.match(page, /mineOnly \? null/);
+assert.match(page, /authStatus !== "ready"/);
+assert.match(page, /mapFirestoreError/);
 
 console.log("OK test-production-staff-month");

@@ -19,6 +19,7 @@ import { PhotoForensicsPanel } from "@/components/PhotoForensicsPanel";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useAuth } from "@/lib/auth";
 import { monthInputValue, parseMonthInput } from "@/lib/bonus";
+import { mapFirestoreError } from "@/lib/firestore-errors";
 import { resolveWorkerDisplayNames } from "@/lib/employee-rename-propagate";
 import { resolveLinkedEmployee } from "@/lib/employees";
 import { staffHomeHref } from "@/lib/nav-menu";
@@ -73,7 +74,7 @@ export default function ProductionPage() {
 }
 
 function ProductionView() {
-  const { actorId, staff, isPermPreview } = useAuth();
+  const { actorId, staff, isPermPreview, status: authStatus } = useAuth();
   const router = useRouter();
   const isOwner = staff?.role === "owner";
   const shopProdView = isOwner || can(staff, "payrollPay");
@@ -104,13 +105,13 @@ function ProductionView() {
   }, [staff, router]);
 
   useEffect(() => {
-    if (!can(staff, "production")) return;
+    if (authStatus !== "ready" || !can(staff, "production")) return;
     setLoading(true);
     let cancelled = false;
     let unsubEntries: (() => void) | undefined;
     const unsubSchedule = subscribeRateSchedule(
       (doc) => setRateSchedule(doc.entries),
-      (err) => setError(err.message),
+      (err) => setError(mapFirestoreError(err, "โหลดตารางเรท")),
     );
 
     void reloadCatalog()
@@ -134,18 +135,18 @@ function ProductionView() {
           }
           unsubEntries = subscribeProdEntries(
             (rows) => setEntries(rows.filter((r) => workEntryIncludesMe(r, me))),
-            (err) => setError(err.message || "โหลดรายการไม่สำเร็จ"),
+            (err) => setError(mapFirestoreError(err, "โหลดรายการผลิต")),
             monthWindow,
           );
           return;
         }
         unsubEntries = subscribeProdEntries(
           (rows) => setEntries(rows),
-          (err) => setError(err.message || "โหลดรายการไม่สำเร็จ"),
+          (err) => setError(mapFirestoreError(err, "โหลดรายการผลิต")),
           monthWindow,
         );
       })
-      .catch((err) => setError((err as Error).message || "โหลดข้อมูลไม่สำเร็จ"))
+      .catch((err) => setError(mapFirestoreError(err, "โหลดข้อมูลผลิต")))
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
@@ -155,7 +156,7 @@ function ProductionView() {
       unsubEntries?.();
       unsubSchedule();
     };
-  }, [staff, isOwner, shopProdView, logYear, logMonthIdx]);
+  }, [authStatus, staff, isOwner, shopProdView, logYear, logMonthIdx]);
 
   useBodyScrollLock(formOpen);
 

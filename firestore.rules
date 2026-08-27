@@ -153,6 +153,26 @@ service cloud.firestore {
         || staffOwnsEmployee(empId);
     }
 
+    /** doc id = YYYY-MM_{employeeId} — แยก employeeId ออก (รองรับ _ ในชื่อ id) */
+    function personalCloseEmployeeId(docId) {
+      return docId.matches('^[0-9]{4}-[0-9]{2}_.+')
+        ? docId.split('_').slice(1).join('_')
+        : '';
+    }
+
+    /**
+     * อ่าน bonusPersonalCloses — เดือนเปิดยังไม่มี doc (resource == null)
+     * ห้ามอ้าง resource.data.employeeId อย่างเดียว ไม่งั้น get ขึ้น permission-denied
+     */
+    function canReadBonusPersonalClose(docId) {
+      return isOwner() || isOwnerEmail() || hasPerm('payrollPay')
+        || (hasPerm('bonus') && staffOwnsEmployee(
+          resource != null
+            ? resource.data.employeeId
+            : personalCloseEmployeeId(docId)
+        ));
+    }
+
     function permissionsHaveElevated(data) {
       return data.keys().hasAny(['permissions'])
         && (
@@ -1223,10 +1243,8 @@ service cloud.firestore {
 
     /** Snapshot โบนัสรายคนหลังปิดเดือน — เห็นได้แค่ของตัวเอง */
     match /bonusPersonalCloses/{id} {
-      allow get: if isOwner() || isOwnerEmail() || hasPerm('payrollPay')
-        || (hasPerm('bonus') && staffOwnsEmployee(resource.data.employeeId));
-      allow list: if isOwner() || isOwnerEmail() || hasPerm('payrollPay')
-        || (hasPerm('bonus') && staffOwnsEmployee(resource.data.employeeId));
+      allow get: if canReadBonusPersonalClose(id);
+      allow list: if canReadBonusPersonalClose(id);
       allow create, update, delete: if isOwner() || isOwnerEmail();
     }
 

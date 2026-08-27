@@ -87,13 +87,41 @@ export function subscribeBonusPersonalClose(
     onData(null);
     return () => undefined;
   }
-  return onSnapshot(
-    personalRef(month, employeeId),
-    (snap) => {
-      onData(snap.exists() ? (snap.data() as BonusPersonalCloseDoc) : null);
-    },
-    (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
-  );
+  let retryTimer: ReturnType<typeof setTimeout> | undefined;
+  let stopped = false;
+  let unsub: Unsubscribe = () => undefined;
+
+  const start = (attempt = 0) => {
+    if (stopped) return;
+    unsub = onSnapshot(
+      personalRef(month, employeeId),
+      (snap) => {
+        if (stopped) return;
+        onData(snap.exists() ? (snap.data() as BonusPersonalCloseDoc) : null);
+      },
+      (err) => {
+        if (stopped) return;
+        const e = err instanceof Error ? err : new Error(String(err));
+        const code = (err as { code?: string })?.code || "";
+        const retryable =
+          code === "permission-denied" ||
+          /insufficient permissions|unavailable|network/i.test(e.message);
+        if (retryable && attempt < 3) {
+          unsub();
+          retryTimer = setTimeout(() => start(attempt + 1), 1200 * (attempt + 1));
+          return;
+        }
+        onError?.(e);
+      },
+    );
+  };
+
+  start();
+  return () => {
+    stopped = true;
+    if (retryTimer) clearTimeout(retryTimer);
+    unsub();
+  };
 }
 
 export async function writeBonusCloseSideDocs(close: BonusMonthCloseDoc): Promise<void> {

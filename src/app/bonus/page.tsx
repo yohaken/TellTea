@@ -107,7 +107,7 @@ export default function BonusPage() {
 }
 
 function BonusView() {
-  const { actorId, staff, isPermPreview } = useAuth();
+  const { actorId, staff, isPermPreview, status: authStatus } = useAuth();
   const router = useRouter();
   /** สรุปโบนัสเปิดที่เดือนปัจจุบันเป็นหลัก — ไม่จำเครื่อง · ไม่ค้างเดือนที่แล้ว */
   const [month, setMonth] = useState(() => monthInputValue());
@@ -156,6 +156,20 @@ function BonusView() {
     setError(mapFirestoreError(err, context));
   }
 
+  /** เดือนเปิดยังไม่มี personal close — permission เก่าหรือ doc ว่างไม่ควรขึ้นแดงทับยอด */
+  function onPersonalCloseError(err: Error) {
+    const code = (err as { code?: string })?.code || "";
+    const msg = err.message || "";
+    if (
+      code === "permission-denied" ||
+      /insufficient permissions|permission-denied/i.test(msg)
+    ) {
+      setPersonalClose(null);
+      return;
+    }
+    onSubError(err, "สรุปโบนัส");
+  }
+
   function onSubData<T>(setter: (value: T) => void, value: T) {
     setter(value);
     setError((prev) =>
@@ -170,7 +184,7 @@ function BonusView() {
   }, [staff, router, canView]);
 
   useEffect(() => {
-    if (!canView) return;
+    if (authStatus !== "ready" || !canView) return;
     setLoading(true);
     setBootReady(false);
     let cancelled = false;
@@ -258,7 +272,7 @@ function BonusView() {
       unsubPayrollSchedule();
       unsubPool();
     };
-  }, [staff, canView, shopPayView, year, monthIdx, month, isPermPreview]);
+  }, [authStatus, staff, canView, shopPayView, year, monthIdx, month, isPermPreview]);
 
   // OT / ผลิต — ทั้งร้าน หรือมุมพนักงาน: โหลดเดือนแล้วกรองฝั่ง client (เหมือนหน้า OT)
   // ห้ามใช้ array-contains workerId อย่างเดียว — แถวเก่า/ชื่ออย่างเดียว/employeeId ค้างจะทำให้โบนัสเป็น 0
@@ -377,7 +391,7 @@ function BonusView() {
       month,
       empId,
       (doc) => onSubData(setPersonalClose, doc),
-      (err) => onSubError(err, "สรุปโบนัส"),
+      onPersonalCloseError,
     );
   }, [canView, bootReady, shopPayView, month, staff, employees]);
 

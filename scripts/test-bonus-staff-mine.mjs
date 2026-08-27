@@ -21,7 +21,8 @@ assert.doesNotMatch(
 
 const mine = read("src/lib/work-entry-mine.ts");
 assert.match(mine, /export function workEntryIncludesMe/);
-assert.match(mine, /export function buildWorkEntryMineIdentity/);
+assert.match(mine, /createdBy/);
+assert.match(mine, /staffId/);
 
 const employees = read("src/lib/employees.ts");
 assert.match(
@@ -41,6 +42,8 @@ function workEntryIncludesMe(entry, me) {
   if (!me) return false;
   const id = (me.employeeId || "").trim();
   if (id && (entry.workerIds || []).includes(id)) return true;
+  const staffId = (me.staffId || "").trim();
+  if (staffId && (entry.createdBy || "").trim() === staffId) return true;
   const aliases = [me.name, me.nickname, me.displayName, ...(me.previousNames || [])].filter(
     (n) => !!n?.trim(),
   );
@@ -52,6 +55,14 @@ assert.equal(
   workEntryIncludesMe(entry, { employeeId: "stale-c", name: "แอน" }),
   true,
   "name fallback must catch bakery/OT rows when id stale",
+);
+assert.equal(
+  workEntryIncludesMe(
+    { workerIds: [], workerNames: ["คนอื่น"], createdBy: "staff-tey" },
+    { employeeId: "stale-c", name: "เตย", staffId: "staff-tey" },
+  ),
+  true,
+  "createdBy fallback shows rows the staff member logged themselves",
 );
 assert.equal(
   workEntryIncludesMe(entry, { employeeId: "stale-c", name: "คนอื่น" }),
