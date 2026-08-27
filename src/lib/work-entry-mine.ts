@@ -34,7 +34,7 @@ export function workEntryIncludesName(entry: WorkEntryMineShape, name: string): 
 export function workEntryCreditsEmployee(
   entry: WorkEntryMineShape,
   employee: Pick<Employee, "id" | "name" | "nickname" | "previousNames"> | null,
-  roster: Pick<Employee, "id" | "name" | "nickname" | "previousNames">[] = [],
+  roster: Employee[] = [],
   staffId?: string,
 ): boolean {
   if (!employee) return false;
