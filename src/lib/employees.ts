@@ -5,6 +5,7 @@ import {
   deleteField,
   doc,
   getDoc,
+  getDocFromServer,
   getDocs,
   getDocsFromServer,
   orderBy,
@@ -255,6 +256,77 @@ export async function listActiveEmployeesFromServer(): Promise<Employee[]> {
   return snap.docs
     .map((d) => mapEmployeeRoster(d.id, d.data() as Record<string, unknown>))
     .filter((e) => e.active);
+}
+
+function isFirestorePermissionDenied(err: unknown): boolean {
+  const code = (err as { code?: string })?.code || "";
+  const msg = err instanceof Error ? err.message : String(err);
+  return code === "permission-denied" || /insufficient permissions|permission-denied/i.test(msg);
+}
+
+/** โหลดแถว roster ที่ผูกกับ staff — ใช้เมื่อ list ทั้งร้านถูก rules บล็อก */
+export async function fetchLinkedEmployeeFromServer(
+  staff: Pick<StaffMember, "id" | "email" | "phone" | "displayName" | "employeeId">,
+): Promise<Employee | null> {
+  if (staff.employeeId) {
+    try {
+      const snap = await getDocFromServer(doc(getDb(), "employees", staff.employeeId));
+      if (snap.exists()) {
+        const row = mapEmployeeRoster(snap.id, snap.data() as Record<string, unknown>);
+        if (row.active) return row;
+      }
+    } catch (err) {
+      if (!isFirestorePermissionDenied(err)) throw err;
+    }
+  }
+  try {
+    const byStaff = await getDocsFromServer(
+      query(employeesCol(), where("linkedStaffId", "==", staff.id)),
+    );
+    const linked = byStaff.docs
+      .map((d) => mapEmployeeRoster(d.id, d.data() as Record<string, unknown>))
+      .find((e) => e.active);
+    if (linked) return linked;
+  } catch (err) {
+    if (!isFirestorePermissionDenied(err)) throw err;
+  }
+  if (staff.email) {
+    const email = normalizeEmail(staff.email);
+    try {
+      const byEmail = await getDocsFromServer(
+        query(employeesCol(), where("linkedEmail", "==", email)),
+      );
+      const linked = byEmail.docs
+        .map((d) => mapEmployeeRoster(d.id, d.data() as Record<string, unknown>))
+        .find((e) => e.active);
+      if (linked) return linked;
+    } catch (err) {
+      if (!isFirestorePermissionDenied(err)) throw err;
+    }
+  }
+  return null;
+}
+
+/**
+ * Roster สำหรับหน้างานพนักงาน — ลอง list ทั้งร้านก่อน
+ * ถ้า rules อ่านได้เฉพาะแถวตัวเอง ใช้ linked row ไม่ให้ค้างโหลด
+ */
+export async function listActiveEmployeesForStaff(
+  staff: Pick<StaffMember, "id" | "email" | "phone" | "displayName" | "employeeId">,
+): Promise<Employee[]> {
+  try {
+    return await listActiveEmployeesFromServer();
+  } catch (err) {
+    if (!isFirestorePermissionDenied(err)) throw err;
+  }
+  try {
+    const cached = await listActiveEmployees();
+    if (cached.length) return cached;
+  } catch {
+    /* offline cache optional */
+  }
+  const linked = await fetchLinkedEmployeeFromServer(staff);
+  return linked ? [linked] : [];
 }
 
 /**

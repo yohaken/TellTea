@@ -15,15 +15,21 @@ import { GoogleAuth } from "google-auth-library";
 const PROJECT = "mypeer-501909";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-/** Must exist in live rules — staff roster → permissionLevels path */
-const LIVE_MARKERS = [
-  "function hasPermFromLevel",
+/** Must exist in live rules — staff bonus / roster path */
+const CORE_MARKERS = [
   "function staffOwnsEmployee",
   "function canReadBonusPersonalClose",
-  "function linkedLevelActive",
-  "function staffHasBrokenLevelLink",
   "function resolvedStaffId",
 ];
+
+/** Present in full firestore.rules — optional when emergency slim rules are live */
+const FULL_MARKERS = [
+  "function hasPermFromLevel",
+  "function linkedLevelActive",
+  "function staffHasBrokenLevelLink",
+];
+
+const LIVE_MARKERS = [...CORE_MARKERS, ...FULL_MARKERS];
 
 function loadCredentials() {
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT || process.env.FIREBASE_KEY;
@@ -92,17 +98,24 @@ async function main() {
   const token = await getToken();
   const live = await fetchLiveRulesSource(token);
 
-  const missing = LIVE_MARKERS.filter((m) => !live.source.includes(m));
-  if (missing.length) {
-    console.error("LIVE rules missing markers (stale deploy):");
-    for (const m of missing) console.error(`  - ${m}`);
+  const missingCore = CORE_MARKERS.filter((m) => !live.source.includes(m));
+  if (missingCore.length) {
+    console.error("LIVE rules missing core markers (stale / wiped deploy):");
+    for (const m of missingCore) console.error(`  - ${m}`);
     console.error(`release: ${live.rulesetName} @ ${live.releaseTime}`);
     process.exit(1);
   }
 
+  const missingFull = FULL_MARKERS.filter((m) => !live.source.includes(m));
+  const mode = missingFull.length ? "emergency-slim" : "full";
+
   console.log(
-    `OK live firestore rules · ${LIVE_MARKERS.length} markers · ${live.rulesetName} @ ${live.releaseTime}`,
+    `OK live firestore rules · ${mode} · ${live.rulesetName} @ ${live.releaseTime}`,
   );
+  if (missingFull.length) {
+    console.warn("full rules markers not live (Firebase 503 on large ruleset):");
+    for (const m of missingFull) console.warn(`  - ${m}`);
+  }
 }
 
 main().catch((err) => {

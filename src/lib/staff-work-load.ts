@@ -23,7 +23,7 @@ import {
 } from "./bonus-personal-close";
 import {
   ensureStaffEmployeeLink,
-  listActiveEmployeesFromServer,
+  listActiveEmployeesForStaff,
   resolveLinkedEmployee,
   type Employee,
 } from "./employees";
@@ -96,7 +96,7 @@ export function clearStaffIdentityPrefetch() {
 
 /** หลัง login — cache roster + link ใน memory (ไม่บล็อก navigation) */
 export async function prefetchStaffIdentity(staff: StaffMember): Promise<StaffIdentityPrefetch> {
-  const employees = await listActiveEmployeesFromServer();
+  const employees = await listActiveEmployeesForStaff(staff);
   const linked = resolveLinkedEmployee(employees, staff);
   if (linked) {
     try {
@@ -122,7 +122,7 @@ export async function loadStaffBonusBundleFromServer(
     employees = prefetched.employees;
     linked = prefetched.linked ?? resolveLinkedEmployee(employees, staff);
   } else {
-    employees = await listActiveEmployeesFromServer();
+    employees = await listActiveEmployeesForStaff(staff);
     linked = resolveLinkedEmployee(employees, staff);
     if (linked) {
       try {

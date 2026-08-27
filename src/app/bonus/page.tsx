@@ -576,7 +576,10 @@ function BonusView() {
     staffBundleStatus === "ready" &&
     isStaffBonusBundleReady(bonusBundle, personalRow, monthClosed);
 
-  const staffBonusLoading = staffUseBundle && staffBundleStatus === "loading";
+  const staffBonusLoading =
+    staffUseBundle &&
+    staffBundleStatus === "loading" &&
+    !staffBundleError;
 
   // ให้ staff.employeeId ตรงกับชื่อที่ลิงก์ — ห้ามเขียนตอนพรีวิว (จะไปทับบัญชีเจ้าของ)
   useEffect(() => {
@@ -878,11 +881,12 @@ function BonusView() {
       )}
 
       {error ? <p className="error-text">{error}</p> : null}
-      {staffBundleError && staffBundleStatus !== "loading" ? (
+      {staffBundleError ? (
         <p className="error-text">
           {staffBundleError.message}
           {staffBundleError.status === "blocked_perm" ||
-          staffBundleError.status === "blocked_network" ? (
+          staffBundleError.status === "blocked_network" ||
+          staffBundleError.status === "blocked_link" ? (
             <>
               {" "}
               <button type="button" className="btn-link" onClick={() => retryStaffBundle()}>

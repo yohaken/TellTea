@@ -1,0 +1,249 @@
+rules_version = '2';
+// Emergency slim rules — deploy when full firestore.rules hits Firebase 503.
+// After publish succeeds, merge back into firestore.rules and re-deploy when API allows.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function hasEmail() {
+      return request.auth != null && request.auth.token.email != null;
+    }
+    function hasPhone() {
+      return request.auth != null && request.auth.token.phone_number != null;
+    }
+    function signedIn() {
+      return hasEmail() || hasPhone();
+    }
+    function authEmail() {
+      return hasEmail() ? request.auth.token.email.lower() : '';
+    }
+    function authPhone() {
+      return hasPhone() ? request.auth.token.phone_number : '';
+    }
+    function phoneDigits() {
+      return hasPhone() && authPhone().size() > 1 ? authPhone()[1:] : '';
+    }
+    function isOwnerEmail() {
+      return hasEmail() && authEmail() == 'yohaken@gmail.com';
+    }
+    function claimStaffId() {
+      return request.auth != null
+        && request.auth.token.keys().hasAny(['staffId'])
+        && request.auth.token.staffId is string
+        ? request.auth.token.staffId
+        : '';
+    }
+    function emailStaffExists() {
+      return hasEmail() && exists(/databases/$(database)/documents/staff/$(authEmail()));
+    }
+    function emailMappedStaffId() {
+      return hasEmail()
+        && exists(/databases/$(database)/documents/staffEmails/$(authEmail()))
+        ? get(/databases/$(database)/documents/staffEmails/$(authEmail())).data.staffId
+        : '';
+    }
+    function phoneStaffId() {
+      return hasPhone() && phoneDigits().size() > 0
+        && exists(/databases/$(database)/documents/staffPhones/$(phoneDigits()))
+        ? get(/databases/$(database)/documents/staffPhones/$(phoneDigits())).data.staffId
+        : '';
+    }
+    function resolvedStaffId() {
+      return emailStaffExists()
+        ? authEmail()
+        : (emailMappedStaffId().size() > 0
+            ? emailMappedStaffId()
+            : (phoneStaffId().size() > 0
+                ? phoneStaffId()
+                : (claimStaffId().size() > 0 ? claimStaffId() : authEmail())));
+    }
+    function staffPath() {
+      return /databases/$(database)/documents/staff/$(resolvedStaffId());
+    }
+    function isStaff() {
+      return signedIn() && exists(staffPath());
+    }
+    function isOwner() {
+      return isStaff() && get(staffPath()).data.role == 'owner';
+    }
+    function staffEmployeeId() {
+      return isStaff()
+        && get(staffPath()).data.keys().hasAny(['employeeId'])
+        && get(staffPath()).data.employeeId is string
+        ? get(staffPath()).data.employeeId
+        : '';
+    }
+    function staffOwnsEmployee(empId) {
+      return isStaff() && (
+        staffEmployeeId() == empId
+        || (exists(/databases/$(database)/documents/employees/$(empId))
+            && (
+              get(/databases/$(database)/documents/employees/$(empId)).data.get('linkedStaffId', '') == resolvedStaffId()
+              || (hasEmail()
+                  && get(/databases/$(database)/documents/employees/$(empId)).data.get('linkedEmail', '') == authEmail())
+            ))
+      );
+    }
+    function linkedLevelId() {
+      return isStaff()
+        ? get(staffPath()).data.get('permissionLevelId', '')
+        : '';
+    }
+    function levelPerms() {
+      return linkedLevelId().size() > 0
+        && exists(/databases/$(database)/documents/permissionLevels/$(linkedLevelId()))
+        && get(/databases/$(database)/documents/permissionLevels/$(linkedLevelId())).data.get('active', false)
+        ? get(/databases/$(database)/documents/permissionLevels/$(linkedLevelId())).data.permissions
+        : {};
+    }
+    function hasPerm(p) {
+      return isOwner() || isOwnerEmail()
+        || (isStaff() && levelPerms().get(p, false) == true)
+        || (isStaff()
+            && get(staffPath()).data.keys().hasAny(['permissions'])
+            && get(staffPath()).data.permissions is map
+            && get(staffPath()).data.permissions.get(p, false) == true);
+    }
+    function actorId() {
+      return hasEmail() ? authEmail() : authPhone();
+    }
+    function personalCloseEmpId(docId) {
+      return docId.matches('^[0-9]{4}-[0-9]{2}_.+')
+        ? docId.split('_').slice(1).join('_')
+        : '';
+    }
+    function canReadBonusPersonalClose(docId) {
+      return isOwner() || isOwnerEmail() || hasPerm('bonus')
+        || staffOwnsEmployee(personalCloseEmpId(docId));
+    }
+    function hubManage() {
+      return isOwner() || isOwnerEmail() || hasPerm('staffManage');
+    }
+
+    match /staff/{staffId} {
+      allow get: if signedIn() && (staffId == resolvedStaffId() || hubManage());
+      allow list: if hubManage();
+      allow create, update, delete: if hubManage() || isOwnerEmail();
+    }
+    match /permissionLevels/{levelId} {
+      allow read: if isStaff() || isOwnerEmail();
+      allow write: if hubManage();
+    }
+    match /staffPhones/{phoneId} {
+      allow get: if signedIn() && (phoneId == phoneDigits() || hubManage());
+      allow write: if hubManage();
+    }
+    match /staffEmails/{emailId} {
+      allow get: if signedIn() && ((hasEmail() && authEmail() == emailId) || hubManage());
+      allow write: if hubManage();
+    }
+    match /staffLoginSecrets/{staffId} { allow read, write: if false; }
+    match /staffNicknames/{nickId} { allow read, write: if false; }
+    match /staffPinAttempts/{staffId} { allow read, write: if false; }
+    match /staffPersonal/{staffId} {
+      allow get: if isOwner() || (signedIn() && staffId == resolvedStaffId());
+      allow list: if isOwner();
+      allow create, update: if signedIn() && staffId == resolvedStaffId();
+      allow delete: if isOwner();
+    }
+
+    match /employees/{id} {
+      allow read: if isStaff() || isOwnerEmail();
+      allow write: if isOwner() || isOwnerEmail() || hasPerm('staffManage');
+    }
+    match /employeePay/{empId} {
+      allow read: if isOwner() || isOwnerEmail() || hasPerm('payrollPay') || staffOwnsEmployee(empId);
+      allow write: if isOwner() || isOwnerEmail() || hasPerm('payrollPay');
+    }
+    match /prodProducts/{id} {
+      allow read: if isStaff() || isOwnerEmail();
+      allow write: if isOwner() || isOwnerEmail() || hasPerm('production');
+    }
+    match /prodWorkers/{id} {
+      allow read: if isStaff() || isOwnerEmail();
+      allow write: if isOwner() || isOwnerEmail() || hasPerm('production');
+    }
+    match /prodEntries/{id} {
+      allow read: if isOwner() || isOwnerEmail() || hasPerm('production')
+        || (isStaff() && resource.data.get('employeeId', '') == staffEmployeeId());
+      allow create: if isOwner() || isOwnerEmail() || hasPerm('production');
+      allow update, delete: if isOwner() || isOwnerEmail() || hasPerm('production');
+    }
+    match /otEntries/{id} {
+      allow read: if isOwner() || isOwnerEmail() || hasPerm('otBonus')
+        || (isStaff() && resource.data.get('employeeId', '') == staffEmployeeId());
+      allow create: if isOwner() || isOwnerEmail() || hasPerm('otBonus');
+      allow update, delete: if isOwner() || isOwnerEmail() || hasPerm('otBonus');
+    }
+    match /bonusLivePool/{monthKey} {
+      allow read: if isOwner() || isOwnerEmail() || hasPerm('bonus');
+      allow write: if isOwner() || isOwnerEmail() || hasPerm('bonus');
+    }
+    match /bonusDeductionMonths/{monthKey} {
+      allow read: if isOwner() || isOwnerEmail() || hasPerm('bonus');
+      allow write: if isOwner() || isOwnerEmail() || hasPerm('bonus');
+    }
+    match /bonusMonthCloses/{monthId} {
+      allow read: if isOwner() || isOwnerEmail() || hasPerm('bonus');
+      allow write: if isOwner() || isOwnerEmail() || hasPerm('bonus');
+    }
+    match /bonusMonthStatus/{monthId} {
+      allow read: if isOwner() || isOwnerEmail() || hasPerm('bonus');
+      allow write: if isOwner() || isOwnerEmail() || hasPerm('bonus');
+    }
+    match /bonusPersonalCloses/{id} {
+      allow read: if canReadBonusPersonalClose(id);
+      allow write: if isOwner() || isOwnerEmail() || hasPerm('bonus');
+    }
+    match /payrollItems/{id} {
+      allow read: if isOwner() || isOwnerEmail() || hasPerm('payrollPay');
+      allow write: if isOwner() || isOwnerEmail() || hasPerm('payrollPay');
+    }
+
+    match /ledger/{entryId} {
+      allow read, write: if hasPerm('ledger') || isOwnerEmail();
+    }
+    match /cashDeposits/{entryId} {
+      allow read, write: if hasPerm('ledger') || isOwnerEmail();
+    }
+    match /billNotices/{entryId} {
+      allow read, write: if hasPerm('ledger') || isOwnerEmail();
+    }
+    match /ownerBooks/{entryId} {
+      allow read, write: if isOwner() || isOwnerEmail();
+    }
+    match /capitalBooks/{entryId} {
+      allow read, write: if isOwner() || isOwnerEmail();
+    }
+    match /evidencePhotos/{photoId} {
+      allow read, write: if hasPerm('ledger') || isOwnerEmail();
+    }
+    match /monthlyIncome/{monthId} {
+      allow read, write: if isOwner() || isOwnerEmail();
+    }
+    match /dailySales/{dateId} {
+      allow read, write: if isOwner() || isOwnerEmail() || hasPerm('ledger');
+    }
+    match /meta/{docId} {
+      allow read: if isStaff() || isOwnerEmail();
+      allow write: if isOwner() || isOwnerEmail();
+    }
+    match /loginTickets/{ticketId} {
+      allow create: if hasEmail() && signedIn();
+      allow get, delete: if true;
+      allow list, update: if false;
+    }
+    match /taxtag/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid
+        && request.auth.token.email == 'yohaken@gmail.com';
+    }
+    match /userData/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      match /{document=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if isOwner() || isOwnerEmail();
+    }
+  }
+}
