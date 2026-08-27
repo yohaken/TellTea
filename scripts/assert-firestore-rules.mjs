@@ -124,7 +124,8 @@ assert.match(rules, /yohaken@gmail\.com/);
 assert.match(rules, /resource\.data\.createdBy == actorId\(\)/);
 assert.match(rules, /resource\.data\.amountIn == 0/);
 // payrollItems: self-scoped get for bonus staff
-assert.match(rules, /resource\.data\.employeeId == staffEmployeeId\(\)/);
+assert.match(rules, /function staffOwnsEmployee\(/);
+assert.match(rules, /staffOwnsEmployee\(resource\.data\.employeeId\)/);
 assert.match(rules, /match \/stockCosts\/\{itemId\}/);
 assert.match(rules, /match \/bonusLivePool\/\{monthKey\}/);
 assert.match(rules, /canReadBonusEntry/);

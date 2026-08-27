@@ -126,11 +126,14 @@ service cloud.firestore {
       return /databases/$(database)/documents/employees/$(empId);
     }
 
-    /** อ่าน employeePay: เจ้าของ / คนจ่ายทั้งร้าน / ของตัวเอง */
-    function canReadEmployeePay(empId) {
-      return isOwner() || isOwnerEmail() || hasPerm('payrollPay')
-        || (isStaff() && staffEmployeeId() == empId)
-        || (isStaff() && exists(employeeDocPath(empId))
+    /**
+     * พนักงานเป็นเจ้าของแถว roster นี้ — staff.employeeId หรือลิงก์ canonical บน employees
+     * (client ใช้ resolveLinkedEmployee — rules ต้องคู่กัน ไม่งั้นโบนัส/คิวจ่าย permission-denied สลับไปมา)
+     */
+    function staffOwnsEmployee(empId) {
+      return isStaff() && (
+        staffEmployeeId() == empId
+        || (exists(employeeDocPath(empId))
             && (
               (get(employeeDocPath(empId)).data.keys().hasAny(['linkedStaffId'])
                 && get(employeeDocPath(empId)).data.linkedStaffId == resolvedStaffId())
@@ -140,7 +143,14 @@ service cloud.firestore {
               || (hasPhone()
                   && get(employeeDocPath(empId)).data.keys().hasAny(['linkedPhone'])
                   && get(employeeDocPath(empId)).data.linkedPhone == authPhone())
-            ));
+            ))
+      );
+    }
+
+    /** อ่าน employeePay: เจ้าของ / คนจ่ายทั้งร้าน / ของตัวเอง */
+    function canReadEmployeePay(empId) {
+      return isOwner() || isOwnerEmail() || hasPerm('payrollPay')
+        || staffOwnsEmployee(empId);
     }
 
     function permissionsHaveElevated(data) {
@@ -1191,7 +1201,7 @@ service cloud.firestore {
      */
     match /payrollItems/{id} {
       allow get: if isOwner() || isOwnerEmail() || hasPerm('payrollPay')
-        || (hasPerm('bonus') && resource.data.employeeId == staffEmployeeId());
+        || (hasPerm('bonus') && staffOwnsEmployee(resource.data.employeeId));
       allow list: if isOwner() || isOwnerEmail() || hasPerm('payrollPay') || hasPerm('bonus');
       allow create, update, delete: if isOwner() || isOwnerEmail();
     }
@@ -1214,9 +1224,9 @@ service cloud.firestore {
     /** Snapshot โบนัสรายคนหลังปิดเดือน — เห็นได้แค่ของตัวเอง */
     match /bonusPersonalCloses/{id} {
       allow get: if isOwner() || isOwnerEmail() || hasPerm('payrollPay')
-        || (hasPerm('bonus') && resource.data.employeeId == staffEmployeeId());
+        || (hasPerm('bonus') && staffOwnsEmployee(resource.data.employeeId));
       allow list: if isOwner() || isOwnerEmail() || hasPerm('payrollPay')
-        || (hasPerm('bonus') && resource.data.employeeId == staffEmployeeId());
+        || (hasPerm('bonus') && staffOwnsEmployee(resource.data.employeeId));
       allow create, update, delete: if isOwner() || isOwnerEmail();
     }
 

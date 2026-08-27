@@ -70,7 +70,8 @@ assert.equal(
   false,
   "bonus must not use realCanPay during staff preview",
 );
-assert.match(bonusPage, /uiIsOwner = !isPermPreview/);
+assert.match(bonusPage, /bootReady/);
+assert.match(bonusPage, /mapFirestoreError/);
 assert.match(shell, /pathname\.startsWith\("\/profile"\)/);
 
 const profilePage = read("src/app/profile/page.tsx");
@@ -117,7 +118,8 @@ assert.match(rules, /canReadEmployeePay/);
 assert.match(rules, /payrollPay/);
 assert.match(rules, /staffHubUpdateOk/);
 assert.match(rules, /employeePayMigrateStrip/);
-assert.match(rules, /resource\.data\.employeeId == staffEmployeeId\(\)/);
+assert.match(rules, /function staffOwnsEmployee\(/);
+assert.match(rules, /staffOwnsEmployee\(resource\.data\.employeeId\)/);
 assert.match(rules, /match \/stockCosts\/\{itemId\}/);
 assert.match(rules, /match \/bonusLivePool\/\{monthKey\}/);
 assert.match(rules, /canReadBonusEntry/);

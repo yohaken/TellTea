@@ -81,6 +81,7 @@ import {
   workEntryIncludesMe,
 } from "@/lib/work-entry-mine";
 import { formatDateShortBe, formatPlainNumber } from "@/lib/utils";
+import { mapFirestoreError } from "@/lib/firestore-errors";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
 function fmt(n: number) {
@@ -122,6 +123,8 @@ function BonusView() {
   const [payrollItems, setPayrollItems] = useState<PayrollItem[]>([]);
   const [livePool, setLivePool] = useState<BonusLivePool | null>(null);
   const [loading, setLoading] = useState(true);
+  /** พร้อม subscribe คิวจ่าย/โบนัสส่วนตัว — หลังโหลด roster + sync employeeId แล้ว */
+  const [bootReady, setBootReady] = useState(false);
   const [closeBusy, setCloseBusy] = useState(false);
   const [monthClose, setMonthClose] = useState<BonusMonthCloseDoc | null>(null);
   const [monthStatus, setMonthStatus] = useState<BonusMonthStatusDoc | null>(null);
@@ -149,6 +152,19 @@ function BonusView() {
 
   useBodyScrollLock(!!editTarget);
 
+  function onSubError(err: Error, context?: string) {
+    setError(mapFirestoreError(err, context));
+  }
+
+  function onSubData<T>(setter: (value: T) => void, value: T) {
+    setter(value);
+    setError((prev) =>
+      prev && /สิทธิ์ไม่พอ|insufficient permissions|permission-denied/i.test(prev)
+        ? null
+        : prev,
+    );
+  }
+
   useEffect(() => {
     if (staff && !canView) router.replace(staffHomeHref(staff));
   }, [staff, router, canView]);
@@ -156,6 +172,7 @@ function BonusView() {
   useEffect(() => {
     if (!canView) return;
     setLoading(true);
+    setBootReady(false);
     let cancelled = false;
     void (async () => {
       try {
@@ -177,9 +194,20 @@ function BonusView() {
         ]);
         if (cancelled) return;
         let nextEmps = emps;
-        if (!shopPayView) {
+        if (!shopPayView && staff && staff.role !== "owner" && !isPermPreview) {
           const linked = resolveLinkedEmployee(emps, staff);
-          const payId = staff?.employeeId || linked?.id;
+          const payId = staff.employeeId || linked?.id;
+          if (linked && staff.employeeId !== linked.id) {
+            try {
+              await updateStaffProfile(staff.id, {
+                employeeId: linked.id,
+                displayName: linked.name,
+                profileComplete: true,
+              });
+            } catch {
+              /* sync best-effort — rules ใช้ staffOwnsEmployee จากลิงก์บน employees ได้ */
+            }
+          }
           if (payId) {
             try {
               const self = await getEmployeeWithPay(payId);
@@ -195,26 +223,33 @@ function BonusView() {
         setEmployees(nextEmps);
         setOtSettingsRate(otSettings.bonusRate);
       } catch (err) {
-        if (!cancelled) setError((err as Error).message || "โหลดพนักงานไม่สำเร็จ");
+        if (!cancelled) setError(mapFirestoreError(err, "โหลดพนักงาน"));
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          setBootReady(true);
+        }
       }
     })();
 
     const unsubSettings = subscribeBonusDeductionSettings(
-      (settings) => setDeductionSettings(settings),
-      (err) => setError(err.message),
+      (settings) => onSubData(setDeductionSettings, settings),
+      (err) => onSubError(err),
     );
     const unsubSchedule = subscribeRateSchedule(
-      (doc) => setRateSchedule(doc.entries),
-      (err) => setError(err.message),
+      (doc) => onSubData(setRateSchedule, doc.entries),
+      (err) => onSubError(err),
     );
     const unsubPayrollSchedule = subscribePayrollSchedule(
-      (doc) => setPayrollSchedule(doc),
-      (err) => setError(err.message),
+      (doc) => onSubData(setPayrollSchedule, doc),
+      (err) => onSubError(err),
     );
     const unsubPool = !shopPayView
-      ? subscribeBonusLivePool(month, setLivePool, (err) => setError(err.message))
+      ? subscribeBonusLivePool(
+          month,
+          (pool) => onSubData(setLivePool, pool),
+          (err) => onSubError(err),
+        )
       : () => undefined;
     return () => {
       cancelled = true;
@@ -223,23 +258,23 @@ function BonusView() {
       unsubPayrollSchedule();
       unsubPool();
     };
-  }, [staff, canView, shopPayView, year, monthIdx, month]);
+  }, [staff, canView, shopPayView, year, monthIdx, month, isPermPreview]);
 
   // OT / ผลิต — ทั้งร้าน หรือมุมพนักงาน: โหลดเดือนแล้วกรองฝั่ง client (เหมือนหน้า OT)
   // ห้ามใช้ array-contains workerId อย่างเดียว — แถวเก่า/ชื่ออย่างเดียว/employeeId ค้างจะทำให้โบนัสเป็น 0
   useEffect(() => {
-    if (!canView) return;
+    if (!canView || !bootReady) return;
     const monthSince = new Date(year, monthIdx, 1).getTime();
     const monthUntil = new Date(year, monthIdx + 1, 1).getTime();
     if (shopPayView) {
       const unsubOt = subscribeOtEntries(
-        (rows) => setOtEntries(rows),
-        (err) => setError(err.message),
+        (rows) => onSubData(setOtEntries, rows),
+        (err) => onSubError(err),
         { since: monthSince, until: monthUntil },
       );
       const unsubProd = subscribeProdEntries(
-        (rows) => setProdEntries(rows),
-        (err) => setError(err.message),
+        (rows) => onSubData(setProdEntries, rows),
+        (err) => onSubError(err),
         { since: monthSince, until: monthUntil },
       );
       return () => {
@@ -260,31 +295,31 @@ function BonusView() {
       return;
     }
     const unsubOt = subscribeOtEntries(
-      (rows) => setOtEntries(rows.filter((r) => workEntryIncludesMe(r, me))),
-      (err) => setError(err.message),
+      (rows) => onSubData(setOtEntries, rows.filter((r) => workEntryIncludesMe(r, me))),
+      (err) => onSubError(err),
       { since: monthSince, until: monthUntil },
     );
     const unsubProd = subscribeProdEntries(
-      (rows) => setProdEntries(rows.filter((r) => workEntryIncludesMe(r, me))),
-      (err) => setError(err.message),
+      (rows) => onSubData(setProdEntries, rows.filter((r) => workEntryIncludesMe(r, me))),
+      (err) => onSubError(err),
       { since: monthSince, until: monthUntil },
     );
     return () => {
       unsubOt();
       unsubProd();
     };
-  }, [canView, shopPayView, year, monthIdx, staff, employees]);
+  }, [canView, bootReady, shopPayView, year, monthIdx, staff, employees]);
 
   // คิวจ่าย — ทั้งร้านหรือเฉพาะตัวเอง (rules บังคับกรอง employeeId)
   useEffect(() => {
-    if (!canView) return;
+    if (!canView || !bootReady) return;
     const payrollSince = new Date(year, monthIdx - 13, 1).getTime();
     if (shopPayView) {
       // Best-effort: แถวที่มีบช./สลิปแล้วแต่สถานะยัง pending → ปิดคิว
       void repairStuckPaidPayrollItems().catch(() => {});
       return subscribePayrollItems(
-        (rows) => setPayrollItems(rows),
-        (err) => setError(err.message),
+        (rows) => onSubData(setPayrollItems, rows),
+        (err) => onSubError(err, "คิวจ่าย"),
         { since: payrollSince },
       );
     }
@@ -294,46 +329,46 @@ function BonusView() {
       return;
     }
     return subscribePayrollItems(
-      (rows) => setPayrollItems(rows),
-      (err) => setError(err.message),
+      (rows) => onSubData(setPayrollItems, rows),
+      (err) => onSubError(err, "คิวจ่าย"),
       { since: payrollSince, employeeId: selfId },
     );
-  }, [canView, shopPayView, year, monthIdx, staff, employees]);
+  }, [canView, bootReady, shopPayView, year, monthIdx, staff, employees]);
 
   useEffect(() => {
-    if (!canView) return;
+    if (!canView || !bootReady) return;
     const unsubMonth = subscribeBonusDeductionMonth(
       year,
       monthIdx,
-      (doc) => setDeductionMonth(doc),
-      (err) => setError(err.message),
+      (doc) => onSubData(setDeductionMonth, doc),
+      (err) => onSubError(err),
     );
     return () => unsubMonth();
-  }, [canView, year, monthIdx]);
+  }, [canView, bootReady, year, monthIdx]);
 
   // เจ้าของ/คนจ่าย: snapshot ทั้งร้าน · พนักงาน: สถานะปิดเดือน + แถวของตัวเองเท่านั้น
   useEffect(() => {
-    if (!canView) return;
+    if (!canView || !bootReady) return;
     if (shopPayView) {
       setMonthStatus(null);
       setPersonalClose(null);
       return subscribeBonusMonthClose(
         month,
-        (doc) => setMonthClose(doc),
-        (err) => setError(err.message),
+        (doc) => onSubData(setMonthClose, doc),
+        (err) => onSubError(err),
       );
     }
     setMonthClose(null);
     const unsubStatus = subscribeBonusMonthStatus(
       month,
-      (doc) => setMonthStatus(doc),
-      (err) => setError(err.message),
+      (doc) => onSubData(setMonthStatus, doc),
+      (err) => onSubError(err),
     );
     return () => unsubStatus();
-  }, [canView, shopPayView, month]);
+  }, [canView, bootReady, shopPayView, month]);
 
   useEffect(() => {
-    if (!canView || shopPayView) return;
+    if (!canView || !bootReady || shopPayView) return;
     const empId = resolveMyWorkerId(employees, staff);
     if (!empId) {
       setPersonalClose(null);
@@ -342,10 +377,10 @@ function BonusView() {
     return subscribeBonusPersonalClose(
       month,
       empId,
-      (doc) => setPersonalClose(doc),
-      (err) => setError(err.message),
+      (doc) => onSubData(setPersonalClose, doc),
+      (err) => onSubError(err, "สรุปโบนัส"),
     );
-  }, [canView, shopPayView, month, staff, employees]);
+  }, [canView, bootReady, shopPayView, month, staff, employees]);
 
   const liveReport = useMemo(() => {
     if (!shopPayView) return null;
