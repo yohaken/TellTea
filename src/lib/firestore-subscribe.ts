@@ -1,5 +1,5 @@
-import type { Query, Unsubscribe } from "firebase/firestore";
-import { onSnapshot } from "firebase/firestore";
+import type { Query, QuerySnapshot, Unsubscribe } from "firebase/firestore";
+import { getDocsFromServer, onSnapshot } from "firebase/firestore";
 
 function isRetryableSubscribeError(err: unknown): boolean {
   const code = (err as { code?: string })?.code || "";
@@ -13,14 +13,27 @@ function isRetryableSubscribeError(err: unknown): boolean {
 /** onSnapshot with short retry — กัน rules/auth ยังไม่พร้อมแล้วขึ้นแดงทั้งที่โหลดได้ภายหลัง */
 export function subscribeQueryWithRetry<T>(
   buildQuery: () => Query<T>,
-  onNext: (snap: import("firebase/firestore").QuerySnapshot<T>) => void,
+  onNext: (snap: QuerySnapshot<T>) => void,
   onError?: (err: Error) => void,
-  opts?: { maxAttempts?: number },
+  opts?: { maxAttempts?: number; seedFromServer?: boolean },
 ): Unsubscribe {
   const maxAttempts = opts?.maxAttempts ?? 3;
+  const seedFromServer = opts?.seedFromServer === true;
   let retryTimer: ReturnType<typeof setTimeout> | undefined;
   let stopped = false;
   let unsub: Unsubscribe = () => undefined;
+
+  if (seedFromServer) {
+    void getDocsFromServer(buildQuery())
+      .then((snap) => {
+        if (!stopped) onNext(snap);
+      })
+      .catch((err) => {
+        if (stopped) return;
+        const e = err instanceof Error ? err : new Error(String(err));
+        onError?.(e);
+      });
+  }
 
   const start = (attempt = 0) => {
     if (stopped) return;
@@ -28,6 +41,8 @@ export function subscribeQueryWithRetry<T>(
       buildQuery(),
       (snap) => {
         if (stopped) return;
+        // อย่าให้ cache เก่า (เคยเห็นแค่ 3 แถว) ทับยอด server ที่ครบ
+        if (seedFromServer && snap.metadata.fromCache) return;
         onNext(snap);
       },
       (err) => {

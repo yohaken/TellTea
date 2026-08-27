@@ -394,7 +394,7 @@ export async function saveOtSettings(bonusRate: number): Promise<void> {
 export function subscribeOtEntries(
   onRows: (rows: OtEntry[]) => void,
   onError?: (err: Error) => void,
-  opts?: { since?: number; until?: number; workerId?: string },
+  opts?: { since?: number; until?: number; workerId?: string; seedFromServer?: boolean },
 ): Unsubscribe {
   const since = opts?.since;
   const until = opts?.until;
@@ -453,6 +453,7 @@ export function subscribeOtEntries(
       onRows(snap.docs.map((d) => mapOtEntryDoc(d.id, d.data() as Record<string, unknown>)));
     },
     (err) => onError?.(err),
+    { seedFromServer: opts?.seedFromServer },
   );
 }
 

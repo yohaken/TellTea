@@ -259,7 +259,7 @@ export async function listProdWorkers(): Promise<ProdWorker[]> {
 export function subscribeProdEntries(
   onRows: (rows: ProdEntry[]) => void,
   onError?: (err: Error) => void,
-  opts?: { since?: number; until?: number; workerId?: string },
+  opts?: { since?: number; until?: number; workerId?: string; seedFromServer?: boolean },
 ): Unsubscribe {
   const since = opts?.since;
   const until = opts?.until;
@@ -316,6 +316,7 @@ export function subscribeProdEntries(
       );
     },
     (err) => onError?.(err),
+    { seedFromServer: opts?.seedFromServer },
   );
 }
 

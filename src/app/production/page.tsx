@@ -153,7 +153,7 @@ function ProductionView() {
               setProdError(null);
             },
             (err) => setProdError(mapFirestoreError(err, "โหลดรายการผลิต")),
-            monthWindow,
+            { ...monthWindow, seedFromServer: true },
           );
           return;
         }

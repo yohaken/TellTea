@@ -325,7 +325,7 @@ function OtView() {
             setError(err.message || "โหลดรายการไม่สำเร็จ");
             setEntriesReady(true);
           },
-          { since, until },
+          { since, until, seedFromServer: !shopOtView },
         );
       })
       .catch((err) => {

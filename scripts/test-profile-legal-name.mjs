@@ -16,6 +16,7 @@ const modal = readFileSync(join(root, "src/components/PersonalProfileModal.tsx")
 assert.match(modal, /isPlausiblePersonName/);
 
 const subscribe = readFileSync(join(root, "src/lib/firestore-subscribe.ts"), "utf8");
-assert.match(subscribe, /subscribeQueryWithRetry/);
+assert.match(subscribe, /seedFromServer/);
+assert.match(subscribe, /getDocsFromServer/);
 
 console.log("OK test-profile-legal-name");
