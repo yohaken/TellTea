@@ -7,7 +7,7 @@ import type { OtEntry } from "./ot";
 import { getOtImageUrls, hasOtQuantities, isOtEntryPlanned, labelOtShift } from "./ot";
 import type { OtShiftId } from "./ot";
 import { OT_SHIFT_DISPLAY_ORDER } from "./ot-grid";
-import { formatDateShort, startOfLocalDay } from "./utils";
+import { formatDateShort, bangkokMinutes, startOfLocalDay } from "./utils";
 
 export type ShiftEntryMode = "single_batch" | "planned_then_closed" | "close_only";
 
@@ -63,7 +63,7 @@ export function shiftSessionKey(date: number, shift: OtShiftId) {
 }
 
 export function getCurrentShiftId(now = new Date()): OtShiftId {
-  const mins = now.getHours() * 60 + now.getMinutes();
+  const mins = bangkokMinutes(now);
   // ดึก 0.3–7 ≈ 00:18–07:00
   if (mins >= 18 && mins < 7 * 60) return "late";
   if (mins >= 7 * 60 && mins < 17 * 60) return "morning";

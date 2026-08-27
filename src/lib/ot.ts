@@ -15,6 +15,7 @@ import {
 } from "firebase/firestore";
 import { getDb } from "./firebase";
 import { assertBonusMonthOpenForDate } from "./bonus-month-guard";
+import { startOfLocalDay, toEpochMs } from "./utils";
 
 /**
  * Lookback แบบกลิ้ง (legacy) — หน้าชงใช้ otViewWindow แทนแล้ว
@@ -260,7 +261,7 @@ function mapOtEntryDoc(id: string, data: Record<string, unknown>): OtEntry {
       : [];
   return {
     id,
-    date: Number(data.date) || 0,
+    date: startOfLocalDay(toEpochMs(data.date)),
     shift: (data.shift as OtShiftId) || "morning",
     workerIds: Array.isArray(data.workerIds) ? (data.workerIds as string[]) : [],
     workerNames: Array.isArray(data.workerNames) ? (data.workerNames as string[]) : [],

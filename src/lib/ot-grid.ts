@@ -5,6 +5,7 @@ import {
   type OtEntry,
   type OtShiftId,
 } from "./ot";
+import { addLocalDays, isFutureBangkokDay, shiftSlotKey, startOfLocalDay } from "./utils";
 
 /** ลำดับแสดงในตาราง — เย็น → เช้า → ดึก (ล่างสุด = ดึก · ไล่ขึ้น = ดึก→เช้า→เย็น) */
 export const OT_SHIFT_DISPLAY_ORDER: OtShiftId[] = ["evening", "morning", "late"];
@@ -33,30 +34,14 @@ export type OtSlotTarget = {
   entry: OtEntry | null;
 };
 
-function startOfLocalDay(ms: number) {
-  const d = new Date(ms);
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-}
-
-function addLocalDays(ms: number, days: number) {
-  const d = new Date(ms);
-  d.setDate(d.getDate() + days);
-  return startOfLocalDay(d.getTime());
-}
-
 export function isFutureLocalDay(dateMs: number) {
-  return startOfLocalDay(dateMs) > startOfLocalDay(Date.now());
-}
-
-export function localDayKey(ms: number) {
-  const d = new Date(ms);
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  return isFutureBangkokDay(dateMs);
 }
 
 function indexEntriesBySlot(entries: OtEntry[]): Map<string, OtEntry> {
   const map = new Map<string, OtEntry>();
   for (const row of entries) {
-    const key = `${localDayKey(row.date)}|${row.shift}`;
+    const key = shiftSlotKey(row.date, row.shift);
     const prev = map.get(key);
     if (!prev || row.createdAt > prev.createdAt) map.set(key, row);
   }
@@ -69,7 +54,7 @@ export function findOtEntryForSlot(
   dateMs: number,
   shift: OtShiftId,
 ): OtEntry | null {
-  return indexEntriesBySlot(entries).get(`${localDayKey(dateMs)}|${shift}`) || null;
+  return indexEntriesBySlot(entries).get(shiftSlotKey(dateMs, shift)) || null;
 }
 
 /** แตะวันที่ — แก้กะบนสุดที่มีข้อมูลก่อน (เย็น→เช้า→ดึก) หรือเปิดกะเช้า */
@@ -90,9 +75,7 @@ function eachLocalDayDesc(newestMs: number, oldestMs: number): number[] {
   const end = startOfLocalDay(oldestMs);
   while (cur >= end) {
     days.push(cur);
-    const prev = new Date(cur);
-    prev.setDate(prev.getDate() - 1);
-    cur = startOfLocalDay(prev.getTime());
+    cur = addLocalDays(cur, -1);
   }
   return days;
 }
@@ -139,7 +122,7 @@ export function buildOtGrid(entries: OtEntry[], options: BuildOtGridOptions = {}
     const slots: OtShiftSlot[] = OT_SHIFT_DISPLAY_ORDER.map((shiftId) => ({
       shiftId,
       shiftLabel: labelOtShift(shiftId),
-      entry: slotMap.get(`${localDayKey(dateMs)}|${shiftId}`) || null,
+      entry: slotMap.get(shiftSlotKey(dateMs, shiftId)) || null,
     }));
 
     let shiftCount = 0;

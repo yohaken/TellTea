@@ -193,7 +193,7 @@ function OtView() {
   const shopOtView = isOwner || can(staff, "payrollPay");
   const canWrite = !!actorId && !isPermPreview;
   const [formOpen, setFormOpen] = useState(false);
-  const [entries, setEntries] = useState<OtEntry[]>([]);
+  const [allEntries, setAllEntries] = useState<OtEntry[]>([]);
   const [workers, setWorkers] = useState<Employee[]>([]);
   const [bonusRate, setBonusRate] = useState(0.6);
   const [rateSchedule, setRateSchedule] = useState<RateScheduleEntry[]>([]);
@@ -211,6 +211,13 @@ function OtView() {
   const [closedByMonth, setClosedByMonth] = useState<Record<string, boolean>>({});
   const loading = !catalogReady || !entriesReady || !checksReady;
   const viewWindow = useMemo(() => otViewWindow(viewMonth), [viewMonth]);
+  const entries = useMemo(() => {
+    if (shopOtView) return allEntries;
+    const linked = resolveLinkedEmployee(workers, staff);
+    const me = buildWorkEntryMineIdentity(linked, staff);
+    if (!me.employeeId && !me.name && !me.nickname && !me.displayName) return [];
+    return allEntries.filter((row) => workEntryIncludesMe(row, me));
+  }, [allEntries, shopOtView, workers, staff]);
   /** เดือนคาบเกี่ยวตอนดูเดือนปัจจุบัน + วันล่วงหน้า */
   const spillMonth = useMemo(() => {
     if (!viewWindow.isLive) return "";
@@ -304,18 +311,14 @@ function OtView() {
         const linked = shopOtView ? null : resolveLinkedEmployee(emps, staff);
         const me = shopOtView ? null : buildWorkEntryMineIdentity(linked, staff);
         if (!shopOtView && me && !me.employeeId && !me.name && !me.nickname && !me.displayName) {
-          setEntries([]);
+          setAllEntries([]);
           setEntriesReady(true);
           setError("ยังไม่ผูกชื่อในรายชื่อร้าน — มุมพนักงานต้องเชื่อมบัญชีกับแถวพนักงาน");
           return;
         }
         unsubOt = subscribeOtEntries(
           (rows) => {
-            if (!shopOtView && me) {
-              setEntries(rows.filter((r) => workEntryIncludesMe(r, me)));
-            } else {
-              setEntries(rows);
-            }
+            setAllEntries(rows);
             setEntriesReady(true);
           },
           (err) => {
@@ -373,7 +376,7 @@ function OtView() {
       gridMin: viewWindow.gridMin,
       gridMax: viewWindow.gridMax,
       periodMonth: viewMonth,
-      entries,
+      entries: allEntries,
       records: checkRecords,
       openingItems,
       closingItems,
@@ -386,7 +389,7 @@ function OtView() {
     viewWindow.gridMin,
     viewWindow.gridMax,
     viewMonth,
-    entries,
+    allEntries,
     checkRecords,
     checkRecordsByDayShift,
     openingItems,
@@ -495,7 +498,7 @@ function OtView() {
               key={editing?.id || slotDraft ? `${slotDraft?.date}-${slotDraft?.shift}` : "new"}
               entry={editing}
               slotDraft={slotDraft}
-              allEntries={entries}
+              allEntries={allEntries}
               checkRecords={checkRecords}
               openingItems={openingItems}
               closingItems={closingItems}

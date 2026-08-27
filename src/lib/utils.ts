@@ -325,6 +325,35 @@ export function startOfLocalDay(date: Date | number = new Date()) {
   return Date.parse(`${key}T00:00:00+07:00`);
 }
 
+/** Add calendar days on Asia/Bangkok midnight ms (no DST in Bangkok). */
+export function addLocalDays(ms: number, days: number) {
+  return startOfLocalDay(ms + days * 86_400_000);
+}
+
+/** Minutes since midnight Asia/Bangkok — shift windows, banners. */
+export function bangkokMinutes(now: Date | number = new Date()) {
+  const ms = typeof now === "number" ? now : now.getTime();
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Bangkok",
+    hour: "numeric",
+    minute: "numeric",
+    hour12: false,
+  }).formatToParts(new Date(ms));
+  const h = Number(parts.find((p) => p.type === "hour")?.value || 0);
+  const m = Number(parts.find((p) => p.type === "minute")?.value || 0);
+  return h * 60 + m;
+}
+
+/** Stable slot key for OT/checklist day×shift maps. */
+export function shiftSlotKey(dateMs: number, shift: string) {
+  return `${startOfLocalDay(dateMs)}|${shift}`;
+}
+
+/** true when dateMs is after today's Asia/Bangkok calendar day. */
+export function isFutureBangkokDay(dateMs: number) {
+  return startOfLocalDay(dateMs) > startOfLocalDay(Date.now());
+}
+
 /** Bangkok calendar midnight ms for sorting/display — 0 if unknown. */
 export function accountingDayMs(value: unknown): number {
   const ms = toEpochMs(value);
