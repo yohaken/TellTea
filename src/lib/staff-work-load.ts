@@ -23,6 +23,7 @@ import {
 } from "./bonus-personal-close";
 import {
   ensureStaffEmployeeLink,
+  fetchLinkedEmployeeFromServer,
   listActiveEmployeesForStaff,
   resolveLinkedEmployee,
   type Employee,
@@ -94,10 +95,17 @@ export function clearStaffIdentityPrefetch() {
   identityPrefetch = null;
 }
 
-/** หลัง login — cache roster + link ใน memory (ไม่บล็อก navigation) */
-export async function prefetchStaffIdentity(staff: StaffMember): Promise<StaffIdentityPrefetch> {
-  const employees = await listActiveEmployeesForStaff(staff);
-  const linked = resolveLinkedEmployee(employees, staff);
+async function resolveStaffLinkedEmployee(
+  staff: StaffMember,
+  employees: Employee[],
+): Promise<{ employees: Employee[]; linked: Employee | null }> {
+  let linked = resolveLinkedEmployee(employees, staff);
+  if (!linked) {
+    linked = await fetchLinkedEmployeeFromServer(staff);
+    if (linked && !employees.some((e) => e.id === linked.id)) {
+      employees = [...employees, linked];
+    }
+  }
   if (linked) {
     try {
       await ensureStaffEmployeeLink(staff, linked);
@@ -105,8 +113,26 @@ export async function prefetchStaffIdentity(staff: StaffMember): Promise<StaffId
       /* best-effort */
     }
   }
-  identityPrefetch = { employees, linked, fetchedAt: Date.now() };
-  return identityPrefetch;
+  return { employees, linked };
+}
+
+function useIdentityPrefetch(prefetched: StaffIdentityPrefetch | null): boolean {
+  return (
+    prefetched != null &&
+    prefetched.linked != null &&
+    Date.now() - prefetched.fetchedAt < 120_000
+  );
+}
+
+/** หลัง login — cache roster + link ใน memory (ไม่บล็อก navigation) */
+export async function prefetchStaffIdentity(staff: StaffMember): Promise<StaffIdentityPrefetch> {
+  let employees = await listActiveEmployeesForStaff(staff);
+  const { employees: nextEmps, linked } = await resolveStaffLinkedEmployee(staff, employees);
+  employees = nextEmps;
+  const snapshot: StaffIdentityPrefetch = { employees, linked, fetchedAt: Date.now() };
+  // อย่า cache ล้มเหลว — token/rules ยังไม่พร้อมตอน login ทำให้ค้าง "ไม่ผูกชื่อ" 120s
+  identityPrefetch = linked ? snapshot : null;
+  return snapshot;
 }
 
 export async function loadStaffBonusBundleFromServer(
@@ -118,18 +144,14 @@ export async function loadStaffBonusBundleFromServer(
   const prefetched = identityPrefetch;
   let employees: Employee[];
   let linked: Employee | null;
-  if (prefetched && Date.now() - prefetched.fetchedAt < 120_000) {
-    employees = prefetched.employees;
-    linked = prefetched.linked ?? resolveLinkedEmployee(employees, staff);
+  if (useIdentityPrefetch(prefetched)) {
+    employees = prefetched!.employees;
+    linked = prefetched!.linked;
   } else {
     employees = await listActiveEmployeesForStaff(staff);
-    linked = resolveLinkedEmployee(employees, staff);
+    ({ employees, linked } = await resolveStaffLinkedEmployee(staff, employees));
     if (linked) {
-      try {
-        await ensureStaffEmployeeLink(staff, linked);
-      } catch {
-        /* best-effort */
-      }
+      identityPrefetch = { employees, linked, fetchedAt: Date.now() };
     }
   }
 
@@ -266,18 +288,14 @@ export async function loadStaffProductionBundleFromServer(
   const prefetched = identityPrefetch;
   let workers: Employee[];
   let linked: Employee | null;
-  if (prefetched && Date.now() - prefetched.fetchedAt < 120_000) {
-    workers = prefetched.employees;
-    linked = prefetched.linked ?? resolveLinkedEmployee(workers, staff);
+  if (useIdentityPrefetch(prefetched)) {
+    workers = prefetched!.employees;
+    linked = prefetched!.linked;
   } else {
     workers = await listActiveEmployeesForStaff(staff);
-    linked = resolveLinkedEmployee(workers, staff);
+    ({ employees: workers, linked } = await resolveStaffLinkedEmployee(staff, workers));
     if (linked) {
-      try {
-        await ensureStaffEmployeeLink(staff, linked);
-      } catch {
-        /* best-effort */
-      }
+      identityPrefetch = { employees: workers, linked, fetchedAt: Date.now() };
     }
   }
 
