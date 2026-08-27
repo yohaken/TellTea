@@ -522,6 +522,25 @@ export async function listEmployeesForProfile(staff: StaffMember): Promise<Emplo
   return active.filter((e) => isUnlinked(e) || isLinkedToStaff(e, staff));
 }
 
+export async function ensureStaffEmployeeLink(
+  staff: Pick<StaffMember, "id" | "email" | "phone">,
+  employee: Employee,
+): Promise<void> {
+  if (isLinkedToStaff(employee, staff as StaffMember)) return;
+  if (employee.linkedStaffId && employee.linkedStaffId !== staff.id) return;
+  try {
+    await linkEmployeeProfile(
+      employee.id,
+      staff.id,
+      employee.name,
+      staff.email,
+      staff.phone,
+    );
+  } catch {
+    /* best-effort — rules อาจรอ email/phone ตรง */
+  }
+}
+
 export async function linkEmployeeProfile(
   employeeId: string,
   staffId: string,

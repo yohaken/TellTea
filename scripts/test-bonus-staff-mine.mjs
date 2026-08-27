@@ -11,18 +11,19 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
 const bonusPage = read("src/app/bonus/page.tsx");
-assert.match(bonusPage, /workEntryIncludesMe/);
-assert.match(bonusPage, /buildWorkEntryMineIdentity/);
+assert.match(bonusPage, /computeMonthBonus/);
+assert.match(bonusPage, /ensureStaffEmployeeLink/);
+assert.match(bonusPage, /onPayrollError/);
 assert.doesNotMatch(
   bonusPage,
-  /workerId:\s*selfId/,
-  "staff bonus must not query array-contains workerId alone",
+  /rows\.filter\(\(r\) => workEntryIncludesMe/,
+  "staff bonus must use full month + computeMonthBonus like owner table",
 );
 
 const mine = read("src/lib/work-entry-mine.ts");
 assert.match(mine, /export function workEntryIncludesMe/);
-assert.match(mine, /createdBy/);
-assert.match(mine, /staffId/);
+assert.match(mine, /export function workEntryCreditsEmployee/);
+assert.match(mine, /findEmployeeByWorkedName/);
 
 const employees = read("src/lib/employees.ts");
 assert.match(
@@ -73,7 +74,7 @@ const version = read("src/lib/version.ts");
 assert.match(version, /APP_BUILD = \d+/);
 
 const prodPage = read("src/app/production/page.tsx");
-assert.match(prodPage, /workEntryIncludesMe/);
+assert.match(prodPage, /workEntryCreditsEmployee/);
 assert.doesNotMatch(prodPage, /workerId: filterId/);
 
 const otPage = read("src/app/ot/page.tsx");

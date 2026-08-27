@@ -1,0 +1,22 @@
+staff bonus/access audit · month 2026-08 · APPLY=0
+staff=6 · employees=5 · levels=4 · otMonth=97 · payrollRecent=28
+
+สถานะ ชื่อ          ชง  ผลิต โบนัสผูก roster            เห็นชงเห็นโบนัเห็นจ่ายOTด.นี้คิว  ต้องแก้
+------------------------------------------------------------------------------------------------------------------------
+OK    Owner         ใช่ ใช่  ใช่  N/A เจ้าของ           ใช่   ใช่     ใช่     0      0    —
+OK    เตย           ใช่ ใช่  ใช่  OK (linkedStaffId)    ใช่   ใช่     ใช่     29     5    —
+OK    ทัพ           ใช่ ใช่  ใช่  OK (linkedStaffId)    ใช่   ใช่     ใช่     30     5    —
+OK    เป้           ใช่ ใช่  ใช่  OK (linkedStaffId)    ใช่   ใช่     ใช่     29     5    —
+OK    แป๋ม          ใช่ ใช่  ใช่  OK (linkedStaffId)    ใช่   ใช่     ใช่     26     8    —
+OK    JAY           ใช่ ใช่  ใช่  OK (linkedStaffId)    ใช่   ใช่     ใช่     26     5    —
+
+=== สรุปแดง 0/5 พนักงาน ===
+ไม่มีคนแดง — สิทธิ์ + ผูกชื่อครบ
+
+=== รายละเอียด ===
+OWNER Owner id=yohaken@gmail.com level=owner emp=— account=yohaken@gmail.com
+OK เตย id=nawarat.srikaeban@gmail.com level=shop_staff emp=985f6edfe50908710befc2d78cdb2b50 account=nawarat.srikaeban@gmail.com
+OK ทัพ id=taphnakarin1995@gmail.com level=shop_staff emp=3b390f246f556e8ad0b27d54b005df37 account=taphnakarin1995@gmail.com
+OK เป้ id=sirintharn1217@gmail.com level=owner_assist emp=88c7e5e9bfb9d5744c8be62ab9295d9a account=sirintharn1217@gmail.com
+OK แป๋ม id=pmapmamashunter27@gmail.com level=shop_staff emp=86gzZEuugjQPVGbuEc6s account=pmapmamashunter27@gmail.com
+OK JAY id=phachara649@gmail.com level=shop_staff emp=5vvygErETiMNLMtYoKel account=phachara649@gmail.com

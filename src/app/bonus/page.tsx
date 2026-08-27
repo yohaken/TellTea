@@ -23,7 +23,6 @@ import {
 } from "@/lib/bonus-deductions";
 import {
   computeMonthBonus,
-  computePersonalBonusRow,
   monthInputValue,
   namesMatch,
   parseMonthInput,
@@ -55,6 +54,7 @@ import {
 import { RateSchedulePanel } from "@/components/RateSchedulePanel";
 import {
   getEmployeeWithPay,
+  ensureStaffEmployeeLink,
   listActiveEmployees,
   listActiveEmployeesWithPay,
   migrateAllLegacyEmployeePay,
@@ -76,16 +76,16 @@ import {
 } from "@/lib/payroll";
 import { subscribeProdEntries, type ProdEntry } from "@/lib/production";
 import { subscribeRateSchedule, type RateScheduleEntry } from "@/lib/rate-schedule";
-import {
-  buildWorkEntryMineIdentity,
-  workEntryIncludesMe,
-} from "@/lib/work-entry-mine";
 import { bangkokMonthRangeMs, formatDateShortBe, formatPlainNumber } from "@/lib/utils";
 import { mapFirestoreError } from "@/lib/firestore-errors";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
 function fmt(n: number) {
   return formatPlainNumber(n);
+}
+
+function round2(n: number) {
+  return Math.round(n * 100) / 100;
 }
 
 function fmtPct(n: number) {
@@ -156,6 +156,20 @@ function BonusView() {
     setError(mapFirestoreError(err, context));
   }
 
+  /** คิวจ่าย — ลิงก์บัญชีค้างทำให้ rules ปฏิเสธ query · ไม่ขึ้นแดงทับสรุปโบนัส */
+  function onPayrollError(err: Error) {
+    const code = (err as { code?: string })?.code || "";
+    const msg = err.message || "";
+    if (
+      code === "permission-denied" ||
+      /insufficient permissions|permission-denied/i.test(msg)
+    ) {
+      setPayrollItems([]);
+      return;
+    }
+    onSubError(err, "คิวจ่าย");
+  }
+
   /** เดือนเปิดยังไม่มี personal close — permission เก่าหรือ doc ว่างไม่ควรขึ้นแดงทับยอด */
   function onPersonalCloseError(err: Error) {
     const code = (err as { code?: string })?.code || "";
@@ -211,6 +225,13 @@ function BonusView() {
         if (!shopPayView && staff && staff.role !== "owner" && !isPermPreview) {
           const linked = resolveLinkedEmployee(emps, staff);
           const payId = staff.employeeId || linked?.id;
+          if (linked) {
+            try {
+              await ensureStaffEmployeeLink(staff, linked);
+            } catch {
+              /* best-effort */
+            }
+          }
           if (linked && staff.employeeId !== linked.id) {
             try {
               await updateStaffProfile(staff.id, {
@@ -301,19 +322,18 @@ function BonusView() {
       return;
     }
     const linked = resolveLinkedEmployee(employees, staff);
-    const me = buildWorkEntryMineIdentity(linked, staff);
-    if (!me.employeeId && !me.name && !me.nickname && !me.displayName) {
+    if (!linked) {
       setOtEntries([]);
       setProdEntries([]);
       return;
     }
     const unsubOt = subscribeOtEntries(
-      (rows) => onSubData(setOtEntries, rows.filter((r) => workEntryIncludesMe(r, me))),
+      (rows) => onSubData(setOtEntries, rows),
       (err) => onSubError(err),
       { since: monthSince, until: monthUntil },
     );
     const unsubProd = subscribeProdEntries(
-      (rows) => onSubData(setProdEntries, rows.filter((r) => workEntryIncludesMe(r, me))),
+      (rows) => onSubData(setProdEntries, rows),
       (err) => onSubError(err),
       { since: monthSince, until: monthUntil },
     );
@@ -343,7 +363,7 @@ function BonusView() {
     }
     return subscribePayrollItems(
       (rows) => onSubData(setPayrollItems, rows),
-      (err) => onSubError(err, "คิวจ่าย"),
+      onPayrollError,
       { since: payrollSince, employeeId: selfId },
     );
   }, [canView, bootReady, shopPayView, year, monthIdx, staff, employees]);
@@ -455,31 +475,48 @@ function BonusView() {
 
   const viewEmployee = isStaffPreview ? previewEmployee : myEmployee;
 
-  // พนักงาน: เดือนปิด → แถวจาก bonusPersonalCloses · เดือนเปิด → OT/ผลิตตัวเอง + livePool
+  // พนักงาน: เดือนปิด → แถวจาก bonusPersonalCloses · เดือนเปิด → คำนวณแบบเดียวกับตารางเจ้าของ
   const personalRow = useMemo((): WorkerMonthBonus | null => {
     if (shopPayView || !myEmployee) return null;
     if (personalClose?.status === "closed") {
       return workerRowFromPersonalClose(personalClose);
     }
     if (monthClosed) {
-      // ปิดแล้วแต่ยังไม่มี personal doc (รอ migrate) — ไม่โชว์ยอดคนอื่น
       return null;
     }
-    const shopDeductPct =
-      livePool?.shopDeductPct ??
-      (deductionSettings && deductionMonth
-        ? computeShopDeductPct(deductionMonth.counts, deductionSettings.rules)
-        : 0);
-    return computePersonalBonusRow({
+    if (!deductionSettings || !deductionMonth) return null;
+    const monthReport = computeMonthBonus(
       otEntries,
       prodEntries,
-      employee: myEmployee,
+      employees,
       year,
-      month: monthIdx,
-      shopDeductPct,
-      totalSalesPool: livePool?.totalSalesPool ?? 0,
-      employeeCount: livePool?.employeeCount ?? 0,
-    });
+      monthIdx,
+      deductionSettings.rules,
+      deductionMonth.counts,
+      rateSchedule,
+    );
+    const picked =
+      monthReport.rows.find((r) => r.workerId === myEmployee.id) ||
+      monthReport.rows.find((r) => namesMatch(r.workerName, myEmployee.name)) ||
+      null;
+    if (!picked) return null;
+    const shopDeductPct =
+      livePool?.shopDeductPct ?? monthReport.shopDeductPct;
+    const salesShare =
+      livePool && livePool.employeeCount > 0 && picked.workedThisMonth
+        ? livePool.totalSalesPool / livePool.employeeCount
+        : picked.salesShare;
+    const total = round2(salesShare + picked.prodBonus + picked.otMain);
+    const deductAmount = round2(total * (shopDeductPct / 100));
+    const remaining = round2(Math.max(0, total - deductAmount));
+    return {
+      ...picked,
+      salesShare: round2(salesShare),
+      total,
+      deductPct: shopDeductPct,
+      deductAmount,
+      remaining,
+    };
   }, [
     shopPayView,
     myEmployee,
@@ -490,8 +527,10 @@ function BonusView() {
     deductionMonth,
     otEntries,
     prodEntries,
+    employees,
     year,
     monthIdx,
+    rateSchedule,
   ]);
 
   // ให้ staff.employeeId ตรงกับชื่อที่ลิงก์ — ห้ามเขียนตอนพรีวิว (จะไปทับบัญชีเจ้าของ)

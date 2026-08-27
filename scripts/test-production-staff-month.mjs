@@ -30,5 +30,7 @@ assert.match(page, /mineOnly=\{!shopProdView\}/);
 assert.match(page, /mineOnly \? null/);
 assert.match(page, /authStatus !== "ready"/);
 assert.match(page, /mapFirestoreError/);
+assert.match(page, /workEntryCreditsEmployee/);
+assert.match(page, /ensureStaffEmployeeLink/);
 
 console.log("OK test-production-staff-month");

@@ -2,7 +2,8 @@
  * กรองรายการชง/ผลิต "ของฉัน" — ใช้ร่วมหน้า OT · ผลิต · สรุปโบนัส
  * employeeId ใน workerIds ก่อน แล้วค่อยชื่อ/ชื่อเล่น/ชื่อเก่า/displayName
  */
-import { namesMatch } from "./bonus";
+import { employeeMatchesName, findEmployeeByWorkedName, namesMatch } from "./bonus";
+import type { Employee } from "./employees";
 
 export type WorkEntryMineShape = {
   workerIds?: string[];
@@ -24,6 +25,40 @@ export type WorkEntryMineIdentity = {
 export function workEntryIncludesName(entry: WorkEntryMineShape, name: string): boolean {
   if (!name.trim()) return false;
   return (entry.workerNames || []).some((w) => namesMatch(w, name));
+}
+
+/**
+ * แถวนี้นับเข้าโบนัส/ประวัติของพนักงานคนนี้ — logic คู่กับ computeMonthBonus.creditEntryWorkers
+ * (id ใน workerIds · ชื่อแมป roster · createdBy สำรอง)
+ */
+export function workEntryCreditsEmployee(
+  entry: WorkEntryMineShape,
+  employee: Pick<Employee, "id" | "name" | "nickname" | "previousNames"> | null,
+  roster: Pick<Employee, "id" | "name" | "nickname" | "previousNames">[] = [],
+  staffId?: string,
+): boolean {
+  if (!employee) return false;
+  const sid = (staffId || "").trim();
+  if (sid && (entry.createdBy || "").trim() === sid) return true;
+  const ids = entry.workerIds || [];
+  if (ids.includes(employee.id)) return true;
+  const credited = new Set<string>();
+  for (const id of ids) {
+    const emp = roster.find((e) => e.id === id);
+    if (emp?.id === employee.id) {
+      credited.add(employee.id);
+      return true;
+    }
+  }
+  for (const rawName of entry.workerNames || []) {
+    const matched =
+      findEmployeeByWorkedName(roster, rawName) ||
+      (employeeMatchesName(employee, rawName) ? employee : undefined);
+    if (matched?.id === employee.id) return true;
+    if (matched) credited.add(matched.id);
+  }
+  if (ids.length > 0) return false;
+  return (entry.workerNames || []).some((n) => employeeMatchesName(employee, n));
 }
 
 /** true ถ้ารายการมีคนนี้ — id หรือชื่อใดชื่อหนึ่งตรง */

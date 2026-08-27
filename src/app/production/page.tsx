@@ -21,11 +21,10 @@ import { useAuth } from "@/lib/auth";
 import { monthInputValue, parseMonthInput } from "@/lib/bonus";
 import { mapFirestoreError } from "@/lib/firestore-errors";
 import { resolveWorkerDisplayNames } from "@/lib/employee-rename-propagate";
-import { resolveLinkedEmployee } from "@/lib/employees";
+import { resolveLinkedEmployee, ensureStaffEmployeeLink } from "@/lib/employees";
 import { staffHomeHref } from "@/lib/nav-menu";
 import {
-  buildWorkEntryMineIdentity,
-  workEntryIncludesMe,
+  workEntryCreditsEmployee,
 } from "@/lib/work-entry-mine";
 import { can } from "@/lib/permissions";
 import {
@@ -88,6 +87,7 @@ function ProductionView() {
   const [logMonth, setLogMonth] = useState(monthInputValue());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [prodError, setProdError] = useState<string | null>(null);
   const [editing, setEditing] = useState<ProdEntry | null>(null);
   const [rateSchedule, setRateSchedule] = useState<RateScheduleEntry[]>([]);
   const { year: logYear, month: logMonthIdx } = parseMonthInput(logMonth);
@@ -128,21 +128,37 @@ function ProductionView() {
         const monthWindow = bangkokMonthRangeMs(logYear, logMonthIdx);
         if (!shopProdView) {
           const linked = resolveLinkedEmployee(w, staff);
-          const me = buildWorkEntryMineIdentity(linked, staff);
-          if (!me.employeeId && !me.name && !me.nickname && !me.displayName) {
+          if (linked && staff) {
+            try {
+              await ensureStaffEmployeeLink(staff, linked);
+            } catch {
+              /* best-effort */
+            }
+          }
+          if (!linked) {
             setEntries([]);
             return;
           }
           unsubEntries = subscribeProdEntries(
-            (rows) => setEntries(rows.filter((r) => workEntryIncludesMe(r, me))),
-            (err) => setError(mapFirestoreError(err, "โหลดรายการผลิต")),
+            (rows) => {
+              setEntries(
+                rows.filter((r) =>
+                  workEntryCreditsEmployee(r, linked, w, staff?.id),
+                ),
+              );
+              setProdError(null);
+            },
+            (err) => setProdError(mapFirestoreError(err, "โหลดรายการผลิต")),
             monthWindow,
           );
           return;
         }
         unsubEntries = subscribeProdEntries(
-          (rows) => setEntries(rows),
-          (err) => setError(mapFirestoreError(err, "โหลดรายการผลิต")),
+          (rows) => {
+            setEntries(rows);
+            setProdError(null);
+          },
+          (err) => setProdError(mapFirestoreError(err, "โหลดรายการผลิต")),
           monthWindow,
         );
       })
@@ -227,6 +243,7 @@ function ProductionView() {
       </div>
 
       {error ? <p className="error-text">{error}</p> : null}
+      {prodError ? <p className="error-text">{prodError}</p> : null}
       {isPermPreview && showLog ? (
         <p className="muted" style={{ margin: "0 0 0.55rem", fontSize: "0.78rem" }}>
           พรีวิวมุมพนักงาน — เลือกเดือนดูรายการของคนนี้ได้ · กรอก/แก้ไม่ได้
