@@ -101,9 +101,12 @@ async function resolveStaffLinkedEmployee(
 ): Promise<{ employees: Employee[]; linked: Employee | null }> {
   let linked = resolveLinkedEmployee(employees, staff);
   if (!linked) {
-    linked = await fetchLinkedEmployeeFromServer(staff);
-    if (linked && !employees.some((e) => e.id === linked.id)) {
-      employees = [...employees, linked];
+    const fetched = await fetchLinkedEmployeeFromServer(staff);
+    if (fetched) {
+      linked = fetched;
+      if (!employees.some((e) => e.id === fetched.id)) {
+        employees = [...employees, fetched];
+      }
     }
   }
   if (linked) {
