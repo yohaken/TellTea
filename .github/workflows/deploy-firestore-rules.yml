@@ -22,7 +22,7 @@ jobs:
         with:
           node-version: "22"
       - name: Guard rules file
-        run: npm run test:firestore-rules
+        run: npm ci && npm run test:firestore-rules
       - uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
@@ -52,6 +52,4 @@ jobs:
             exit 1
           fi
       - name: Verify live rules markers
-        env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-        run: node scripts/verify-firestore-rules-deploy.mjs
+        run: npm run verify:firestore-rules
