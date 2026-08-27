@@ -30,6 +30,7 @@ import {
 } from "@/lib/work-entry-mine";
 import { can } from "@/lib/permissions";
 import { staffHomeHref } from "@/lib/nav-menu";
+import { updateStaffProfile } from "@/lib/staff";
 import {
   entryHasPhotoFlag,
   type PhotoForensicsReport,
@@ -189,7 +190,11 @@ function OtView() {
   const { actorId, staff, isPermPreview } = useAuth();
   const router = useRouter();
   const isOwner = staff?.role === "owner";
-  /** เห็นทั้งร้าน — เจ้าของ / คนจ่ายเงินเดือน · พนักงานเห็นเฉพาะกะที่มีชื่อตัวเอง */
+  /**
+   * ตารางชง = งานทีมทั้งร้าน (เหมือนป๊อปอัปกะค้าง)
+   * กรอง "ของฉัน" เป็นตัวเลือกในตาราง — ห้ามซ่อนทั้งร้านตอนโหลด
+   * (เคยกรอง workEntryIncludesMe ตอนโหลด ทำให้พนักงานเห็นตารางว่างทั้งที่เจ้าของเห็นครบ)
+   */
   const shopOtView = isOwner || can(staff, "payrollPay");
   const canWrite = !!actorId && !isPermPreview;
   const [formOpen, setFormOpen] = useState(false);
@@ -211,13 +216,8 @@ function OtView() {
   const [closedByMonth, setClosedByMonth] = useState<Record<string, boolean>>({});
   const loading = !catalogReady || !entriesReady || !checksReady;
   const viewWindow = useMemo(() => otViewWindow(viewMonth), [viewMonth]);
-  const entries = useMemo(() => {
-    if (shopOtView) return allEntries;
-    const linked = resolveLinkedEmployee(workers, staff);
-    const me = buildWorkEntryMineIdentity(linked, staff);
-    if (!me.employeeId && !me.name && !me.nickname && !me.displayName) return [];
-    return allEntries.filter((row) => workEntryIncludesMe(row, me));
-  }, [allEntries, shopOtView, workers, staff]);
+  /** ทุกคนเห็นรายการชงทั้งร้าน — ของฉันใช้ checkbox ในตาราง */
+  const entries = allEntries;
   /** เดือนคาบเกี่ยวตอนดูเดือนปัจจุบัน + วันล่วงหน้า */
   const spillMonth = useMemo(() => {
     if (!viewWindow.isLive) return "";
@@ -303,18 +303,18 @@ function OtView() {
         const emps = await listActiveEmployees();
         if (cancelled) return;
         setWorkers(emps);
-        /**
-         * มุมพนักงาน/พรีวิว: โหลดช่วงเดือนแล้วกรองฝั่ง client ด้วย workEntryIncludesMe
-         * (workerIds + ชื่อ/ชื่อเล่น/ชื่อเก่า) — แถวเก่าที่ไม่มี workerIds ยังเห็นได้
-         * ห้ามพึ่ง workerId query อย่างเดียว: employeeId ค้าง/พรีวิวไม่ครบจะได้ตารางว่าง
-         */
-        const linked = shopOtView ? null : resolveLinkedEmployee(emps, staff);
-        const me = shopOtView ? null : buildWorkEntryMineIdentity(linked, staff);
-        if (!shopOtView && me && !me.employeeId && !me.name && !me.nickname && !me.displayName) {
-          setAllEntries([]);
-          setEntriesReady(true);
-          setError("ยังไม่ผูกชื่อในรายชื่อร้าน — มุมพนักงานต้องเชื่อมบัญชีกับแถวพนักงาน");
-          return;
+        // ตารางชงโหลดทั้งร้านเสมอ (งานทีม) — กรอง "ของฉัน" ที่ตาราง
+        if (!shopOtView && staff) {
+          const linked = resolveLinkedEmployee(emps, staff);
+          if (linked && staff.employeeId !== linked.id && !isPermPreview) {
+            void updateStaffProfile(staff.id, {
+              employeeId: linked.id,
+              displayName: linked.name,
+              profileComplete: true,
+            }).catch(() => undefined);
+          } else if (!linked) {
+            setError("บัญชียังไม่ผูกกับรายชื่อร้าน — ไปโปรไฟล์เพื่อเชื่อมชื่อ (ตารางชงยังเห็นทั้งร้านได้)");
+          }
         }
         unsubOt = subscribeOtEntries(
           (rows) => {
@@ -341,7 +341,7 @@ function OtView() {
       unsubOt?.();
       unsubCheck();
     };
-  }, [staff, viewWindow, shopOtView]);
+  }, [staff, viewWindow, shopOtView, isPermPreview]);
 
   const openingItems = useMemo(() => openingItemsFromCatalog(checkItems), [checkItems]);
   const closingItems = useMemo(() => closingItemsFromCatalog(checkItems), [checkItems]);

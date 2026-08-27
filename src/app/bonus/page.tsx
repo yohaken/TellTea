@@ -80,7 +80,7 @@ import {
   buildWorkEntryMineIdentity,
   workEntryIncludesMe,
 } from "@/lib/work-entry-mine";
-import { formatDateShortBe, formatPlainNumber } from "@/lib/utils";
+import { bangkokMonthRangeMs, formatDateShortBe, formatPlainNumber } from "@/lib/utils";
 import { mapFirestoreError } from "@/lib/firestore-errors";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
@@ -264,8 +264,7 @@ function BonusView() {
   // ห้ามใช้ array-contains workerId อย่างเดียว — แถวเก่า/ชื่ออย่างเดียว/employeeId ค้างจะทำให้โบนัสเป็น 0
   useEffect(() => {
     if (!canView || !bootReady) return;
-    const monthSince = new Date(year, monthIdx, 1).getTime();
-    const monthUntil = new Date(year, monthIdx + 1, 1).getTime();
+    const { since: monthSince, until: monthUntil } = bangkokMonthRangeMs(year, monthIdx);
     if (shopPayView) {
       const unsubOt = subscribeOtEntries(
         (rows) => onSubData(setOtEntries, rows),

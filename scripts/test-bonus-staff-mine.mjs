@@ -68,5 +68,13 @@ assert.doesNotMatch(prodPage, /workerId: filterId/);
 const otPage = read("src/app/ot/page.tsx");
 assert.match(otPage, /workEntryIncludesMe/);
 assert.match(otPage, /buildWorkEntryMineIdentity/);
+assert.match(
+  otPage,
+  /const entries = allEntries/,
+  "staff OT must show full shop grid (team), not filter-away on load",
+);
+
+const bonusUtils = read("src/app/bonus/page.tsx");
+assert.match(bonusUtils, /bangkokMonthRangeMs/);
 
 console.log("OK test-bonus-staff-mine");

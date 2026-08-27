@@ -55,6 +55,7 @@ import {
   type RateScheduleEntry,
 } from "@/lib/rate-schedule";
 import {
+  bangkokMonthRangeMs,
   formatDateShortBe,
   formatPlainNumber,
   parseDateInput,
@@ -123,10 +124,7 @@ function ProductionView() {
         if (cancelled) return;
         setWorkers(w);
         // มุมพนักงาน/พรีวิว: โหลดเดือนแล้วกรองฝั่ง client (id + ชื่อ) — กัน employeeId ค้างแล้วรายการว่าง
-        const monthWindow = {
-          since: new Date(logYear, logMonthIdx, 1).getTime(),
-          until: new Date(logYear, logMonthIdx + 1, 1).getTime(),
-        };
+        const monthWindow = bangkokMonthRangeMs(logYear, logMonthIdx);
         if (!shopProdView) {
           const linked = resolveLinkedEmployee(w, staff);
           const me = buildWorkEntryMineIdentity(linked, staff);

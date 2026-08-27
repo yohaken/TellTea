@@ -354,6 +354,20 @@ export function isFutureBangkokDay(dateMs: number) {
   return startOfLocalDay(dateMs) > startOfLocalDay(Date.now());
 }
 
+/** Asia/Bangkok [since, until) for calendar month (monthIdx 0–11). */
+export function bangkokMonthRangeMs(year: number, monthIdx: number): { since: number; until: number } {
+  const m = Math.max(0, Math.min(11, Math.floor(monthIdx)));
+  const y = Math.floor(year);
+  const startKey = `${y}-${String(m + 1).padStart(2, "0")}-01`;
+  const nextY = m === 11 ? y + 1 : y;
+  const nextM = m === 11 ? 1 : m + 2;
+  const endKey = `${nextY}-${String(nextM).padStart(2, "0")}-01`;
+  return {
+    since: Date.parse(`${startKey}T00:00:00+07:00`),
+    until: Date.parse(`${endKey}T00:00:00+07:00`),
+  };
+}
+
 /** Bangkok calendar midnight ms for sorting/display — 0 if unknown. */
 export function accountingDayMs(value: unknown): number {
   const ms = toEpochMs(value);

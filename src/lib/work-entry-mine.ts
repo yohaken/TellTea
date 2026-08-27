@@ -29,14 +29,17 @@ export function workEntryIncludesMe(
 ): boolean {
   if (!me) return false;
   const id = (me.employeeId || "").trim();
-  if (id && (entry.workerIds || []).includes(id)) return true;
+  const ids = entry.workerIds || [];
+  if (id && ids.includes(id)) return true;
+  // id ค้าง/ว่าง — ยังเทียบชื่อในกะ (กันโบนัส/ตารางฝั่งพนักงานเป็น 0 ทั้งที่ลงแล้ว)
   const aliases = [
     me.name,
     me.nickname,
     me.displayName,
     ...(me.previousNames || []),
   ].filter((n): n is string => !!n?.trim());
-  return aliases.some((n) => workEntryIncludesName(entry, n));
+  if (aliases.some((n) => workEntryIncludesName(entry, n))) return true;
+  return false;
 }
 
 /** สร้าง identity จากแถว roster + staff — ใช้กรองฝั่ง client */
