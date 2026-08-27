@@ -40,7 +40,9 @@
 เปิดด้วย **Safari / Chrome** — LINE / Facebook in-app browser มักพัง OAuth/reCAPTCHA
 
 ### พนักงาน (หลังร้าน `/login`)
-- **ทางหลัก:** same-origin Google — เดสก์ท็อปใช้ popup · มือถือใช้ `signInWithRedirect` (เหมือนสมาชิก)
+- **ทางหลัก:** same-origin Google — เดสก์ท็อปใช้ popup · มือถือใช้ `signInWithRedirect`
+- **authDomain รันไทม์** = โฮสต์ปัจจุบัน (`telltea-bo.web.app`) — กัน Safari/Chrome เจอ `missing initial state` จาก storage ข้ามโดเมน
+- ถ้า Google พังบนมือถือ: ใช้ **เบอร์ + OTP** หรือเปิดใน Chrome/Safari (ไม่ใช่ใน LINE)
 - **ไม่พึ่ง** cross-domain `telltea-auth.html` + Firestore ticket เป็นค่าเริ่มต้น (เคย timeout บ่อยตอนพนักงานเข้าใช้)
 - **ทางสำรอง legacy:** `NEXT_PUBLIC_FORCE_AUTH_BRIDGE=1` ยังชี้ไป  
   `https://mypeer-501909.firebaseapp.com/telltea-auth.html`  

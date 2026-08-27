@@ -18,30 +18,46 @@ import { getFunctions, type Functions } from "firebase/functions";
 import { getStorage, type FirebaseStorage } from "firebase/storage";
 
 /**
- * Keep authDomain on the Firebase default host.
- * TellTea production login uses the firebaseapp auth bridge.
+ * authDomain ต้องอยู่โดเมนเดียวกับแอป (Option 1 ใน Firebase redirect best practices)
+ * ไม่งั้นมือถือ Safari/Chrome จะเจอ "missing initial state" หลัง Google redirect
+ * เพราะ sessionStorage ข้ามโดเมนถูกบล็อก
  */
-const PROJECT_DEFAULTS = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "",
-  authDomain:
-    process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "mypeer-501909.firebaseapp.com",
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "",
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "",
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "",
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "",
-};
-
-export function isFirebaseConfigured() {
-  return Boolean(
-    PROJECT_DEFAULTS.apiKey &&
-      PROJECT_DEFAULTS.authDomain &&
-      PROJECT_DEFAULTS.projectId &&
-      PROJECT_DEFAULTS.appId,
+export function resolveAuthDomain(): string {
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname;
+    if (
+      host === "telltea-bo.web.app" ||
+      host === "telltea-pos.web.app" ||
+      host === "localhost" ||
+      host === "127.0.0.1"
+    ) {
+      return host === "127.0.0.1" ? "localhost" : host;
+    }
+  }
+  return (
+    process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ||
+    "mypeer-501909.firebaseapp.com"
   );
 }
 
+function firebaseConfig() {
+  return {
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "",
+    authDomain: resolveAuthDomain(),
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "",
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "",
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "",
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "",
+  };
+}
+
+export function isFirebaseConfigured() {
+  const cfg = firebaseConfig();
+  return Boolean(cfg.apiKey && cfg.authDomain && cfg.projectId && cfg.appId);
+}
+
 export function isFirebaseStorageConfigured() {
-  return isFirebaseConfigured() && Boolean(PROJECT_DEFAULTS.storageBucket?.trim());
+  return isFirebaseConfigured() && Boolean(firebaseConfig().storageBucket?.trim());
 }
 
 let app: FirebaseApp | undefined;
@@ -55,7 +71,7 @@ export function getFirebaseApp() {
     throw new Error("Firebase ยังไม่ได้ตั้งค่า — ดู README");
   }
   if (!app) {
-    app = getApps().length ? getApps()[0]! : initializeApp(PROJECT_DEFAULTS);
+    app = getApps().length ? getApps()[0]! : initializeApp(firebaseConfig());
   }
   return app;
 }

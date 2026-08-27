@@ -18,19 +18,20 @@ import {
   type Firestore,
 } from "firebase/firestore";
 import { getFunctions, type Functions } from "firebase/functions";
-import { isFirebaseConfigured } from "./firebase";
+import { isFirebaseConfigured, resolveAuthDomain } from "./firebase";
 
 const POS_APP_NAME = "telltea-pos";
 
-const PROJECT_DEFAULTS = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "",
-  authDomain:
-    process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "mypeer-501909.firebaseapp.com",
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "",
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "",
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "",
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "",
-};
+function posFirebaseConfig() {
+  return {
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "",
+    authDomain: resolveAuthDomain(),
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "",
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "",
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "",
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "",
+  };
+}
 
 let posApp: FirebaseApp | undefined;
 let posAuth: Auth | undefined;
@@ -43,7 +44,7 @@ export function getPosFirebaseApp(): FirebaseApp {
   }
   if (!posApp) {
     const existing = getApps().find((a) => a.name === POS_APP_NAME);
-    posApp = existing ?? initializeApp(PROJECT_DEFAULTS, POS_APP_NAME);
+    posApp = existing ?? initializeApp(posFirebaseConfig(), POS_APP_NAME);
   }
   return posApp;
 }

@@ -46,6 +46,12 @@ assert.match(auth, /ownerFallbackMember|isAppOwnerEmail/);
 assert.match(auth, /void resolveStaffViaCallable/);
 assert.match(auth, /signInWithPopup/);
 assert.match(auth, /auth\.currentUser/);
+assert.match(auth, /missing initial state|storage-partitioned/);
+
+const firebase = read("src/lib/firebase.ts");
+assert.match(firebase, /resolveAuthDomain/);
+assert.match(firebase, /telltea-bo\.web\.app/);
+assert.match(firebase, /authDomain: resolveAuthDomain\(\)/);
 
 const login = read("src/app/login/page.tsx");
 assert.match(login, /busyReason/);

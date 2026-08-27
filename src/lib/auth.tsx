@@ -127,9 +127,10 @@ export function mapFirebaseAuthError(error: unknown): string {
   if (
     code === "auth/argument-error" ||
     code === "auth/internal-error" ||
-    code === "auth/network-request-failed"
+    code === "auth/network-request-failed" ||
+    /missing initial state|sessionStorage is inaccessible|storage-partitioned/i.test(message)
   ) {
-    return "เข้า Google ไม่สำเร็จ — เปิดใน Chrome/Safari แล้วลองใหม่ หรือใช้เบอร์แทน";
+    return "เข้า Google ไม่สำเร็จ — เปิดใน Chrome/Safari (ไม่ใช่ใน LINE) แล้วลองใหม่ หรือใช้เบอร์แทน";
   }
   if (
     code === "auth/configuration-not-found" ||
