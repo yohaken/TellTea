@@ -125,6 +125,8 @@ assert.match(rules, /resource\.data\.createdBy == actorId\(\)/);
 assert.match(rules, /resource\.data\.amountIn == 0/);
 // payrollItems: self-scoped get for bonus staff
 assert.match(rules, /function staffOwnsEmployee\(/);
+assert.match(rules, /function linkedLevelActive\(/);
+assert.match(rules, /function staffHasBrokenLevelLink\(/);
 assert.match(rules, /docId == 'rateSchedule'/);
 assert.match(rules, /function personalCloseEmployeeId\(/);
 assert.match(rules, /staffOwnsEmployee\(resource\.data\.employeeId\)/);

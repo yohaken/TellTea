@@ -74,10 +74,13 @@ function resolve(member, levels) {
   const customized = member.permissionsCustomized === true;
   if (!customized && levelId && levels?.length) {
     const level = levels.find((l) => l.id === levelId);
-    if (level?.active !== false) return materialize(level.permissions);
+    if (level && level.active !== false) return materialize(level.permissions);
   }
   if (member.permissions && typeof member.permissions === "object") {
     return materialize(member.permissions);
+  }
+  if (!customized && levelId && levels?.length) {
+    return empty();
   }
   return { ...DEFAULT };
 }
@@ -138,6 +141,8 @@ assert.match(preview, /levels\?/);
 const rules = read("firestore.rules");
 assert.match(rules, /hasPermFromLevel/);
 assert.match(rules, /staffUsesLinkedLevel/);
+assert.match(rules, /linkedLevelActive/);
+assert.match(rules, /staffHasBrokenLevelLink/);
 assert.match(rules, /allow read: if isStaff\(\) \|\| isOwnerEmail\(\)/);
 assert.match(
   rules,
@@ -148,5 +153,13 @@ assert.doesNotMatch(
   /!get\(staffPath\(\)\)\.data\.keys\(\)\.hasAny\(\['permissions'\]\)[\s\S]*?p == 'ledger'/,
   "legacy hasPerm fallback must not grant ledger",
 );
+
+// inactive level → deny (mirror client)
+const inactive = resolve(
+  { role: "staff", permissionLevelId: "shop_staff", permissionsCustomized: false },
+  [{ id: "shop_staff", active: false, permissions: { bonus: true, production: true } }],
+);
+assert.equal(inactive.bonus, false);
+assert.equal(inactive.production, false);
 
 console.log("OK test-permissions-resolve");

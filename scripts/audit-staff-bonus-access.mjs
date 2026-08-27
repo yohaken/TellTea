@@ -335,10 +335,32 @@ async function main() {
     };
   });
 
+  const shopStaffLevel = levels.find((l) => l.id === "shop_staff");
+  if (!shopStaffLevel) {
+    console.error("CRITICAL: permissionLevels/shop_staff หาย — พนักงานที่ผูก level จะไม่มีสิทธิ");
+  } else if (shopStaffLevel.active === false) {
+    console.error("CRITICAL: permissionLevels/shop_staff ถูกปิด — พนักงานทั้งร้านไม่มีสิทธิพื้นร้าน");
+  }
+
   const rows = [];
   const applied = [];
 
   for (const staff of staffMembers) {
+    // Safe APPLY: ผูกลำดับ shop_staff ให้พนักงานที่ยังไม่มี level (ทั้ง roster)
+    if (
+      APPLY &&
+      staff.role !== "owner" &&
+      !staff.permissionLevelId &&
+      !staff.permissionsCustomized
+    ) {
+      await patchDoc(token, "staff", staff.id, {
+        permissionLevelId: "shop_staff",
+        updatedAt: now,
+      });
+      applied.push(`staff/${staff.id} permissionLevelId=shop_staff`);
+      staff.permissionLevelId = "shop_staff";
+    }
+
     const perms = resolveEffectivePermissions(staff, levels);
     const { emp, via } = resolveLinkedEmployee(employees, staff);
 

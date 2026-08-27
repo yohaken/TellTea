@@ -42,10 +42,16 @@ jobs:
             rules=$?
             if [ "$rules" -eq 0 ]; then
               echo "OK rules deployed on attempt $attempt"
-              exit 0
+              break
             fi
             # exponential-ish backoff, cap 90s
             sleep $(( attempt < 8 ? attempt * 10 : 90 ))
           done
-          echo "ERROR firestore rules still failing after 20 attempts"
-          exit 1
+          if [ "$rules" -ne 0 ]; then
+            echo "ERROR firestore rules still failing after 20 attempts"
+            exit 1
+          fi
+      - name: Verify live rules markers
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node scripts/verify-firestore-rules-deploy.mjs

@@ -6,9 +6,11 @@
 
 - [x] `bonusPersonalCloses/{id}` — เดือนเปิดยังไม่มี doc → `resource == null` ทำให้ `resource.data.employeeId` ล้ม
 - [x] เพิ่ม `personalCloseEmployeeId` + `canReadBonusPersonalClose` อ่านจาก path id เมื่อ doc ว่าง
+- [x] `linkedLevelActive` + `staffHasBrokenLevelLink` — คู่ client resolveEffectivePermissions
 - [ ] **Deploy:** `firebase deploy --only firestore:rules` (โปรเจกต์ mypeer-501909)
+- [ ] **Verify:** `npm run verify:firestore-rules` (live markers)
 
-## Phase 2 — Client ฝั่งพนักงาน ✅
+## Phase 2 — Client ฝั่งพนักงาน (ทุกคนใน roster) ✅
 
 - [x] รอ `authStatus === "ready"` ก่อน subscribe (โบนัส · ผลิต)
 - [x] retry subscribe ตารางเรท + personal close (เหมือน bonusLivePool)
@@ -16,10 +18,11 @@
 - [x] หน้าผลิต: แปล error เป็นภาษาไทย (`mapFirestoreError`)
 - [x] `workEntryIncludesMe` — fallback `createdBy === staff.id` สำหรับแถวที่ตัวเองกรอก
 
-## Phase 3 — ข้อมูล / ลิงก์ roster
+## Phase 3 — ข้อมูล / ลิงก์ roster (ทั้ง roster ไม่ใช่คนเดียว)
 
-- [ ] รัน audit: `node scripts/audit-staff-bonus-access.mjs` (OUT_DIR=artifacts)
-- [ ] แก้คนแดง: ผูก `staff.employeeId` ↔ `employees.linkedStaffId` ในศูนย์พนักงาน
+- [ ] รัน audit ทั้งร้าน: `OUT_DIR=artifacts node scripts/audit-staff-bonus-access.mjs`
+- [ ] แก้อัตโนมัติที่ปลอดภัย: `APPLY=1 node scripts/audit-staff-bonus-access.mjs`
+- [ ] แก้คนแดงที่เหลือ: ผูก `staff.employeeId` ↔ `employees.linkedStaffId` ในศูนย์พนักงาน
 - [ ] ถ้าเปลี่ยนชื่อในร้าน: ใส่ `previousNames` บน roster ให้แถวเก่าจับคนเดิมได้
 
 ## Phase 4 — ตรวจหลัง deploy

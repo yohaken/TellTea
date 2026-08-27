@@ -232,20 +232,54 @@ service cloud.firestore {
 
     // Fine-grained permissions on staff doc; owners always pass.
     // Staff without permissions map: daily modules only (legacy default).
+    /** id ลำดับสิทธิที่ผูกบน staff doc (ว่างถ้าไม่ผูก) */
+    function linkedPermissionLevelId() {
+      return isStaff()
+        && get(staffPath()).data.keys().hasAny(['permissionLevelId'])
+        && get(staffPath()).data.permissionLevelId is string
+        && get(staffPath()).data.permissionLevelId.size() > 0
+        ? get(staffPath()).data.permissionLevelId
+        : '';
+    }
+
+    function permissionLevelDoc(levelId) {
+      return /databases/$(database)/documents/permissionLevels/$(levelId);
+    }
+
+    function linkedLevelDocExists() {
+      return linkedPermissionLevelId().size() > 0
+        && exists(permissionLevelDoc(linkedPermissionLevelId()));
+    }
+
+    /** คู่ client resolveEffectivePermissions — level ปิด = ไม่ใช้สิทธิจาก level */
+    function linkedLevelActive() {
+      return linkedLevelDocExists()
+        && (
+          !get(permissionLevelDoc(linkedPermissionLevelId())).data.keys().hasAny(['active'])
+          || get(permissionLevelDoc(linkedPermissionLevelId())).data.active != false
+        );
+    }
+
     /** ผูก level และยังไม่ customize → อ่านสิทธิ์จาก permissionLevels */
     function staffUsesLinkedLevel() {
       return isStaff()
         && get(staffPath()).data.permissionsCustomized != true
-        && get(staffPath()).data.keys().hasAny(['permissionLevelId'])
-        && get(staffPath()).data.permissionLevelId is string
-        && get(staffPath()).data.permissionLevelId.size() > 0
-        && exists(/databases/$(database)/documents/permissionLevels/$(get(staffPath()).data.permissionLevelId));
+        && linkedLevelDocExists()
+        && linkedLevelActive();
+    }
+
+    /** มี permissionLevelId แต่ doc หายหรือปิด — ห้ามเดา legacy floor (คู่ client deny) */
+    function staffHasBrokenLevelLink() {
+      return isStaff()
+        && get(staffPath()).data.permissionsCustomized != true
+        && linkedPermissionLevelId().size() > 0
+        && (!linkedLevelDocExists() || !linkedLevelActive());
     }
 
     function hasPermFromLevel(p) {
       return staffUsesLinkedLevel()
-        && get(/databases/$(database)/documents/permissionLevels/$(get(staffPath()).data.permissionLevelId)).data.keys().hasAny(['permissions'])
-        && get(/databases/$(database)/documents/permissionLevels/$(get(staffPath()).data.permissionLevelId)).data.permissions[p] == true;
+        && get(permissionLevelDoc(linkedPermissionLevelId())).data.keys().hasAny(['permissions'])
+        && get(permissionLevelDoc(linkedPermissionLevelId())).data.permissions[p] == true;
     }
 
     function hasPermFromStaffMap(p) {
@@ -266,6 +300,7 @@ service cloud.firestore {
         || (isStaff()
             && !get(staffPath()).data.keys().hasAny(['permissions'])
             && !staffUsesLinkedLevel()
+            && !staffHasBrokenLevelLink()
             && (p == 'production' || p == 'otBonus' || p == 'checklist' || p == 'bonus'));
     }
 
