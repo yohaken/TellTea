@@ -1,5 +1,5 @@
-# Dedicated rules deploy — Firebase Rules API often 503s during full deploy.
-# Run on main when firestore.rules changes, or manually.
+# Dedicated rules deploy — Firebase Rules API often 503s on CLI :test step.
+# REST fallback skips :test and creates ruleset + patches release directly.
 name: Deploy Firestore rules only
 
 on:
@@ -7,6 +7,7 @@ on:
     branches: [main]
     paths:
       - "firestore.rules"
+      - "scripts/deploy-firestore-rules-rest.mjs"
       - ".github/workflows/deploy-firestore-rules.yml"
   workflow_dispatch:
 
@@ -26,30 +27,45 @@ jobs:
       - uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-      - name: Deploy firestore:rules with long retry
+      - name: Deploy firestore:rules (CLI quick retry)
+        id: cli_deploy
+        continue-on-error: true
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
           set +e
-          # write SA for firebase-tools
           echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
           rules=1
-          for attempt in $(seq 1 20); do
-            echo "Firestore rules attempt $attempt / 20"
+          for attempt in 1 2 3; do
+            echo "Firestore CLI attempt $attempt / 3"
             npx firebase-tools@latest deploy --only firestore:rules \
               --project mypeer-501909 --non-interactive --force
             rules=$?
             if [ "$rules" -eq 0 ]; then
-              echo "OK rules deployed on attempt $attempt"
+              echo "OK CLI rules on attempt $attempt"
               break
             fi
-            # exponential-ish backoff, cap 90s
-            sleep $(( attempt < 8 ? attempt * 10 : 90 ))
+            sleep $((attempt * 15))
           done
           if [ "$rules" -ne 0 ]; then
-            echo "ERROR firestore rules still failing after 20 attempts"
+            echo "CLI deploy failed — will try REST fallback"
             exit 1
           fi
+      - name: REST fallback (skip :test endpoint)
+        id: rest_deploy
+        if: steps.cli_deploy.outcome == 'failure'
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+          node scripts/deploy-firestore-rules-rest.mjs
       - name: Verify live rules markers
+        if: steps.cli_deploy.outcome == 'success' || steps.rest_deploy.outcome == 'success'
         run: npm run verify:firestore-rules
+      - name: Fail if all deploy paths failed
+        if: steps.cli_deploy.outcome != 'success' && steps.rest_deploy.outcome != 'success'
+        run: |
+          echo "CLI and REST deploy both failed"
+          exit 1

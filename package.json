@@ -9,6 +9,7 @@
     "smoke:pos-hosting": "node scripts/smoke-pos-hosting.mjs",
     "test:firestore-rules": "node scripts/assert-firestore-rules.mjs",
     "verify:firestore-rules": "node scripts/verify-firestore-rules-deploy.mjs",
+    "deploy:firestore-rules-rest": "node scripts/deploy-firestore-rules-rest.mjs",
     "test:staff-roster-invariant": "node scripts/test-staff-roster-invariant.mjs",
     "test:staff-rbac": "node scripts/test-staff-rbac-phases.mjs",
     "test:permissions-resolve": "node scripts/test-permissions-resolve.mjs",
