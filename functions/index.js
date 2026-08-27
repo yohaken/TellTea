@@ -88,6 +88,13 @@ exports.touchStaffPresence = staffPresence.touchStaffPresence;
 exports.onOtEntryCreatedForPresence = staffPresence.onOtEntryCreatedForPresence;
 exports.onProdEntryCreatedForPresence = staffPresence.onProdEntryCreatedForPresence;
 exports.onStockCountWrittenForPresence = staffPresence.onStockCountWrittenForPresence;
+const bonusLivePoolSync = require("./bonus-live-pool-sync");
+exports.onProdEntryWrittenForBonusPool = bonusLivePoolSync.onProdEntryWrittenForBonusPool;
+exports.onOtEntryWrittenForBonusPool = bonusLivePoolSync.onOtEntryWrittenForBonusPool;
+exports.onBonusDeductionMonthWrittenForBonusPool =
+  bonusLivePoolSync.onBonusDeductionMonthWrittenForBonusPool;
+exports.onRateScheduleWrittenForBonusPool = bonusLivePoolSync.onRateScheduleWrittenForBonusPool;
+exports.bonusLivePoolHourly = bonusLivePoolSync.bonusLivePoolHourly;
 const resolveMyStaff = require("./resolve-my-staff");
 exports.resolveMyStaff = resolveMyStaff.resolveMyStaff;
 const staffPinLogin = require("./staff-pin-login");

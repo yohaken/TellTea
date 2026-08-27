@@ -75,6 +75,7 @@
     "test:bonus-evidence-viewer-live": "node scripts/test-bonus-evidence-viewer-live.mjs",
     "test:staff-task-nudge": "node scripts/test-staff-task-nudge.mjs",
     "test:bonus-staff-mine": "node scripts/test-bonus-staff-mine.mjs",
+    "test:bonus-live-pool-sync": "node scripts/test-bonus-live-pool-sync.mjs",
     "test:task-progress-notes": "node scripts/test-task-progress-notes.mjs",
     "test:task-owner-timeline": "node scripts/test-task-owner-timeline.mjs",
     "test:ledger-asset-type-bar": "node scripts/test-ledger-asset-type-bar.mjs",

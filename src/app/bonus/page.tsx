@@ -967,7 +967,7 @@ function BonusView() {
               <p className="muted bonus-live-note">
                 หักตามกติการ้าน · อัปเดตเมื่อมีการกรอกชง / ผลิต · ไม่แสดงยอดคนอื่น
                 {!showShopUi && !isStaffPreview && !livePool && !monthClosed
-                  ? " · ส่วนแบ่งขายจะครบเมื่อเจ้าของเปิดหน้านี้ในเดือนนี้"
+                  ? " · ส่วนแบ่งขายอัปเดตอัตโนมัติหลังมีรายการชง/ผลิตในเดือนนี้"
                   : ""}
               </p>
             </section>

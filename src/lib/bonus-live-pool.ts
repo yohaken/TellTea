@@ -55,23 +55,51 @@ export function subscribeBonusLivePool(
   onData: (pool: BonusLivePool | null) => void,
   onError?: (err: Error) => void,
 ): Unsubscribe {
-  return onSnapshot(
-    poolRef(periodMonth),
-    (snap) => {
-      if (!snap.exists()) {
-        onData(null);
-        return;
-      }
-      const d = snap.data();
-      onData({
-        periodMonth,
-        totalSalesPool: Number(d.totalSalesPool) || 0,
-        totalProdQty: Number(d.totalProdQty) || 0,
-        employeeCount: Number(d.employeeCount) || 0,
-        shopDeductPct: Number(d.shopDeductPct) || 0,
-        updatedAt: Number(d.updatedAt) || 0,
-      });
-    },
-    (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
-  );
+  let retryTimer: ReturnType<typeof setTimeout> | undefined;
+  let stopped = false;
+  let unsub: Unsubscribe = () => undefined;
+
+  const start = (attempt = 0) => {
+    if (stopped) return;
+    unsub = onSnapshot(
+      poolRef(periodMonth),
+      (snap) => {
+        if (stopped) return;
+        if (!snap.exists()) {
+          onData(null);
+          return;
+        }
+        const d = snap.data();
+        onData({
+          periodMonth,
+          totalSalesPool: Number(d.totalSalesPool) || 0,
+          totalProdQty: Number(d.totalProdQty) || 0,
+          employeeCount: Number(d.employeeCount) || 0,
+          shopDeductPct: Number(d.shopDeductPct) || 0,
+          updatedAt: Number(d.updatedAt) || 0,
+        });
+      },
+      (err) => {
+        if (stopped) return;
+        const e = err instanceof Error ? err : new Error(String(err));
+        const code = (err as { code?: string })?.code || "";
+        const retryable =
+          code === "permission-denied" ||
+          /insufficient permissions|unavailable|network/i.test(e.message);
+        if (retryable && attempt < 3) {
+          unsub();
+          retryTimer = setTimeout(() => start(attempt + 1), 1200 * (attempt + 1));
+          return;
+        }
+        onError?.(e);
+      },
+    );
+  };
+
+  start();
+  return () => {
+    stopped = true;
+    if (retryTimer) clearTimeout(retryTimer);
+    unsub();
+  };
 }
