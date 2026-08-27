@@ -270,7 +270,7 @@ export async function loadStaffProductionBundleFromServer(
     workers = prefetched.employees;
     linked = prefetched.linked ?? resolveLinkedEmployee(workers, staff);
   } else {
-    workers = await listActiveEmployeesFromServer();
+    workers = await listActiveEmployeesForStaff(staff);
     linked = resolveLinkedEmployee(workers, staff);
     if (linked) {
       try {
