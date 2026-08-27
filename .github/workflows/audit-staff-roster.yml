@@ -1,0 +1,40 @@
+# Audit + optional fix staff roster links/levels for entire shop (not one person).
+name: Audit staff roster access
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Apply safe fixes (shop_staff bind + employee links)"
+        required: true
+        default: "0"
+        type: choice
+        options:
+          - "0"
+          - "1"
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Audit all staff roster
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          APPLY: ${{ inputs.apply }}
+          OUT_DIR: artifacts
+        run: node scripts/audit-staff-bonus-access.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: audit-staff-roster
+          path: artifacts/audit-staff-bonus-access.txt
+          if-no-files-found: ignore
