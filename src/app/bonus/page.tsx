@@ -322,12 +322,12 @@ function BonusView() {
     const unsubOt = subscribeOtEntries(
       (rows) => onSubData(setOtEntries, rows),
       (err) => onSubError(err),
-      { since: monthSince, until: monthUntil, seedFromServer: true },
+      { since: monthSince, until: monthUntil },
     );
     const unsubProd = subscribeProdEntries(
       (rows) => onSubData(setProdEntries, rows),
       (err) => onSubError(err),
-      { since: monthSince, until: monthUntil, seedFromServer: true },
+      { since: monthSince, until: monthUntil },
     );
     return () => {
       unsubOt();
