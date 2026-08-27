@@ -47,6 +47,7 @@ import {
   computeOtBonus,
   deleteOtEntry,
   getOtSettings,
+  fetchOtEntriesFromServer,
   getOtImageUrls,
   hasOtQuantities,
   isOtEntryLocked,
@@ -316,6 +317,18 @@ function OtView() {
             setError("บัญชียังไม่ผูกกับรายชื่อร้าน — ไปโปรไฟล์เพื่อเชื่อมชื่อ (ตารางชงยังเห็นทั้งร้านได้)");
           }
         }
+        try {
+          const rows = await fetchOtEntriesFromServer({ since, until });
+          if (!cancelled) {
+            setAllEntries(rows);
+            setEntriesReady(true);
+          }
+        } catch (err) {
+          if (!cancelled) {
+            setError((err as Error).message || "โหลดรายการไม่สำเร็จ");
+            setEntriesReady(true);
+          }
+        }
         unsubOt = subscribeOtEntries(
           (rows) => {
             setAllEntries(rows);
@@ -325,7 +338,7 @@ function OtView() {
             setError(err.message || "โหลดรายการไม่สำเร็จ");
             setEntriesReady(true);
           },
-          { since, until },
+          { since, until, ignoreCacheSnapshots: true },
         );
       })
       .catch((err) => {

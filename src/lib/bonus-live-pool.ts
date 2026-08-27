@@ -2,7 +2,7 @@
  * สรุปพูลโบนัสรายเดือน — ให้พนักงานคำนวณส่วนแบ่งขายได้โดยไม่ต้องอ่าน OT/ผลิตทั้งร้าน
  * เขียนโดยเจ้าของ / payrollPay ตอนเปิดหน้าจ่าย · อ่านได้ทุกคนที่มีสิทธิ์ bonus
  */
-import { doc, getDoc, onSnapshot, setDoc, type Unsubscribe } from "firebase/firestore";
+import { doc, getDoc, getDocFromServer, onSnapshot, setDoc, type Unsubscribe } from "firebase/firestore";
 import { getDb } from "./firebase";
 
 export type BonusLivePool = {
@@ -20,6 +20,22 @@ function poolRef(periodMonth: string) {
 
 export async function getBonusLivePool(periodMonth: string): Promise<BonusLivePool | null> {
   const snap = await getDoc(poolRef(periodMonth));
+  if (!snap.exists()) return null;
+  const d = snap.data();
+  return {
+    periodMonth,
+    totalSalesPool: Number(d.totalSalesPool) || 0,
+    totalProdQty: Number(d.totalProdQty) || 0,
+    employeeCount: Number(d.employeeCount) || 0,
+    shopDeductPct: Number(d.shopDeductPct) || 0,
+    updatedAt: Number(d.updatedAt) || 0,
+  };
+}
+
+export async function getBonusLivePoolFromServer(
+  periodMonth: string,
+): Promise<BonusLivePool | null> {
+  const snap = await getDocFromServer(poolRef(periodMonth));
   if (!snap.exists()) return null;
   const d = snap.data();
   return {

@@ -6,6 +6,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  getDocsFromServer,
   orderBy,
   query,
   setDoc,
@@ -246,6 +247,14 @@ export async function listEmployees(): Promise<Employee[]> {
 
 export async function listActiveEmployees(): Promise<Employee[]> {
   return (await listEmployees()).filter((e) => e.active);
+}
+
+/** Server-only roster — หน้างานพนักงานไม่พึ่ง offline cache */
+export async function listActiveEmployeesFromServer(): Promise<Employee[]> {
+  const snap = await getDocsFromServer(query(employeesCol(), orderBy("name", "asc")));
+  return snap.docs
+    .map((d) => mapEmployeeRoster(d.id, d.data() as Record<string, unknown>))
+    .filter((e) => e.active);
 }
 
 /**

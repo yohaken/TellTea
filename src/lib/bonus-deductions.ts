@@ -1,6 +1,7 @@
 import {
   doc,
   getDoc,
+  getDocFromServer,
   onSnapshot,
   setDoc,
   type Unsubscribe,
@@ -195,6 +196,14 @@ export async function getBonusDeductionSettings(): Promise<BonusDeductionSetting
   return normalizeBonusDeductionSettings(snap.data() as Partial<BonusDeductionSettings>);
 }
 
+export async function getBonusDeductionSettingsFromServer(): Promise<BonusDeductionSettings> {
+  const snap = await getDocFromServer(settingsRef());
+  if (!snap.exists()) {
+    return normalizeBonusDeductionSettings(undefined);
+  }
+  return normalizeBonusDeductionSettings(snap.data() as Partial<BonusDeductionSettings>);
+}
+
 export function subscribeBonusDeductionSettings(
   onData: (settings: BonusDeductionSettings) => void,
   onError?: (err: Error) => void,
@@ -234,6 +243,17 @@ export async function getBonusDeductionMonth(
   month: number,
 ): Promise<BonusDeductionMonthDoc> {
   const snap = await getDoc(monthRef(year, month));
+  if (!snap.exists()) {
+    return normalizeBonusDeductionMonthDoc(year, month, undefined);
+  }
+  return normalizeBonusDeductionMonthDoc(year, month, snap.data() as Partial<BonusDeductionMonthDoc>);
+}
+
+export async function getBonusDeductionMonthFromServer(
+  year: number,
+  month: number,
+): Promise<BonusDeductionMonthDoc> {
+  const snap = await getDocFromServer(monthRef(year, month));
   if (!snap.exists()) {
     return normalizeBonusDeductionMonthDoc(year, month, undefined);
   }

@@ -15,10 +15,11 @@ export function subscribeQueryWithRetry<T>(
   buildQuery: () => Query<T>,
   onNext: (snap: QuerySnapshot<T>) => void,
   onError?: (err: Error) => void,
-  opts?: { maxAttempts?: number; seedFromServer?: boolean },
+  opts?: { maxAttempts?: number; seedFromServer?: boolean; ignoreCacheSnapshots?: boolean },
 ): Unsubscribe {
   const maxAttempts = opts?.maxAttempts ?? 3;
   const seedFromServer = opts?.seedFromServer === true;
+  const ignoreCacheSnapshots = opts?.ignoreCacheSnapshots === true;
   let retryTimer: ReturnType<typeof setTimeout> | undefined;
   let stopped = false;
   let unsub: Unsubscribe = () => undefined;
@@ -42,7 +43,7 @@ export function subscribeQueryWithRetry<T>(
       (snap) => {
         if (stopped) return;
         // อย่าให้ cache เก่า (เคยเห็นแค่ 3 แถว) ทับยอด server ที่ครบ
-        if (seedFromServer && snap.metadata.fromCache) return;
+        if ((seedFromServer || ignoreCacheSnapshots) && snap.metadata.fromCache) return;
         onNext(snap);
       },
       (err) => {

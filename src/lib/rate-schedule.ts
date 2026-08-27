@@ -1,6 +1,7 @@
 import {
   doc,
   getDoc,
+  getDocFromServer,
   onSnapshot,
   setDoc,
   type Unsubscribe,
@@ -195,6 +196,12 @@ export function listRateHistory(
 
 export async function getRateSchedule(): Promise<RateScheduleDoc> {
   const snap = await getDoc(scheduleRef());
+  if (!snap.exists()) return { entries: [], updatedAt: 0 };
+  return normalizeRateSchedule(snap.data() as Partial<RateScheduleDoc>);
+}
+
+export async function getRateScheduleFromServer(): Promise<RateScheduleDoc> {
+  const snap = await getDocFromServer(scheduleRef());
   if (!snap.exists()) return { entries: [], updatedAt: 0 };
   return normalizeRateSchedule(snap.data() as Partial<RateScheduleDoc>);
 }

@@ -689,6 +689,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!next) {
         if (bridgePending) return;
         clearAppCaches();
+        void import("./staff-work-load")
+          .then(({ clearStaffIdentityPrefetch }) => clearStaffIdentityPrefetch())
+          .catch(() => undefined);
         resetPhoneRecaptcha();
         setPhoneConfirmation(null);
         setUser(null);
@@ -744,9 +747,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             void migrateAllLegacyEmployeePay().catch(() => undefined);
             void migrateAllLegacyStockCosts().catch(() => undefined);
             void migrateAllBonusCloseSideDocs().catch(() => undefined);
+          } else {
+            void import("./staff-work-load")
+              .then(({ prefetchStaffIdentity }) => prefetchStaffIdentity(member))
+              .catch(() => undefined);
           }
         } else {
           clearAppCaches();
+          void import("./staff-work-load")
+            .then(({ clearStaffIdentityPrefetch }) => clearStaffIdentityPrefetch())
+            .catch(() => undefined);
           setBusyReason(null);
           setStatus("denied");
         }
@@ -893,6 +903,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     clearAppCaches();
+    void import("./staff-work-load")
+      .then(({ clearStaffIdentityPrefetch }) => clearStaffIdentityPrefetch())
+      .catch(() => undefined);
     resetPhoneRecaptcha();
     setPhoneConfirmation(null);
     setPermPreview(null);

@@ -79,6 +79,8 @@ import { subscribeRateSchedule, type RateScheduleEntry } from "@/lib/rate-schedu
 import { bangkokMonthRangeMs, formatDateShortBe, formatPlainNumber } from "@/lib/utils";
 import { mapFirestoreError } from "@/lib/firestore-errors";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
+import { useStaffWorkBundle } from "@/hooks/useStaffWorkBundle";
+import { isStaffBonusBundleReady } from "@/lib/staff-work-bundle";
 
 function fmt(n: number) {
   return formatPlainNumber(n);
@@ -150,6 +152,43 @@ function BonusView() {
   const canPay = uiCanPay;
   const { year, month: monthIdx } = parseMonthInput(month);
 
+  /** พนักงานจริง (ไม่ใช่มุมเจ้าของ/พรีวิว) — ใช้ server-first bundle */
+  const staffUseBundle = canView && !shopPayView && !isStaffPreview;
+
+  const {
+    status: staffBundleStatus,
+    error: staffBundleError,
+    bonusBundle,
+    retry: retryStaffBundle,
+  } = useStaffWorkBundle({
+    page: "bonus",
+    month,
+    staff,
+    authReady: authStatus === "ready",
+    enabled: staffUseBundle,
+  });
+
+  const effectiveEmployees =
+    staffUseBundle && bonusBundle ? bonusBundle.employees : employees;
+  const effectiveOtEntries =
+    staffUseBundle && bonusBundle ? bonusBundle.otEntries : otEntries;
+  const effectiveProdEntries =
+    staffUseBundle && bonusBundle ? bonusBundle.prodEntries : prodEntries;
+  const effectiveDeductionSettings =
+    staffUseBundle && bonusBundle
+      ? bonusBundle.deductionSettings
+      : deductionSettings;
+  const effectiveDeductionMonth =
+    staffUseBundle && bonusBundle ? bonusBundle.deductionMonth : deductionMonth;
+  const effectiveRateSchedule =
+    staffUseBundle && bonusBundle ? bonusBundle.rateSchedule : rateSchedule;
+  const effectiveLivePool =
+    staffUseBundle && bonusBundle ? bonusBundle.livePool : livePool;
+  const effectiveMonthStatus =
+    staffUseBundle && bonusBundle ? bonusBundle.monthStatus : monthStatus;
+  const effectivePersonalClose =
+    staffUseBundle && bonusBundle ? bonusBundle.personalClose : personalClose;
+
   useBodyScrollLock(!!editTarget);
 
   function onSubError(err: Error, context?: string) {
@@ -217,12 +256,14 @@ function BonusView() {
           }
         }
         const [emps, otSettings] = await Promise.all([
-          shopPayView ? listActiveEmployeesWithPay() : listActiveEmployees(),
+          shopPayView ? listActiveEmployeesWithPay() : Promise.resolve([] as Employee[]),
           getOtSettings(),
         ]);
         if (cancelled) return;
         let nextEmps = emps;
-        if (!shopPayView && staff && staff.role !== "owner" && !isPermPreview) {
+        if (shopPayView) {
+          /* owner path only */
+        } else if (!staffUseBundle && staff && staff.role !== "owner" && !isPermPreview) {
           const linked = resolveLinkedEmployee(emps, staff);
           const payId = staff.employeeId || linked?.id;
           if (linked) {
@@ -267,25 +308,30 @@ function BonusView() {
       }
     })();
 
-    const unsubSettings = subscribeBonusDeductionSettings(
-      (settings) => onSubData(setDeductionSettings, settings),
-      (err) => onSubError(err),
-    );
-    const unsubSchedule = subscribeRateSchedule(
-      (doc) => onSubData(setRateSchedule, doc.entries),
-      (err) => onSubError(err),
-    );
+    const unsubSettings = shopPayView || isStaffPreview
+      ? subscribeBonusDeductionSettings(
+          (settings) => onSubData(setDeductionSettings, settings),
+          (err) => onSubError(err),
+        )
+      : () => undefined;
+    const unsubSchedule = shopPayView || isStaffPreview
+      ? subscribeRateSchedule(
+          (doc) => onSubData(setRateSchedule, doc.entries),
+          (err) => onSubError(err),
+        )
+      : () => undefined;
     const unsubPayrollSchedule = subscribePayrollSchedule(
       (doc) => onSubData(setPayrollSchedule, doc),
       (err) => onSubError(err),
     );
-    const unsubPool = !shopPayView
-      ? subscribeBonusLivePool(
-          month,
-          (pool) => onSubData(setLivePool, pool),
-          (err) => onSubError(err),
-        )
-      : () => undefined;
+    const unsubPool =
+      shopPayView || isStaffPreview || staffUseBundle
+        ? () => undefined
+        : subscribeBonusLivePool(
+            month,
+            (pool) => onSubData(setLivePool, pool),
+            (err) => onSubError(err),
+          );
     return () => {
       cancelled = true;
       unsubSettings();
@@ -293,12 +339,11 @@ function BonusView() {
       unsubPayrollSchedule();
       unsubPool();
     };
-  }, [authStatus, staff, canView, shopPayView, year, monthIdx, month, isPermPreview]);
+  }, [authStatus, staff, canView, shopPayView, year, monthIdx, month, isPermPreview, staffUseBundle]);
 
-  // OT / ผลิต — ทั้งร้าน หรือมุมพนักงาน: โหลดเดือนแล้วกรองฝั่ง client (เหมือนหน้า OT)
-  // ห้ามใช้ array-contains workerId อย่างเดียว — แถวเก่า/ชื่ออย่างเดียว/employeeId ค้างจะทำให้โบนัสเป็น 0
+  // OT / ผลิต — เจ้าของ/พรีวิว; พนักงานจริงใช้ staff bundle
   useEffect(() => {
-    if (!canView || !bootReady) return;
+    if (!canView || !bootReady || staffUseBundle) return;
     const { since: monthSince, until: monthUntil } = bangkokMonthRangeMs(year, monthIdx);
     if (shopPayView) {
       const unsubOt = subscribeOtEntries(
@@ -333,7 +378,7 @@ function BonusView() {
       unsubOt();
       unsubProd();
     };
-  }, [canView, bootReady, shopPayView, year, monthIdx, staff, employees]);
+  }, [canView, bootReady, shopPayView, year, monthIdx, staff, employees, staffUseBundle]);
 
   // คิวจ่าย — ทั้งร้านหรือเฉพาะตัวเอง (rules บังคับกรอง employeeId)
   useEffect(() => {
@@ -361,7 +406,7 @@ function BonusView() {
   }, [canView, bootReady, shopPayView, year, monthIdx, staff, employees]);
 
   useEffect(() => {
-    if (!canView || !bootReady) return;
+    if (!canView || !bootReady || staffUseBundle) return;
     const unsubMonth = subscribeBonusDeductionMonth(
       year,
       monthIdx,
@@ -369,11 +414,11 @@ function BonusView() {
       (err) => onSubError(err),
     );
     return () => unsubMonth();
-  }, [canView, bootReady, year, monthIdx]);
+  }, [canView, bootReady, year, monthIdx, staffUseBundle]);
 
-  // เจ้าของ/คนจ่าย: snapshot ทั้งร้าน · พนักงาน: สถานะปิดเดือน + แถวของตัวเองเท่านั้น
+  // เจ้าของ/คนจ่าย: snapshot ทั้งร้าน · พนักงาน bundle: สถานะปิดเดือนใน bundle
   useEffect(() => {
-    if (!canView || !bootReady) return;
+    if (!canView || !bootReady || staffUseBundle) return;
     if (shopPayView) {
       setMonthStatus(null);
       setPersonalClose(null);
@@ -390,10 +435,10 @@ function BonusView() {
       (err) => onSubError(err),
     );
     return () => unsubStatus();
-  }, [canView, bootReady, shopPayView, month]);
+  }, [canView, bootReady, shopPayView, month, staffUseBundle]);
 
   useEffect(() => {
-    if (!canView || !bootReady || shopPayView) return;
+    if (!canView || !bootReady || shopPayView || staffUseBundle) return;
     const empId = resolveMyWorkerId(employees, staff);
     if (!empId) {
       setPersonalClose(null);
@@ -405,31 +450,31 @@ function BonusView() {
       (doc) => onSubData(setPersonalClose, doc),
       onPersonalCloseError,
     );
-  }, [canView, bootReady, shopPayView, month, staff, employees]);
+  }, [canView, bootReady, shopPayView, month, staff, employees, staffUseBundle]);
 
   const liveReport = useMemo(() => {
     if (!shopPayView) return null;
-    if (!deductionSettings || !deductionMonth) return null;
+    if (!effectiveDeductionSettings || !effectiveDeductionMonth) return null;
     return computeMonthBonus(
-      otEntries,
-      prodEntries,
-      employees,
+      effectiveOtEntries,
+      effectiveProdEntries,
+      effectiveEmployees,
       year,
       monthIdx,
-      deductionSettings.rules,
-      deductionMonth.counts,
-      rateSchedule,
+      effectiveDeductionSettings.rules,
+      effectiveDeductionMonth.counts,
+      effectiveRateSchedule,
     );
   }, [
     shopPayView,
-    otEntries,
-    prodEntries,
-    employees,
-    deductionSettings,
-    deductionMonth,
+    effectiveOtEntries,
+    effectiveProdEntries,
+    effectiveEmployees,
+    effectiveDeductionSettings,
+    effectiveDeductionMonth,
     year,
     monthIdx,
-    rateSchedule,
+    effectiveRateSchedule,
   ]);
 
   // เจ้าของ/คนจ่าย — เผยพูลให้พนักงานอ่านส่วนแบ่งขายได้โดยไม่เห็น OT ทั้งร้าน
@@ -453,12 +498,13 @@ function BonusView() {
 
   const monthClosed = shopPayView
     ? monthClose?.status === "closed"
-    : monthStatus?.status === "closed" || personalClose?.status === "closed";
+    : effectiveMonthStatus?.status === "closed" ||
+      effectivePersonalClose?.status === "closed";
 
-  const myEmployee = useMemo(
-    () => resolveLinkedEmployee(employees, staff),
-    [employees, staff],
-  );
+  const myEmployee = useMemo(() => {
+    if (staffUseBundle && bonusBundle) return bonusBundle.linked;
+    return resolveLinkedEmployee(effectiveEmployees, staff);
+  }, [staffUseBundle, bonusBundle, effectiveEmployees, staff]);
 
   const previewEmployee = useMemo(() => {
     if (!previewEmployeeId) return null;
@@ -470,22 +516,22 @@ function BonusView() {
   // พนักงาน: เดือนปิด → แถวจาก bonusPersonalCloses · เดือนเปิด → คำนวณแบบเดียวกับตารางเจ้าของ
   const personalRow = useMemo((): WorkerMonthBonus | null => {
     if (shopPayView || !myEmployee) return null;
-    if (personalClose?.status === "closed") {
-      return workerRowFromPersonalClose(personalClose);
+    if (effectivePersonalClose?.status === "closed") {
+      return workerRowFromPersonalClose(effectivePersonalClose);
     }
     if (monthClosed) {
       return null;
     }
-    if (!deductionSettings || !deductionMonth) return null;
+    if (!effectiveDeductionSettings || !effectiveDeductionMonth) return null;
     const monthReport = computeMonthBonus(
-      otEntries,
-      prodEntries,
-      employees,
+      effectiveOtEntries,
+      effectiveProdEntries,
+      effectiveEmployees,
       year,
       monthIdx,
-      deductionSettings.rules,
-      deductionMonth.counts,
-      rateSchedule,
+      effectiveDeductionSettings.rules,
+      effectiveDeductionMonth.counts,
+      effectiveRateSchedule,
     );
     const picked =
       monthReport.rows.find((r) => r.workerId === myEmployee.id) ||
@@ -493,10 +539,10 @@ function BonusView() {
       null;
     if (!picked) return null;
     const shopDeductPct =
-      livePool?.shopDeductPct ?? monthReport.shopDeductPct;
+      effectiveLivePool?.shopDeductPct ?? monthReport.shopDeductPct;
     const salesShare =
-      livePool && livePool.employeeCount > 0 && picked.workedThisMonth
-        ? livePool.totalSalesPool / livePool.employeeCount
+      effectiveLivePool && effectiveLivePool.employeeCount > 0 && picked.workedThisMonth
+        ? effectiveLivePool.totalSalesPool / effectiveLivePool.employeeCount
         : picked.salesShare;
     const total = round2(salesShare + picked.prodBonus + picked.otMain);
     const deductAmount = round2(total * (shopDeductPct / 100));
@@ -512,18 +558,25 @@ function BonusView() {
   }, [
     shopPayView,
     myEmployee,
-    personalClose,
+    effectivePersonalClose,
     monthClosed,
-    livePool,
-    deductionSettings,
-    deductionMonth,
-    otEntries,
-    prodEntries,
-    employees,
+    effectiveLivePool,
+    effectiveDeductionSettings,
+    effectiveDeductionMonth,
+    effectiveOtEntries,
+    effectiveProdEntries,
+    effectiveEmployees,
     year,
     monthIdx,
-    rateSchedule,
+    effectiveRateSchedule,
   ]);
+
+  const staffBonusReady =
+    staffUseBundle &&
+    staffBundleStatus === "ready" &&
+    isStaffBonusBundleReady(bonusBundle, personalRow, monthClosed);
+
+  const staffBonusLoading = staffUseBundle && staffBundleStatus === "loading";
 
   // ให้ staff.employeeId ตรงกับชื่อที่ลิงก์ — ห้ามเขียนตอนพรีวิว (จะไปทับบัญชีเจ้าของ)
   useEffect(() => {
@@ -600,14 +653,14 @@ function BonusView() {
    * เพื่อโชว์ตารางหัก + หลักฐานระวัง/ตัด หลังปิดเดือน
    */
   const staffRulesReport = useMemo((): MonthBonusReport | null => {
-    if (shopPayView || !deductionSettings || !deductionMonth) return null;
+    if (shopPayView || !effectiveDeductionSettings || !effectiveDeductionMonth) return null;
     const deductionLines = buildBonusDeductionLines(
-      deductionMonth.counts,
-      deductionSettings.rules,
+      effectiveDeductionMonth.counts,
+      effectiveDeductionSettings.rules,
     );
     const shopDeductPct = computeShopDeductPct(
-      deductionMonth.counts,
-      deductionSettings.rules,
+      effectiveDeductionMonth.counts,
+      effectiveDeductionSettings.rules,
     );
     return {
       year,
@@ -621,7 +674,7 @@ function BonusView() {
       totalRemaining: 0,
       rows: [],
     };
-  }, [shopPayView, deductionSettings, deductionMonth, year, monthIdx]);
+  }, [shopPayView, effectiveDeductionSettings, effectiveDeductionMonth, year, monthIdx]);
 
   const rulesReport = report || staffRulesReport;
 
@@ -825,6 +878,20 @@ function BonusView() {
       )}
 
       {error ? <p className="error-text">{error}</p> : null}
+      {staffBundleError && staffBundleStatus !== "loading" ? (
+        <p className="error-text">
+          {staffBundleError.message}
+          {staffBundleError.status === "blocked_perm" ||
+          staffBundleError.status === "blocked_network" ? (
+            <>
+              {" "}
+              <button type="button" className="btn-link" onClick={() => retryStaffBundle()}>
+                ลองโหลดใหม่
+              </button>
+            </>
+          ) : null}
+        </p>
+      ) : null}
       {info ? <p className="success-text">{info}</p> : null}
 
       {showShopUi &&
@@ -943,7 +1010,9 @@ function BonusView() {
 
       {tab === "bonus" ? (
         <>
-          {loading || (showShopUi && !report) ? <p className="empty">กำลังโหลด...</p> : null}
+          {loading || (showShopUi && !report) || staffBonusLoading ? (
+            <p className="empty">กำลังโหลด...</p>
+          ) : null}
 
           {/* สรุปพูลทั้งร้าน + ตารางรายคน: มุมร้านเท่านั้น — พนักงาน/พรีวิวเห็นแค่ของฉัน */}
           {report && showShopUi ? (
@@ -977,7 +1046,7 @@ function BonusView() {
             </p>
           ) : null}
 
-          {!loading && myRow ? (
+          {!loading && !staffBonusLoading && staffBonusReady && myRow ? (
             <section className="bonus-my-card">
               <header className="bonus-my-head">
                 <div>
@@ -1010,14 +1079,18 @@ function BonusView() {
               </dl>
               <p className="muted bonus-live-note">
                 หักตามกติการ้าน · อัปเดตเมื่อมีการกรอกชง / ผลิต · ไม่แสดงยอดคนอื่น
-                {!showShopUi && !isStaffPreview && !livePool && !monthClosed
+                {!showShopUi && !isStaffPreview && !effectiveLivePool && !monthClosed
                   ? " · ส่วนแบ่งขายอัปเดตอัตโนมัติหลังมีรายการชง/ผลิตในเดือนนี้"
                   : ""}
               </p>
             </section>
           ) : null}
 
-          {!loading && !myRow && !showShopUi ? (
+          {!loading &&
+          !staffBonusLoading &&
+          staffBonusReady &&
+          !myRow &&
+          !showShopUi ? (
             <p className="muted bonus-no-match">
               {isStaffPreview && previewEmployee ? (
                 <>
@@ -1076,7 +1149,7 @@ function BonusView() {
               year={year}
               month={monthIdx}
               periodMonth={month}
-              doc={deductionMonth}
+              doc={effectiveDeductionMonth ?? deductionMonth}
               isOwner={uiIsOwner}
               actorId={actorId || ""}
               onError={setError}

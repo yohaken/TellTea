@@ -17,6 +17,7 @@ import { EntryTimestampsMeta } from "@/components/EntryTimestampsMeta";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { PhotoForensicsPanel } from "@/components/PhotoForensicsPanel";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
+import { useStaffWorkBundle } from "@/hooks/useStaffWorkBundle";
 import { useAuth } from "@/lib/auth";
 import { monthInputValue, parseMonthInput } from "@/lib/bonus";
 import { mapFirestoreError } from "@/lib/firestore-errors";
@@ -92,6 +93,33 @@ function ProductionView() {
   const [rateSchedule, setRateSchedule] = useState<RateScheduleEntry[]>([]);
   const { year: logYear, month: logMonthIdx } = parseMonthInput(logMonth);
 
+  const staffUseBundle = !shopProdView && !isPermPreview;
+
+  const {
+    status: staffBundleStatus,
+    error: staffBundleError,
+    productionBundle,
+    retry: retryStaffBundle,
+  } = useStaffWorkBundle({
+    page: "production",
+    month: logMonth,
+    staff,
+    authReady: authStatus === "ready",
+    enabled: staffUseBundle && can(staff, "production"),
+  });
+
+  const effectiveEntries =
+    staffUseBundle && productionBundle ? productionBundle.entries : entries;
+  const effectiveRateSchedule =
+    staffUseBundle && productionBundle ? productionBundle.rateSchedule : rateSchedule;
+  const effectiveProducts =
+    staffUseBundle && productionBundle ? productionBundle.products : products;
+  const effectiveWorkers =
+    staffUseBundle && productionBundle ? productionBundle.workers : workers;
+
+  const staffProdLoading = staffUseBundle && staffBundleStatus === "loading";
+  const staffProdReady = staffUseBundle && staffBundleStatus === "ready";
+  const pageLoading = loading || staffProdLoading;
   async function reloadCatalog() {
     const [p, w] = await Promise.all([listProdProducts(), listProdWorkers()]);
     setProducts(p);
@@ -106,6 +134,10 @@ function ProductionView() {
 
   useEffect(() => {
     if (authStatus !== "ready" || !can(staff, "production")) return;
+    if (staffUseBundle) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     let cancelled = false;
     let unsubEntries: (() => void) | undefined;
@@ -176,14 +208,14 @@ function ProductionView() {
       unsubEntries?.();
       unsubSchedule();
     };
-  }, [authStatus, staff, isOwner, shopProdView, logYear, logMonthIdx]);
+  }, [authStatus, staff, isOwner, shopProdView, logYear, logMonthIdx, staffUseBundle]);
 
   useBodyScrollLock(formOpen);
 
   if (!can(staff, "production")) return null;
 
-  const activeProducts = products.filter((p) => p.active);
-  const activeWorkers = workers.filter((w) => w.active);
+  const activeProducts = effectiveProducts.filter((p) => p.active);
+  const activeWorkers = effectiveWorkers.filter((w) => w.active);
   const showCatalog = isOwner && ownerView === "catalog";
   const showLog = !showCatalog;
 
@@ -248,14 +280,22 @@ function ProductionView() {
 
       {error ? <p className="error-text">{error}</p> : null}
       {prodError ? <p className="error-text">{prodError}</p> : null}
+      {staffBundleError && staffBundleStatus !== "loading" ? (
+        <p className="error-text">
+          {staffBundleError.message}
+          <button type="button" className="btn-link" onClick={() => retryStaffBundle()}>
+            ลองโหลดใหม่
+          </button>
+        </p>
+      ) : null}
       {isPermPreview && showLog ? (
         <p className="muted" style={{ margin: "0 0 0.55rem", fontSize: "0.78rem" }}>
           พรีวิวมุมพนักงาน — เลือกเดือนดูรายการของคนนี้ได้ · กรอก/แก้ไม่ได้
         </p>
       ) : null}
-      {loading ? <p className="empty">กำลังโหลด...</p> : null}
+      {pageLoading ? <p className="empty">กำลังโหลด...</p> : null}
 
-      {!loading && showCatalog ? (
+      {!pageLoading && showCatalog ? (
         <>
           {ownerTabs ? (
             <div className="ot-toolbar-slim module-toolbar-slim">{ownerTabs}</div>
@@ -272,10 +312,10 @@ function ProductionView() {
         </>
       ) : null}
 
-      {!loading && showLog ? (
+      {!pageLoading && showLog && (shopProdView || staffProdReady) ? (
         <ProdTable
-          entries={entries}
-          workers={workers}
+          entries={effectiveEntries}
+          workers={effectiveWorkers}
           isOwner={isOwner}
           mineOnly={!shopProdView}
           canOpenRow={canWrite}
@@ -287,7 +327,7 @@ function ProductionView() {
         />
       ) : null}
 
-      {canWrite && formOpen && !loading && showLog ? (
+      {canWrite && formOpen && !pageLoading && showLog ? (
         <div className="modal-backdrop edit-modal is-module-form" onClick={closeForm}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <ProdEntryForm
@@ -295,7 +335,7 @@ function ProductionView() {
               entry={editing}
               products={activeProducts}
               workers={activeWorkers}
-              rateSchedule={rateSchedule}
+              rateSchedule={effectiveRateSchedule}
               createdBy={actorId}
               isOwner={isOwner}
               staff={staff}

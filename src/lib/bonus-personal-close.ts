@@ -7,6 +7,7 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  getDocFromServer,
   getDocs,
   onSnapshot,
   query,
@@ -57,6 +58,25 @@ export async function getBonusMonthStatus(
   const snap = await getDoc(statusRef(month));
   if (!snap.exists()) return null;
   return snap.data() as BonusMonthStatusDoc;
+}
+
+export async function getBonusMonthStatusFromServer(
+  month: string,
+): Promise<BonusMonthStatusDoc | null> {
+  if (!/^\d{4}-\d{2}$/.test(month)) return null;
+  const snap = await getDocFromServer(statusRef(month));
+  if (!snap.exists()) return null;
+  return snap.data() as BonusMonthStatusDoc;
+}
+
+export async function getBonusPersonalCloseFromServer(
+  month: string,
+  employeeId: string,
+): Promise<BonusPersonalCloseDoc | null> {
+  if (!/^\d{4}-\d{2}$/.test(month) || !employeeId.trim()) return null;
+  const snap = await getDocFromServer(personalRef(month, employeeId));
+  if (!snap.exists()) return null;
+  return snap.data() as BonusPersonalCloseDoc;
 }
 
 export function subscribeBonusMonthStatus(

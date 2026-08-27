@@ -4,6 +4,7 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  getDocsFromServer,
   onSnapshot,
   orderBy,
   query,
@@ -391,11 +392,11 @@ export async function saveOtSettings(bonusRate: number): Promise<void> {
   );
 }
 
-export function subscribeOtEntries(
-  onRows: (rows: OtEntry[]) => void,
-  onError?: (err: Error) => void,
-  opts?: { since?: number; until?: number; workerId?: string; seedFromServer?: boolean },
-): Unsubscribe {
+export function buildOtEntriesQuery(opts?: {
+  since?: number;
+  until?: number;
+  workerId?: string;
+}) {
   const since = opts?.since;
   const until = opts?.until;
   const workerId = (opts?.workerId || "").trim();
@@ -447,13 +448,39 @@ export function subscribeOtEntries(
       orderBy("createdAt", "desc"),
     );
   }
+  return q;
+}
+
+export async function fetchOtEntriesFromServer(opts?: {
+  since?: number;
+  until?: number;
+}): Promise<OtEntry[]> {
+  const snap = await getDocsFromServer(buildOtEntriesQuery(opts));
+  return snap.docs.map((d) => mapOtEntryDoc(d.id, d.data() as Record<string, unknown>));
+}
+
+export function subscribeOtEntries(
+  onRows: (rows: OtEntry[]) => void,
+  onError?: (err: Error) => void,
+  opts?: {
+    since?: number;
+    until?: number;
+    workerId?: string;
+    seedFromServer?: boolean;
+    ignoreCacheSnapshots?: boolean;
+  },
+): Unsubscribe {
+  const q = buildOtEntriesQuery(opts);
   return subscribeQueryWithRetry(
     () => q,
     (snap) => {
       onRows(snap.docs.map((d) => mapOtEntryDoc(d.id, d.data() as Record<string, unknown>)));
     },
     (err) => onError?.(err),
-    { seedFromServer: opts?.seedFromServer },
+    {
+      seedFromServer: opts?.seedFromServer,
+      ignoreCacheSnapshots: opts?.ignoreCacheSnapshots,
+    },
   );
 }
 

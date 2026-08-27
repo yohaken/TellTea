@@ -5,6 +5,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  getDocsFromServer,
   onSnapshot,
   orderBy,
   query,
@@ -256,11 +257,11 @@ export async function listProdWorkers(): Promise<ProdWorker[]> {
   return listEmployees();
 }
 
-export function subscribeProdEntries(
-  onRows: (rows: ProdEntry[]) => void,
-  onError?: (err: Error) => void,
-  opts?: { since?: number; until?: number; workerId?: string; seedFromServer?: boolean },
-): Unsubscribe {
+export function buildProdEntriesQuery(opts?: {
+  since?: number;
+  until?: number;
+  workerId?: string;
+}) {
   const since = opts?.since;
   const until = opts?.until;
   const workerId = (opts?.workerId || "").trim();
@@ -305,6 +306,32 @@ export function subscribeProdEntries(
       orderBy("createdAt", "desc"),
     );
   }
+  return q;
+}
+
+export async function fetchProdEntriesFromServer(opts?: {
+  since?: number;
+  until?: number;
+}): Promise<ProdEntry[]> {
+  const snap = await getDocsFromServer(buildProdEntriesQuery(opts));
+  return snap.docs.map((d) => ({
+    id: d.id,
+    ...(d.data() as Omit<ProdEntry, "id">),
+  }));
+}
+
+export function subscribeProdEntries(
+  onRows: (rows: ProdEntry[]) => void,
+  onError?: (err: Error) => void,
+  opts?: {
+    since?: number;
+    until?: number;
+    workerId?: string;
+    seedFromServer?: boolean;
+    ignoreCacheSnapshots?: boolean;
+  },
+): Unsubscribe {
+  const q = buildProdEntriesQuery(opts);
   return subscribeQueryWithRetry(
     () => q,
     (snap) => {
@@ -316,7 +343,10 @@ export function subscribeProdEntries(
       );
     },
     (err) => onError?.(err),
-    { seedFromServer: opts?.seedFromServer },
+    {
+      seedFromServer: opts?.seedFromServer,
+      ignoreCacheSnapshots: opts?.ignoreCacheSnapshots,
+    },
   );
 }
 

@@ -1,0 +1,43 @@
+=== diagnose เตย bonus · month 2026-08 ===
+employee: เตย (เตย) id=985f6edfe50908710befc2d78cdb2b50
+linkedStaffId: nawarat.srikaeban@gmail.com
+linkedEmail: nawarat.srikaeban@gmail.com
+linkedPhone: +66630830213
+
+--- staff docs ---
+id=nawarat.srikaeban@gmail.com
+  email=nawarat.srikaeban@gmail.com phone=+66630830213
+  displayName=เตย employeeId=985f6edfe50908710befc2d78cdb2b50
+  permissionLevelId=shop_staff role=staff
+  linked? employee.linkedStaffId=nawarat.srikaeban@gmail.com vs staff.id=nawarat.srikaeban@gmail.com → MATCH
+
+--- staffPhones index ---
+  phoneKey=66630830213 → staffId=nawarat.srikaeban@gmail.com
+
+--- staffEmails index ---
+  emailKey=nawarat.srikaeban@gmail.com → staffId=nawarat.srikaeban@gmail.com
+
+--- entry counts Aug 2026 ---
+OT total month: 97 | prod total: 52
+OT credited เตย (owner logic): 0.00
+OT credited (staff filter incl createdBy): 0.00
+OT credited (createdBy staff only): 0.00
+Prod credited เตย (owner logic): 0.00
+Prod credited (staff filter): 0.00
+Prod credited (createdBy only): 0.00
+
+OT rows owner sees for เตย: 29 | staff filter sees: 29
+Prod rows owner sees for เตย: 16 | staff filter sees: 16
+
+
+--- prod rows staff filter matches (16) ---
+  2026-08-17 names=["เตย"] ids=["985f6edfe50908710befc2d78cdb2b50"] createdBy=nawarat.srikaeban@gmail.com
+  2026-08-22 names=["เตย"] ids=["985f6edfe50908710befc2d78cdb2b50"] createdBy=nawarat.srikaeban@gmail.com
+  2026-08-26 names=["เตย"] ids=["985f6edfe50908710befc2d78cdb2b50"] createdBy=nawarat.srikaeban@gmail.com
+  2026-08-16 names=["เตย"] ids=["985f6edfe50908710befc2d78cdb2b50"] createdBy=nawarat.srikaeban@gmail.com
+  2026-08-16 names=["เตย"] ids=["985f6edfe50908710befc2d78cdb2b50"] createdBy=nawarat.srikaeban@gmail.com
+  2026-08-03 names=["เตย"] ids=["985f6edfe50908710befc2d78cdb2b50"] createdBy=nawarat.srikaeban@gmail.com
+  2026-08-24 names=["เตย"] ids=["985f6edfe50908710befc2d78cdb2b50"] createdBy=nawarat.srikaeban@gmail.com
+  2026-08-16 names=["เตย"] ids=["985f6edfe50908710befc2d78cdb2b50"] createdBy=nawarat.srikaeban@gmail.com
+  2026-08-08 names=["เตย"] ids=["985f6edfe50908710befc2d78cdb2b50"] createdBy=nawarat.srikaeban@gmail.com
+  2026-08-06 names=["เตย"] ids=["985f6edfe50908710befc2d78cdb2b50"] createdBy=nawarat.srikaeban@gmail.com
