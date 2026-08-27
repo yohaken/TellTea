@@ -1,0 +1,36 @@
+# Retry Firestore rules deploy until live markers match (Google Rules API 503 outages).
+name: Retry Firestore rules until live
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+    inputs:
+      max_attempts:
+        description: "Max REST deploy attempts per run"
+        default: "20"
+        required: false
+
+jobs:
+  retry-until-live:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Retry REST deploy + verify until OK
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          MAX_ATTEMPTS: ${{ inputs.max_attempts || '20' }}
+          SLEEP_SEC: "45"
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+          node scripts/deploy-firestore-rules-retry.mjs
