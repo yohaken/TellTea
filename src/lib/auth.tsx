@@ -94,6 +94,7 @@ type AuthContextValue = {
   actorId: string;
   error: string | null;
   signIn: () => Promise<void>;
+  signInWithStaffPin: (nickname: string, pin: string) => Promise<void>;
   sendPhoneLoginOtp: (phone: string, recaptchaContainerId: string) => Promise<void>;
   confirmPhoneLoginOtp: (code: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -902,6 +903,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [phoneConfirmation],
   );
 
+  const signInWithStaffPin = useCallback(async (nickname: string, pin: string) => {
+    if (!isFirebaseConfigured()) {
+      setError("Firebase ยังไม่ได้ตั้งค่า");
+      return;
+    }
+    setError(null);
+    setBusyReason("bridge");
+    setStatus("loading");
+    try {
+      const { signInWithStaffPin: pinSignIn } = await import("./staff-pin-login");
+      await pinSignIn(nickname, pin);
+    } catch (err) {
+      setBusyReason(null);
+      setStatus("signedOut");
+      setError(mapAuthError(err));
+      throw err;
+    }
+  }, []);
+
   const signOut = useCallback(async () => {
     clearAppCaches();
     void import("./staff-work-load")
@@ -945,6 +965,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       actorId,
       error,
       signIn,
+      signInWithStaffPin,
       sendPhoneLoginOtp,
       confirmPhoneLoginOtp,
       signOut,
@@ -964,6 +985,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       actorId,
       error,
       signIn,
+      signInWithStaffPin,
       sendPhoneLoginOtp,
       confirmPhoneLoginOtp,
       signOut,

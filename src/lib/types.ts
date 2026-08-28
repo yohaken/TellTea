@@ -29,6 +29,8 @@ export type StaffMember = {
   permissionsCustomized?: boolean;
   /** เข้าใช้แอปหลังสุด (heartbeat) — เจ้าของใช้ดูว่าใครอยู่ในระบบ */
   lastSeenAt?: number;
+  /** ตั้ง PIN เข้าระบบภายในแล้ว (ms) — ไม่เก็บรหัสจริงบน staff doc */
+  loginPinSetAt?: number;
 };
 
 /** ลำดับสิทธิ์ (แม่แบบ) — สร้าง/แก้ได้ที่ศูนย์พนักงาน */
