@@ -5,6 +5,7 @@ import type { Unsubscribe } from "firebase/firestore";
 import {
   getBonusDeductionMonthFromServer,
   getBonusDeductionSettingsFromServer,
+  normalizeBonusDeductionMonthDoc,
   subscribeBonusDeductionMonth,
   subscribeBonusDeductionSettings,
 } from "./bonus-deductions";
@@ -86,12 +87,17 @@ async function loadStaffBonusBundleViaCallable(month: string): Promise<StaffBonu
     employees: raw.employees,
     rateSchedule: raw.rateSchedule,
     deductionSettings: raw.deductionSettings,
-    deductionMonth: raw.deductionMonth ?? {
-      year: Number(month.slice(0, 4)),
-      month: Number(month.slice(5, 7)),
-      counts: { caution: 0, cut: 0, waste: 0, claim: 0 },
-      updatedAt: 0,
-    },
+    deductionMonth: raw.deductionMonth
+      ? normalizeBonusDeductionMonthDoc(
+          Number(month.slice(0, 4)),
+          Number(month.slice(5, 7)),
+          raw.deductionMonth,
+        )
+      : normalizeBonusDeductionMonthDoc(
+          Number(month.slice(0, 4)),
+          Number(month.slice(5, 7)),
+          undefined,
+        ),
     otEntries: raw.otEntries.map((row) => mapOtEntryDoc(row.id, row)),
     prodEntries: raw.prodEntries.map((row) => mapProdEntryDoc(row.id, row)),
     livePool: raw.livePool,
@@ -125,7 +131,10 @@ async function loadStaffProductionBundleViaCallable(
   return {
     linked: raw.linked,
     workers: raw.workers,
-    products: raw.products.map((row) => ({ id: row.id, ...(row as Omit<ProdProduct, "id">) })),
+    products: raw.products.map((row) => ({
+      id: row.id,
+      ...(row as unknown as Omit<ProdProduct, "id">),
+    })),
     rateSchedule: raw.rateSchedule,
     entries: raw.prodEntries.map((row) => mapProdEntryDoc(row.id, row)),
   };

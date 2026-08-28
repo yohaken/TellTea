@@ -22,7 +22,7 @@ type CallableLedgerRaw = {
 function mapLedgerRow(row: { id: string } & Record<string, unknown>): LedgerEntry {
   return {
     id: row.id,
-    ...(row as Omit<LedgerEntry, "id">),
+    ...(row as unknown as Omit<LedgerEntry, "id">),
   };
 }
 
