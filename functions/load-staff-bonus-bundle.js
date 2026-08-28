@@ -102,12 +102,6 @@ exports.loadStaffBonusBundle = functions
       throw new functions.https.HttpsError("permission-denied", "ไม่พบบัญชีพนักงาน");
     }
     const staffData = staffSnap.data() || {};
-    const levelId = String(staffData.permissionLevelId || "").trim();
-    const levelDoc = levelId ? await db.collection("permissionLevels").doc(levelId).get() : null;
-
-    if (!staffHasPerm(staffData, levelDoc, "bonus")) {
-      throw new functions.https.HttpsError("permission-denied", "สิทธิ์โบนัสไม่พอ");
-    }
 
     const employeeId = String(staffData.employeeId || "").trim();
     if (!employeeId) {

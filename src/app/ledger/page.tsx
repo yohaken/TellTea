@@ -57,6 +57,7 @@ import {
   type LedgerTypeSource,
 } from "@/lib/ledger-ai";
 import { loadCachedLedger, saveCachedLedger } from "@/lib/cache";
+import { loadStaffLedgerFromServer } from "@/lib/ledger-staff-load";
 import {
   normalizeVatSource,
   parseVatInputStr,
@@ -220,23 +221,24 @@ function LedgerView() {
       },
     );
 
-    // One-time full recompute after this release so meta/ledger is correct
-    // even if older aggregate reads failed silently.
-    try {
-      const seedKey = "telltea_balance_seed_v6";
-      if (typeof window !== "undefined" && !window.localStorage.getItem(seedKey)) {
-        void recomputeLedgerBalance()
-          .then(() => window.localStorage.setItem(seedKey, "1"))
-          .catch(() => {
-            /* subscribe bootstrap still runs if meta missing */
-          });
+    // Owner-only recompute — staff cannot write meta/ledger under live rules.
+    if (isOwner) {
+      try {
+        const seedKey = "telltea_balance_seed_v6";
+        if (typeof window !== "undefined" && !window.localStorage.getItem(seedKey)) {
+          void recomputeLedgerBalance()
+            .then(() => window.localStorage.setItem(seedKey, "1"))
+            .catch(() => {
+              /* subscribe bootstrap still runs if meta missing */
+            });
+        }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
     }
 
     return unsub;
-  }, [canUseLedger]);
+  }, [canUseLedger, isOwner]);
 
   useEffect(() => {
     if (!canUseLedger) return;
@@ -244,30 +246,83 @@ function LedgerView() {
     if (hasRowsRef.current) setRefreshing(true);
     else setLoading(true);
 
+    let cancelled = false;
+    let pollTimer: ReturnType<typeof setInterval> | undefined;
+
+    const applyBundle = (
+      entriesRaw: LedgerEntry[],
+      bundleHasMore: boolean,
+      bundleBalance: number | null,
+    ) => {
+      const next = sortByDateNewestFirst(entriesRaw);
+      setEntries(next);
+      setHasMore(bundleHasMore && liveLimit < LEDGER_LIVE_MAX);
+      hasRowsRef.current = next.length > 0;
+      if (bundleBalance != null) {
+        setBalance(bundleBalance);
+        balanceRef.current = bundleBalance;
+      }
+      setLoading(false);
+      setLoadingMore(false);
+      setRefreshing(false);
+      persistSnapshot(next, bundleHasMore, balanceRef.current);
+    };
+
+    const loadViaCallable = async () => {
+      const result = await loadStaffLedgerFromServer({
+        limit: liveLimit,
+        staffRole: staff?.role ?? null,
+      });
+      if (cancelled) return;
+      if ("error" in result) {
+        setLoading(false);
+        setRefreshing(false);
+        setLoadingMore(false);
+        if (!hasRowsRef.current) setError(result.error);
+        return;
+      }
+      applyBundle(
+        result.bundle.entries,
+        result.bundle.hasMore,
+        result.bundle.balance,
+      );
+    };
+
+    if (!isOwner) {
+      void loadViaCallable();
+      pollTimer = setInterval(() => {
+        void loadViaCallable();
+      }, 60_000);
+      return () => {
+        cancelled = true;
+        if (pollTimer) clearInterval(pollTimer);
+      };
+    }
+
     const unsub = subscribeLedgerPage(
       liveLimit,
       (page) => {
-        const next = sortByDateNewestFirst(page.entries);
-        setEntries(next);
-        setHasMore(page.hasMore && liveLimit < LEDGER_LIVE_MAX);
-        hasRowsRef.current = next.length > 0;
-        setLoading(false);
-        setLoadingMore(false);
-        setRefreshing(false);
-        persistSnapshot(next, page.hasMore, balanceRef.current);
+        applyBundle(page.entries, page.hasMore, balanceRef.current);
       },
       (err) => {
+        const msg = err.message || "โหลดบัญชีไม่สำเร็จ";
+        const permDenied = /insufficient permissions/i.test(msg);
+        if (permDenied) {
+          void loadViaCallable();
+          return;
+        }
         setLoading(false);
         setRefreshing(false);
         setLoadingMore(false);
-        if (!hasRowsRef.current) {
-          setError(err.message || "โหลดบัญชีไม่สำเร็จ");
-        }
+        if (!hasRowsRef.current) setError(msg);
       },
     );
 
-    return () => unsub();
-  }, [canUseLedger, liveLimit, persistSnapshot]);
+    return () => {
+      cancelled = true;
+      unsub();
+    };
+  }, [canUseLedger, isOwner, liveLimit, persistSnapshot, staff?.role]);
 
   useEffect(() => {
     if (!canUseLedger || !deferredQuery) {
