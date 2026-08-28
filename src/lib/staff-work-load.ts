@@ -169,7 +169,7 @@ export async function loadStaffBonusBundleFromServer(
 
   const { since, until } = bangkokMonthRangeMs(year, monthIdx);
 
-  try {
+  async function fetchBundle() {
     const [
       rateDoc,
       deductionSettings,
@@ -187,24 +187,36 @@ export async function loadStaffBonusBundleFromServer(
       fetchProdEntriesFromServer({ since, until }),
       getBonusLivePoolFromServer(month),
       getBonusMonthStatusFromServer(month),
-      getBonusPersonalCloseFromServer(month, linked.id),
+      getBonusPersonalCloseFromServer(month, linked!.id),
     ]);
-
     return {
-      bundle: {
-        linked,
-        employees,
-        rateSchedule: rateDoc.entries,
-        deductionSettings,
-        deductionMonth,
-        otEntries,
-        prodEntries,
-        livePool,
-        monthStatus,
-        personalClose,
-      },
+      linked: linked!,
+      employees,
+      rateSchedule: rateDoc.entries,
+      deductionSettings,
+      deductionMonth,
+      otEntries,
+      prodEntries,
+      livePool,
+      monthStatus,
+      personalClose,
     };
+  }
+
+  try {
+    return { bundle: await fetchBundle() };
   } catch (err) {
+    const code = (err as { code?: string })?.code || "";
+    const msg = (err as Error)?.message || "";
+    if (code === "permission-denied" || /insufficient permissions/i.test(msg)) {
+      try {
+        const { getFirebaseAuth } = await import("./firebase");
+        await getFirebaseAuth().currentUser?.getIdToken(true);
+        return { bundle: await fetchBundle() };
+      } catch (retryErr) {
+        return { error: classifyStaffWorkError(retryErr, "โหลดสรุปโบนัส") };
+      }
+    }
     return { error: classifyStaffWorkError(err, "โหลดสรุปโบนัส") };
   }
 }

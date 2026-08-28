@@ -30,6 +30,6 @@ assert.ok(existsSync(join(root, "scripts/batch-set-staff-email-password.mjs")));
 assert.equal(passwordFromPhone("+66985081617"), "0985081617");
 assert.equal(passwordFromPhone("0985081617"), "0985081617");
 
-assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)[1]) >= 844);
+assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)[1]) >= 845);
 
 console.log("OK test-staff-email-login");

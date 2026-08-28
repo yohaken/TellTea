@@ -317,20 +317,24 @@ async function attachPersonalIfStaff(member: StaffMember): Promise<StaffMember> 
 
 async function resolveStaff(user: User): Promise<StaffMember | null> {
   const local = await resolveStaffLocal(user);
-  // Local hit (owner / email doc / phone index) — enter immediately.
-  // Callable is enhancement (claim + p_* migrate). Waiting on it during
-  // function deploys caused BOTH Google and phone logins to bounce.
-  if (local) {
-    void resolveStaffViaCallable(user);
-    return attachPersonalIfStaff(local);
+  let fromServer: StaffMember | null = null;
+  try {
+    fromServer = await resolveStaffViaCallable(user);
+  } catch {
+    /* callable optional — local roster still valid */
   }
-  const fromServer = await resolveStaffViaCallable(user);
-  if (fromServer) return attachPersonalIfStaff(fromServer);
   const email = emailFromUser(user);
-  if (isAppOwnerEmail(email)) {
-    return ownerFallbackMember(user, email);
+  const member =
+    fromServer ||
+    local ||
+    (isAppOwnerEmail(email) ? ownerFallbackMember(user, email) : null);
+  if (!member) return null;
+  try {
+    await user.getIdToken(true);
+  } catch {
+    /* rules may still accept email/phone before claim propagates */
   }
-  return null;
+  return attachPersonalIfStaff(member);
 }
 
 function clearSavedLoginTicket() {
@@ -712,14 +716,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         (cacheKey ? loadCachedStaff(cacheKey) : null) ||
         (next.phoneNumber ? loadCachedStaff(next.phoneNumber) : null) ||
         (emailFromUser(next) ? loadCachedStaff(emailFromUser(next)) : null);
-      if (cached) {
-        setStaff(cached);
-        setBusyReason(null);
-        setStatus("ready");
-      } else {
-        setBusyReason("staff");
-        setStatus("loading");
-      }
+      setBusyReason("staff");
+      setStatus("loading");
 
       try {
         const member = await withTimeout(
@@ -769,18 +767,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const timedOut = /หมดเวลา/.test(message);
         const permissionDenied =
           code === "permission-denied" || /insufficient permissions/i.test(message);
-        // อย่าเด้งออกถ้าแคชยังตรงบัญชีนี้ — โชว์ข้อผิดพลาดแล้วให้ใช้งานต่อได้
-        if ((permissionDenied || timedOut) && cached?.id) {
-          setError(mapAuthError(err));
-          setStaff(cached);
-          setBusyReason(null);
-          setStatus("ready");
-          // ยังปัก presence จากแคช — อย่าให้สถานะค้างเพราะ resolve ล้มชั่วคราว
-          void import("./staff-presence")
-            .then(({ touchStaffPresence }) => touchStaffPresence(cached.id))
-            .catch(() => undefined);
-          return;
-        }
         if (permissionDenied) {
           clearAppCaches();
           setError(mapAuthError(err));
@@ -789,16 +775,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setStatus("denied");
           return;
         }
-        if (cached?.id) {
-          setError(null);
-          setBusyReason(null);
-          setStatus("ready");
-          return;
-        }
         setError(mapAuthError(err));
         setStaff(null);
         setBusyReason(null);
-        // timeout / network — back to login with retry, not infinite spinner
         setStatus(timedOut ? "signedOut" : "denied");
       }
     });
