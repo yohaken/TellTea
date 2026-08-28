@@ -1,0 +1,1463 @@
+rules_version = '2';
+// Canonical Firestore rules for Firebase project mypeer-501909 (TellTea + shared apps).
+// Sibling sites (e.g. taxtag.web.app, caltracker-th.web.app) MUST NOT deploy their
+// own firestore.rules — that wipes this file and locks the shop out.
+// Hosting-only deploy for siblings.
+// See scripts/templates/SHARED_FIREBASE_CHECKLIST.md and scripts/assert-firestore-rules.mjs
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function hasEmail() {
+      return request.auth != null && request.auth.token.email != null;
+    }
+
+    function hasPhone() {
+      return request.auth != null && request.auth.token.phone_number != null;
+    }
+
+    function signedIn() {
+      return hasEmail() || hasPhone();
+    }
+
+    function authEmail() {
+      return hasEmail() ? request.auth.token.email.lower() : '';
+    }
+
+    function authPhone() {
+      return hasPhone() ? request.auth.token.phone_number : '';
+    }
+
+    function phoneDigits() {
+      return hasPhone() && authPhone().size() > 1 ? authPhone()[1:] : '';
+    }
+
+    /**
+     * Resolve staff doc id for the signed-in Auth token.
+     * Email roster doc always wins over a stale custom claim (owner lockout).
+     * 1) email staff doc if it exists
+     * 2) staffEmails index (phone-keyed docs with email field)
+     * 3) staffPhones index
+     * 4) custom claim staffId
+     * Never treat a bare token email as staff id when that doc is missing.
+     */
+    function claimStaffId() {
+      return request.auth != null
+        && request.auth.token.keys().hasAny(['staffId'])
+        && request.auth.token.staffId is string
+        ? request.auth.token.staffId
+        : '';
+    }
+
+    function emailStaffExists() {
+      return hasEmail() && exists(/databases/$(database)/documents/staff/$(authEmail()));
+    }
+
+    function emailMappedStaffId() {
+      return hasEmail()
+        && exists(/databases/$(database)/documents/staffEmails/$(authEmail()))
+        ? get(/databases/$(database)/documents/staffEmails/$(authEmail())).data.staffId
+        : '';
+    }
+
+    function phoneStaffId() {
+      return hasPhone() && phoneDigits().size() > 0
+        && exists(/databases/$(database)/documents/staffPhones/$(phoneDigits()))
+        ? get(/databases/$(database)/documents/staffPhones/$(phoneDigits())).data.staffId
+        : '';
+    }
+
+    function resolvedStaffId() {
+      return emailStaffExists()
+        ? authEmail()
+        : (emailMappedStaffId().size() > 0
+            ? emailMappedStaffId()
+            : (phoneStaffId().size() > 0
+                ? phoneStaffId()
+                : (claimStaffId().size() > 0 ? claimStaffId() : authEmail())));
+    }
+
+    function staffPath() {
+      return /databases/$(database)/documents/staff/$(resolvedStaffId());
+    }
+
+    function isStaff() {
+      return signedIn() && exists(staffPath());
+    }
+
+    function isOwner() {
+      return isStaff() && get(staffPath()).data.role == 'owner';
+    }
+
+    function isOwnerEmail() {
+      return hasEmail() && authEmail() == 'yohaken@gmail.com';
+    }
+
+    // ศูนย์รวมพนักงาน — list + get ต้องผ่านทั้งคู่ใน query
+    function staffHubManage() {
+      return isOwner() || hasPerm('staffManage') || isOwnerEmail();
+    }
+
+    /** CRM สมาชิก / แต้ม หลังร้าน — เจ้าของร้านเท่านั้น (เคาน์เตอร์ใช้ Admin CF) */
+    function membersHubView() {
+      return isOwner() || isOwnerEmail();
+    }
+
+    function membersHubManage() {
+      return isOwner() || isOwnerEmail();
+    }
+
+    function membersHubAdjustPoints() {
+      return isOwner() || isOwnerEmail();
+    }
+
+    function actorId() {
+      return hasEmail() ? authEmail() : authPhone();
+    }
+
+    /** employeeId ที่ผูกกับบัญชี staff — คิวจ่าย / งานมอบหมาย / ข้อมูลจ่ายของตัวเอง */
+    function staffEmployeeId() {
+      return isStaff()
+        && get(staffPath()).data.keys().hasAny(['employeeId'])
+        && get(staffPath()).data.employeeId is string
+        ? get(staffPath()).data.employeeId
+        : '';
+    }
+
+    function employeeDocPath(empId) {
+      return /databases/$(database)/documents/employees/$(empId);
+    }
+
+    /**
+     * พนักงานเป็นเจ้าของแถว roster นี้ — staff.employeeId หรือลิงก์ canonical บน employees
+     * (client ใช้ resolveLinkedEmployee — rules ต้องคู่กัน ไม่งั้นโบนัส/คิวจ่าย permission-denied สลับไปมา)
+     */
+    function staffOwnsEmployee(empId) {
+      return isStaff() && (
+        staffEmployeeId() == empId
+        || (exists(employeeDocPath(empId))
+            && (
+              (get(employeeDocPath(empId)).data.keys().hasAny(['linkedStaffId'])
+                && get(employeeDocPath(empId)).data.linkedStaffId == resolvedStaffId())
+              || (hasEmail()
+                  && get(employeeDocPath(empId)).data.keys().hasAny(['linkedEmail'])
+                  && get(employeeDocPath(empId)).data.linkedEmail == authEmail())
+              || (hasPhone()
+                  && get(employeeDocPath(empId)).data.keys().hasAny(['linkedPhone'])
+                  && get(employeeDocPath(empId)).data.linkedPhone == authPhone())
+            ))
+      );
+    }
+
+    /** อ่าน employeePay: เจ้าของ / คนจ่ายทั้งร้าน / ของตัวเอง */
+    function canReadEmployeePay(empId) {
+      return isOwner() || isOwnerEmail() || hasPerm('payrollPay')
+        || staffOwnsEmployee(empId);
+    }
+
+    /** doc id = YYYY-MM_{employeeId} — แยก employeeId ออก (รองรับ _ ในชื่อ id) */
+    function personalCloseEmployeeId(docId) {
+      return docId.matches('^[0-9]{4}-[0-9]{2}_.+')
+        ? docId.split('_').slice(1).join('_')
+        : '';
+    }
+
+    /**
+     * อ่าน bonusPersonalCloses — เดือนเปิดยังไม่มี doc (resource == null)
+     * ห้ามอ้าง resource.data.employeeId อย่างเดียว ไม่งั้น get ขึ้น permission-denied
+     */
+    function canReadBonusPersonalClose(docId) {
+      return isOwner() || isOwnerEmail() || hasPerm('payrollPay')
+        || (hasPerm('bonus') && staffOwnsEmployee(
+          resource != null
+            ? resource.data.employeeId
+            : personalCloseEmployeeId(docId)
+        ));
+    }
+
+    function permissionsHaveElevated(data) {
+      return data.keys().hasAny(['permissions'])
+        && (
+          data.permissions.ownerBooks == true
+          || data.permissions.pnl == true
+          || data.permissions.transferIn == true
+          || data.permissions.exportData == true
+          || data.permissions.staffManage == true
+          || data.permissions.payrollPay == true
+          || data.permissions.membersView == true
+          || data.permissions.membersManage == true
+          || data.permissions.membersAdjustPoints == true
+        );
+    }
+
+    function levelPermsElevated(perms) {
+      return perms.ownerBooks == true
+        || perms.pnl == true
+        || perms.transferIn == true
+        || perms.exportData == true
+        || perms.staffManage == true
+        || perms.payrollPay == true
+        || perms.membersView == true
+        || perms.membersManage == true
+        || perms.membersAdjustPoints == true;
+    }
+
+    function isSeedPermissionLevelId(levelId) {
+      return levelId == 'shop_staff'
+        || levelId == 'shift_lead'
+        || levelId == 'owner_assist'
+        || levelId == 'owner';
+    }
+
+    function staffHubCreateOk() {
+      return isOwner() || isOwnerEmail()
+        || (hasPerm('staffManage')
+            && request.resource.data.role == 'staff'
+            && !permissionsHaveElevated(request.resource.data));
+    }
+
+    function staffHubUpdateOk(targetStaffId) {
+      let before = resource.data;
+      let after = request.resource.data;
+      return after.createdAt == before.createdAt
+        && (
+          isOwner() || isOwnerEmail()
+          || (
+            hasPerm('staffManage')
+            && before.role == 'staff'
+            && after.role == 'staff'
+            && targetStaffId != resolvedStaffId()
+            && !permissionsHaveElevated(after)
+          )
+        );
+    }
+
+    // Fine-grained permissions on staff doc; owners always pass.
+    // Staff without permissions map: daily modules only (legacy default).
+    /** id ลำดับสิทธิที่ผูกบน staff doc (ว่างถ้าไม่ผูก) */
+    function linkedPermissionLevelId() {
+      return isStaff()
+        && get(staffPath()).data.keys().hasAny(['permissionLevelId'])
+        && get(staffPath()).data.permissionLevelId is string
+        && get(staffPath()).data.permissionLevelId.size() > 0
+        ? get(staffPath()).data.permissionLevelId
+        : '';
+    }
+
+    function permissionLevelDoc(levelId) {
+      return /databases/$(database)/documents/permissionLevels/$(levelId);
+    }
+
+    function linkedLevelDocExists() {
+      return linkedPermissionLevelId().size() > 0
+        && exists(permissionLevelDoc(linkedPermissionLevelId()));
+    }
+
+    /** คู่ client resolveEffectivePermissions — level ปิด = ไม่ใช้สิทธิจาก level */
+    function linkedLevelActive() {
+      return linkedLevelDocExists()
+        && (
+          !get(permissionLevelDoc(linkedPermissionLevelId())).data.keys().hasAny(['active'])
+          || get(permissionLevelDoc(linkedPermissionLevelId())).data.active != false
+        );
+    }
+
+    /** ผูก level และยังไม่ customize → อ่านสิทธิ์จาก permissionLevels */
+    function staffUsesLinkedLevel() {
+      return isStaff()
+        && get(staffPath()).data.permissionsCustomized != true
+        && linkedLevelDocExists()
+        && linkedLevelActive();
+    }
+
+    /** มี permissionLevelId แต่ doc หายหรือปิด — ห้ามเดา legacy floor (คู่ client deny) */
+    function staffHasBrokenLevelLink() {
+      return isStaff()
+        && get(staffPath()).data.permissionsCustomized != true
+        && linkedPermissionLevelId().size() > 0
+        && (!linkedLevelDocExists() || !linkedLevelActive());
+    }
+
+    function hasPermFromLevel(p) {
+      return staffUsesLinkedLevel()
+        && get(permissionLevelDoc(linkedPermissionLevelId())).data.keys().hasAny(['permissions'])
+        && get(permissionLevelDoc(linkedPermissionLevelId())).data.permissions[p] == true;
+    }
+
+    function hasPermFromStaffMap(p) {
+      return isStaff()
+        && !staffUsesLinkedLevel()
+        && get(staffPath()).data.keys().hasAny(['permissions'])
+        && get(staffPath()).data.permissions[p] == true;
+    }
+
+    /**
+     * แหล่งความจริงสิทธิ์ (คู่กับ client resolveEffectivePermissions)
+     * 1) owner 2) level ที่ผูก 3) แผนที่บน staff 4) legacy ไม่มีแผนที่ = พื้นร้าน (ไม่มีบช./คลัง)
+     */
+    function hasPerm(p) {
+      return isOwner()
+        || hasPermFromLevel(p)
+        || hasPermFromStaffMap(p)
+        || (isStaff()
+            && !get(staffPath()).data.keys().hasAny(['permissions'])
+            && !staffUsesLinkedLevel()
+            && !staffHasBrokenLevelLink()
+            && (p == 'production' || p == 'otBonus' || p == 'checklist' || p == 'bonus'));
+    }
+
+    function staffSelfProfileUpdate() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return after.role == before.role
+        && after.createdAt == before.createdAt
+        && after.diff(before).affectedKeys()
+            .hasOnly([
+              'displayName',
+              'employeeId',
+              'profileComplete',
+              'profileSnoozeUntil',
+              'personalProfileComplete',
+              'lastSeenAt',
+            ])
+        && (
+          !after.diff(before).affectedKeys().hasAny(['lastSeenAt'])
+          || after.lastSeenAt is number
+        );
+    }
+
+    /** heartbeat ออนไลน์ — แก้ได้แค่ lastSeenAt ของตัวเอง (ไม่ผูก createdAt) */
+    function staffPresenceTouch() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastSeenAt'])
+        && request.resource.data.lastSeenAt is number;
+    }
+
+    /**
+     * บัญชีตัวเอง: doc id = resolvedStaffId
+     * หรือ token email/phone ตรงฟิลด์บน doc (กันเคส id เป็นอีเมล แต่ล็อกอินด้วยเบอร์ที่ผูกไว้)
+     */
+    function isOwnStaffDoc(staffId) {
+      return signedIn() && (
+        staffId == resolvedStaffId()
+        || (hasEmail()
+            && resource.data.keys().hasAny(['email'])
+            && resource.data.email == authEmail())
+        || (hasPhone()
+            && resource.data.keys().hasAny(['phone'])
+            && resource.data.phone == authPhone())
+      );
+    }
+
+    function employeeSelfLinkUpdate() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return after.diff(before).affectedKeys()
+            .hasOnly(['linkedEmail', 'linkedPhone', 'linkedStaffId', 'updatedAt'])
+        && (
+          (hasEmail() && after.linkedEmail == authEmail())
+          || (hasPhone() && after.linkedPhone == authPhone())
+        )
+        && (
+          !after.keys().hasAny(['linkedEmail', 'linkedPhone', 'linkedStaffId'])
+          || !before.keys().hasAny(['linkedEmail', 'linkedPhone', 'linkedStaffId'])
+          || (hasEmail() && before.linkedEmail == authEmail())
+          || (hasPhone() && before.linkedPhone == authPhone())
+          || (before.keys().hasAny(['linkedStaffId']) && before.linkedStaffId == resolvedStaffId())
+        );
+    }
+
+    // พนักงานกรอก/แก้รายการได้ — เปลี่ยนสถานะจ่ายโบนัสได้เฉพาะเจ้าของ
+    function bonusEntryStaffUpdate() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return before.status != 'paid'
+        && after.status == before.status
+        && after.createdBy == before.createdBy
+        && after.createdAt == before.createdAt;
+    }
+
+    function prodEntryCreate() {
+      return request.resource.data.createdBy == actorId()
+        && request.resource.data.productName is string
+        && request.resource.data.qtyProduced is number
+        && request.resource.data.qtyProduced > 0
+        && request.resource.data.status == 'unpaid';
+    }
+
+    function otEntryCreate() {
+      return request.resource.data.createdBy == actorId()
+        && request.resource.data.shift is string
+        && request.resource.data.machineCount is number
+        && request.resource.data.status in ['pending', 'unpaid'];
+    }
+
+    function isPosDeviceAuth() {
+      return request.auth != null
+        && (
+          request.auth.token.posDevice == true
+          || request.auth.token.firebase.sign_in_provider == 'anonymous'
+        );
+    }
+
+    function posDeviceCreate() {
+      return isPosDeviceAuth()
+        && request.resource.data.authUid == request.auth.uid
+        && request.resource.data.registeredAt is number
+        && request.resource.data.lastSeenAt is number
+        && request.resource.data.appBuild is number
+        && request.resource.data.pairingCode is string
+        && request.resource.data.pairingCode.size() >= 4;
+    }
+
+    function posDeviceHeartbeat() {
+      let before = resource.data;
+      let after = request.resource.data;
+      let repairAuth = !before.keys().hasAll(['authUid']) || before.authUid == '';
+      let telemetryKeys = [
+        'deviceHint', 'printerLabel', 'printerReady', 'standalone', 'screenSize', 'platform', 'telemetryAt',
+        'shellKind', 'nativeShellBuild',
+        'updateStatus', 'updateTargetBuild', 'updateError', 'updateCheckedAt',
+        'lastOwnerPingAckAt',
+      ];
+      let baseKeys = [
+        'lastSeenAt', 'appBuild', 'userAgent', 'lastReloadAckAt',
+        'syncPendingCount', 'syncFailedCount', 'syncStuckAt', 'syncLastError', 'updatedAt',
+      ];
+      let allowedKeys = repairAuth
+        ? baseKeys.concat(telemetryKeys).concat(['authUid'])
+        : baseKeys.concat(telemetryKeys);
+      return isPosDeviceAuth()
+        && (repairAuth || before.authUid == request.auth.uid)
+        && after.authUid == request.auth.uid
+        && (!before.keys().hasAll(['registeredAt']) || after.registeredAt == before.registeredAt)
+        && (!before.keys().hasAll(['pairingCode']) || after.pairingCode == before.pairingCode)
+        && after.diff(before).affectedKeys().hasOnly(allowedKeys);
+    }
+
+    function posMenuCategoryCreate() {
+      return isPosDeviceAuth()
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.sortOrder is number
+        && request.resource.data.active is bool
+        && request.resource.data.createdAt is number
+        && request.resource.data.updatedAt is number;
+    }
+
+    function posMenuItemCreate() {
+      return isPosDeviceAuth()
+        && request.resource.data.categoryId is string
+        && request.resource.data.categoryId.size() > 0
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.price is number
+        && request.resource.data.price >= 0
+        && request.resource.data.sortOrder is number
+        && request.resource.data.active is bool
+        && request.resource.data.createdAt is number
+        && request.resource.data.updatedAt is number;
+    }
+
+    function posDeviceOwnerPatch() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return after.authUid == before.authUid
+        && after.registeredAt == before.registeredAt
+        && after.pairingCode == before.pairingCode
+        && after.diff(before).affectedKeys().hasOnly([
+          'label',
+          'forceReloadAt',
+          'ownerPingAt',
+          'ownerPingMessage',
+          'captureRequestAt',
+          'captureIntervalMinutes',
+          'updatedAt',
+          'updatedBy',
+          'disabled',
+          'blocked',
+          'deviceClass',
+        ]);
+    }
+
+    function posMetaBillWrite() {
+      return request.resource.data.billDate is number
+        && request.resource.data.billSeq is number
+        && request.resource.data.billSeq >= 1
+        && request.resource.data.billSeq <= 9999;
+    }
+
+    function posActorId() {
+      return 'pos:' + request.auth.uid;
+    }
+
+    function posDeviceClaimOk() {
+      return exists(/databases/$(database)/documents/posDevices/$(request.auth.uid))
+        && get(/databases/$(database)/documents/posDevices/$(request.auth.uid)).data.storeClaimed == true
+        && get(/databases/$(database)/documents/posDevices/$(request.auth.uid)).data.blocked != true
+        && get(/databases/$(database)/documents/posDevices/$(request.auth.uid)).data.deviceClass != 'blocked';
+    }
+
+    function storeClaimGateOn() {
+      return exists(/databases/$(database)/documents/meta/pos)
+        && get(/databases/$(database)/documents/meta/pos).data.keys().hasAll(['storeClaimCodeHash'])
+        && get(/databases/$(database)/documents/meta/pos).data.storeClaimCodeHash is string
+        && get(/databases/$(database)/documents/meta/pos).data.storeClaimCodeHash.size() >= 32
+        && get(/databases/$(database)/documents/meta/pos).data.storeClaimRequired != false;
+    }
+
+    function posSaleCreate() {
+      return isPosDeviceAuth()
+        && request.resource.data.deviceId == request.auth.uid
+        && request.resource.data.sessionId is string
+        && request.resource.data.date is number
+        && request.resource.data.shift is string
+        && request.resource.data.lines is list
+        && request.resource.data.lines.size() > 0
+        && request.resource.data.total is number
+        && request.resource.data.total > 0
+        && request.resource.data.paymentMethod in ['cash', 'promptpay']
+        && request.resource.data.cashReceived is number
+        && request.resource.data.change is number
+        && request.resource.data.change >= 0
+        && (
+          (request.resource.data.paymentMethod == 'cash'
+            && request.resource.data.cashReceived >= request.resource.data.total)
+          || (request.resource.data.paymentMethod == 'promptpay'
+            && request.resource.data.cashReceived == 0
+            && request.resource.data.change == 0)
+        )
+        && request.resource.data.createdBy == posActorId()
+        && request.resource.data.status == 'completed'
+        && request.resource.data.billNo is string
+        && request.resource.data.billNo.size() >= 5
+        && (!storeClaimGateOn() || posDeviceClaimOk());
+    }
+
+    function posSessionOpen() {
+      return isPosDeviceAuth()
+        && request.resource.data.deviceId == request.auth.uid
+        && request.resource.data.date is number
+        && request.resource.data.shift is string
+        && request.resource.data.status == 'open'
+        && request.resource.data.openedAt is number
+        && (!storeClaimGateOn() || posDeviceClaimOk());
+    }
+
+    function posSessionSaleBump() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return isPosDeviceAuth()
+        && before.deviceId == request.auth.uid
+        && after.deviceId == before.deviceId
+        && after.status == 'open'
+        && after.saleCount >= before.saleCount
+        && after.totalSales >= before.totalSales;
+    }
+
+    function posSessionClose() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return isPosDeviceAuth()
+        && before.deviceId == request.auth.uid
+        && after.deviceId == before.deviceId
+        && before.status == 'open'
+        && after.status == 'closed'
+        && after.closedAt is number
+        && after.saleCount == before.saleCount
+        && after.totalSales == before.totalSales;
+    }
+
+    function posMenuItemSoldOutToggle() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return isPosDeviceAuth()
+        && after.diff(before).affectedKeys().hasOnly(['active', 'updatedAt'])
+        && after.categoryId == before.categoryId
+        && after.name == before.name
+        && after.price == before.price
+        && after.sortOrder == before.sortOrder
+        && after.createdAt == before.createdAt
+        && after.active is bool;
+    }
+
+    function isAssignTaskAssignee() {
+      return staffEmployeeId() != ''
+        && staffEmployeeId() in resource.data.assigneeIds;
+    }
+
+    function assignTaskCreate() {
+      return request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.assigneeIds is list
+        && request.resource.data.assigneeIds.size() > 0
+        && request.resource.data.dueDate is number
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdBy == actorId();
+    }
+
+    function assignTaskStaffComplete() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return before.status == 'pending'
+        && after.status == 'completed'
+        && isAssignTaskAssignee()
+        && after.proofImg is string
+        && after.proofImg.size() > 0
+        && after.title == before.title
+        && after.note == before.note
+        && after.assigneeIds == before.assigneeIds
+        && after.assigneeNames == before.assigneeNames
+        && after.dueDate == before.dueDate
+        && after.recurrence == before.recurrence
+        && after.checklist == before.checklist
+        && after.createdBy == before.createdBy
+        && after.createdAt == before.createdAt
+        && after.assignedBy == before.assignedBy;
+    }
+
+    match /staff/{staffId} {
+      // อ่านบัญชีตัวเอง: id == resolved หรืออีเมล/เบอร์บน doc ตรง token (คู่กับ presence update)
+      allow get: if signedIn() && (staffId == resolvedStaffId() || isOwnStaffDoc(staffId) || staffHubManage());
+      allow list: if staffHubManage();
+      allow create: if staffHubCreateOk()
+        || (isOwnerEmail()
+            && staffId == authEmail()
+            && request.resource.data.email == authEmail()
+            && request.resource.data.role == 'owner');
+      allow update: if (staffHubManage() && staffHubUpdateOk(staffId))
+        || (isOwnStaffDoc(staffId) && staffSelfProfileUpdate())
+        // presence: ทางเดิม (id == resolved) + ทางขยาย (อีเมล/เบอร์บน doc ตรง token)
+        || (signedIn() && staffId == resolvedStaffId() && staffPresenceTouch())
+        || (isOwnStaffDoc(staffId) && staffPresenceTouch());
+      allow delete: if isOwner() || isOwnerEmail()
+        || (hasPerm('staffManage') && resource.data.role == 'staff');
+    }
+
+    // ลำดับสิทธิ์ (แม่แบบ) — อ่านได้ทุก staff (resolve สิทธิ์) · เขียนเฉพาะศูนย์พนักงาน
+    match /permissionLevels/{levelId} {
+      allow read: if isStaff() || isOwnerEmail();
+      // seed ครั้งแรก: staffManage สร้างมาตรฐานได้; สร้างใหม่ elevated ได้แค่เจ้าของ
+      allow create: if staffHubManage()
+        && request.resource.data.keys().hasAll(['name', 'sortOrder', 'active', 'permissions', 'createdAt', 'updatedAt'])
+        && request.resource.data.name is string
+        && request.resource.data.sortOrder is number
+        && request.resource.data.active is bool
+        && request.resource.data.permissions is map
+        && (
+          isOwner() || isOwnerEmail()
+          || (
+            hasPerm('staffManage')
+            && (
+              !levelPermsElevated(request.resource.data.permissions)
+              || (isSeedPermissionLevelId(levelId) && levelId != 'owner')
+            )
+          )
+        )
+        && (levelId != 'owner' || isOwner() || isOwnerEmail());
+      allow update: if staffHubManage()
+        && !(resource.data.isSystem == true && levelId == 'owner')
+        && request.resource.data.createdAt == resource.data.createdAt
+        && (
+          isOwner() || isOwnerEmail()
+          || (
+            hasPerm('staffManage')
+            && resource.data.isSystem != true
+            && !levelPermsElevated(resource.data.permissions)
+            && !levelPermsElevated(request.resource.data.permissions)
+            && request.resource.data.isSystem != true
+          )
+        );
+      allow delete: if (isOwner() || isOwnerEmail() || hasPerm('staffManage'))
+        && resource.data.isSystem != true
+        && levelId != 'owner'
+        && (
+          isOwner() || isOwnerEmail()
+          || !levelPermsElevated(resource.data.permissions)
+        );
+    }
+
+    match /staffPhones/{phoneId} {
+      allow get: if signedIn() && (phoneId == phoneDigits() || staffHubManage());
+      allow write: if staffHubManage();
+    }
+
+    // อีเมล → staffId (บัญชีที่ doc id เป็นเบอร์ แต่เก็บ email ในฟิลด์)
+    match /staffEmails/{emailId} {
+      allow get: if signedIn() && (
+        (hasEmail() && authEmail() == emailId) || staffHubManage()
+      );
+      allow write: if staffHubManage();
+    }
+
+    // PIN secrets / nickname index / attempt lock — Admin SDK only (callables)
+    match /staffLoginSecrets/{staffId} {
+      allow read, write: if false;
+    }
+    match /staffNicknames/{nickId} {
+      allow read, write: if false;
+    }
+    match /staffPinAttempts/{staffId} {
+      allow read, write: if false;
+    }
+
+    // ข้อมูลส่วนตัวละเอียดอ่อน — เจ้าของอ่านได้, พนักงานอ่าน/เขียนเฉพาะของตัวเอง
+    match /staffPersonal/{staffId} {
+      allow get: if isOwner() || (signedIn() && staffId == resolvedStaffId());
+      allow list: if isOwner();
+      allow create, update: if signedIn() && staffId == resolvedStaffId();
+      allow delete: if isOwner();
+    }
+
+    match /ledger/{entryId} {
+      allow read: if hasPerm('ledger');
+      allow create: if (hasPerm('ledger')
+        && request.resource.data.createdBy == actorId()
+        && request.resource.data.description is string
+        && request.resource.data.amountIn is number
+        && request.resource.data.amountOut is number
+        && request.resource.data.amountIn >= 0
+        && request.resource.data.amountOut >= 0
+        && (
+          (request.resource.data.amountIn > 0 && request.resource.data.amountOut == 0 && hasPerm('transferIn'))
+          || (request.resource.data.amountOut > 0 && request.resource.data.amountIn == 0)
+        ));
+      // พนักงานแก้/ลบได้เฉพาะรายการออกที่ตัวเองสร้าง — โอนเข้าและรายการคนอื่น = เจ้าของ
+      allow update: if hasPerm('ledger') && (
+        isOwner() || isOwnerEmail()
+        || (
+          resource.data.createdBy == actorId()
+          && resource.data.amountIn == 0
+          && request.resource.data.amountIn == 0
+          && request.resource.data.createdBy == resource.data.createdBy
+        )
+      );
+      allow delete: if hasPerm('ledger') && (
+        isOwner() || isOwnerEmail()
+        || (resource.data.createdBy == actorId() && resource.data.amountIn == 0)
+      );
+    }
+
+    /**
+     * ตารางเทียบเงินนำเข้า — เงินสดหน้าร้านโอนเข้า บช. ร้าน + สลิปสรุป POS
+     * อ่าน/สร้าง/แก้: มีสิทธิ ledger (พนักงานที่เข้าบัญชีได้ เช่น เป้)
+     * พนักงานแก้/ลบได้เฉพาะมัดที่ตัวเองสร้าง · เจ้าของแก้ได้ทั้งหมด
+     * บันทึก = matched (โอนตามระบบ) ได้เลย ไม่ต้องรอตรวจ
+     */
+    match /cashDeposits/{entryId} {
+      allow read: if hasPerm('ledger');
+      allow create: if hasPerm('ledger')
+        && request.resource.data.createdBy == actorId()
+        && request.resource.data.transferDate is number
+        && request.resource.data.bankAmount is number
+        && request.resource.data.bankAmount > 0
+        && request.resource.data.expectedCashTotal is number
+        && request.resource.data.expectedCashTotal >= 0
+        && request.resource.data.days is list
+        && request.resource.data.days.size() > 0
+        && request.resource.data.days.size() <= 31
+        && request.resource.data.status in ['pending', 'matched'];
+      allow update: if hasPerm('ledger')
+        && (
+          isOwner()
+          || (
+            resource.data.createdBy == actorId()
+            && request.resource.data.createdBy == resource.data.createdBy
+            && request.resource.data.status in ['pending', 'matched']
+          )
+        );
+      allow delete: if hasPerm('ledger')
+        && (isOwner() || resource.data.createdBy == actorId());
+    }
+
+    /**
+     * ตารางแจ้งบิล — พนักงานเสนอบิลค่าไฟ/น้ำ (รูป+ยอด) ให้เจ้าของจ่าย
+     * อ่าน/สร้าง: มีสิทธิ ledger · พนักงานแก้ได้เฉพาะของตัวเองขณะรอ
+     * รับเข้า บช.เจ้าของ / ไม่รับ: เจ้าของ · ลบ: เจ้าของหรือคนสร้าง
+     */
+    match /billNotices/{entryId} {
+      allow read: if hasPerm('ledger');
+      allow create: if hasPerm('ledger')
+        && request.resource.data.createdBy == actorId()
+        && request.resource.data.date is number
+        && request.resource.data.date > 0
+        && request.resource.data.description is string
+        && request.resource.data.description.size() > 0
+        && request.resource.data.amountOut is number
+        && request.resource.data.amountOut > 0
+        && request.resource.data.status == 'pending';
+      allow update: if hasPerm('ledger')
+        && (
+          isOwner()
+          || (
+            resource.data.createdBy == actorId()
+            && request.resource.data.createdBy == resource.data.createdBy
+            && resource.data.status == 'pending'
+            && request.resource.data.status == 'pending'
+            && request.resource.data.verifiedBy == ''
+            && request.resource.data.verifiedAt == 0
+            && request.resource.data.ownerBookId == ''
+          )
+        );
+      allow delete: if hasPerm('ledger')
+        && (isOwner() || resource.data.createdBy == actorId());
+    }
+
+    match /ownerBooks/{entryId} {
+      allow read, write: if hasPerm('ownerBooks');
+    }
+
+    match /capitalBooks/{entryId} {
+      allow read, write: if hasPerm('ownerBooks');
+    }
+
+    /**
+     * One evidence photo per doc — keeps parent rows small (`evp:{id}`).
+     * Staff folders must match every storageFolder used in the app
+     * (bonus-deductions / payroll / cash-deposits / vat-input were missing
+     * → owner/staff got permission-denied = 「ไม่มีสิทธิ์บันทึกรูป」).
+     */
+    function evidencePhotoStaffFolder(folder) {
+      return folder in [
+        'ledger-receipts', 'ot-photos', 'bill-notices',
+        'checklist', 'tasks', 'production', 'staff-id',
+        'bonus-deductions', 'payroll', 'cash-deposits', 'vat-input'
+      ];
+    }
+
+    match /evidencePhotos/{photoId} {
+      allow read: if isOwner() || isOwnerEmail()
+        || (signedIn() && evidencePhotoStaffFolder(resource.data.folder))
+        || (hasPerm('ownerBooks') && resource.data.folder == 'owner-books')
+        || (hasPerm('ownerBooks') && resource.data.folder == 'capital-books');
+      allow create: if signedIn()
+        && request.resource.data.keys().hasAll([
+          'dataUrl', 'contentType', 'fileName', 'folder', 'slotKey', 'createdBy', 'createdAt'
+        ])
+        && request.resource.data.dataUrl is string
+        && request.resource.data.dataUrl.size() < 950000
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt is number
+        && request.resource.data.folder is string
+        && request.resource.data.slotKey is string
+        && (
+          evidencePhotoStaffFolder(request.resource.data.folder)
+          || ((isOwner() || isOwnerEmail() || hasPerm('ownerBooks'))
+              && (request.resource.data.folder == 'owner-books'
+                  || request.resource.data.folder == 'capital-books'))
+          || ((isOwner() || isOwnerEmail())
+              && request.resource.data.folder == 'vat-ingest')
+        );
+      allow update: if false;
+      allow delete: if isOwner() || isOwnerEmail() || resource.data.createdBy == request.auth.uid;
+    }
+
+    match /monthlyIncome/{monthId} {
+      allow read, write: if hasPerm('pnl');
+    }
+
+    /**
+     * อากาศรายวันสถานีอุดรฯ สำหรับแดชบอร์ดยอดขาย — เจ้าของอ่าน
+     * เขียนจาก Cloud Functions (Admin SDK) เท่านั้น
+     */
+    match /weatherDays/{dateId} {
+      allow read: if isOwner() || isOwnerEmail();
+      allow write: if false;
+    }
+
+    /** ยอดขายรายวัน + VAT — เจ้าของเท่านั้น (พนักงานหลังร้านอ่านไม่ได้) */
+    match /dailySales/{dateId} {
+      allow read: if isOwner();
+      allow create, update: if isOwner()
+        && request.resource.data.dateKey is string
+        && request.resource.data.dateKey == dateId
+        && request.resource.data.storefrontGross is number
+        && request.resource.data.storefrontGross >= 0
+        && request.resource.data.deliveryGross is number
+        && request.resource.data.deliveryGross >= 0
+        && request.resource.data.totalGross is number
+        && request.resource.data.totalGross >= 0
+        && request.resource.data.vatBase is number
+        && request.resource.data.vatBase >= 0
+        && request.resource.data.vatOutput is number
+        && request.resource.data.vatOutput >= 0
+        && request.resource.data.status in ['draft', 'confirmed']
+        && request.resource.data.updatedAt is number
+        && request.resource.data.updatedBy is string;
+      allow delete: if isOwner();
+    }
+
+    /** เมลรายงานแพลตฟอร์มดิบ — เจ้าของอ่าน · เขียนจาก Admin SDK เป็นหลัก */
+    match /platformEmailReports/{id} {
+      allow read: if isOwner();
+      allow write: if isOwner();
+    }
+
+    /** D3 ข้อเสนอเดือน (L3) — ยังไม่ใช่งบ · เจ้าของเท่านั้น */
+    match /vatDeliveryMonthProposals/{monthId} {
+      allow read, write: if isOwner() || isOwnerEmail();
+    }
+
+    /** พรีวิวแคป AI (ยอด+รูป) ก่อนส่งเข้าตารางหลัก — เจ้าของเท่านั้น */
+    match /vatDeliveryIngestDrafts/{monthId} {
+      allow read, write: if isOwner() || isOwnerEmail();
+    }
+
+    /** บันทึกปิดเดือน VAT → monthlyIncome — เจ้าของเท่านั้น */
+    match /vatMonthCloses/{monthId} {
+      allow read, write: if isOwner();
+    }
+
+    /** VAT รายเดือน (play-safe) — เจ้าของเท่านั้น */
+    match /vatMonthlyReturns/{monthId} {
+      allow read, write: if isOwner() || isOwnerEmail();
+    }
+
+    /** แถวนำเข้าไฟล์ VAT (วัน×ช่องทาง) — เจ้าของเท่านั้น */
+    match /vatImportRows/{rowId} {
+      allow read, write: if isOwner() || isOwnerEmail();
+    }
+
+    /** โต๊ะจูน — แชท local AI ↔ mentor (โปร่งใสบนเว็บ) */
+    match /vatAgentChat/{msgId} {
+      allow read, write: if isOwner() || isOwnerEmail();
+    }
+
+
+    /** ใบกำกับซื้อ (ภาษีซื้อ) — เจ้าของเท่านั้น */
+    match /vatInputInvoices/{docId} {
+      allow read, write: if isOwner();
+    }
+
+    /** audit ยอดขาย/VAT — เจ้าของเท่านั้น */
+    match /vatSalesAudit/{id} {
+      allow read, write: if isOwner();
+    }
+
+    // ลบ unitCost legacy ออกจาก stock หลังย้ายไป stockCosts
+    function stockCostMigrateStrip() {
+      return (isOwner() || isOwnerEmail())
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['unitCost', 'updatedAt']);
+    }
+
+    match /stock/{itemId} {
+      allow read: if hasPerm('stock');
+      allow create, delete: if isOwner();
+      // พนักงานปรับยอดได้ — ห้ามเปลี่ยนชื่อ · ต้นทุนอยู่ stockCosts
+      allow update: if isOwner()
+        || stockCostMigrateStrip()
+        || (hasPerm('stock')
+            && request.resource.data.name == resource.data.name
+            && request.resource.data.qty is number
+            && request.resource.data.qty >= 0
+            && request.resource.data.minQty is number
+            && request.resource.data.minQty >= 0
+            && (
+              !request.resource.data.keys().hasAny(['unitCost'])
+              || request.resource.data.unitCost == resource.data.get('unitCost', 0)
+            ));
+    }
+
+    /** ต้นทุนวัตถุดิบ — เจ้าของเท่านั้น */
+    match /stockCosts/{itemId} {
+      allow read, write: if isOwner() || isOwnerEmail();
+    }
+
+    match /stockMovements/{logId} {
+      allow read: if hasPerm('stock');
+      allow create: if hasPerm('stock')
+        && request.resource.data.itemId is string
+        && request.resource.data.itemName is string
+        && request.resource.data.type in ['IN', 'OUT', 'ADJUST']
+        && request.resource.data.quantity is number
+        && request.resource.data.quantity > 0
+        && request.resource.data.date is number
+        && request.resource.data.inspector is string
+        && request.resource.data.createdBy == actorId();
+      allow update, delete: if isOwner();
+    }
+
+    match /stockCountSessions/{sessionId} {
+      allow read: if hasPerm('stock');
+      // สร้างรอบใหม่ — createdBy = คนบันทึก
+      allow create: if hasPerm('stock')
+        && request.resource.data.date is number
+        && request.resource.data.dayOfMonth in [1, 10, 20]
+        && request.resource.data.year is int
+        && request.resource.data.month is int
+        && request.resource.data.inspector is string
+        && request.resource.data.submittedAt is number
+        && request.resource.data.createdBy == actorId()
+        && request.resource.data.lines is list;
+      // แก้ยอดรอบเดิมได้โดยไม่ต้องลบ — คง createdBy · ใส่ updatedBy
+      allow update: if hasPerm('stock')
+        && request.resource.data.date is number
+        && request.resource.data.dayOfMonth in [1, 10, 20]
+        && request.resource.data.year is int
+        && request.resource.data.month is int
+        && request.resource.data.inspector is string
+        && request.resource.data.submittedAt is number
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.updatedBy == actorId()
+        && request.resource.data.lines is list;
+      allow delete: if isOwner();
+    }
+
+    // ลบ field จ่าย legacy ออกจาก employees หลังย้ายไป employeePay
+    function employeePayMigrateStrip() {
+      return (isOwner() || isOwnerEmail() || hasPerm('payrollPay') || staffHubManage())
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly([
+              'monthlySalary', 'payBank', 'payAccountNo', 'payAccountName',
+              'advanceBalance', 'skipGroupPayroll', 'updatedAt'
+            ]);
+    }
+
+    // ศูนย์รวมรายชื่อพนักงานร้าน — ชื่อ/สถานะ/ลิงก์ (ไม่มีเงินเดือน — อยู่ employeePay)
+    match /employees/{id} {
+      allow read: if isStaff();
+      allow create, delete: if staffHubManage();
+      allow update: if staffHubManage() || employeeSelfLinkUpdate() || employeePayMigrateStrip();
+    }
+
+    /**
+     * ลูกค้าสมาชิก (บัตร + แต้ม) — คนละโดเมนกับ staff/employees
+     * doc id = phoneDigits (E.164 ไม่มี +)
+     */
+    match /members/{memberId} {
+      allow read: if membersHubView();
+      allow create: if membersHubManage()
+        && request.resource.data.keys().hasAll([
+          'phone', 'phoneDigits', 'displayName', 'cardNo', 'status',
+          'pointsBalance', 'lifetimePointsEarned', 'source',
+          'createdAt', 'updatedAt', 'createdBy', 'updatedBy'
+        ])
+        && request.resource.data.phoneDigits == memberId
+        && request.resource.data.pointsBalance is number
+        && request.resource.data.pointsBalance >= 0;
+      allow update: if membersHubManage()
+        || (membersHubAdjustPoints()
+            && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['pointsBalance', 'lifetimePointsEarned', 'updatedAt', 'updatedBy'])
+            && request.resource.data.pointsBalance is number
+            && request.resource.data.pointsBalance >= 0
+            && request.resource.data.phoneDigits == resource.data.phoneDigits
+            && request.resource.data.createdAt == resource.data.createdAt);
+      allow delete: if isOwner() || isOwnerEmail();
+    }
+
+    match /memberLedger/{entryId} {
+      allow read: if membersHubView();
+      allow create: if membersHubAdjustPoints()
+        && request.resource.data.keys().hasAll([
+          'memberId', 'delta', 'balanceAfter', 'reason',
+          'actorType', 'actorId', 'createdAt'
+        ])
+        && request.resource.data.delta is number
+        && request.resource.data.delta != 0
+        && request.resource.data.balanceAfter is number
+        && request.resource.data.balanceAfter >= 0
+        && request.resource.data.actorId == actorId();
+      allow update, delete: if false;
+    }
+
+    /** One-time QR ให้แต้ม coupons — issue/claim via Cloud Functions only. */
+    match /pointCoupons/{couponId} {
+      allow read: if membersHubView();
+      allow write: if false;
+    }
+
+    /** One-time spin-game play tickets — Cloud Functions (Admin) only. */
+    match /memberSpinPlays/{playId} {
+      allow read, write: if false;
+    }
+
+    /**
+     * เงินเดือน / บัญชีรับโอน / เบิกค้าง — แยกจากรายชื่อร้าน
+     * อ่าน: เจ้าของ · payrollPay · ของตัวเอง · เขียน: เจ้าของ / payrollPay / staffManage (ตั้งค่า)
+     */
+    match /employeePay/{empId} {
+      allow get: if canReadEmployeePay(empId);
+      allow list: if isOwner() || isOwnerEmail() || hasPerm('payrollPay') || staffHubManage();
+      allow create, update, delete: if isOwner() || isOwnerEmail() || hasPerm('payrollPay')
+        || staffHubManage();
+    }
+
+    // ผลิต / โบนัส — พนักงานกรอกแถว · เจ้าของตั้งสินค้า
+    match /prodProducts/{id} {
+      allow read: if hasPerm('production');
+      allow write: if isOwner();
+    }
+    // legacy — ย้ายไป employees แล้ว
+    match /prodWorkers/{id} {
+      allow read: if isStaff();
+      allow write: if staffHubManage();
+    }
+    /**
+     * อ่าน entry ผลิต/ชง รายเอกสาร — ต้องคู่กับ list
+     * (เดิมจำกัดแค่ workerIds/คนสร้าง ทำให้ getDoc ตอนบันทึกยอดย้อนหลัง
+     * ขึ้น Missing or insufficient permissions แม้เห็นฟอร์มจาก list ได้)
+     */
+    function canReadBonusEntry(perm) {
+      return isOwner() || isOwnerEmail() || hasPerm('payrollPay') || hasPerm(perm);
+    }
+
+    match /prodEntries/{id} {
+      allow get: if canReadBonusEntry('production');
+      allow list: if isOwner() || isOwnerEmail() || hasPerm('payrollPay') || hasPerm('production');
+      allow create: if hasPerm('production') && prodEntryCreate();
+      allow update: if hasPerm('production')
+        && (isOwner() || bonusEntryStaffUpdate());
+      allow delete: if isOwner();
+    }
+
+    // โบนัสชงเครื่องดื่ม
+    match /otEntries/{id} {
+      allow get: if canReadBonusEntry('otBonus');
+      allow list: if isOwner() || isOwnerEmail() || hasPerm('payrollPay') || hasPerm('otBonus');
+      allow create: if hasPerm('otBonus') && otEntryCreate();
+      allow update: if hasPerm('otBonus')
+        && (isOwner() || bonusEntryStaffUpdate());
+      allow delete: if isOwner();
+    }
+
+    /** พูลโบนัสสรุปเดือน — พนักงานอ่านได้ · เขียนโดยเจ้าของ/คนจ่าย */
+    match /bonusLivePool/{monthKey} {
+      allow read: if hasPerm('bonus');
+      allow create, update, delete: if isOwner() || isOwnerEmail() || hasPerm('payrollPay');
+    }
+
+    // SmartCheck SOP — บันทึกแนวตั้งต่อรายการ
+    match /checklistItems/{id} {
+      allow read: if hasPerm('checklist') || hasPerm('otBonus');
+      allow write: if isOwner();
+    }
+    match /checklistRecords/{id} {
+      allow read: if hasPerm('checklist') || hasPerm('otBonus');
+      allow create: if (hasPerm('checklist') || hasPerm('otBonus'))
+        && request.resource.data.createdBy == actorId()
+        && request.resource.data.checkId is string
+        && request.resource.data.itemName is string
+        && request.resource.data.status in ['pass', 'fail']
+        && (!request.resource.data.keys().hasAny(['sessionKind'])
+          || request.resource.data.sessionKind in ['opening', 'closing', 'full']);
+      allow delete: if isOwner();
+      allow update: if false;
+    }
+
+    // legacy collection — งานจริงอยู่ taskTemplates / taskOccurrences · ปิดการเขียนใหม่
+    match /assignTasks/{id} {
+      allow read: if isOwner() || isOwnerEmail();
+      allow write: if false;
+    }
+
+    function isTaskOccurrenceAssignee() {
+      return staffEmployeeId() != ''
+        && staffEmployeeId() in resource.data.assigneeIds;
+    }
+
+    function taskOccurrenceAssigneeComplete() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return isTaskOccurrenceAssignee()
+        && after.templateId == before.templateId
+        && after.periodKey == before.periodKey
+        && after.title == before.title
+        && after.note == before.note
+        && after.checklist == before.checklist
+        && after.assigneeIds == before.assigneeIds
+        && after.assigneeNames == before.assigneeNames
+        && after.dueDate == before.dueDate
+        && after.openAt == before.openAt
+        && after.createdAt == before.createdAt
+        && after.get('nudgeKind', 'deadline') == before.get('nudgeKind', 'deadline')
+        && after.diff(before).affectedKeys().hasOnly([
+          'checklistDone',
+          'progressNotes',
+          'proofImg',
+          'proofImgs',
+          'completionNote',
+          'status',
+          'completedAt',
+          'completedBy',
+          'completedKind',
+          'wasMissedBeforeBackfill',
+          'updatedAt',
+        ])
+        && (
+          !after.keys().hasAny(['progressNotes'])
+          || (after.progressNotes is list && after.progressNotes.size() <= 80)
+        );
+    }
+
+    match /taskTemplates/{id} {
+      allow read, create, update, delete: if isOwner() || isOwnerEmail();
+    }
+
+    match /taskOccurrences/{id} {
+      allow read: if isOwner() || isOwnerEmail() || isTaskOccurrenceAssignee();
+      allow create, delete: if isOwner() || isOwnerEmail();
+      allow update: if isOwner() || isOwnerEmail() || taskOccurrenceAssigneeComplete();
+    }
+
+    // ข้อเสนอจากพนักงาน (ไอคอนยูทิลิตี้) — ส่งได้ทุกคน · เปลี่ยนสถานะเฉพาะเจ้าของ
+    function staffSuggestionCreate() {
+      return isStaff()
+        && request.resource.data.keys().hasAll([
+          'title', 'body', 'status', 'createdBy', 'createdByName',
+          'employeeId', 'ownerNote', 'createdAt', 'updatedAt',
+        ])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 80
+        && request.resource.data.body is string
+        && request.resource.data.body.size() <= 500
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdBy == actorId()
+        && request.resource.data.createdByName is string
+        && request.resource.data.employeeId is string
+        && request.resource.data.ownerNote == ''
+        && request.resource.data.createdAt is number
+        && request.resource.data.updatedAt is number;
+    }
+
+    function staffSuggestionOwnerUpdate() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return isOwner()
+        && after.createdBy == before.createdBy
+        && after.createdAt == before.createdAt
+        && after.title == before.title
+        && after.body == before.body
+        && after.createdByName == before.createdByName
+        && after.employeeId == before.employeeId
+        && after.status in ['pending', 'accepted', 'later', 'done']
+        && after.ownerNote is string
+        && after.ownerNote.size() <= 200
+        && after.updatedAt is number
+        && after.diff(before).affectedKeys().hasOnly(['status', 'ownerNote', 'updatedAt']);
+    }
+
+    match /staffSuggestions/{id} {
+      allow read: if isOwner() || isOwnerEmail()
+        || (isStaff() && resource.data.createdBy == actorId());
+      allow create: if staffSuggestionCreate();
+      allow update: if staffSuggestionOwnerUpdate();
+      allow delete: if isOwner() || isOwnerEmail();
+    }
+
+    match /bonusDeductionMonths/{monthKey} {
+      allow read: if hasPerm('bonus');
+      allow write: if isOwner();
+    }
+
+    /**
+     * คิวจ่ายเงินเดือน + โบนัส — ระบบสร้างรายการรอโอนให้เจ้าของแนบสลิป
+     * อ่านทั้งร้าน: เจ้าของ / payrollPay · พนักงาน(bonus): เฉพาะ employeeId ของตัวเอง (ต้อง query กรอง)
+     * สร้าง/แก้/จ่าย: เจ้าของ
+     */
+    match /payrollItems/{id} {
+      allow get: if isOwner() || isOwnerEmail() || hasPerm('payrollPay')
+        || (hasPerm('bonus') && staffOwnsEmployee(resource.data.employeeId));
+      allow list: if isOwner() || isOwnerEmail() || hasPerm('payrollPay') || hasPerm('bonus');
+      allow create, update, delete: if isOwner() || isOwnerEmail();
+    }
+
+    /**
+     * ปิดเดือนโบนัส — snapshot ทั้งร้าน (มียอดทุกคน)
+     * อ่าน: เจ้าของ / payrollPay เท่านั้น — พนักงานห้าม (ดู bonusPersonalCloses ของตัวเอง)
+     */
+    match /bonusMonthCloses/{monthId} {
+      allow read: if isOwner() || isOwnerEmail() || hasPerm('payrollPay');
+      allow create, update, delete: if isOwner() || isOwnerEmail();
+    }
+
+    /** สถานะปิดเดือนอย่างเดียว (ไม่มียอดรายคน) — พนักงานอ่านได้เพื่อล็อกชง/ผลิต */
+    match /bonusMonthStatus/{monthId} {
+      allow read: if hasPerm('bonus') || hasPerm('otBonus') || hasPerm('production');
+      allow create, update, delete: if isOwner() || isOwnerEmail();
+    }
+
+    /** Snapshot โบนัสรายคนหลังปิดเดือน — เห็นได้แค่ของตัวเอง */
+    match /bonusPersonalCloses/{id} {
+      allow get: if canReadBonusPersonalClose(id);
+      allow list: if canReadBonusPersonalClose(id);
+      allow create, update, delete: if isOwner() || isOwnerEmail();
+    }
+
+    match /meta/{docId} {
+      // brandLogo + businessProfile text are public (no secrets) so login can show the mark
+      // aiSettings holds Gemini API key — owner-only read
+      // posStoreClaimSecret = full shop claim code — owner-only (never staff / POS)
+      // vatSalesSettings / vatMailOAuth — บัญชี VAT / token เมล — owner-only (พนักงานห้ามอ่าน)
+      allow read: if docId == 'businessProfile'
+        || docId == 'brandLogo'
+        // pointsSpinSettings = สัดส่วน/จำนวนช่องวงล้อ — ไม่มีความลับ อ่านได้เพื่อเล่นเกม
+        || docId == 'pointsSpinSettings'
+        || (docId == 'aiSettings' && isOwner())
+        || (docId == 'foodstoryAuth' && isOwner())
+        || (docId == 'posStoreClaimSecret' && isOwner())
+        || (docId == 'vatSalesSettings' && isOwner())
+        || (docId == 'vatImportAiNotes' && isOwner())
+        || (docId == 'vatDeliverySourceNotes' && isOwner())
+        || (docId == 'vatMailStudyNotes' && isOwner())
+        || (docId == 'vatAgentApi' && isOwner())
+        || (docId == 'vatMailStudyPass' && isOwner())
+        || (docId == 'vatDeliveryFreshStart' && isOwner())
+        || (docId == 'businessNotes' && isOwner())
+        || (docId == 'vatAgentChatPresence' && (isOwner() || isOwnerEmail()))
+        || (docId == 'vatMonthlySettings' && (isOwner() || isOwnerEmail()))
+        || (docId == 'personalTaxSettings' && (isOwner() || isOwnerEmail()))
+        || (docId == 'payrollPaymentDoc' && (isOwner() || isOwnerEmail() || isStaff()))
+        || (docId == 'vatMailOAuth' && isOwner())
+        || (docId == 'vatMailOAuthLineman' && isOwner())
+        || (docId == 'vatMailOAuthConfig' && isOwner())
+        || (docId == 'vatMailOAuthState' && isOwner())
+        || (docId == 'vatMailOAuthOutlook' && isOwner())
+        || (docId == 'vatMailOAuthConfigOutlook' && isOwner())
+        || (docId == 'vatMailOAuthStateOutlook' && isOwner())
+        || (docId == 'vatMailDrive' && isOwner())
+        || (docId == 'vatSalesAlertState' && isOwner())
+        || (docId == 'ownerLineNotify' && isOwner())
+        || (docId == 'ownerDailyDigestState' && isOwner())
+        || (docId == 'rateSchedule' && (isStaff() || hasPerm('production') || hasPerm('otBonus') || hasPerm('bonus')))
+        || (docId != 'aiSettings' && docId != 'foodstoryAuth' && docId != 'posStoreClaimSecret' && docId != 'vatSalesSettings' && docId != 'vatImportAiNotes' && docId != 'vatDeliverySourceNotes' && docId != 'vatMailStudyNotes' && docId != 'vatAgentApi' && docId != 'vatMailStudyPass' && docId != 'vatDeliveryFreshStart' && docId != 'businessNotes' && docId != 'vatAgentChatPresence' && docId != 'vatMonthlySettings' && docId != 'personalTaxSettings' && docId != 'vatMailOAuth' && docId != 'vatMailOAuthLineman' && docId != 'vatMailOAuthConfig' && docId != 'vatMailOAuthState' && docId != 'vatMailOAuthOutlook' && docId != 'vatMailOAuthConfigOutlook' && docId != 'vatMailOAuthStateOutlook' && docId != 'vatMailDrive' && docId != 'vatSalesAlertState' && docId != 'ownerLineNotify' && docId != 'ownerDailyDigestState' && isStaff())
+        || (isPosDeviceAuth() && (docId == 'ui' || docId == 'pos' || docId == 'posNativeRelease' || docId == 'posOpsNotes' || docId == 'posMenuRank'));
+      allow write: if isOwner()
+        || (isOwnerEmail() && (docId == 'vatMonthlySettings' || docId == 'personalTaxSettings' || docId == 'vatAgentChatPresence'))
+
+
+        || (hasPerm('ledger') && (docId == 'ledger' || docId == 'lowBalanceAlert'))
+        || (isOwner() && docId == 'lowBalanceAlert')
+        || (hasPerm('ownerBooks') && docId == 'ownerBooks')
+        || (hasPerm('ownerBooks') && docId == 'capitalBooks')
+        || (isOwner() && docId == 'otSettings')
+        || ((isOwner() || isOwnerEmail()) && docId == 'memberSettings')
+        || ((isOwner() || isOwnerEmail()) && docId == 'pointsSpinSettings')
+        || (isPosDeviceAuth() && docId == 'pos' && posMetaBillWrite());
+    }
+
+    match /pushSubscriptions/{id} {
+      allow read: if isOwner();
+      allow create, update: if isOwner()
+        && hasEmail()
+        && request.resource.data.email == authEmail()
+        && request.resource.data.endpoint is string
+        && request.resource.data.keys.keys().hasAll(['p256dh', 'auth']);
+      allow delete: if isOwner() && hasEmail() && resource.data.email == authEmail();
+    }
+
+    match /menuCategories/{id} {
+      allow read: if isStaff() || isPosDeviceAuth();
+      allow create: if isOwner() || posMenuCategoryCreate();
+      allow update, delete: if isOwner() || isPosDeviceAuth();
+    }
+
+    match /menuItems/{id} {
+      allow read: if isStaff() || isPosDeviceAuth();
+      allow create: if isOwner() || posMenuItemCreate();
+      allow update, delete: if isOwner() || isPosDeviceAuth();
+    }
+
+    match /menuOptionGroups/{id} {
+      allow read: if isStaff() || isPosDeviceAuth();
+      allow create, update, delete: if isOwner() || isPosDeviceAuth();
+    }
+
+    match /posSessions/{sessionId} {
+      // Owner + ledger staff (เทียบเงินนำเข้าต้องเห็นรอบค้าง) · device = รอบตัวเอง
+      allow read: if isOwner()
+        || hasPerm('ledger')
+        || (isPosDeviceAuth() && (
+          resource == null || resource.data.deviceId == request.auth.uid
+        ));
+      allow list: if isOwner() || hasPerm('ledger');
+      // Device open-round OR owner manual/external closed round (เคาน์เตอร์นอกโปรแกรม)
+      allow create: if (isPosDeviceAuth() && posSessionOpen())
+        || (isOwner()
+          && request.resource.data.source == 'manual'
+          && request.resource.data.status == 'closed'
+          && request.resource.data.deviceId == 'manual'
+          && request.resource.data.date is number
+          && request.resource.data.remitAmount is number
+          && request.resource.data.remitAmount >= 0);
+      allow update: if (isPosDeviceAuth() && (posSessionSaleBump() || posSessionClose())) || isOwner();
+      allow delete: if isOwner();
+    }
+
+    match /posSales/{id} {
+      // BO dashboard date-range queries — owner staff role or canonical owner email
+      allow read: if isOwner() || isOwnerEmail();
+      allow create: if isPosDeviceAuth() && posSaleCreate();
+      allow update, delete: if isOwner() || isOwnerEmail();
+    }
+
+    match /nposDiagnose/{installId} {
+      // Written only by Admin SDK (reportNposDiagnose Cloud Function).
+      allow read: if isOwner() || isOwnerEmail();
+      allow write: if false;
+    }
+
+    match /nposOpsLog/{installId} {
+      // Compact device timeline — Admin SDK write only (reportNposOpsLog).
+      allow read: if isOwner() || isOwnerEmail();
+      allow write: if false;
+    }
+
+    match /nposScreenShots/{shotId} {
+      // Screen captures — Admin SDK write only (reportNposScreenCapture).
+      allow read: if isOwner() || isOwnerEmail();
+      allow write: if false;
+    }
+
+    match /posDevices/{deviceId} {
+      allow read: if isOwner() || isOwnerEmail()
+        || (isPosDeviceAuth() && deviceId == request.auth.uid);
+      allow list: if isOwner() || isOwnerEmail();
+      allow create: if isPosDeviceAuth()
+        && deviceId == request.auth.uid
+        && posDeviceCreate();
+      allow update: if (isPosDeviceAuth()
+          && deviceId == request.auth.uid
+          && posDeviceHeartbeat())
+        || ((isOwner() || isOwnerEmail()) && posDeviceOwnerPatch());
+      allow delete: if isOwner() || isOwnerEmail();
+    }
+
+    match /loginTickets/{ticketId} {
+      // ตั๋วสั้นอายุ · id ยาวแบบสุ่ม — อ่านได้เสมอเพื่อไม่ให้ client ค้าง permission-denied/timeout
+      // ตอนตั๋วหมดอายุ (client ตรวจ exp เอง)
+      allow create: if hasEmail()
+        && signedIn()
+        && request.resource.data.keys().hasOnly(['idToken', 'createdAt', 'exp'])
+        && request.resource.data.idToken is string
+        && request.resource.data.idToken.size() > 20
+        && request.resource.data.idToken.size() < 12000
+        && request.resource.data.createdAt is number
+        && request.resource.data.exp is number
+        && request.resource.data.exp > request.time.toMillis()
+        && request.resource.data.exp < request.time.toMillis() + 600000;
+      allow get: if true;
+      allow delete: if true;
+      allow list, update: if false;
+    }
+
+    // TaxTag (https://taxtag.web.app) — same Firebase project, own collection only.
+    // Keep these rules here: never deploy a Tax-only firestore.rules or it wipes TellTea.
+    match /taxtag/{uid} {
+      allow read, write: if request.auth != null
+        && request.auth.uid == uid
+        && request.auth.token.email == 'yohaken@gmail.com';
+    }
+
+    // Cal Tracker (https://caltracker-th.web.app) — same Firebase project.
+    // Sibling must deploy hosting only; keep userData rules here so TellTea
+    // deploys do not wipe cal-tracker (and cal-tracker must never ship a tiny rules file).
+    match /userData/{userId} {
+      allow read, write: if request.auth != null
+        && request.auth.uid == userId;
+      match /{document=**} {
+        allow read, write: if request.auth != null
+          && request.auth.uid == userId;
+      }
+    }
+  }
+}

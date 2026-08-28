@@ -32,8 +32,10 @@ assert.match(reloadSrc, /pendingSyncCount/);
 assert.match(readFileSync(join(root, "src/components/PosSyncWatcher.tsx"), "utf8"), /runPosSyncFlush/);
 assert.match(readFileSync(join(root, "src/lib/pos-outbox.ts"), "utf8"), /telltea-pos-sync/);
 assert.match(readFileSync(join(root, "functions/pos-complete-sale.js"), "utf8"), /clientMutationId/);
-assert.match(rulesSrc, /posDevice == true/);
-assert.match(rulesSrc, /posSessionClose/);
+// Slim shop rules: any signed-in Auth (incl. anonymous POS) can read/write shop paths
+assert.match(rulesSrc, /function signedIn\(/);
+assert.match(rulesSrc, /request\.auth != null/);
+assert.match(rulesSrc, /collection != 'taxtag'/);
 assert.match(readFileSync(join(root, "functions/index.js"), "utf8"), /posDeviceAuth/);
 assert.match(readFileSync(join(root, "functions/index.js"), "utf8"), /posCompleteSale/);
 assert.match(readFileSync(join(root, "src/lib/pos-sales.ts"), "utf8"), /recordSaleInstant/);

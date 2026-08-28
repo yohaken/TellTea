@@ -1,10 +1,8 @@
 /**
- * Verify production Firestore rules contain required staff-permission markers.
- * Fails CI if repo rules shipped but live rules are stale (Rules API 503 drift).
+ * Verify production Firestore rules match slim shop model.
  *
  * Usage:
- *   GOOGLE_APPLICATION_CREDENTIALS=... node scripts/verify-firestore-rules-deploy.mjs
- *   FIREBASE_SERVICE_ACCOUNT='{...}' node scripts/verify-firestore-rules-deploy.mjs
+ *   node scripts/verify-firestore-rules-deploy.mjs
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -15,21 +13,20 @@ import { GoogleAuth } from "google-auth-library";
 const PROJECT = "mypeer-501909";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-/** Must exist in live rules — staff bonus / roster path */
-const CORE_MARKERS = [
-  "function staffOwnsEmployee",
-  "function canReadBonusPersonalClose",
-  "function resolvedStaffId",
+/** Must exist in live slim rules */
+const SLIM_MARKERS = [
+  "function signedIn",
+  "collection != 'taxtag'",
+  "collection != 'userData'",
+  "match /loginTickets/{ticketId}",
 ];
 
-/** Present in full firestore.rules — optional when emergency slim rules are live */
-const FULL_MARKERS = [
+/** Old bloated markers — should be gone after slim deploy */
+const LEGACY_MARKERS = [
   "function hasPermFromLevel",
-  "function linkedLevelActive",
+  "function levelPerms",
   "function staffHasBrokenLevelLink",
 ];
-
-const LIVE_MARKERS = [...CORE_MARKERS, ...FULL_MARKERS];
 
 function loadCredentials() {
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT || process.env.FIREBASE_KEY;
@@ -91,30 +88,30 @@ async function fetchLiveRulesSource(token) {
 
 async function main() {
   const repoRules = readFileSync(join(root, "firestore.rules"), "utf8");
-  for (const marker of LIVE_MARKERS) {
+  for (const marker of SLIM_MARKERS) {
     assert.match(repoRules, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
 
   const token = await getToken();
   const live = await fetchLiveRulesSource(token);
 
-  const missingCore = CORE_MARKERS.filter((m) => !live.source.includes(m));
-  if (missingCore.length) {
-    console.error("LIVE rules missing core markers (stale / wiped deploy):");
-    for (const m of missingCore) console.error(`  - ${m}`);
+  const missingSlim = SLIM_MARKERS.filter((m) => !live.source.includes(m));
+  if (missingSlim.length) {
+    console.error("LIVE rules missing slim markers (stale / not deployed):");
+    for (const m of missingSlim) console.error(`  - ${m}`);
     console.error(`release: ${live.rulesetName} @ ${live.releaseTime}`);
     process.exit(1);
   }
 
-  const missingFull = FULL_MARKERS.filter((m) => !live.source.includes(m));
-  const mode = missingFull.length ? "emergency-slim" : "full";
+  const leftover = LEGACY_MARKERS.filter((m) => live.source.includes(m));
+  const mode = leftover.length ? "slim-partial" : "slim";
 
   console.log(
     `OK live firestore rules · ${mode} · ${live.rulesetName} @ ${live.releaseTime}`,
   );
-  if (missingFull.length) {
-    console.warn("full rules markers not live (Firebase 503 on large ruleset):");
-    for (const m of missingFull) console.warn(`  - ${m}`);
+  if (leftover.length) {
+    console.warn("legacy markers still live (unexpected):");
+    for (const m of leftover) console.warn(`  - ${m}`);
   }
 }
 

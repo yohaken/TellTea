@@ -1,10 +1,8 @@
 /**
- * Guard: TellTea firestore.rules must stay complete before any firebase deploy.
+ * Guard: TellTea firestore.rules — slim shop model (signed-in can work).
  *
- * Why: sibling apps on the same project (e.g. TaxTag / taxtag.web.app) once
- * deployed a tiny rules file and wiped ledger/staff/POS access for the shop.
- *
- * Canonical rules live ONLY in this repo. Sibling apps must deploy hosting only.
+ * Sibling apps on mypeer-501909 must NOT deploy their own rules file.
+ * Canonical rules live ONLY in this repo. See firestore.rules.full.bak for archive.
  */
 import assert from "node:assert/strict";
 import { readFileSync, existsSync } from "node:fs";
@@ -17,6 +15,7 @@ const firebasePath = join(root, "firebase.json");
 
 assert.ok(existsSync(rulesPath), "missing firestore.rules");
 const rules = readFileSync(rulesPath, "utf8");
+const lines = rules.split("\n").length;
 const firebase = JSON.parse(readFileSync(firebasePath, "utf8"));
 
 assert.equal(
@@ -25,152 +24,32 @@ assert.equal(
   "firebase.json must point firestore.rules at this repo file",
 );
 
-/** Core TellTea / POS paths — if any go missing, shop breaks. */
-const REQUIRED_MATCHES = [
-  "staff",
-  "staffPhones",
-  "staffEmails",
-  "staffLoginSecrets",
-  "staffNicknames",
-  "permissionLevels",
-  "ledger",
-  "cashDeposits",
-  "billNotices",
-  "ownerBooks",
-  "capitalBooks",
-  "evidencePhotos",
-  "monthlyIncome",
-  "stock",
-  "stockCosts",
-  "employees",
-  "employeePay",
-  "members",
-  "memberLedger",
-  "memberSpinPlays",
-  "pointCoupons",
-  "payrollItems",
-  "bonusLivePool",
-  "bonusMonthCloses",
-  "bonusMonthStatus",
-  "bonusPersonalCloses",
-  "prodEntries",
-  "otEntries",
-  "checklistRecords",
-  "staffSuggestions",
-  "meta",
-  "loginTickets",
-  "posSales",
-  "posDevices",
-  "nposDiagnose",
-  "nposOpsLog",
-  "nposScreenShots",
-  "menuItems",
-  "dailySales",
-  "platformEmailReports",
-  "vatDeliveryMonthProposals",
-  "vatDeliveryIngestDrafts",
-  "vatMonthCloses",
-  "vatMonthlyReturns",
-  "vatInputInvoices",
-  "vatSalesAudit",
-  "vatAgentChat",
-];
-
-
-/** Sibling apps that share mypeer-501909 — keep their collections here too. */
-const SHARED_APP_MATCHES = [
-  // https://taxtag.web.app — collection taxtag/{uid}
-  "taxtag",
-  // https://caltracker-th.web.app — collection userData/{userId}
-  "userData",
-];
-
-const matchNames = [...rules.matchAll(/match\s+\/([A-Za-z0-9_]+)\/\{/g)].map((m) => m[1]);
-const unique = new Set(matchNames);
-
 assert.ok(
-  matchNames.length >= 20,
-  `firestore.rules looks too small (${matchNames.length} top-level matches) — possible wipe/overwrite`,
+  lines <= 55,
+  `firestore.rules too long (${lines} lines) — keep slim shop model ≤50`,
 );
+assert.ok(lines >= 20, `firestore.rules suspiciously short (${lines} lines)`);
 
-for (const name of REQUIRED_MATCHES) {
-  assert.ok(unique.has(name), `missing required match /${name}/{…} in firestore.rules`);
-}
-
-for (const name of SHARED_APP_MATCHES) {
-  assert.ok(
-    unique.has(name),
-    `missing shared-app match /${name}/{…} — add rules in TellTea before sibling hosting uses it`,
-  );
-}
-
-assert.match(rules, /function isStaff\(/);
-assert.match(rules, /function hasPerm\(/);
-assert.match(rules, /function staffPresenceTouch\(/);
-assert.match(rules, /function isOwnStaffDoc\(/);
-assert.match(rules, /staffId == resolvedStaffId\(\) && staffPresenceTouch\(\)/);
-assert.match(rules, /isOwnStaffDoc\(staffId\) && staffPresenceTouch\(\)/);
-assert.match(rules, /function canReadEmployeePay\(/);
-assert.match(rules, /match \/bonusMonthStatus\/\{monthId\}/);
-assert.match(rules, /match \/bonusPersonalCloses\/\{id\}/);
-assert.match(
-  rules,
-  /match \/bonusMonthCloses\/\{monthId\}[\s\S]*?allow read: if isOwner\(\) \|\| isOwnerEmail\(\) \|\| hasPerm\('payrollPay'\)/,
-);
-assert.match(rules, /function staffHubUpdateOk\(/);
-assert.match(rules, /payrollPay/);
+assert.match(rules, /function signedIn\(/);
+assert.match(rules, /request\.auth != null/);
 assert.match(rules, /yohaken@gmail\.com/);
-// ledger: staff cannot freely update/delete all rows
-assert.match(rules, /resource\.data\.createdBy == actorId\(\)/);
-assert.match(rules, /resource\.data\.amountIn == 0/);
-// payrollItems: self-scoped get for bonus staff
-assert.match(rules, /function staffOwnsEmployee\(/);
-assert.match(rules, /function linkedLevelActive\(/);
-assert.match(rules, /function staffHasBrokenLevelLink\(/);
-assert.match(rules, /docId == 'rateSchedule'/);
-assert.match(rules, /function personalCloseEmployeeId\(/);
-assert.match(rules, /staffOwnsEmployee\(resource\.data\.employeeId\)/);
-assert.match(rules, /match \/stockCosts\/\{itemId\}/);
-assert.match(rules, /match \/bonusLivePool\/\{monthKey\}/);
-assert.match(rules, /canReadBonusEntry/);
-// get ต้องคู่ list — hasPerm(perm) ไม่จำกัด workerIds (ลงยอดย้อนหลัง)
+assert.match(rules, /match \/loginTickets\/\{ticketId\}/);
+assert.match(rules, /match \/taxtag\/\{uid\}/);
+assert.match(rules, /match \/userData\/\{userId\}/);
+assert.match(rules, /collection != 'taxtag'/);
+assert.match(rules, /collection != 'userData'/);
 assert.match(
   rules,
-  /function canReadBonusEntry\(perm\) \{[\s\S]*?hasPerm\(perm\);/,
-);
-assert.match(
-  rules,
-  /Never deploy a Tax-only firestore\.rules|Canonical Firestore rules|TaxTag/,
+  /Canonical Firestore rules|Sibling apps|firestore\.rules\.full\.bak|TaxTag/i,
 );
 
-// VAT / daily sales — owner-only + light write validation
-assert.match(rules, /match \/dailySales\/\{dateId\}/);
-assert.match(rules, /match \/vatDeliveryMonthProposals\/\{monthId\}/);
-assert.match(rules, /match \/vatMonthlyReturns\/\{monthId\}/);
-assert.match(rules, /request\.resource\.data\.dateKey == dateId/);
-assert.match(rules, /vatMonthlyReturns\/\{monthId\}[\s\S]*?isOwner\(\) \|\| isOwnerEmail\(\)/);
-assert.match(rules, /vatSalesSettings' && isOwner\(\)/);
-assert.match(rules, /vatImportAiNotes' && isOwner\(\)/);
-assert.match(rules, /vatDeliverySourceNotes' && isOwner\(\)/);
-assert.match(rules, /businessNotes' && isOwner\(\)/);
-assert.match(rules, /vatMailStudyNotes' && isOwner\(\)/);
-assert.match(rules, /vatAgentApi' && isOwner\(\)/);
-assert.match(rules, /vatMailStudyPass' && isOwner\(\)/);
-assert.match(rules, /vatDeliveryFreshStart' && isOwner\(\)/);
-assert.match(rules, /match \/vatAgentChat\/\{msgId\}/);
-assert.match(rules, /vatAgentChatPresence'/);
-
-
-assert.match(rules, /vatMonthlySettings' && \(isOwner\(\) \|\| isOwnerEmail\(\)\)/);
-assert.match(rules, /personalTaxSettings' && \(isOwner\(\) \|\| isOwnerEmail\(\)\)/);
-assert.match(rules, /vatMailOAuth' && isOwner\(\)/);
+// Deny-all wipe pattern (sibling accident)
 assert.doesNotMatch(
   rules,
-  /PERMISSION_KEYS|ownerBooks.*vat|vatSales.*hasPerm/,
-  "VAT must not be grantable via permissions",
+  /match \/\{document=\*\*\}[\s\S]{0,80}allow read, write: if false/,
+  "must not be a deny-all wipe ruleset",
 );
 
-// Sibling template must stay hosting-only (no firestore key) so copy-paste is safe.
 const templatePath = join(root, "scripts/templates/firebase.hosting-only.json");
 assert.ok(existsSync(templatePath), "missing scripts/templates/firebase.hosting-only.json");
 const template = JSON.parse(readFileSync(templatePath, "utf8"));
@@ -181,6 +60,4 @@ assert.equal(
 );
 assert.ok(template.hosting, "hosting-only template needs hosting");
 
-console.log(
-  `OK firestore-rules guard · ${unique.size} collections · shared apps: ${SHARED_APP_MATCHES.join(", ")}`,
-);
+console.log(`OK firestore-rules guard · slim · ${lines} lines · shop signedIn + sibling own-uid`);
