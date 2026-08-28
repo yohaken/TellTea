@@ -58,27 +58,11 @@ function isPermissionDenied(err: unknown): boolean {
   );
 }
 
-/** Staff-first loader — callable ก่อน แล้วค่อย client Firestore (owner path). */
+/** Prefer client Firestore (slim signed-in rules). Callable only as fallback. */
 export async function loadStaffLedgerFromServer(
   opts?: { limit?: number; staffRole?: string | null },
 ): Promise<{ bundle: StaffLedgerBundle } | { error: string }> {
   const limit = opts?.limit ?? LEDGER_PAGE_SIZE;
-  const isOwner = opts?.staffRole === "owner";
-
-  if (!isOwner) {
-    try {
-      return { bundle: await loadStaffLedgerBundleViaCallable(limit) };
-    } catch (callableErr) {
-      const code = (callableErr as { code?: string })?.code || "";
-      const msg = (callableErr as Error)?.message || "";
-      const missing =
-        code === "functions/not-found" ||
-        /not-found|404|UNIMPLEMENTED/i.test(msg);
-      if (!missing && !isPermissionDenied(callableErr)) {
-        return { error: msg || "โหลดบัญชีไม่สำเร็จ" };
-      }
-    }
-  }
 
   try {
     const { listLedgerPage, getLedgerBalance } = await import("./ledger");
@@ -96,15 +80,14 @@ export async function loadStaffLedgerFromServer(
       },
     };
   } catch (err) {
-    if (isPermissionDenied(err)) {
-      try {
-        await getFirebaseAuth().currentUser?.getIdToken(true);
-        return { bundle: await loadStaffLedgerBundleViaCallable(limit) };
-      } catch (retryErr) {
-        const msg = (retryErr as Error)?.message || "โหลดบัญชีไม่สำเร็จ";
-        return { error: msg };
-      }
+    if (!isPermissionDenied(err)) {
+      return { error: (err as Error)?.message || "โหลดบัญชีไม่สำเร็จ" };
     }
-    return { error: (err as Error)?.message || "โหลดบัญชีไม่สำเร็จ" };
+    try {
+      await getFirebaseAuth().currentUser?.getIdToken(true);
+      return { bundle: await loadStaffLedgerBundleViaCallable(limit) };
+    } catch (retryErr) {
+      return { error: (retryErr as Error)?.message || "โหลดบัญชีไม่สำเร็จ" };
+    }
   }
 }

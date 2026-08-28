@@ -247,7 +247,6 @@ function LedgerView() {
     else setLoading(true);
 
     let cancelled = false;
-    let pollTimer: ReturnType<typeof setInterval> | undefined;
 
     const applyBundle = (
       entriesRaw: LedgerEntry[],
@@ -289,13 +288,27 @@ function LedgerView() {
     };
 
     if (!isOwner) {
-      void loadViaCallable();
-      pollTimer = setInterval(() => {
-        void loadViaCallable();
-      }, 60_000);
+      // Slim rules: staff uses live snapshot like owner; callable only on deny.
+      const unsubStaff = subscribeLedgerPage(
+        liveLimit,
+        (page) => {
+          applyBundle(page.entries, page.hasMore, balanceRef.current);
+        },
+        (err) => {
+          const msg = err.message || "โหลดบัญชีไม่สำเร็จ";
+          if (/insufficient permissions/i.test(msg)) {
+            void loadViaCallable();
+            return;
+          }
+          setLoading(false);
+          setRefreshing(false);
+          setLoadingMore(false);
+          if (!hasRowsRef.current) setError(msg);
+        },
+      );
       return () => {
         cancelled = true;
-        if (pollTimer) clearInterval(pollTimer);
+        unsubStaff();
       };
     }
 
