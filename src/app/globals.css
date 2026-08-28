@@ -371,7 +371,22 @@ body.modal-open .main-panel {
 }
 
 .hero-brand .brand {
+  display: block;
+  margin: 0.35rem 0 0;
+  color: #f7f3e8;
+  font-size: 1rem;
+  line-height: 1.2;
+  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.hero-brand .brand-name {
   display: none;
+}
+
+.hero-brand .brand-version {
+  font-size: 1em;
+  font-weight: 700;
+  color: rgba(247, 243, 232, 0.92);
 }
 
 .hero-copy .brand-wrap:not(.hero-brand) .brand-logo {
