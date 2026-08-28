@@ -1,5 +1,6 @@
 rules_version = '2';
 // Emergency slim rules — deploy when full firestore.rules hits Firebase 503.
+// Staff READ: เปิดทั้งหมด (isStaff) — UI/เมนูกรองว่าเห็นอะไร · WRITE ยังใช้ hasPerm
 // After publish succeeds, merge back into firestore.rules and re-deploy when API allows.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -63,6 +64,10 @@ service cloud.firestore {
     }
     function isOwner() {
       return isStaff() && get(staffPath()).data.role == 'owner';
+    }
+    /** พนักงานที่ล็อกอินแล้ว — อ่าน DB ได้ทั้งหมด · เขียนยังใช้ hasPerm / owner */
+    function staffReadAll() {
+      return isStaff() || isOwner() || isOwnerEmail();
     }
     function staffEmployeeId() {
       return isStaff()
@@ -138,7 +143,7 @@ service cloud.firestore {
             && (p == 'production' || p == 'otBonus' || p == 'checklist' || p == 'bonus'));
     }
     function canReadBonusEntry(perm) {
-      return isOwner() || isOwnerEmail() || hasPerm('payrollPay') || hasPerm(perm);
+      return staffReadAll();
     }
     function actorId() {
       return hasEmail() ? authEmail() : authPhone();
@@ -149,8 +154,7 @@ service cloud.firestore {
         : '';
     }
     function canReadBonusPersonalClose(docId) {
-      return isOwner() || isOwnerEmail() || hasPerm('bonus')
-        || staffOwnsEmployee(personalCloseEmpId(docId));
+      return staffReadAll();
     }
     function hubManage() {
       return isOwner() || isOwnerEmail() || hasPerm('staffManage');
@@ -158,11 +162,11 @@ service cloud.firestore {
 
     match /staff/{staffId} {
       allow get: if signedIn() && (staffId == resolvedStaffId() || hubManage());
-      allow list: if hubManage();
+      allow list: if staffReadAll();
       allow create, update, delete: if hubManage() || isOwnerEmail();
     }
     match /permissionLevels/{levelId} {
-      allow read: if isStaff() || isOwnerEmail();
+      allow read: if staffReadAll();
       allow write: if hubManage();
     }
     match /staffPhones/{phoneId} {
@@ -184,84 +188,92 @@ service cloud.firestore {
     }
 
     match /employees/{id} {
-      allow read: if isStaff() || isOwnerEmail();
+      allow read: if staffReadAll();
       allow write: if isOwner() || isOwnerEmail() || hasPerm('staffManage');
     }
     match /employeePay/{empId} {
-      allow read: if isOwner() || isOwnerEmail() || hasPerm('payrollPay') || staffOwnsEmployee(empId);
+      allow read: if staffReadAll();
       allow write: if isOwner() || isOwnerEmail() || hasPerm('payrollPay');
     }
     match /prodProducts/{id} {
-      allow read: if isStaff() || isOwnerEmail();
+      allow read: if staffReadAll();
       allow write: if isOwner() || isOwnerEmail() || hasPerm('production');
     }
     match /prodWorkers/{id} {
-      allow read: if isStaff() || isOwnerEmail();
+      allow read: if staffReadAll();
       allow write: if isOwner() || isOwnerEmail() || hasPerm('production');
     }
     match /prodEntries/{id} {
-      allow get: if canReadBonusEntry('production');
-      allow list: if isOwner() || isOwnerEmail() || hasPerm('payrollPay') || hasPerm('production');
+      allow get: if staffReadAll();
+      allow list: if staffReadAll();
       allow create: if isOwner() || isOwnerEmail() || hasPerm('production');
       allow update, delete: if isOwner() || isOwnerEmail() || hasPerm('production');
     }
     match /otEntries/{id} {
-      allow get: if canReadBonusEntry('otBonus');
-      allow list: if isOwner() || isOwnerEmail() || hasPerm('payrollPay') || hasPerm('otBonus');
+      allow get: if staffReadAll();
+      allow list: if staffReadAll();
       allow create: if isOwner() || isOwnerEmail() || hasPerm('otBonus');
       allow update, delete: if isOwner() || isOwnerEmail() || hasPerm('otBonus');
     }
     match /bonusLivePool/{monthKey} {
-      allow read: if isOwner() || isOwnerEmail() || hasPerm('bonus');
+      allow read: if staffReadAll();
       allow write: if isOwner() || isOwnerEmail() || hasPerm('bonus');
     }
     match /bonusDeductionMonths/{monthKey} {
-      allow read: if isOwner() || isOwnerEmail() || hasPerm('bonus');
+      allow read: if staffReadAll();
       allow write: if isOwner() || isOwnerEmail() || hasPerm('bonus');
     }
     match /bonusMonthCloses/{monthId} {
-      allow read: if isOwner() || isOwnerEmail() || hasPerm('bonus');
+      allow read: if staffReadAll();
       allow write: if isOwner() || isOwnerEmail() || hasPerm('bonus');
     }
     match /bonusMonthStatus/{monthId} {
-      allow read: if isOwner() || isOwnerEmail() || hasPerm('bonus');
+      allow read: if staffReadAll();
       allow write: if isOwner() || isOwnerEmail() || hasPerm('bonus');
     }
     match /bonusPersonalCloses/{id} {
-      allow read: if canReadBonusPersonalClose(id);
+      allow read: if staffReadAll();
       allow write: if isOwner() || isOwnerEmail() || hasPerm('bonus');
     }
     match /payrollItems/{id} {
-      allow read: if isOwner() || isOwnerEmail() || hasPerm('payrollPay');
+      allow read: if staffReadAll();
       allow write: if isOwner() || isOwnerEmail() || hasPerm('payrollPay');
     }
 
     match /ledger/{entryId} {
-      allow read, write: if hasPerm('ledger') || isOwnerEmail();
+      allow read: if staffReadAll();
+      allow write: if hasPerm('ledger') || isOwnerEmail();
     }
     match /cashDeposits/{entryId} {
-      allow read, write: if hasPerm('ledger') || isOwnerEmail();
+      allow read: if staffReadAll();
+      allow write: if hasPerm('ledger') || isOwnerEmail();
     }
     match /billNotices/{entryId} {
-      allow read, write: if hasPerm('ledger') || isOwnerEmail();
+      allow read: if staffReadAll();
+      allow write: if hasPerm('ledger') || isOwnerEmail();
     }
     match /ownerBooks/{entryId} {
-      allow read, write: if isOwner() || isOwnerEmail();
+      allow read: if staffReadAll();
+      allow write: if isOwner() || isOwnerEmail();
     }
     match /capitalBooks/{entryId} {
-      allow read, write: if isOwner() || isOwnerEmail();
+      allow read: if staffReadAll();
+      allow write: if isOwner() || isOwnerEmail();
     }
     match /evidencePhotos/{photoId} {
-      allow read, write: if hasPerm('ledger') || isOwnerEmail();
+      allow read: if staffReadAll();
+      allow write: if hasPerm('ledger') || isOwnerEmail();
     }
     match /monthlyIncome/{monthId} {
-      allow read, write: if isOwner() || isOwnerEmail();
+      allow read: if staffReadAll();
+      allow write: if isOwner() || isOwnerEmail();
     }
     match /dailySales/{dateId} {
-      allow read, write: if isOwner() || isOwnerEmail() || hasPerm('ledger');
+      allow read: if staffReadAll();
+      allow write: if isOwner() || isOwnerEmail() || hasPerm('ledger');
     }
     match /meta/{docId} {
-      allow read: if isStaff() || isOwnerEmail();
+      allow read: if staffReadAll();
       allow write: if isOwner() || isOwnerEmail();
     }
     match /loginTickets/{ticketId} {
@@ -281,7 +293,8 @@ service cloud.firestore {
     }
 
     match /{document=**} {
-      allow read, write: if isOwner() || isOwnerEmail();
+      allow read: if staffReadAll();
+      allow write: if isOwner() || isOwnerEmail();
     }
   }
 }
