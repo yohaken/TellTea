@@ -125,6 +125,7 @@ assert.equal(materialize({ bonus: true }).ledger, false);
 assert.equal(materialize({ bonus: true }).bonus, true);
 
 const levels = read("src/lib/permission-levels.ts");
+assert.match(levels, /full_access/);
 assert.match(levels, /syncLevelPermissionsToLinkedStaff/);
 assert.match(levels, /ensurePermissionLevelSeeds/);
 assert.match(levels, /seed\.isSystem/);

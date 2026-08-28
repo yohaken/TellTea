@@ -33,6 +33,8 @@ export const SEED_LEVEL_IDS = {
   shopStaff: "shop_staff",
   shiftLead: "shift_lead",
   ownerAssist: "owner_assist",
+  /** สิทธิครบชุดเดียวกับเจ้าของ — มอบให้พนักงานได้ (role ยังเป็น staff) */
+  fullAccess: "full_access",
   owner: "owner",
 } as const;
 
@@ -80,6 +82,14 @@ export const SEED_PERMISSION_LEVELS: Omit<PermissionLevel, "createdAt" | "update
     active: true,
     isSystem: false,
     permissions: { ...OWNER_ASSIST_PERMISSIONS },
+  },
+  {
+    id: SEED_LEVEL_IDS.fullAccess,
+    name: "สิทธิเต็ม (เท่าเจ้าของ)",
+    sortOrder: 90,
+    active: true,
+    isSystem: true,
+    permissions: { ...OWNER_PERMISSIONS },
   },
   {
     id: SEED_LEVEL_IDS.owner,
