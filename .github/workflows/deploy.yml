@@ -120,6 +120,17 @@ jobs:
         run: node scripts/enable-anonymous-auth.mjs
         continue-on-error: true
 
+      - name: Enable email/password sign-in (staff BO)
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node scripts/enable-email-password-auth.mjs
+        continue-on-error: true
+
+      - name: Sync staff email passwords from phone roster
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node scripts/batch-set-staff-email-password.mjs
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:

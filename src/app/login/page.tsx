@@ -15,7 +15,7 @@ function isInAppBrowser() {
   return /Line\//i.test(ua) || /FBAN|FBAV/i.test(ua) || /Instagram/i.test(ua);
 }
 
-type LoginMode = "pin" | "google" | "phone";
+type LoginMode = "email" | "google";
 
 export default function LoginPage() {
   const {
@@ -23,20 +23,15 @@ export default function LoginPage() {
     busyReason,
     staff,
     signIn,
-    signInWithStaffPin,
+    signInWithStaffEmailPassword,
     signOut,
-    sendPhoneLoginOtp,
-    confirmPhoneLoginOtp,
     error,
   } = useAuth();
   const router = useRouter();
   const [inApp, setInApp] = useState(false);
-  const [mode, setMode] = useState<LoginMode>("pin");
-  const [nickname, setNickname] = useState("");
-  const [pin, setPin] = useState("");
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
+  const [mode, setMode] = useState<LoginMode>("email");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [showEscape, setShowEscape] = useState(false);
@@ -45,7 +40,6 @@ export default function LoginPage() {
     setInApp(isInAppBrowser());
   }, []);
 
-  /** Agent/QA: /login/?qaToken=<firebase-custom-token>&next=/ledger/?transferIn=1 */
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
@@ -93,41 +87,14 @@ export default function LoginPage() {
   const signingIn = busyReason === "bridge" || busyReason === "staff";
   const displayError = localError || error;
 
-  async function onPinLogin(e: FormEvent) {
+  async function onEmailLogin(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
     setLocalError(null);
     try {
-      await signInWithStaffPin(nickname, pin);
+      await signInWithStaffEmailPassword(email, password);
     } catch (err) {
-      setLocalError((err as Error).message || "เข้าด้วย PIN ไม่สำเร็จ");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onSendOtp(e: FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setLocalError(null);
-    try {
-      await sendPhoneLoginOtp(phone, "phone-recaptcha");
-      setOtpSent(true);
-    } catch (err) {
-      setLocalError((err as Error).message || "ส่ง OTP ไม่สำเร็จ");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onConfirmOtp(e: FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setLocalError(null);
-    try {
-      await confirmPhoneLoginOtp(otp);
-    } catch (err) {
-      setLocalError((err as Error).message || "ยืนยัน OTP ไม่สำเร็จ");
+      setLocalError((err as Error).message || "เข้าสู่ระบบไม่สำเร็จ");
     } finally {
       setBusy(false);
     }
@@ -154,9 +121,9 @@ export default function LoginPage() {
         {displayError ? <p className="error-text">{displayError}</p> : null}
         {status === "denied" ? (
           <p className="muted" style={{ marginBottom: "0.75rem", textAlign: "left" }}>
-            บัญชีที่เข้าอยู่ยังไม่ตรงรายชื่อร้าน — เจ้าของร้านใช้ Google{" "}
+            บัญชีที่เข้าอยู่ยังไม่ตรงรายชื่อร้าน — เจ้าของใช้ Google{" "}
             <strong>yohaken@gmail.com</strong>
-            · พนักงานใช้ชื่อในร้าน + PIN (6 หลักท้ายเบอร์โทร)
+            · พนักงานใช้อีเมลที่ลงทะเบียน + รหัสผ่าน = เบอร์โทร 10 หลัก
           </p>
         ) : null}
         {busyReason === "bridge" ? (
@@ -192,23 +159,23 @@ export default function LoginPage() {
         ) : null}
 
         <p className="muted" style={{ marginBottom: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>
-          <strong>พนักงาน:</strong> ชื่อในร้าน + PIN (6 หลักท้ายเบอร์โทร) — ไม่ต้องใช้ Gmail
+          <strong>พนักงาน:</strong> อีเมลที่ลงทะเบียน + รหัสผ่าน = เบอร์โทร 10 หลัก (เช่น 0985081617)
           <br />
-          <strong>เจ้าของ:</strong> Google · เปิดใน Chrome/Safari (อย่าเปิดจาก LINE)
+          <strong>เจ้าของ:</strong> Google · เปิดใน Chrome/Safari
         </p>
 
         <div className="login-mode-tabs" role="tablist" aria-label="วิธีเข้าสู่ระบบ">
           <button
             type="button"
             role="tab"
-            aria-selected={mode === "pin"}
-            className={cn("login-mode-tab", mode === "pin" && "active")}
+            aria-selected={mode === "email"}
+            className={cn("login-mode-tab", mode === "email" && "active")}
             onClick={() => {
-              setMode("pin");
+              setMode("email");
               setLocalError(null);
             }}
           >
-            ชื่อ + PIN
+            อีเมล
           </button>
           <button
             type="button"
@@ -222,54 +189,43 @@ export default function LoginPage() {
           >
             Google
           </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === "phone"}
-            className={cn("login-mode-tab", mode === "phone" && "active")}
-            onClick={() => {
-              setMode("phone");
-              setLocalError(null);
-            }}
-          >
-            เบอร์โทร
-          </button>
         </div>
 
-        {mode === "pin" ? (
-          <form className="entry-form login-phone-panel" onSubmit={(e) => void onPinLogin(e)}>
+        {mode === "email" ? (
+          <form className="entry-form login-phone-panel" onSubmit={(e) => void onEmailLogin(e)}>
             <div className="field">
-              <label htmlFor="login-nickname">ชื่อในร้าน / ชื่อเล่น</label>
+              <label htmlFor="login-email">อีเมล</label>
               <input
-                id="login-nickname"
-                type="text"
-                autoComplete="username"
-                placeholder="แป๋ม"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
+                id="login-email"
+                type="email"
+                inputMode="email"
+                autoComplete="username email"
+                placeholder="name@gmail.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
             <div className="field">
-              <label htmlFor="login-pin">PIN (6 หลักท้ายเบอร์โทร)</label>
+              <label htmlFor="login-password">รหัสผ่าน (เบอร์โทร 10 หลัก)</label>
               <input
-                id="login-pin"
+                id="login-password"
                 type="password"
                 inputMode="numeric"
                 autoComplete="current-password"
-                placeholder="••••••"
-                value={pin}
-                onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                minLength={4}
-                maxLength={6}
+                placeholder="0985081617"
+                value={password}
+                onChange={(e) => setPassword(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                minLength={10}
+                maxLength={10}
                 required
               />
             </div>
             <button type="submit" className="primary-btn" disabled={blocked || busy || signingIn}>
-              {busy || signingIn ? "กำลังเข้าสู่ระบบ..." : "เข้าใช้ด้วย PIN"}
+              {busy || signingIn ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
             </button>
           </form>
-        ) : mode === "google" ? (
+        ) : (
           <button
             type="button"
             className="primary-btn"
@@ -278,66 +234,6 @@ export default function LoginPage() {
           >
             {signingIn ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบด้วย Google"}
           </button>
-        ) : (
-          <div className="login-phone-panel">
-            <div id="phone-recaptcha" />
-            {!otpSent ? (
-              <form className="entry-form" onSubmit={(e) => void onSendOtp(e)}>
-                <div className="field">
-                  <label htmlFor="login-phone">เบอร์โทรศัพท์</label>
-                  <input
-                    id="login-phone"
-                    type="tel"
-                    inputMode="tel"
-                    autoComplete="tel"
-                    placeholder="0812345678"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    required
-                  />
-                </div>
-                <button type="submit" className="primary-btn" disabled={blocked || busy || signingIn}>
-                  {busy ? "กำลังส่ง..." : "ส่งรหัส OTP"}
-                </button>
-              </form>
-            ) : (
-              <form className="entry-form" onSubmit={(e) => void onConfirmOtp(e)}>
-                <p className="muted" style={{ textAlign: "left", margin: "0 0 0.65rem" }}>
-                  ส่งรหัสไปที่ {phone} แล้ว
-                </p>
-                <div className="field">
-                  <label htmlFor="login-otp">รหัส OTP</label>
-                  <input
-                    id="login-otp"
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    placeholder="123456"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="btn-row">
-                  <button type="submit" className="primary-btn" disabled={blocked || busy || signingIn}>
-                    {busy ? "กำลังยืนยัน..." : "ยืนยันและเข้าใช้"}
-                  </button>
-                  <button
-                    type="button"
-                    className="ghost-btn"
-                    disabled={busy}
-                    onClick={() => {
-                      setOtpSent(false);
-                      setOtp("");
-                      setLocalError(null);
-                    }}
-                  >
-                    เปลี่ยนเบอร์
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
         )}
       </div>
     </div>
