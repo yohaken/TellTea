@@ -29,10 +29,13 @@ import {
   type Employee,
 } from "./employees";
 import { mapFirestoreError } from "./firestore-errors";
-import { fetchOtEntriesFromServer, subscribeOtEntries, type OtEntry } from "./ot";
+import { getFirebaseFunctions } from "./firebase";
+import { httpsCallable } from "firebase/functions";
+import { fetchOtEntriesFromServer, mapOtEntryDoc, subscribeOtEntries, type OtEntry } from "./ot";
 import {
   fetchProdEntriesFromServer,
   listProdProducts,
+  mapProdEntryDoc,
   subscribeProdEntries,
   type ProdEntry,
   type ProdProduct,
@@ -43,6 +46,10 @@ import {
   type RateScheduleEntry,
 } from "./rate-schedule";
 import type {
+  BonusDeductionMonthDoc,
+  BonusDeductionSettings,
+} from "./bonus-deductions";
+import type {
   StaffBonusBundle,
   StaffProductionBundle,
   StaffWorkBundleError,
@@ -51,6 +58,43 @@ import type {
 import type { StaffMember } from "./types";
 import { bangkokMonthRangeMs } from "./utils";
 import { workEntryCreditsEmployee } from "./work-entry-mine";
+
+type CallableBonusBundleRaw = {
+  linked: Employee;
+  employees: Employee[];
+  rateSchedule: RateScheduleEntry[];
+  deductionSettings: BonusDeductionSettings | null;
+  deductionMonth: BonusDeductionMonthDoc | null;
+  otEntries: Array<{ id: string } & Record<string, unknown>>;
+  prodEntries: Array<{ id: string } & Record<string, unknown>>;
+  livePool: BonusLivePool | null;
+  monthStatus: BonusMonthStatusDoc | null;
+  personalClose: BonusPersonalCloseDoc | null;
+};
+
+async function loadStaffBonusBundleViaCallable(month: string): Promise<StaffBonusBundle> {
+  const fn = httpsCallable<{ month: string }, { ok?: boolean; bundle?: CallableBonusBundleRaw }>(
+    getFirebaseFunctions(),
+    "loadStaffBonusBundle",
+  );
+  const res = await fn({ month });
+  const raw = res.data?.bundle;
+  if (!res.data?.ok || !raw?.linked || !raw.deductionSettings || !raw.deductionMonth) {
+    throw new Error("โหลดสรุปโบนัสไม่สำเร็จ");
+  }
+  return {
+    linked: raw.linked,
+    employees: raw.employees,
+    rateSchedule: raw.rateSchedule,
+    deductionSettings: raw.deductionSettings,
+    deductionMonth: raw.deductionMonth,
+    otEntries: raw.otEntries.map((row) => mapOtEntryDoc(row.id, row)),
+    prodEntries: raw.prodEntries.map((row) => mapProdEntryDoc(row.id, row)),
+    livePool: raw.livePool,
+    monthStatus: raw.monthStatus,
+    personalClose: raw.personalClose,
+  };
+}
 
 export function classifyStaffWorkError(err: unknown, source?: string): StaffWorkBundleError {
   const code = (err as { code?: string })?.code || "";
@@ -204,6 +248,24 @@ export async function loadStaffBonusBundleFromServer(
   }
 
   try {
+    return { bundle: await loadStaffBonusBundleViaCallable(month) };
+  } catch (callableErr) {
+    const callableCode = (callableErr as { code?: string })?.code || "";
+    const callableMsg = (callableErr as Error)?.message || "";
+    const callableMissing =
+      callableCode === "functions/not-found" ||
+      /not-found|404|UNIMPLEMENTED/i.test(callableMsg);
+    if (!callableMissing) {
+      const permLike =
+        callableCode === "functions/permission-denied" ||
+        /permission|สิทธิ์/i.test(callableMsg);
+      if (permLike) {
+        return { error: classifyStaffWorkError(callableErr, "โหลดสรุปโบนัส") };
+      }
+    }
+  }
+
+  try {
     return { bundle: await fetchBundle() };
   } catch (err) {
     const code = (err as { code?: string })?.code || "";
@@ -214,7 +276,11 @@ export async function loadStaffBonusBundleFromServer(
         await getFirebaseAuth().currentUser?.getIdToken(true);
         return { bundle: await fetchBundle() };
       } catch (retryErr) {
-        return { error: classifyStaffWorkError(retryErr, "โหลดสรุปโบนัส") };
+        try {
+          return { bundle: await loadStaffBonusBundleViaCallable(month) };
+        } catch (callableErr) {
+          return { error: classifyStaffWorkError(callableErr, "โหลดสรุปโบนัส") };
+        }
       }
     }
     return { error: classifyStaffWorkError(err, "โหลดสรุปโบนัส") };

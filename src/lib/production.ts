@@ -180,7 +180,7 @@ export function resolveProdEntryRates(
   };
 }
 
-function mapProdEntryDoc(id: string, data: Record<string, unknown>): ProdEntry {
+export function mapProdEntryDoc(id: string, data: Record<string, unknown>): ProdEntry {
   const imageUrls = Array.isArray(data.imageUrls)
     ? (data.imageUrls as string[]).map(String).filter((u) => u.trim())
     : data.imageUrl

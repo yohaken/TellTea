@@ -255,7 +255,7 @@ export function assertOtImageUrlsFit(urls: string[]): string[] {
   return capped;
 }
 
-function mapOtEntryDoc(id: string, data: Record<string, unknown>): OtEntry {
+export function mapOtEntryDoc(id: string, data: Record<string, unknown>): OtEntry {
   const imageUrls = Array.isArray(data.imageUrls)
     ? (data.imageUrls as string[]).map(String).filter((u) => u.trim())
     : data.imageUrl

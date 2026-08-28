@@ -82,25 +82,63 @@ service cloud.firestore {
             ))
       );
     }
-    function linkedLevelId() {
+    function linkedPermissionLevelId() {
       return isStaff()
-        ? get(staffPath()).data.get('permissionLevelId', '')
+        && get(staffPath()).data.keys().hasAny(['permissionLevelId'])
+        && get(staffPath()).data.permissionLevelId is string
+        && get(staffPath()).data.permissionLevelId.size() > 0
+        ? get(staffPath()).data.permissionLevelId
         : '';
     }
-    function levelPerms() {
-      return linkedLevelId().size() > 0
-        && exists(/databases/$(database)/documents/permissionLevels/$(linkedLevelId()))
-        && get(/databases/$(database)/documents/permissionLevels/$(linkedLevelId())).data.get('active', false)
-        ? get(/databases/$(database)/documents/permissionLevels/$(linkedLevelId())).data.permissions
-        : {};
+    function permissionLevelDoc(levelId) {
+      return /databases/$(database)/documents/permissionLevels/$(levelId);
+    }
+    function linkedLevelDocExists() {
+      return linkedPermissionLevelId().size() > 0
+        && exists(permissionLevelDoc(linkedPermissionLevelId()));
+    }
+    function linkedLevelActive() {
+      return linkedLevelDocExists()
+        && (
+          !get(permissionLevelDoc(linkedPermissionLevelId())).data.keys().hasAny(['active'])
+          || get(permissionLevelDoc(linkedPermissionLevelId())).data.active != false
+        );
+    }
+    function staffUsesLinkedLevel() {
+      return isStaff()
+        && get(staffPath()).data.permissionsCustomized != true
+        && linkedLevelDocExists()
+        && linkedLevelActive();
+    }
+    function staffHasBrokenLevelLink() {
+      return isStaff()
+        && get(staffPath()).data.permissionsCustomized != true
+        && linkedPermissionLevelId().size() > 0
+        && (!linkedLevelDocExists() || !linkedLevelActive());
+    }
+    function hasPermFromLevel(p) {
+      return staffUsesLinkedLevel()
+        && get(permissionLevelDoc(linkedPermissionLevelId())).data.keys().hasAny(['permissions'])
+        && get(permissionLevelDoc(linkedPermissionLevelId())).data.permissions[p] == true;
+    }
+    function hasPermFromStaffMap(p) {
+      return isStaff()
+        && !staffUsesLinkedLevel()
+        && get(staffPath()).data.keys().hasAny(['permissions'])
+        && get(staffPath()).data.permissions[p] == true;
     }
     function hasPerm(p) {
       return isOwner() || isOwnerEmail()
-        || (isStaff() && levelPerms().get(p, false) == true)
+        || hasPermFromLevel(p)
+        || hasPermFromStaffMap(p)
         || (isStaff()
-            && get(staffPath()).data.keys().hasAny(['permissions'])
-            && get(staffPath()).data.permissions is map
-            && get(staffPath()).data.permissions.get(p, false) == true);
+            && !get(staffPath()).data.keys().hasAny(['permissions'])
+            && !staffUsesLinkedLevel()
+            && !staffHasBrokenLevelLink()
+            && (p == 'production' || p == 'otBonus' || p == 'checklist' || p == 'bonus'));
+    }
+    function canReadBonusEntry(perm) {
+      return isOwner() || isOwnerEmail() || hasPerm('payrollPay') || hasPerm(perm);
     }
     function actorId() {
       return hasEmail() ? authEmail() : authPhone();
@@ -162,14 +200,14 @@ service cloud.firestore {
       allow write: if isOwner() || isOwnerEmail() || hasPerm('production');
     }
     match /prodEntries/{id} {
-      allow read: if isOwner() || isOwnerEmail() || hasPerm('production')
-        || (isStaff() && resource.data.get('employeeId', '') == staffEmployeeId());
+      allow get: if canReadBonusEntry('production');
+      allow list: if isOwner() || isOwnerEmail() || hasPerm('payrollPay') || hasPerm('production');
       allow create: if isOwner() || isOwnerEmail() || hasPerm('production');
       allow update, delete: if isOwner() || isOwnerEmail() || hasPerm('production');
     }
     match /otEntries/{id} {
-      allow read: if isOwner() || isOwnerEmail() || hasPerm('otBonus')
-        || (isStaff() && resource.data.get('employeeId', '') == staffEmployeeId());
+      allow get: if canReadBonusEntry('otBonus');
+      allow list: if isOwner() || isOwnerEmail() || hasPerm('payrollPay') || hasPerm('otBonus');
       allow create: if isOwner() || isOwnerEmail() || hasPerm('otBonus');
       allow update, delete: if isOwner() || isOwnerEmail() || hasPerm('otBonus');
     }
