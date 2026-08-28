@@ -32,13 +32,12 @@ import { mapFirestoreError } from "./firestore-errors";
 import { getFirebaseFunctions } from "./firebase";
 import { httpsCallable } from "firebase/functions";
 import { fetchOtEntriesFromServer, mapOtEntryDoc, subscribeOtEntries, type OtEntry } from "./ot";
+import type { ProdEntry, ProdProduct } from "./production";
 import {
   fetchProdEntriesFromServer,
   listProdProducts,
   mapProdEntryDoc,
   subscribeProdEntries,
-  type ProdEntry,
-  type ProdProduct,
 } from "./production";
 import {
   getRateScheduleFromServer,
@@ -79,7 +78,7 @@ async function loadStaffBonusBundleViaCallable(month: string): Promise<StaffBonu
   );
   const res = await fn({ month });
   const raw = res.data?.bundle;
-  if (!res.data?.ok || !raw?.linked || !raw.deductionSettings || !raw.deductionMonth) {
+  if (!res.data?.ok || !raw?.linked || !raw.deductionSettings) {
     throw new Error("โหลดสรุปโบนัสไม่สำเร็จ");
   }
   return {
@@ -87,12 +86,48 @@ async function loadStaffBonusBundleViaCallable(month: string): Promise<StaffBonu
     employees: raw.employees,
     rateSchedule: raw.rateSchedule,
     deductionSettings: raw.deductionSettings,
-    deductionMonth: raw.deductionMonth,
+    deductionMonth: raw.deductionMonth ?? {
+      year: Number(month.slice(0, 4)),
+      month: Number(month.slice(5, 7)),
+      counts: { caution: 0, cut: 0, waste: 0, claim: 0 },
+      updatedAt: 0,
+    },
     otEntries: raw.otEntries.map((row) => mapOtEntryDoc(row.id, row)),
     prodEntries: raw.prodEntries.map((row) => mapProdEntryDoc(row.id, row)),
     livePool: raw.livePool,
     monthStatus: raw.monthStatus,
     personalClose: raw.personalClose,
+  };
+}
+
+async function loadStaffProductionBundleViaCallable(
+  year: number,
+  monthIdx: number,
+): Promise<StaffProductionBundle> {
+  const fn = httpsCallable<
+    { year: number; monthIdx: number },
+    {
+      ok?: boolean;
+      bundle?: {
+        linked: Employee;
+        workers: Employee[];
+        products: Array<{ id: string } & Record<string, unknown>>;
+        rateSchedule: RateScheduleEntry[];
+        prodEntries: Array<{ id: string } & Record<string, unknown>>;
+      };
+    }
+  >(getFirebaseFunctions(), "loadStaffProductionBundle");
+  const res = await fn({ year, monthIdx });
+  const raw = res.data?.bundle;
+  if (!res.data?.ok || !raw?.linked) {
+    throw new Error("โหลดรายการผลิตไม่สำเร็จ");
+  }
+  return {
+    linked: raw.linked,
+    workers: raw.workers,
+    products: raw.products.map((row) => ({ id: row.id, ...(row as Omit<ProdProduct, "id">) })),
+    rateSchedule: raw.rateSchedule,
+    entries: raw.prodEntries.map((row) => mapProdEntryDoc(row.id, row)),
   };
 }
 
@@ -390,6 +425,27 @@ export async function loadStaffProductionBundleFromServer(
   }
 
   const { since, until } = bangkokMonthRangeMs(year, monthIdx);
+
+  try {
+    const viaCallable = await loadStaffProductionBundleViaCallable(year, monthIdx);
+    const entries = viaCallable.entries.filter((r) =>
+      workEntryCreditsEmployee(r, viaCallable.linked, viaCallable.workers, staff.id),
+    );
+    return { bundle: { ...viaCallable, entries } };
+  } catch (callableErr) {
+    const code = (callableErr as { code?: string })?.code || "";
+    const msg = (callableErr as Error)?.message || "";
+    const callableMissing =
+      code === "functions/not-found" || /not-found|404|UNIMPLEMENTED/i.test(msg);
+    if (!callableMissing) {
+      const permLike =
+        code === "functions/permission-denied" ||
+        /permission|สิทธิ์/i.test(msg);
+      if (permLike) {
+        return { error: classifyStaffWorkError(callableErr, "โหลดรายการผลิต") };
+      }
+    }
+  }
 
   try {
     const [products, rateDoc, prodEntries] = await Promise.all([

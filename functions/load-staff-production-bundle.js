@@ -1,10 +1,9 @@
 /**
- * โหลด input สรุปโบนัสสำหรับพนักงานผ่าน Admin SDK — กัน client rules emergency
- * ที่ list otEntries/prodEntries ไม่ผ่านแม้สิทธิ์ level ถูกต้อง
+ * โหลด input หน้าผลิตสำหรับพนักงานผ่าน Admin SDK — กัน rules บล็อก list prodEntries
  */
 const functions = require("firebase-functions/v1");
 const { getFirestore } = require("firebase-admin/firestore");
-const { _findStaffId, _mapStaffPayload } = require("./resolve-my-staff");
+const { _findStaffId } = require("./resolve-my-staff");
 
 const REGION = "asia-southeast1";
 
@@ -19,31 +18,6 @@ function bangkokMonthRangeMs(year, monthIdx) {
     since: Date.parse(`${startKey}T00:00:00+07:00`),
     until: Date.parse(`${endKey}T00:00:00+07:00`),
   };
-}
-
-function permFromLevel(staffData, levelDoc) {
-  if (!levelDoc?.exists) return null;
-  const data = levelDoc.data() || {};
-  if (data.active === false) return null;
-  return data.permissions && typeof data.permissions === "object" ? data.permissions : null;
-}
-
-function staffHasPerm(staffData, levelDoc, key) {
-  if (staffData.role === "owner") return true;
-  const customized = staffData.permissionsCustomized === true;
-  const levelId = String(staffData.permissionLevelId || "").trim();
-  if (levelId && !customized) {
-    const fromLevel = permFromLevel(staffData, levelDoc);
-    if (fromLevel && fromLevel[key] === true) return true;
-    if (fromLevel) return false;
-  }
-  if (staffData.permissions && typeof staffData.permissions === "object") {
-    return staffData.permissions[key] === true;
-  }
-  if (!levelId && !staffData.permissions) {
-    return key === "production" || key === "otBonus" || key === "checklist" || key === "bonus";
-  }
-  return false;
 }
 
 function mapEmployee(id, data) {
@@ -65,19 +39,15 @@ function docWithId(doc) {
   return { id: doc.id, ...doc.data() };
 }
 
-exports.loadStaffBonusBundle = functions
+exports.loadStaffProductionBundle = functions
   .region(REGION)
   .https.onCall(async (data, context) => {
     if (!context.auth) {
       throw new functions.https.HttpsError("unauthenticated", "ต้องล็อกอินก่อน");
     }
-    const month = String(data?.month || "").trim();
-    if (!/^\d{4}-\d{2}$/.test(month)) {
-      throw new functions.https.HttpsError("invalid-argument", "เดือนไม่ถูกต้อง");
-    }
-    const year = Number(month.slice(0, 4));
-    const monthIdx = Number(month.slice(5, 7)) - 1;
-    if (!Number.isFinite(year) || monthIdx < 0 || monthIdx > 11) {
+    const year = Number(data?.year);
+    const monthIdx = Number(data?.monthIdx);
+    if (!Number.isFinite(year) || !Number.isFinite(monthIdx) || monthIdx < 0 || monthIdx > 11) {
       throw new functions.https.HttpsError("invalid-argument", "เดือนไม่ถูกต้อง");
     }
 
@@ -102,13 +72,6 @@ exports.loadStaffBonusBundle = functions
       throw new functions.https.HttpsError("permission-denied", "ไม่พบบัญชีพนักงาน");
     }
     const staffData = staffSnap.data() || {};
-    const levelId = String(staffData.permissionLevelId || "").trim();
-    const levelDoc = levelId ? await db.collection("permissionLevels").doc(levelId).get() : null;
-
-    if (!staffHasPerm(staffData, levelDoc, "bonus")) {
-      throw new functions.https.HttpsError("permission-denied", "สิทธิ์โบนัสไม่พอ");
-    }
-
     const employeeId = String(staffData.employeeId || "").trim();
     if (!employeeId) {
       throw new functions.https.HttpsError("failed-precondition", "บัญชียังไม่ผูกกับรายชื่อร้าน");
@@ -121,28 +84,10 @@ exports.loadStaffBonusBundle = functions
 
     const { since, until } = bangkokMonthRangeMs(year, monthIdx);
 
-    const [
-      employeesSnap,
-      rateSnap,
-      deductionSettingsSnap,
-      deductionMonthSnap,
-      otSnap,
-      prodSnap,
-      livePoolSnap,
-      monthStatusSnap,
-      personalCloseSnap,
-    ] = await Promise.all([
+    const [employeesSnap, productsSnap, rateSnap, prodSnap] = await Promise.all([
       db.collection("employees").where("active", "==", true).orderBy("name", "asc").get(),
+      db.collection("prodProducts").orderBy("name", "asc").get(),
       db.doc("meta/rateSchedule").get(),
-      db.doc("meta/bonusDeductionSettings").get(),
-      db.doc(`bonusDeductionMonths/${month}`).get(),
-      db
-        .collection("otEntries")
-        .where("date", ">=", since)
-        .where("date", "<", until)
-        .orderBy("date", "desc")
-        .orderBy("createdAt", "desc")
-        .get(),
       db
         .collection("prodEntries")
         .where("date", ">=", since)
@@ -150,30 +95,19 @@ exports.loadStaffBonusBundle = functions
         .orderBy("date", "desc")
         .orderBy("createdAt", "desc")
         .get(),
-      db.doc(`bonusLivePool/${month}`).get(),
-      db.doc(`bonusMonthStatus/${month}`).get(),
-      db.doc(`bonusPersonalCloses/${month}_${employeeId}`).get(),
     ]);
 
-    const employees = employeesSnap.docs.map((d) => mapEmployee(d.id, d.data()));
+    const workers = employeesSnap.docs.map((d) => mapEmployee(d.id, d.data()));
     const linked = mapEmployee(linkedSnap.id, linkedSnap.data());
 
     return {
       ok: true,
-      staff: _mapStaffPayload(staffId, staffData),
       bundle: {
         linked,
-        employees,
+        workers,
+        products: productsSnap.docs.map(docWithId),
         rateSchedule: Array.isArray(rateSnap.get("entries")) ? rateSnap.get("entries") : [],
-        deductionSettings: deductionSettingsSnap.exists ? deductionSettingsSnap.data() : { rules: [], updatedAt: 0 },
-        deductionMonth: deductionMonthSnap.exists
-          ? deductionMonthSnap.data()
-          : { year, month: monthIdx + 1, counts: { caution: 0, cut: 0, waste: 0, claim: 0 }, updatedAt: 0 },
-        otEntries: otSnap.docs.map(docWithId),
         prodEntries: prodSnap.docs.map(docWithId),
-        livePool: livePoolSnap.exists ? livePoolSnap.data() : null,
-        monthStatus: monthStatusSnap.exists ? monthStatusSnap.data() : null,
-        personalClose: personalCloseSnap.exists ? personalCloseSnap.data() : null,
       },
     };
   });
