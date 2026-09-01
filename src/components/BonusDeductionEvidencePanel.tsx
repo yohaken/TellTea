@@ -192,7 +192,7 @@ export function BonusDeductionEvidencePanel({
               max={BONUS_DEDUCTION_EVIDENCE_MAX}
               storageFolder="bonus-deductions"
               storageSlotKey={`caution-${periodMonth}`}
-              hint="ลำดับรูป = ลำดับที่พนักงานจะเห็น"
+              hint={`ลำดับรูป = ลำดับที่พนักงานจะเห็น · สูงสุด ${BONUS_DEDUCTION_EVIDENCE_MAX} รูป`}
             />
             <label className="field">
               <span>โน้ตระวัง (สั้นๆ)</span>
@@ -227,7 +227,7 @@ export function BonusDeductionEvidencePanel({
               max={BONUS_DEDUCTION_EVIDENCE_MAX}
               storageFolder="bonus-deductions"
               storageSlotKey={`cut-${periodMonth}`}
-              hint="แคปฟีดแบค / สาเหตุหักคะแนน"
+              hint={`แคปฟีดแบค / สาเหตุหักคะแนน · สูงสุด ${BONUS_DEDUCTION_EVIDENCE_MAX} รูป`}
             />
             <label className="field">
               <span>โน้ตตัด (สั้นๆ)</span>

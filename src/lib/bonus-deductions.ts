@@ -24,8 +24,8 @@ export type BonusDeductionSettings = {
 /** จำนวนหักทั้งร้านต่อเดือน — เจ้าของกรอกสิ้นเดือน */
 export type BonusDeductionMonthCounts = Record<BonusDeductionRuleId, number>;
 
-/** รูปหลักฐานต่อกองต่องวด (ระวัง / ตัด) */
-export const BONUS_DEDUCTION_EVIDENCE_MAX = 8;
+/** รูปหลักฐานต่อกองต่องวด (ระวัง / ตัด) — ให้พอต่อเคสหักหลายราย (เคยแคป 8 แล้วตัดรูปหาย) */
+export const BONUS_DEDUCTION_EVIDENCE_MAX = 20;
 
 export type BonusEvidencePileId = "caution" | "cut";
 
