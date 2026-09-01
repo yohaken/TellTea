@@ -727,9 +727,16 @@ function ProdTable({
   }, [month, entries.length]);
 
   async function onDelete(row: ProdEntry) {
-    if (!window.confirm("ลบรายการนี้?")) return;
+    if (!isOwner) return;
+    const locked = isProdEntryLocked(row);
+    const ok = window.confirm(
+      locked
+        ? `รายการนี้จ่ายแล้ว — ลบถาวร?\n${formatDateShortBe(row.date)} · ${row.productName}\n\nยอดจะหายจากสรุปโบนัสเดือนนี้`
+        : "ลบรายการนี้?",
+    );
+    if (!ok) return;
     try {
-      await deleteProdEntry(row.id);
+      await deleteProdEntry(row.id, { asOwner: true });
     } catch (err) {
       onError((err as Error).message || "ลบไม่สำเร็จ");
     }
@@ -869,11 +876,16 @@ function ProdTable({
                       </span>
                     </td>
                     <td className="col-act">
-                      {isOwner && !locked ? (
+                      {isOwner ? (
                         <button
                           type="button"
                           className="trash-btn"
-                          aria-label="ลบ"
+                          aria-label={locked ? "ลบรายการที่จ่ายแล้ว" : "ลบ"}
+                          title={
+                            locked
+                              ? "ลบได้แม้จ่ายแล้ว (เจ้าของร้าน)"
+                              : "ลบรายการ"
+                          }
                           onClick={() => void onDelete(row)}
                         >
                           <Trash2 size={14} />

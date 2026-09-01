@@ -529,13 +529,19 @@ export async function bulkUpdateProdEntryStatus(
   return count;
 }
 
-export async function deleteProdEntry(id: string): Promise<void> {
+/**
+ * ลบรายการผลิต — รายการจ่ายแล้วลบได้เฉพาะเจ้าของ (`asOwner: true`)
+ */
+export async function deleteProdEntry(
+  id: string,
+  opts?: { asOwner?: boolean },
+): Promise<void> {
   const ref = doc(getDb(), "prodEntries", id);
   const snap = await getDoc(ref);
   if (snap.exists()) {
     const current = mapProdEntryDoc(snap.id, snap.data() as Record<string, unknown>);
-    if (isProdEntryLocked(current)) {
-      throw new Error("รายการจ่ายแล้ว — ลบไม่ได้");
+    if (isProdEntryLocked(current) && !opts?.asOwner) {
+      throw new Error("รายการจ่ายแล้ว — ลบไม่ได้ (เฉพาะเจ้าของร้าน)");
     }
   }
   await deleteDoc(ref);
