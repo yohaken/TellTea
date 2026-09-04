@@ -2,7 +2,6 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import { Info } from "lucide-react";
-import { CHANNEL_LIVE_SCANS } from "@/data/channel-live-prices";
 import {
   DELIVERY_CHANNELS,
   channelCellForItem,
@@ -52,10 +51,13 @@ import {
 import { applyShopeeExportToLiveStore, parseShopeeExportFiles } from "@/lib/shopee-export";
 import {
   loadMenuPriceHubSettings,
+  saveChannelRule,
+  saveChannelRules,
   saveMenuPriceHubSettings,
   setItemChannelOverride,
   setOptionChannelOverride,
   setManyChannelOverrides,
+  subscribeMenuPriceHubSettings,
 } from "@/lib/menu-price-hub-settings";
 import { HUB_TABLE_NOTE_GUIDE } from "@/lib/menu-price-hub-guide";
 import { clearMenuItemHubNotes, setMenuItemHubNotes, updateMenuItem } from "@/lib/pos-menu";
@@ -863,6 +865,28 @@ export function PosMenuChannelPriceHub({
   const [ruleValueText, setRuleValueText] = useState<Partial<Record<DeliveryChannel, string>>>(
     {},
   );
+  const settingsRef = useRef<MenuPriceHubSettings | null>(null);
+  const ruleValueTextRef = useRef(ruleValueText);
+  settingsRef.current = settings;
+  ruleValueTextRef.current = ruleValueText;
+
+  const applyHubSettings = useCallback((next: MenuPriceHubSettings) => {
+    settingsRef.current = next;
+    setSettings(next);
+    const typingKeys = Object.keys(ruleValueTextRef.current);
+    if (!typingKeys.length) {
+      setRuleDraft(next.channels);
+      return;
+    }
+    setRuleDraft((prev) => {
+      if (!prev) return next.channels;
+      const merged = { ...next.channels };
+      for (const k of typingKeys) {
+        if (k === "shopee" || k === "grab" || k === "lineman") merged[k] = prev[k];
+      }
+      return merged;
+    });
+  }, []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
@@ -1228,27 +1252,17 @@ export function PosMenuChannelPriceHub({
 
   useEffect(() => {
     let cancelled = false;
-    void loadMenuPriceHubSettings()
-      .then((s) => {
+    const unsubSettings = subscribeMenuPriceHubSettings(
+      (s) => {
         if (cancelled) return;
-        setSettings(s);
-        setRuleDraft(s.channels);
-      })
-      .catch((err) => {
+        setSettingsError(null);
+        applyHubSettings(s);
+      },
+      (err) => {
         if (cancelled) return;
-        setSettingsError((err as Error).message);
-        const fallback: MenuPriceHubSettings = {
-          channels: {
-            shopee: { mode: "gp", value: 22 },
-            grab: { mode: "gp", value: 30 },
-            lineman: { mode: "gp", value: 30 },
-          },
-          itemOverrides: {},
-          optionOverrides: {},
-        };
-        setSettings(fallback);
-        setRuleDraft(fallback.channels);
-      });
+        setSettingsError(err.message);
+      },
+    );
 
     void loadChannelLiveStoreFromServer()
       .then((live) => {
@@ -1317,9 +1331,10 @@ export function PosMenuChannelPriceHub({
 
     return () => {
       cancelled = true;
+      unsubSettings();
       unsubLive();
     };
-  }, []);
+  }, [applyHubSettings]);
 
   useEffect(() => {
     function onMove(e: MouseEvent) {
@@ -1417,13 +1432,7 @@ export function PosMenuChannelPriceHub({
               patched,
               ch,
               liveSettings,
-              // มีข้อมูล hub แล้ว ห้าม fallback สแกน bundled — จะโชว์ ≠ ปลอมของเมนูที่ไม่มีบนแพลตฟอร์ม
-              waiting ||
-              stored ||
-              ld ||
-              Object.keys(channelLive.items || {}).length > 0
-                ? emptyLiveItems()
-                : CHANNEL_LIVE_SCANS[ch].items,
+              emptyLiveItems(),
               observation,
             ),
           ];
@@ -2403,6 +2412,16 @@ export function PosMenuChannelPriceHub({
     }
   }
 
+  async function persistChannelRule(channel: DeliveryChannel, rule: ChannelPriceRule) {
+    try {
+      const next = await saveChannelRule(channel, rule);
+      applyHubSettings(next);
+      setOk("ซิงก์สูตรแล้ว");
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
   function setRule(ch: DeliveryChannel, patch: Partial<ChannelPriceRule>) {
     setRuleDraft((prev) => (prev ? { ...prev, [ch]: { ...prev[ch], ...patch } } : prev));
     setOk(null);
@@ -2416,15 +2435,27 @@ export function PosMenuChannelPriceHub({
   }
 
   function commitRuleValue(ch: DeliveryChannel) {
+    const prev = ruleDraft;
+    if (!prev) return;
     const raw = ruleValueText[ch];
-    if (raw === undefined) return;
-    const n = raw.trim() === "" || raw === "-" || raw === "." || raw === "-." ? 0 : Number(raw);
-    setRule(ch, { value: Number.isFinite(n) ? n : 0 });
-    setRuleValueText((prev) => {
-      const next = { ...prev };
+    const n =
+      raw === undefined
+        ? prev[ch].value
+        : raw.trim() === "" || raw === "-" || raw === "." || raw === "-."
+          ? 0
+          : Number(raw);
+    const channels = {
+      ...prev,
+      [ch]: { ...prev[ch], value: Number.isFinite(n) ? n : 0 },
+    };
+    setRuleDraft(channels);
+    setRuleValueText((p) => {
+      const next = { ...p };
       delete next[ch];
       return next;
     });
+    if (JSON.stringify(channels[ch]) === JSON.stringify(settingsRef.current?.channels[ch])) return;
+    void persistChannelRule(ch, channels[ch]);
   }
 
   function startResize(key: ColKey, e: React.MouseEvent) {
@@ -2546,14 +2577,11 @@ export function PosMenuChannelPriceHub({
     setError(null);
     setOk(null);
     try {
-      const next = await saveMenuPriceHubSettings({
-        ...settings,
-        channels,
-      });
-      setSettings(next);
-      setRuleDraft(next.channels);
+      const next = await saveChannelRules(channels);
       setRuleValueText({});
-      setOk("เซฟสูตรแล้ว");
+      ruleValueTextRef.current = {};
+      applyHubSettings(next);
+      setOk("ซิงก์สูตรแล้ว");
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -2574,11 +2602,12 @@ export function PosMenuChannelPriceHub({
     setOk(null);
     try {
       const raw = tableNoteDraft.trim();
+      const current = await loadMenuPriceHubSettings();
       const next = await saveMenuPriceHubSettings({
-        ...settings,
+        ...current,
         tableNote: raw || undefined,
       });
-      setSettings(next);
+      applyHubSettings(next);
       setShowTableNote(false);
       setOk(raw ? "บันทึกโน้ตรวมแล้ว" : "ล้างโน้ตรวมแล้ว");
     } catch (err) {
@@ -3084,12 +3113,18 @@ export function PosMenuChannelPriceHub({
                 aria-label={`โหมด ${channelLabel(key)}`}
                 title="GP% = ตั้งขายให้หลังหักจีพีเหลือเท่าหน้าร้าน · คงที่ = ราคาเดียวกันทุกแถว · ดับเบิลคลิกช่องเป้าเพื่อใส่ราคาคงที่แถวนั้น (บันทึกทันที)"
                 onChange={(e) => {
+                  const mode = e.target.value as ChannelPriceMode;
                   setRuleValueText((prev) => {
                     const next = { ...prev };
                     delete next[key];
                     return next;
                   });
-                  setRule(key, { mode: e.target.value as ChannelPriceMode });
+                  setRuleDraft((prev) => {
+                    if (!prev) return prev;
+                    const rule = { ...prev[key], mode };
+                    void persistChannelRule(key, rule);
+                    return { ...prev, [key]: rule };
+                  });
                 }}
                 onClick={(e) => e.stopPropagation()}
               >
@@ -3149,12 +3184,7 @@ export function PosMenuChannelPriceHub({
             </span>
             <LiveAtLine
               waiting={waiting}
-              iso={
-                waiting
-                  ? null
-                  : latestChannelScanAt(channelLive, key) ??
-                    CHANNEL_LIVE_SCANS[key].scannedAt
-              }
+              iso={waiting ? null : latestChannelScanAt(channelLive, key)}
             />
           </div>
         ) : filterable ? (
@@ -3493,7 +3523,7 @@ export function PosMenuChannelPriceHub({
           disabled={busy || !rulesDirty}
           onClick={() => void saveRules()}
         >
-          {rulesDirty ? "สูตร*" : "สูตร"}
+          {rulesDirty ? "ซิงก์สูตร*" : "สูตร"}
         </button>
         <span className="mph-scan muted" title="เวลาอัปเดตล่าสุดแยกตามช่องทางที่แสดง (จาก hub)">
           {visibleChannels.map((ch, i) => (
@@ -3503,10 +3533,7 @@ export function PosMenuChannelPriceHub({
               {clearedLive.has(ch) ? (
                 <em className="mph-waiting-label">รอสแกน</em>
               ) : (
-                formatLiveAt(
-                  latestChannelScanAt(channelLive, ch) ??
-                    CHANNEL_LIVE_SCANS[ch].scannedAt,
-                ) || formatScanAt(CHANNEL_LIVE_SCANS[ch].scannedAt)
+                formatLiveAt(latestChannelScanAt(channelLive, ch)) || "—"
               )}
             </span>
           ))}
@@ -3900,8 +3927,7 @@ export function PosMenuChannelPriceHub({
                                     channel: ch,
                                     cell,
                                     scannedAt:
-                                      channelLive.items[item.id]?.[ch]?.scannedAt ??
-                                      CHANNEL_LIVE_SCANS[ch].scannedAt,
+                                      channelLive.items[item.id]?.[ch]?.scannedAt ?? null,
                                     nameDraft: ld.name || cell.liveName || "",
                                   });
                                 }}
@@ -3926,8 +3952,7 @@ export function PosMenuChannelPriceHub({
                             <LiveAtLine
                               waiting={waiting}
                               iso={
-                                channelLive.items[item.id]?.[ch]?.scannedAt ??
-                                CHANNEL_LIVE_SCANS[ch].scannedAt
+                                channelLive.items[item.id]?.[ch]?.scannedAt ?? null
                               }
                               detail={channelLive.items[item.id]?.[ch]?.applyNote}
                             />

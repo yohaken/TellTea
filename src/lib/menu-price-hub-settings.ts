@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, setDoc, type Unsubscribe } from "firebase/firestore";
 import { getMenuDb } from "@/lib/pos-menu-db";
 import {
   DEFAULT_CHANNEL_RULES,
@@ -79,6 +79,24 @@ export async function loadMenuPriceHubSettings(): Promise<MenuPriceHubSettings> 
   return normalizeMenuPriceHubSettings(snap.data());
 }
 
+/** Realtime สูตร/เป้าในตาราง — แก้ที่เครื่องอื่นหรือสคริปต์แล้วโผล่ทันที */
+export function subscribeMenuPriceHubSettings(
+  onNext: (settings: MenuPriceHubSettings) => void,
+  onError?: (err: Error) => void,
+): Unsubscribe {
+  return onSnapshot(
+    doc(getMenuDb(), COL, DOC_ID),
+    (snap) => {
+      onNext(
+        snap.exists()
+          ? normalizeMenuPriceHubSettings(snap.data())
+          : defaultMenuPriceHubSettings(),
+      );
+    },
+    (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
+  );
+}
+
 export async function saveMenuPriceHubSettings(
   settings: MenuPriceHubSettings,
 ): Promise<MenuPriceHubSettings> {
@@ -109,6 +127,18 @@ export async function saveMenuPriceHubSettings(
 export async function saveChannelRules(channels: ChannelRules): Promise<MenuPriceHubSettings> {
   const current = await loadMenuPriceHubSettings();
   return saveMenuPriceHubSettings({ ...current, channels });
+}
+
+/** ซิงก์สูตรคอลัมน์เดียว — ไม่ทับสูตรช่องอื่นที่เพิ่งเซฟจากเครื่องอื่น */
+export async function saveChannelRule(
+  channel: DeliveryChannel,
+  rule: ChannelPriceRule,
+): Promise<MenuPriceHubSettings> {
+  const current = await loadMenuPriceHubSettings();
+  return saveMenuPriceHubSettings({
+    ...current,
+    channels: { ...current.channels, [channel]: rule },
+  });
 }
 
 export type ChannelOverrideWrite = {
