@@ -138,9 +138,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return items;
   }, [staff, navUi]);
 
+  const isMenuFullBleed = pathname.startsWith("/menu");
+
   return (
-    <div className="phone-frame">
-      <div className="app-shell">
+    <div className={cn("phone-frame", isMenuFullBleed && "phone-frame--menu-full")}>
+      <div className={cn("app-shell", isMenuFullBleed && "app-shell--menu-full")}>
         <header className="topbar">
           <div>
             <AppBrand compact />

@@ -1,0 +1,50 @@
+{
+  "at": "2026-09-02T11:10:33.220Z",
+  "coffee": {
+    "group_id": "2489613938674688",
+    "group_name": "กาแฟ",
+    "shelve_state": true,
+    "rank": 0,
+    "remark": "",
+    "select_mode": 5,
+    "select_min": 0,
+    "select_max": 0,
+    "options": [
+      {
+        "option_id": "3243747419424256",
+        "option_name": "ไม่เพิ่ม",
+        "rank": 1,
+        "price": "0",
+        "available": true,
+        "out_of_stock_time": null,
+        "sync_item_group_id": ""
+      },
+      {
+        "option_id": "3242232716035584",
+        "option_name": "เพิ่มช็อตกาแฟ 1 ช็อต",
+        "rank": 2,
+        "price": "1800000",
+        "available": true,
+        "out_of_stock_time": null,
+        "sync_item_group_id": ""
+      },
+      {
+        "option_id": "3242232716035585",
+        "option_name": "เพิ่มช็อตกาแฟ 2 ช็อต",
+        "rank": 3,
+        "price": "2600000",
+        "available": true,
+        "out_of_stock_time": null,
+        "sync_item_group_id": ""
+      }
+    ],
+    "linked_dish_count": 25,
+    "qc_frozen": false,
+    "failed_qc_record_id": 3243747419833344,
+    "sync_item_group_id": ""
+  },
+  "topping": {
+    "name": "ท็อปปิ้ง",
+    "count": 12
+  }
+}

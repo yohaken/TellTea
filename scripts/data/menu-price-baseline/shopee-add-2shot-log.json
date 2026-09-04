@@ -1,0 +1,47 @@
+{
+  "at": "2026-09-01T09:20:00.000Z",
+  "groupId": "2489613938674688",
+  "groupName": "กาแฟ",
+  "method": "PUT https://foody.shopee.co.th/api/seller/store/option-groups/2489613938674688",
+  "workingShape": {
+    "option_group": {
+      "group_id": "string",
+      "group_name": "string",
+      "remark": "",
+      "shelve_state": 1,
+      "select_min": 0,
+      "select_max": 0,
+      "select_mode": 5
+    },
+    "options": [
+      {
+        "id": "option_id",
+        "name": "display name",
+        "rank": 1,
+        "price": "1800000",
+        "available": 1
+      }
+    ]
+  },
+  "notes": [
+    "available must be numeric enum (1), not boolean",
+    "option names use camel `name` + `id` (not option_name/option_id) on PUT",
+    "prices are micros: 18 -> 1800000, 26 -> 2600000",
+    "POST returns fake success and does not persist"
+  ],
+  "result": {
+    "linked_dish_count": 25,
+    "options": [
+      {
+        "option_id": "3242232716035584",
+        "option_name": "เพิ่มช็อตกาแฟ 1 ช็อต",
+        "price": "1800000"
+      },
+      {
+        "option_id": "3242232716035585",
+        "option_name": "เพิ่มช็อตกาแฟ 2 ช็อต",
+        "price": "2600000"
+      }
+    ]
+  }
+}

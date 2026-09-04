@@ -1,0 +1,97 @@
+{
+  "at": "2026-09-03T03:10:49.377Z",
+  "note": "remaining 8 name variants · Grab → POS exact",
+  "counts": {
+    "rename": 8
+  },
+  "rename": [
+    {
+      "grabName": "กาแฟสด อเมริกาโน่ (Americano) เย็น 16 ออนซ์",
+      "grabId": "THITE2025022802341811174",
+      "grabCategory": "* กาแฟสดเข้มข้น",
+      "posName": "กาแฟสด อเมริกาโน่ เย็น 16 ออนซ์",
+      "posId": "fs_item_41276630",
+      "hubNote": "",
+      "score": 1,
+      "reason": "exact-variant-en-parens",
+      "action": "rename_grab_to_pos"
+    },
+    {
+      "grabName": "กาแฟสด ลาเต้ (Latte) เย็น 16 ออนซ์",
+      "grabId": "THITE2025022802352904031",
+      "grabCategory": "* กาแฟสดนมนุ่มละมุน",
+      "posName": "กาแฟสด ลาเต้ เย็น 16 ออนซ์",
+      "posId": "fs_item_41277718",
+      "hubNote": "",
+      "score": 1,
+      "reason": "exact-variant-en-parens",
+      "action": "rename_grab_to_pos"
+    },
+    {
+      "grabName": "กาแฟสด เอสเปรสโซ่ (Espresso) เย็น 16 ออนซ์",
+      "grabId": "THITE2025022802363923759",
+      "grabCategory": "* กาแฟสดเข้มข้น",
+      "posName": "กาแฟสด เอสเปรสโซ่ เย็น 16 ออนซ์",
+      "posId": "fs_item_41277766",
+      "hubNote": "",
+      "score": 1,
+      "reason": "exact-variant-en-parens",
+      "action": "rename_grab_to_pos"
+    },
+    {
+      "grabName": "กาแฟสด คาปูชิโน่ (Cappuccino) เย็น 16 ออนซ์",
+      "grabId": "THITE2025022802373259359",
+      "grabCategory": "* กาแฟสดนมนุ่มละมุน",
+      "posName": "กาแฟสด คาปูชิโน่ เย็น 16 ออนซ์",
+      "posId": "fs_item_41279794",
+      "hubNote": "สร้างเมนู grab",
+      "score": 1,
+      "reason": "exact-variant-en-parens",
+      "action": "rename_grab_to_pos"
+    },
+    {
+      "grabName": "กาแฟสด Long Black (ลองแบล็ค) เย็น 16 ออนซ์",
+      "grabId": "THITE2025030203155620292",
+      "grabCategory": "* กาแฟสดเข้มข้น",
+      "posName": "กาแฟสด ลองแบล็ค เย็น 16 ออนซ์",
+      "posId": "fs_item_41321144",
+      "hubNote": "สร้างเมนู grab",
+      "score": 1,
+      "reason": "exact-variant-en-parens",
+      "action": "rename_grab_to_pos"
+    },
+    {
+      "grabName": "กาแฟสด แฟลตไวท์ (Flat White) เย็น 16 ออนซ์",
+      "grabId": "THITE2025030203221737606",
+      "grabCategory": "* กาแฟสดนมนุ่มละมุน",
+      "posName": "กาแฟสด แฟลตไวท์ เย็น 16 ออนซ์",
+      "posId": "fs_item_41321223",
+      "hubNote": "สร้างเมนู grab",
+      "score": 1,
+      "reason": "exact-variant-en-parens",
+      "action": "rename_grab_to_pos"
+    },
+    {
+      "grabName": "กาแฟสด คาปูชิโน่ร้อน (Cappuccino) ร้อน",
+      "grabId": "THITE2025030204120972961",
+      "grabCategory": "* กาแฟสด อื่นๆ ร้อน",
+      "posName": "กาแฟสด Cappuccino (คาปูชิโน่) ร้อน 12 ออนซ์",
+      "posId": "fs_item_41322135",
+      "hubNote": "",
+      "score": 1,
+      "reason": "exact-variant-en-parens",
+      "action": "rename_grab_to_pos"
+    },
+    {
+      "grabName": "ช็อกโกแลตมิลค์ร้อน",
+      "grabId": "THITE2025031216180413409",
+      "grabCategory": "* กาแฟสด อื่นๆ ร้อน",
+      "posName": "ช็อกโกแลตมิลค์ร้อน 12 ออนซ์",
+      "posId": "fs_item_41574246",
+      "hubNote": "",
+      "score": 1,
+      "reason": "exact-variant-en-parens",
+      "action": "rename_grab_to_pos"
+    }
+  ]
+}

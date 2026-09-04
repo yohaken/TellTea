@@ -1,0 +1,24 @@
+{
+  "at": "2026-09-01T09:31:25.713Z",
+  "tab": "★ Name sync — เมนู+ตัวเลือก",
+  "stats": {
+    "menus": 167,
+    "options": 68,
+    "mGrab": 167,
+    "mShopee": 147,
+    "mLm": 142,
+    "oGrab": 68,
+    "oShopee": 68,
+    "oLm": 68,
+    "menuExtras": 1,
+    "optExtras": 0
+  },
+  "sources": {
+    "grabMenus": 167,
+    "shopeeMenus": 148,
+    "lmMenus": 143,
+    "grabOptions": 67,
+    "shopeeOptions": 67,
+    "lmOptions": 50
+  }
+}

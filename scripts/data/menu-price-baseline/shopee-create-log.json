@@ -1,0 +1,64 @@
+{
+  "at": "2026-09-03T12:52:37.854Z",
+  "results": [
+    {
+      "name": "0% โคล่าโซดามะนาว",
+      "posId": "fs_item_41836317",
+      "dishId": "3245263396127744",
+      "price": 24,
+      "target": 24,
+      "optionGroupCount": 4,
+      "bind": {
+        "ok": true,
+        "ticked": {
+          "done": [
+            {
+              "name": "ท้อปปิ้ง",
+              "checked": true
+            },
+            {
+              "name": "ความหวาน",
+              "checked": true
+            },
+            {
+              "name": "แยกน้ำแข็ง",
+              "checked": true
+            },
+            {
+              "name": "ช็อตมะนาว",
+              "checked": true
+            }
+          ],
+          "missed": []
+        },
+        "save": {
+          "ok": true
+        },
+        "after": {
+          "url": "https://partner.shopee.co.th/shopee-pos/menu-management/dish/edit?id=3245263396127744&storeId=10212109&defaultTab=sf",
+          "sample": "หน้าแรก\nการแจ้งเตือน\nศูนย์ช่วยเหลือ\nKongsi Tea Bar\npeerapongyohaken\nข้อมูลเชิงลึก\nเมนู\nกระเป๋าเงิน\nการจัดการคำสั่งซื้อ\nใบกำกับภาษี (ShopeeFood)\nShopeePay\nพนักงานของฉัน\nการตั้งค่า\nรายงานของฉัน\nสนับสนุนโดย Shopee\nMenu Management/แก้ไขเมนู\nแก้ไขเมนู\nยกเลิกลบบันทึก\nชื่อเมนู\nแก้ไข\nรายละเอียดเมนู\nหมวดหมู่\n0% แคล โซดาซ่าเพื่อสุขภาพ\nราคา\n฿\nพร้อมจำหน่าย\nพร้อมจำหน่าย\nจำนวนสต็อก\nไม่จำกัด\nการแสดงสถานะ\nแสดง\nคำอธิบาย (ไม่บังคับ)\nช่วงเวลาการจำหน่าย\nตลอดทั้งวัน\nกำหนดเอง\nกลุ่มตัวเลือกเสริม\nกลุ่มตัวเลือกเสริมที่ผ"
+        },
+        "blocked": false
+      },
+      "status": "created"
+    },
+    {
+      "name": "กาแฟสด ไมโลกาแฟ เย็น 16 ออนซ์",
+      "status": "quota",
+      "quota": "Exceed Dish number limitation",
+      "created": {
+        "status": 200,
+        "json": {
+          "code": 1100002,
+          "msg": "Exceed Dish number limitation",
+          "data": {
+            "id": "0",
+            "failed_group_ids": [],
+            "auto_qc_result": 0,
+            "failed_fields": []
+          }
+        }
+      }
+    }
+  ]
+}

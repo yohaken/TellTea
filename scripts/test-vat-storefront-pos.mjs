@@ -71,6 +71,10 @@ assert.deepEqual(scaleSfSendTenders({ cash: 333, transfer: 0 }, 50), {
   cash: 166.5,
   transfer: 0,
 });
+assert.deepEqual(scaleSfSendTenders({ cash: 47228, transfer: 81618 }, 0), {
+  cash: 0,
+  transfer: 0,
+});
 
 function patchSfSendTendersIntoDraft(draft, tenders) {
   const cash = normalizeMoney(tenders.cash);

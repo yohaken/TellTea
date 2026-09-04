@@ -1,0 +1,1808 @@
+{
+  "scannedAt": "2026-09-04T00:31:27.678Z",
+  "method": "shopee-dishes-api",
+  "sourceFile": null,
+  "count": 150,
+  "items": [
+    {
+      "name": "ปังมันม่วง อบสด โฮมเมด",
+      "listPrice": 25,
+      "displayPrice": 25,
+      "prices": [
+        25
+      ],
+      "dishId": "2718363917855232",
+      "category": "เบเกอรี่ & ไอศครีม",
+      "visible": "แสดงเมนู",
+      "stock": "งดจำหน่าย"
+    },
+    {
+      "name": "ชิโอปัง (Shio Pan) โฮมเมด ใหญ่ขึ้น",
+      "listPrice": 22,
+      "displayPrice": 22,
+      "prices": [
+        22
+      ],
+      "dishId": "2702834868003840",
+      "category": "เบเกอรี่ & ไอศครีม",
+      "visible": "แสดงเมนู",
+      "stock": "งดจำหน่าย"
+    },
+    {
+      "name": "มันไทยอบ ดั้งเดิม",
+      "listPrice": 18,
+      "displayPrice": 18,
+      "prices": [
+        18
+      ],
+      "dishId": "2967472896374784",
+      "category": "เบเกอรี่ & ไอศครีม",
+      "visible": "แสดงเมนู",
+      "stock": "งดจำหน่าย"
+    },
+    {
+      "name": "วาฟเฟิลเบลเยียม โฮมเมด",
+      "listPrice": 18,
+      "displayPrice": 18,
+      "prices": [
+        18
+      ],
+      "dishId": "3137372581526016",
+      "category": "เบเกอรี่ & ไอศครีม",
+      "visible": "แสดงเมนู",
+      "stock": "งดจำหน่าย"
+    },
+    {
+      "name": "ซอฟต์คุกกี้ โฮมเมด (เลือกได้)",
+      "listPrice": 18,
+      "displayPrice": 18,
+      "prices": [
+        18
+      ],
+      "dishId": "2950619592160768",
+      "category": "เบเกอรี่ & ไอศครีม",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "เค้กกล้วยหอม โฮมเมด",
+      "listPrice": 18,
+      "displayPrice": 18,
+      "prices": [
+        18
+      ],
+      "dishId": "2991758051948544",
+      "category": "เบเกอรี่ & ไอศครีม",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "บราวนี่โฮมเมด",
+      "listPrice": 18,
+      "displayPrice": 18,
+      "prices": [
+        18
+      ],
+      "dishId": "2763730334689792",
+      "category": "เบเกอรี่ & ไอศครีม",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ปังเนยกรอบอบไอน้ำ",
+      "listPrice": 22,
+      "displayPrice": 22,
+      "prices": [
+        22
+      ],
+      "dishId": "2676059704648192",
+      "category": "เบเกอรี่ & ไอศครีม",
+      "visible": "แสดงเมนู",
+      "stock": "งดจำหน่าย"
+    },
+    {
+      "name": "Ice Cream To-Go แก้วใหญ่ 16oz (แถมถุงเย็น)",
+      "listPrice": 29,
+      "displayPrice": 29,
+      "prices": [
+        29
+      ],
+      "dishId": "2738717429164544",
+      "category": "เบเกอรี่ & ไอศครีม",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ชานมไข่มุก (เย็น/ปั่น)",
+      "listPrice": 29,
+      "displayPrice": 29,
+      "prices": [
+        29
+      ],
+      "dishId": "2035915327775232",
+      "category": "Signature Drinks (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ชานมไข่มุกบราวน์ชูการ์ (เย็น/ปั่น)",
+      "listPrice": 64,
+      "displayPrice": 64,
+      "prices": [
+        64
+      ],
+      "dishId": "2035926352093184",
+      "category": "Signature Drinks (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "โกโก้สตรอว์เบอร์รี (เย็น/ปั่น)",
+      "listPrice": 44,
+      "displayPrice": 44,
+      "prices": [
+        44
+      ],
+      "dishId": "2035929394717184",
+      "category": "Signature Drinks (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ชาไทยชีส (เย็น/ปั่น)",
+      "listPrice": 54,
+      "displayPrice": 54,
+      "prices": [
+        54
+      ],
+      "dishId": "2035955801760256",
+      "category": "Signature Drinks (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ชาเขียวนม (เย็น/ปั่น)",
+      "listPrice": 42,
+      "displayPrice": 42,
+      "prices": [
+        42
+      ],
+      "dishId": "2035963095818240",
+      "category": "Signature Drinks (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "โกโก้มิ้นต์ (เย็น/ปั่น)",
+      "listPrice": 57,
+      "displayPrice": 57,
+      "prices": [
+        57
+      ],
+      "dishId": "2035956504945152",
+      "category": "Signature Drinks (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "กาแฟโบราณ บราวน์ชูการ์ (เย็น/ปั่น)",
+      "listPrice": 49,
+      "displayPrice": 49,
+      "prices": [
+        49
+      ],
+      "dishId": "2035957223202816",
+      "category": "Signature Drinks (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "โกโก้ (เย็น/ปั่น)",
+      "listPrice": 42,
+      "displayPrice": 42,
+      "prices": [
+        42
+      ],
+      "dishId": "2035950934172160",
+      "category": "Signature Drinks (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "โกโก้ลาวาช็อกขูด (เย็น/ปั่น)",
+      "listPrice": 54,
+      "displayPrice": 54,
+      "prices": [
+        54
+      ],
+      "dishId": "2970522469726208",
+      "category": "Signature Drinks (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ชานมชีส (เย็น/ปั่น)",
+      "listPrice": 49,
+      "displayPrice": 49,
+      "prices": [
+        49
+      ],
+      "dishId": "2035962409689088",
+      "category": "Signature Drinks (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ชาจัสมินฝูเจี้ยน (เย็น/ปั่น) 16 oz",
+      "listPrice": 37,
+      "displayPrice": 37,
+      "prices": [
+        37
+      ],
+      "dishId": "2944861680138240",
+      "category": "ชานมสดคราฟต์ (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ชาอู่หลงเย็น",
+      "listPrice": 24,
+      "displayPrice": 24,
+      "prices": [
+        24
+      ],
+      "dishId": "2748382045219328",
+      "category": "ชา",
+      "visible": "แสดงเมนู",
+      "stock": "งดจำหน่าย"
+    },
+    {
+      "name": "ชาอู่หลงน้ำผึ้ง",
+      "listPrice": 29,
+      "displayPrice": 29,
+      "prices": [
+        29
+      ],
+      "dishId": "2748383136392704",
+      "category": "ชา",
+      "visible": "แสดงเมนู",
+      "stock": "งดจำหน่าย"
+    },
+    {
+      "name": "ชาอู่หลงน้ำผึ้งมะนาว",
+      "listPrice": 29,
+      "displayPrice": 29,
+      "prices": [
+        29
+      ],
+      "dishId": "2748385436329472",
+      "category": "ชา",
+      "visible": "แสดงเมนู",
+      "stock": "งดจำหน่าย"
+    },
+    {
+      "name": "ชาดำเย็น",
+      "listPrice": 24,
+      "displayPrice": 24,
+      "prices": [
+        24
+      ],
+      "dishId": "2035973480783872",
+      "category": "ชา",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ชาเขียวมะลิ",
+      "listPrice": 24,
+      "displayPrice": 24,
+      "prices": [
+        24
+      ],
+      "dishId": "2035974334947328",
+      "category": "ชา",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ชาสตรอว์เบอร์รี",
+      "listPrice": 24,
+      "displayPrice": 24,
+      "prices": [
+        24
+      ],
+      "dishId": "2035976159748608",
+      "category": "ชา",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ชาลิ้นจี่",
+      "listPrice": 24,
+      "displayPrice": 24,
+      "prices": [
+        24
+      ],
+      "dishId": "2036011307360256",
+      "category": "ชา",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ชามะนาว",
+      "listPrice": 29,
+      "displayPrice": 29,
+      "prices": [
+        29
+      ],
+      "dishId": "2036011953496576",
+      "category": "ชา",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ชาแอปเปิ้ล",
+      "listPrice": 24,
+      "displayPrice": 24,
+      "prices": [
+        24
+      ],
+      "dishId": "2036013205692416",
+      "category": "ชา",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ชาเสาวรส",
+      "listPrice": 24,
+      "displayPrice": 24,
+      "prices": [
+        24
+      ],
+      "dishId": "2036013836541952",
+      "category": "ชา",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ชาบลูเบอร์รี่",
+      "listPrice": 24,
+      "displayPrice": 24,
+      "prices": [
+        24
+      ],
+      "dishId": "2036014408409600",
+      "category": "ชา",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "มัทฉะลาเต้ (Matcha Latte)",
+      "listPrice": 65,
+      "displayPrice": 65,
+      "prices": [
+        65
+      ],
+      "dishId": "2534314857043968",
+      "category": "มัทฉะแท้",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "มัทฉะครีมชีส (Matcha Cheese Tea)",
+      "listPrice": 59,
+      "displayPrice": 59,
+      "prices": [
+        59
+      ],
+      "dishId": "2534590891660800",
+      "category": "มัทฉะแท้",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "เพียวมัทฉะ (Pure Matcha)",
+      "listPrice": 37,
+      "displayPrice": 37,
+      "prices": [
+        37
+      ],
+      "dishId": "2534623812442112",
+      "category": "มัทฉะแท้",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "มัทฉะบราวน์ชูการ์ไข่มุก (Matcha Brown Sugar Boba)",
+      "listPrice": 55,
+      "displayPrice": 55,
+      "prices": [
+        55
+      ],
+      "dishId": "2534835210999808",
+      "category": "มัทฉะแท้",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "มัทฉะมะพร้าว",
+      "listPrice": 75,
+      "displayPrice": 75,
+      "prices": [
+        75
+      ],
+      "dishId": "2568233223560192",
+      "category": "มัทฉะแท้",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "มัทฉะมะพร้าวนม",
+      "listPrice": 55,
+      "displayPrice": 55,
+      "prices": [
+        55
+      ],
+      "dishId": "2568243239148032",
+      "category": "มัทฉะแท้",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "มัทฉะเลม่อนเย็น (Matcha Lemon)",
+      "listPrice": 45,
+      "displayPrice": 45,
+      "prices": [
+        45
+      ],
+      "dishId": "2685485808034304",
+      "category": "มัทฉะแท้",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ชานมใต้หวัน (เย็น/ปั่น)",
+      "listPrice": 24,
+      "displayPrice": 24,
+      "prices": [
+        24
+      ],
+      "dishId": "2035963759337472",
+      "category": "ชานม (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ชาไทย (เย็น/ปั่น)",
+      "listPrice": 42,
+      "displayPrice": 42,
+      "prices": [
+        42
+      ],
+      "dishId": "2035964543181312",
+      "category": "ชานม (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ชานมเฮเซลนัท (เย็น/ปั่น)",
+      "listPrice": 37,
+      "displayPrice": 37,
+      "prices": [
+        37
+      ],
+      "dishId": "2035965318586880",
+      "category": "ชานม (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ชานมกาแฟ (เย็น/ปั่น)",
+      "listPrice": 29,
+      "displayPrice": 29,
+      "prices": [
+        29
+      ],
+      "dishId": "2035966040252416",
+      "category": "ชานม (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ชานมคาราเมล (เย็น/ปั่น)",
+      "listPrice": 37,
+      "displayPrice": 37,
+      "prices": [
+        37
+      ],
+      "dishId": "2035966767997440",
+      "category": "ชานม (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ชานมมิ้นต์ (เย็น/ปั่น)",
+      "listPrice": 37,
+      "displayPrice": 37,
+      "prices": [
+        37
+      ],
+      "dishId": "2035970393153536",
+      "category": "ชานม (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ชานมเผือก (เย็น/ปั่น)",
+      "listPrice": 50,
+      "displayPrice": 50,
+      "prices": [
+        50
+      ],
+      "dishId": "2035971219087360",
+      "category": "ชานม (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ชาไทยมันม่วง",
+      "listPrice": 49,
+      "displayPrice": 49,
+      "prices": [
+        49
+      ],
+      "dishId": "2653285325527552",
+      "category": "ชานม (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ชานมมันม่วง",
+      "listPrice": 49,
+      "displayPrice": 49,
+      "prices": [
+        49
+      ],
+      "dishId": "2653291415755776",
+      "category": "ชานม (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ชาส้มยูสุ",
+      "listPrice": 49,
+      "displayPrice": 49,
+      "prices": [
+        49
+      ],
+      "dishId": "2036029215105024",
+      "category": "ชาผลไม้",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ชาพีช",
+      "listPrice": 49,
+      "displayPrice": 49,
+      "prices": [
+        49
+      ],
+      "dishId": "2036029991477760",
+      "category": "ชาผลไม้",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ชาผลไม้รวม",
+      "listPrice": 49,
+      "displayPrice": 49,
+      "prices": [
+        49
+      ],
+      "dishId": "2036030560920064",
+      "category": "ชาผลไม้",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ชามิกซ์เบอร์รี่",
+      "listPrice": 49,
+      "displayPrice": 49,
+      "prices": [
+        49
+      ],
+      "dishId": "2036031220129792",
+      "category": "ชาผลไม้",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ชาพีชส้มยูสุ",
+      "listPrice": 63,
+      "displayPrice": 63,
+      "prices": [
+        63
+      ],
+      "dishId": "2036031881322496",
+      "category": "ชาผลไม้",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "สตรอเบอร์รี่ปั่น แก้วใหญ่ 22 ออนซ์",
+      "listPrice": 50,
+      "displayPrice": 50,
+      "prices": [
+        50
+      ],
+      "dishId": "2634634361788928",
+      "category": "ผลไม้ปั่น & สมูทตี้",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "(สมูทตี้) สตรอเบอร์รี่ แก้วใหญ่ 22 ออนซ์",
+      "listPrice": 49,
+      "displayPrice": 49,
+      "prices": [
+        49
+      ],
+      "dishId": "2634654449867776",
+      "category": "ผลไม้ปั่น & สมูทตี้",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "มิกซ์เบอร์รี่ปั่น แก้วใหญ่ 22 ออนซ์",
+      "listPrice": 75,
+      "displayPrice": 75,
+      "prices": [
+        75
+      ],
+      "dishId": "2639167031270400",
+      "category": "ผลไม้ปั่น & สมูทตี้",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "(สมูทตี้) มิกซ์เบอร์รี่ แก้วใหญ่ 22 ออนซ์",
+      "listPrice": 69,
+      "displayPrice": 69,
+      "prices": [
+        69
+      ],
+      "dishId": "2639168936892928",
+      "category": "ผลไม้ปั่น & สมูทตี้",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ส้มปั่น แก้วใหญ่ 22 ออนซ์",
+      "listPrice": 44,
+      "displayPrice": 44,
+      "prices": [
+        44
+      ],
+      "dishId": "2640118287964672",
+      "category": "ผลไม้ปั่น & สมูทตี้",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "(สมูทตี้) ส้ม แก้วใหญ่ 22 ออนซ์",
+      "listPrice": 59,
+      "displayPrice": 59,
+      "prices": [
+        59
+      ],
+      "dishId": "2640133131557376",
+      "category": "ผลไม้ปั่น & สมูทตี้",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "มะม่วงปั่น แก้วใหญ่ 22 ออนซ์",
+      "listPrice": 57,
+      "displayPrice": 57,
+      "prices": [
+        57
+      ],
+      "dishId": "2643251108862464",
+      "category": "ผลไม้ปั่น & สมูทตี้",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "(สมูทตี้) มะม่วง แก้วใหญ่ 22 ออนซ์",
+      "listPrice": 69,
+      "displayPrice": 69,
+      "prices": [
+        69
+      ],
+      "dishId": "2643254118750720",
+      "category": "ผลไม้ปั่น & สมูทตี้",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "(สมูทตี้) มันม่วง แก้วใหญ่ 22 ออนซ์",
+      "listPrice": 59,
+      "displayPrice": 59,
+      "prices": [
+        59
+      ],
+      "dishId": "2653300422876160",
+      "category": "ผลไม้ปั่น & สมูทตี้",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "โอวัลติน (เย็น/ปั่น)",
+      "listPrice": 42,
+      "displayPrice": 42,
+      "prices": [
+        42
+      ],
+      "dishId": "2035945924894720",
+      "category": "นม (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "นมสดเย็น (เย็น/ปั่น)",
+      "listPrice": 29,
+      "displayPrice": 29,
+      "prices": [
+        29
+      ],
+      "dishId": "2035946936360960",
+      "category": "นม (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "นมสดน้ำผึ้ง (เย็น/ปั่น)",
+      "listPrice": 49,
+      "displayPrice": 49,
+      "prices": [
+        49
+      ],
+      "dishId": "2035948064661504",
+      "category": "นม (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "นมสดคาราเมล (เย็น/ปั่น)",
+      "listPrice": 49,
+      "displayPrice": 49,
+      "prices": [
+        49
+      ],
+      "dishId": "2035948795551744",
+      "category": "นม (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "นมมรกต (เย็น/ปั่น)",
+      "listPrice": 37,
+      "displayPrice": 37,
+      "prices": [
+        37
+      ],
+      "dishId": "2035949566386176",
+      "category": "นม (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "นมสดเผือก (เย็น/ปั่น)",
+      "listPrice": 49,
+      "displayPrice": 49,
+      "prices": [
+        49
+      ],
+      "dishId": "2035950191992832",
+      "category": "นม (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "นมสดมิ้นต์ (เย็น/ปั่น)",
+      "listPrice": 49,
+      "displayPrice": 49,
+      "prices": [
+        49
+      ],
+      "dishId": "2035951546671104",
+      "category": "นม (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ไมโล (เย็น/ปั่น)",
+      "listPrice": 29,
+      "displayPrice": 29,
+      "prices": [
+        29
+      ],
+      "dishId": "2035952592658432",
+      "category": "นม (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "นมสดไข่มุกบราวน์ชูการ์ (เย็น/ปั่น)",
+      "listPrice": 54,
+      "displayPrice": 54,
+      "prices": [
+        54
+      ],
+      "dishId": "2035953395212800",
+      "category": "นม (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "นมสดเฮเซลนัท (เย็น/ปั่น)",
+      "listPrice": 49,
+      "displayPrice": 49,
+      "prices": [
+        49
+      ],
+      "dishId": "2035954600386560",
+      "category": "นม (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "นมชมพู (เย็น/ปั่น)",
+      "listPrice": 37,
+      "displayPrice": 37,
+      "prices": [
+        37
+      ],
+      "dishId": "2035955132063744",
+      "category": "นม (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "นมสดมันม่วง",
+      "listPrice": 49,
+      "displayPrice": 49,
+      "prices": [
+        49
+      ],
+      "dishId": "2653296383105536",
+      "category": "นม (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "น้ำเต้าหู้สูตรดั้งเดิม (เย็น/ปั่น)",
+      "listPrice": 29,
+      "displayPrice": 29,
+      "prices": [
+        29
+      ],
+      "dishId": "2591167330294272",
+      "category": "เบาเบากับน้ำเต้าหู้ (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "น้ำเต้าหู้นมสด (เย็น/ปั่น)",
+      "listPrice": 42,
+      "displayPrice": 42,
+      "prices": [
+        42
+      ],
+      "dishId": "2591168375168000",
+      "category": "เบาเบากับน้ำเต้าหู้ (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "น้ำเต้าหู้โอวัลติน (เย็น/ปั่น)",
+      "listPrice": 29,
+      "displayPrice": 29,
+      "prices": [
+        29
+      ],
+      "dishId": "2591173929278464",
+      "category": "เบาเบากับน้ำเต้าหู้ (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "น้ำเต้าหู้เผือก (เย็น/ปั่น)",
+      "listPrice": 40,
+      "displayPrice": 40,
+      "prices": [
+        40
+      ],
+      "dishId": "2591179103066624",
+      "category": "เบาเบากับน้ำเต้าหู้ (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "น้ำเต้าหู้โกโก้ (เย็น/ปั่น)",
+      "listPrice": 29,
+      "displayPrice": 29,
+      "prices": [
+        29
+      ],
+      "dishId": "2591186275916288",
+      "category": "เบาเบากับน้ำเต้าหู้ (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "โกปี๊อ้อ (โอเลี้ยง) (เย็น/ปั่น)",
+      "listPrice": 24,
+      "displayPrice": 24,
+      "prices": [
+        24
+      ],
+      "dishId": "2001840413628416",
+      "category": "กาแฟ (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "โกปี๊ ยกล้อ (ใส่นม) (เย็น/ปั่น)",
+      "listPrice": 29,
+      "displayPrice": 29,
+      "prices": [
+        29
+      ],
+      "dishId": "2035958178849280",
+      "category": "กาแฟ (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "โกปี๊ โบราณ (เย็น/ปั่น)",
+      "listPrice": 29,
+      "displayPrice": 29,
+      "prices": [
+        29
+      ],
+      "dishId": "2035959022821376",
+      "category": "กาแฟ (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "เนสกาแฟ (เย็น/ปั่น)",
+      "listPrice": 42,
+      "displayPrice": 42,
+      "prices": [
+        42
+      ],
+      "dishId": "2035959681572864",
+      "category": "กาแฟ (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "มอคค่า (เย็น/ปั่น)",
+      "listPrice": 37,
+      "displayPrice": 37,
+      "prices": [
+        37
+      ],
+      "dishId": "2035960316469248",
+      "category": "กาแฟ (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ลาเต้ (เย็น/ปั่น)",
+      "listPrice": 37,
+      "displayPrice": 37,
+      "prices": [
+        37
+      ],
+      "dishId": "2035961126806016",
+      "category": "กาแฟ (เย็น, ปั่น)",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "แดงโซดา",
+      "listPrice": 22,
+      "displayPrice": 22,
+      "prices": [
+        22
+      ],
+      "dishId": "2036016510902784",
+      "category": "อินตาเลียนโซดา",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "เขียวโซดา",
+      "listPrice": 22,
+      "displayPrice": 22,
+      "prices": [
+        22
+      ],
+      "dishId": "2036017101955584",
+      "category": "อินตาเลียนโซดา",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "น้ำผึ้งมะนาวโซดา",
+      "listPrice": 50,
+      "displayPrice": 50,
+      "prices": [
+        50
+      ],
+      "dishId": "2036018203664896",
+      "category": "อินตาเลียนโซดา",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "แดงมะนาวโซดา",
+      "listPrice": 50,
+      "displayPrice": 50,
+      "prices": [
+        50
+      ],
+      "dishId": "2036019807199232",
+      "category": "อินตาเลียนโซดา",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "เขียวมะนาวโซดา",
+      "listPrice": 36,
+      "displayPrice": 36,
+      "prices": [
+        36
+      ],
+      "dishId": "2036020665278976",
+      "category": "อินตาเลียนโซดา",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "บ๊วยโซดา",
+      "listPrice": 29,
+      "displayPrice": 29,
+      "prices": [
+        29
+      ],
+      "dishId": "2036021911478784",
+      "category": "อินตาเลียนโซดา",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "มะนาวโซดา",
+      "listPrice": 29,
+      "displayPrice": 29,
+      "prices": [
+        29
+      ],
+      "dishId": "2036022599246336",
+      "category": "อินตาเลียนโซดา",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "สตรอว์เบอร์รีโซดา",
+      "listPrice": 22,
+      "displayPrice": 22,
+      "prices": [
+        22
+      ],
+      "dishId": "2036023190970368",
+      "category": "อินตาเลียนโซดา",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "เสาวรสโซดา",
+      "listPrice": 22,
+      "displayPrice": 22,
+      "prices": [
+        22
+      ],
+      "dishId": "2036023845904384",
+      "category": "อินตาเลียนโซดา",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ลิ้นจี่โซดา",
+      "listPrice": 22,
+      "displayPrice": 22,
+      "prices": [
+        22
+      ],
+      "dishId": "2036024399880192",
+      "category": "อินตาเลียนโซดา",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "บลูเบอร์รี่โซดา",
+      "listPrice": 22,
+      "displayPrice": 22,
+      "prices": [
+        22
+      ],
+      "dishId": "2036025039052800",
+      "category": "อินตาเลียนโซดา",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "แอปเปิ้ลโซดา",
+      "listPrice": 22,
+      "displayPrice": 22,
+      "prices": [
+        22
+      ],
+      "dishId": "2036025616605696",
+      "category": "อินตาเลียนโซดา",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "บลูฮาวายโซดา",
+      "listPrice": 22,
+      "displayPrice": 22,
+      "prices": [
+        22
+      ],
+      "dishId": "2036026321018880",
+      "category": "อินตาเลียนโซดา",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "0% แคล ชาลิ้นจี่",
+      "listPrice": 24,
+      "displayPrice": 24,
+      "prices": [
+        24
+      ],
+      "dishId": "2482308320284160",
+      "category": "0% แคล ชาเพื่อสุขภาพ",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "0% แคล ชาสละ",
+      "listPrice": 24,
+      "displayPrice": 24,
+      "prices": [
+        24
+      ],
+      "dishId": "2482309736599040",
+      "category": "0% แคล ชาเพื่อสุขภาพ",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "0% แคล ชาองุ่น",
+      "listPrice": 24,
+      "displayPrice": 24,
+      "prices": [
+        24
+      ],
+      "dishId": "2482311366315520",
+      "category": "0% แคล ชาเพื่อสุขภาพ",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "0% แคล ชาพีช",
+      "listPrice": 24,
+      "displayPrice": 24,
+      "prices": [
+        24
+      ],
+      "dishId": "2483534695534080",
+      "category": "0% แคล ชาเพื่อสุขภาพ",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "0% แคล ชาน้ำผึ้ง",
+      "listPrice": 24,
+      "displayPrice": 24,
+      "prices": [
+        24
+      ],
+      "dishId": "2483536546172416",
+      "category": "0% แคล ชาเพื่อสุขภาพ",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "0% แคล ชาน้ำผึ้งมะนาว",
+      "listPrice": 24,
+      "displayPrice": 24,
+      "prices": [
+        24
+      ],
+      "dishId": "2483538555735040",
+      "category": "0% แคล ชาเพื่อสุขภาพ",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "0% แคล ชาแคนตาลูป",
+      "listPrice": 24,
+      "displayPrice": 24,
+      "prices": [
+        24
+      ],
+      "dishId": "2486652702198784",
+      "category": "0% แคล ชาเพื่อสุขภาพ",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "0% แคล ชาฟรุตพันช์",
+      "listPrice": 24,
+      "displayPrice": 24,
+      "prices": [
+        24
+      ],
+      "dishId": "2486653864250368",
+      "category": "0% แคล ชาเพื่อสุขภาพ",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "0% แคล ชามะลิ",
+      "listPrice": 24,
+      "displayPrice": 24,
+      "prices": [
+        24
+      ],
+      "dishId": "2486655182490624",
+      "category": "0% แคล ชาเพื่อสุขภาพ",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "0% แคล โซดาลิ้นจี่",
+      "listPrice": 22,
+      "displayPrice": 22,
+      "prices": [
+        22
+      ],
+      "dishId": "2486660673801728",
+      "category": "0% แคล โซดาซ่าเพื่อสุขภาพ",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "0% แคล โซดาน้ำผึ้ง",
+      "listPrice": 22,
+      "displayPrice": 22,
+      "prices": [
+        22
+      ],
+      "dishId": "2486663893191680",
+      "category": "0% แคล โซดาซ่าเพื่อสุขภาพ",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "0% แคล โซดาน้ำผึ้งมะนาว",
+      "listPrice": 22,
+      "displayPrice": 22,
+      "prices": [
+        22
+      ],
+      "dishId": "2486666748726784",
+      "category": "0% แคล โซดาซ่าเพื่อสุขภาพ",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "0% แคล โซดาองุ่น",
+      "listPrice": 22,
+      "displayPrice": 22,
+      "prices": [
+        22
+      ],
+      "dishId": "2486669035671040",
+      "category": "0% แคล โซดาซ่าเพื่อสุขภาพ",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "0% แคล โซดาแคนตาลูป",
+      "listPrice": 22,
+      "displayPrice": 22,
+      "prices": [
+        22
+      ],
+      "dishId": "2488093025963520",
+      "category": "0% แคล โซดาซ่าเพื่อสุขภาพ",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "0% แคล โซดาพีช",
+      "listPrice": 22,
+      "displayPrice": 22,
+      "prices": [
+        22
+      ],
+      "dishId": "2488095588060160",
+      "category": "0% แคล โซดาซ่าเพื่อสุขภาพ",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "0% แคล โซดาฟรุตพันช์",
+      "listPrice": 22,
+      "displayPrice": 22,
+      "prices": [
+        22
+      ],
+      "dishId": "2488097824525312",
+      "category": "0% แคล โซดาซ่าเพื่อสุขภาพ",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "0% โคล่าโซดา",
+      "listPrice": 24,
+      "displayPrice": 24,
+      "prices": [
+        24
+      ],
+      "dishId": "3245263001568768",
+      "category": "0% แคล โซดาซ่าเพื่อสุขภาพ",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "0% โคล่าโซดามะนาว",
+      "listPrice": 24,
+      "displayPrice": 24,
+      "prices": [
+        24
+      ],
+      "dishId": "3245263396127744",
+      "category": "0% แคล โซดาซ่าเพื่อสุขภาพ",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "กาแฟสด อเมริกาโน่ เย็น 16 ออนซ์",
+      "listPrice": 50,
+      "displayPrice": 50,
+      "prices": [
+        50
+      ],
+      "dishId": "2463263179654144",
+      "category": "* กาแฟสดเข้มข้น",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "กาแฟสด เอสเปรสโซ่ เย็น 16 ออนซ์",
+      "listPrice": 45,
+      "displayPrice": 45,
+      "prices": [
+        45
+      ],
+      "dishId": "2463265350189568",
+      "category": "* กาแฟสดเข้มข้น",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "กาแฟสด ลองแบล็ค เย็น 16 ออนซ์",
+      "listPrice": 37,
+      "displayPrice": 37,
+      "prices": [
+        37
+      ],
+      "dishId": "2466129961927680",
+      "category": "* กาแฟสดเข้มข้น",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "กาแฟสด เอสเปรสโซ่ไทยสไตล์ เย็น 16 ออนซ์",
+      "listPrice": 37,
+      "displayPrice": 37,
+      "prices": [
+        37
+      ],
+      "dishId": "2471227068632064",
+      "category": "* กาแฟสดเข้มข้น",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "กาแฟสด โอเลี้ยง เย็น 16 ออนซ์",
+      "listPrice": 37,
+      "displayPrice": 37,
+      "prices": [
+        37
+      ],
+      "dishId": "2473114179980288",
+      "category": "* กาแฟสดเข้มข้น",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "กาแฟสด กาแฟโบราณ เย็น 16 ออนซ์",
+      "listPrice": 37,
+      "displayPrice": 37,
+      "prices": [
+        37
+      ],
+      "dishId": "2473119347035136",
+      "category": "* กาแฟสดเข้มข้น",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "กาแฟสด โอเลี้ยงเฮเซลนัท เย็น 16 ออนซ์",
+      "listPrice": 37,
+      "displayPrice": 37,
+      "prices": [
+        37
+      ],
+      "dishId": "2476703913102336",
+      "category": "* กาแฟสดเข้มข้น",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "กาแฟสด มอคค่า เย็น 16 ออนซ์",
+      "listPrice": 45,
+      "displayPrice": 45,
+      "prices": [
+        45
+      ],
+      "dishId": "2531306903050240",
+      "category": "* กาแฟสดเข้มข้น",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "กาแฟสด ลาเต้ เย็น 16 ออนซ์",
+      "listPrice": 45,
+      "displayPrice": 45,
+      "prices": [
+        45
+      ],
+      "dishId": "2463264255804416",
+      "category": "* กาแฟสดนมนุ่มละมุน",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "กาแฟสด คาปูชิโน่ เย็น 16 ออนซ์",
+      "listPrice": 45,
+      "displayPrice": 45,
+      "prices": [
+        45
+      ],
+      "dishId": "2463266156052992",
+      "category": "* กาแฟสดนมนุ่มละมุน",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "กาแฟสด แฟลตไวท์ เย็น 16 ออนซ์",
+      "listPrice": 45,
+      "displayPrice": 45,
+      "prices": [
+        45
+      ],
+      "dishId": "2466134036087296",
+      "category": "* กาแฟสดนมนุ่มละมุน",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "กาแฟสด มอคค่า เย็น 16 ออนซ์",
+      "listPrice": 45,
+      "displayPrice": 45,
+      "prices": [
+        45
+      ],
+      "dishId": "2471217986505728",
+      "category": "* กาแฟสดนมนุ่มละมุน",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "กาแฟสด คาราเมลมัคคิอาโต้ เย็น 16 ออนซ์",
+      "listPrice": 47,
+      "displayPrice": 47,
+      "prices": [
+        47
+      ],
+      "dishId": "2471222752218112",
+      "category": "* กาแฟสดนมนุ่มละมุน",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ช็อกโกแลตมิลค์ เย็น 16 ออนซ์",
+      "listPrice": 37,
+      "displayPrice": 37,
+      "prices": [
+        37
+      ],
+      "dishId": "2473112192256512",
+      "category": "* กาแฟสดนมนุ่มละมุน",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "กาแฟสด ช็อกโกแลตเอสเปรสโซ่ เย็น 16 ออนซ์",
+      "listPrice": 37,
+      "displayPrice": 37,
+      "prices": [
+        37
+      ],
+      "dishId": "2476707554249216",
+      "category": "* กาแฟสดนมนุ่มละมุน",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "กาแฟสด โอวัลตินช็อตกาแฟ เย็น 16 ออนซ์",
+      "listPrice": 37,
+      "displayPrice": 37,
+      "prices": [
+        37
+      ],
+      "dishId": "2476714197240320",
+      "category": "* กาแฟสดนมนุ่มละมุน",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "กาแฟสด น้ำผึ้งมะนาว เย็น 16 ออนซ์",
+      "listPrice": 37,
+      "displayPrice": 37,
+      "prices": [
+        37
+      ],
+      "dishId": "2476793101568512",
+      "category": "* กาแฟสดฟิวชันสดชื่น",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "กาแฟสดโซดา เอสเปรสโซ่เสาวรส เย็น 16 ออนซ์",
+      "listPrice": 32,
+      "displayPrice": 32,
+      "prices": [
+        32
+      ],
+      "dishId": "2478149939087872",
+      "category": "* กาแฟสดฟิวชันสดชื่น",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
+      "listPrice": 32,
+      "displayPrice": 32,
+      "prices": [
+        32
+      ],
+      "dishId": "2466156880004096",
+      "category": "* กาแฟสด อื่นๆ ร้อน",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "กาแฟสด Espresso (เอสเปรสโซ่) ร้อน 12 ออนซ์",
+      "listPrice": 37,
+      "displayPrice": 37,
+      "prices": [
+        37
+      ],
+      "dishId": "2466162749407744",
+      "category": "* กาแฟสด อื่นๆ ร้อน",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "กาแฟสด ลาเต้ (Latte) ร้อน 12 ออนซ์",
+      "listPrice": 37,
+      "displayPrice": 37,
+      "prices": [
+        37
+      ],
+      "dishId": "2466170085344256",
+      "category": "* กาแฟสด อื่นๆ ร้อน",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "กาแฟสด Cappuccino (คาปูชิโน่) ร้อน 12 ออนซ์",
+      "listPrice": 37,
+      "displayPrice": 37,
+      "prices": [
+        37
+      ],
+      "dishId": "2466182941787136",
+      "category": "* กาแฟสด อื่นๆ ร้อน",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "กาแฟสด มอคค่า ร้อน 12 ออนซ์",
+      "listPrice": 37,
+      "displayPrice": 37,
+      "prices": [
+        37
+      ],
+      "dishId": "2476745102904320",
+      "category": "* กาแฟสด อื่นๆ ร้อน",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "นมร้อน 12 ออนซ์",
+      "listPrice": 24,
+      "displayPrice": 24,
+      "prices": [
+        24
+      ],
+      "dishId": "2481063311002624",
+      "category": "* กาแฟสด อื่นๆ ร้อน",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "กาแฟสด คาราเมลลาเต้ร้อน 12 ออนซ์",
+      "listPrice": 45,
+      "displayPrice": 45,
+      "prices": [
+        45
+      ],
+      "dishId": "2481065432648704",
+      "category": "* กาแฟสด อื่นๆ ร้อน",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "เจลลี่ผลไม้",
+      "listPrice": 6,
+      "displayPrice": 6,
+      "prices": [
+        6
+      ],
+      "dishId": "2534735346358272",
+      "category": "ท็อปปิ้ง",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ไข่มุก",
+      "listPrice": 6,
+      "displayPrice": 6,
+      "prices": [
+        6
+      ],
+      "dishId": "2534736407303680",
+      "category": "ท็อปปิ้ง",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "เฉาก๊วยหนึบเนื้อแน่น",
+      "listPrice": 11,
+      "displayPrice": 11,
+      "prices": [
+        11
+      ],
+      "dishId": "2579384402156544",
+      "category": "ท็อปปิ้ง",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "บุกบราวน์ชูการ์",
+      "listPrice": 13,
+      "displayPrice": 13,
+      "prices": [
+        13
+      ],
+      "dishId": "2534737451636736",
+      "category": "ท็อปปิ้ง",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "บุกน้ำผึ้ง",
+      "listPrice": 13,
+      "displayPrice": 13,
+      "prices": [
+        13
+      ],
+      "dishId": "2534738596206080",
+      "category": "ท็อปปิ้ง",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "บุกน้ำตาล",
+      "listPrice": 13,
+      "displayPrice": 13,
+      "prices": [
+        13
+      ],
+      "dishId": "2534740326356480",
+      "category": "ท็อปปิ้ง",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ซอสบราวน์ชูการ์",
+      "listPrice": 19,
+      "displayPrice": 19,
+      "prices": [
+        19
+      ],
+      "dishId": "2534742297892864",
+      "category": "ท็อปปิ้ง",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "ครีมซีส",
+      "listPrice": 25,
+      "displayPrice": 25,
+      "prices": [
+        25
+      ],
+      "dishId": "2534742989493760",
+      "category": "ท็อปปิ้ง",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "วุ้นกบไต้หวัน",
+      "listPrice": 8,
+      "displayPrice": 8,
+      "prices": [
+        8
+      ],
+      "dishId": "2610668571040256",
+      "category": "ท็อปปิ้ง",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    },
+    {
+      "name": "วุ้นว่านหางจระเข้ หั่นลูกเต๋า",
+      "listPrice": 19,
+      "displayPrice": 19,
+      "prices": [
+        19
+      ],
+      "dishId": "2610676942985728",
+      "category": "ท็อปปิ้ง",
+      "visible": "แสดงเมนู",
+      "stock": "พร้อมจำหน่าย"
+    }
+  ]
+}

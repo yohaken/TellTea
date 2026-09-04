@@ -1,0 +1,48 @@
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "dish": {
+      "id": "2486660673801728",
+      "store_id": "10212109",
+      "name": "0% แคล โซดาลิ้นจี่",
+      "price": "2200000",
+      "list_price": "2200000",
+      "picture": "th-11134505-7ras8-m7fadgukmevu99",
+      "description": "สดชื่น หอมหวานกำลังดี ด้วยกลิ่นลิ้นจี่แบบธรรมชาติ ซ่าซ่าแบบไม่มีน้ำตาลและแคลอรี่ ดื่มง่าย สดชื่นทุกเวลา",
+      "available": true,
+      "option_group_count": 3,
+      "sales_volume": 47,
+      "sale_start_time": 0,
+      "sale_end_time": 86399,
+      "sale_week_bit": 127,
+      "in_sale_time": true,
+      "listing_status": 1,
+      "sale_status": 1,
+      "time_for_sales": [
+        {
+          "sale_start_time": 0,
+          "sale_end_time": 86399
+        }
+      ],
+      "rank": 1,
+      "create_source": null,
+      "discount_type": null,
+      "discount_amount": "0",
+      "sync_item_group_id": "",
+      "blocked": false,
+      "item_discount": null,
+      "flash_sale_dish_discount": null,
+      "flag": {
+        "alcoholic": false,
+        "qc_frozen": false
+      },
+      "picture_type": 0,
+      "is_prepaid_sku": false,
+      "stock_type": 0,
+      "catalog_id": "2482306644233728",
+      "catalog_name": "0% แคล โซดาซ่าเพื่อสุขภาพ",
+      "qc_frozen": false
+    }
+  }
+}

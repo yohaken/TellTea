@@ -1,0 +1,61 @@
+{
+  "at": "2026-09-03T09:05:11.661Z",
+  "apply": true,
+  "sourceCsv": "scripts/data/menu-price-baseline/grab-export-fresh-1788426287422.csv",
+  "grabRule": {
+    "mode": "gp",
+    "value": 30
+  },
+  "diffs": [
+    {
+      "grabGroup": "ท็อปปิ้ง",
+      "name": "วุ้นกบไต้หวัน",
+      "live": 9,
+      "store": 6,
+      "target": 8,
+      "posKey": "fs_opt_27722806::fs_c_41662758",
+      "posGroup": "ท้อปปิ้ง",
+      "verifyLive": 8
+    },
+    {
+      "grabGroup": "ช็อตมัทฉะ",
+      "name": "เพิ่มช็อตมัทฉะ 1 กรัม",
+      "live": 9,
+      "store": 6,
+      "target": 8,
+      "posKey": "fs_opt_41309539::fs_c_41756674",
+      "posGroup": "ช็อตมัทฉะ",
+      "verifyLive": 8
+    }
+  ],
+  "cellPatches": 140,
+  "skippedOver100": 0,
+  "optionCols": [
+    "OptionGroup1",
+    "OptionGroup2",
+    "OptionGroup3",
+    "OptionGroup4",
+    "OptionGroup5"
+  ],
+  "upload": {
+    "inject": {
+      "ok": true,
+      "name": "grab-hub-opt-fix.zip",
+      "size": 7181,
+      "sellDisabled": false
+    },
+    "submit": {
+      "clicked": true
+    },
+    "status": {
+      "slice": "grab-hub-opt-fix.zip\t\n167\n\t\nสำเร็จ\n\t\n03 Sep 26 16:05\n\t\nyohaken@gmail.com\n\tดาวน์โหลด\ngrab-hub-opt-price.zip\t\n167\n\t\nสำเร็จ\n\t\n03 Sep 26 15:56\n\t\nyohaken@gmail.com\n\tดาวน์โหลด\ngrab-hub-price-update.zip\t\n167\n\t\nสำเร็จ\n\t\n03 Sep 26 15:44\n\t\nyohaken@gm",
+      "processing": false,
+      "success": true
+    }
+  },
+  "verify": {
+    "matched": 2,
+    "stillOff": 0,
+    "csv": "/var/folders/ts/5b4_c2pn3w9__87zmd7c87dc0000gn/T/grab-csv-1788426360020/3-C6J1BCNXTYKTLX_20260903_b6ed368374e849659dc744205f18c6d1.csv"
+  }
+}

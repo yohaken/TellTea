@@ -1,0 +1,38 @@
+{
+  "method": "POST",
+  "payload": {
+    "group_id": "2489613938674688",
+    "group_name": "กาแฟ",
+    "shelve_state": true,
+    "rank": 0,
+    "remark": "",
+    "select_mode": 5,
+    "select_min": 0,
+    "select_max": 0,
+    "options": [
+      {
+        "option_id": "2489613938707968",
+        "option_name": "เพิ่มช็อตกาแฟ 1 ช็อต",
+        "rank": 1,
+        "price": "1800000",
+        "available": true,
+        "out_of_stock_time": null,
+        "sync_item_group_id": ""
+      },
+      {
+        "option_name": "เพิ่มช็อตกาแฟ 2 ช็อต",
+        "rank": 2,
+        "price": "2600000",
+        "available": true,
+        "out_of_stock_time": null,
+        "sync_item_group_id": ""
+      }
+    ],
+    "sync_item_group_id": ""
+  },
+  "res": {
+    "code": 0,
+    "msg": "success",
+    "data": null
+  }
+}

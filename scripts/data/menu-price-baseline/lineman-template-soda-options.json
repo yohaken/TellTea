@@ -1,0 +1,292 @@
+{
+  "optionSlice": "ตัวเลือก\n\nสร้างตัวเลือก\nขนาด ปริมาณ แก้วกาแฟ\nความหวาน\nชิโอปัง เพิ่มไส้พิเศษ\nช็อตกาแฟ\nช็อตมะนาว\nช็อตมัทฉะ\nซอฟต์คุกกี้ เลือกรสชาติ\nท็อปปิ้งขนมปัง\nท้อปปิ้ง\nประเภท\nรสชาติ ไอศครีม\nแยกน้ำแข็ง\nโปรโมชั่น Soft Cookie โฮมเมด\nโปรโมชั่น ชิโอปัง\nโปรโมชั่น บราวนี่\nโปรโมชั่น ปังมันม่วง\nโปรโมชั่น ปังเนยกรอบอบไอน้ำ\nโปรโมชั่น มันไทยอบ ดั้งเดิม\nโปรโมชั่น วาฟเฟิลเบลเยียมโฮมเมด ดั้งเดิม\nโปรโมชั่น เค้กกล้วยหอม\n\nประเภท\n\nสร้างประเภท\nเบเกอรี่ & ไอศครีม\nSignature Drinks (เย็น, ปั่น)\nชานมสดคราฟต์ (เย็น, ปั่น)\nชา\nชานม (เย็น, ปั่น)\nมัจฉะแท้\nผลไม้ปั่น & สมูทตี้\nชาผลไม้\nกาแฟ (เย็น, ปั่น)\nนม (เย็น, ปั่น)\nเบาเบากับน้ำเต้าหู้ (เย็น, ปั่น)\nอิตาเลียน โซดา\n0% แคล ชาเพื่อสุขภาพ\n0% แคล โซดาซ่าเพื่อสุขภาพ\n* กาแฟสดเข้มข้น\n* กาแฟสดนมนุ่มละมุน\n* กาแฟสดฟิวชันสดชื่น\n* กาแฟสด อื่นๆ ร้อน\nทัอปปิ้ง\nสินค้าแนะนำ\nเลือกสินค้านี้เป็นสินค้าแนะนำของร้าน\nบันทึก\n\nสถานะสินค้า\n\nมีจำหน่าย\n\nมีจำหน่าย",
+  "checks": [
+    {
+      "name": "onlineEnabled",
+      "id": "",
+      "checked": true,
+      "label": "เดลิเวอรี"
+    },
+    {
+      "name": "pickUpEnabled",
+      "id": "",
+      "checked": true,
+      "label": "รับที่ร้าน"
+    },
+    {
+      "name": "offlineEnabled",
+      "id": "",
+      "checked": true,
+      "label": "หน้าร้าน"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "ขนาด ปริมาณ แก้วกาแฟ"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": true,
+      "label": "ความหวาน"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "ชิโอปัง เพิ่มไส้พิเศษ"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "ช็อตกาแฟ"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "ช็อตมะนาว"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "ช็อตมัทฉะ"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "ซอฟต์คุกกี้ เลือกรสชาติ"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "ท็อปปิ้งขนมปัง"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": true,
+      "label": "ท้อปปิ้ง"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "ประเภท"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "รสชาติ ไอศครีม"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": true,
+      "label": "แยกน้ำแข็ง"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "โปรโมชั่น Soft Cookie โฮมเมด"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "โปรโมชั่น ชิโอปัง"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "โปรโมชั่น บราวนี่"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "โปรโมชั่น ปังมันม่วง"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "โปรโมชั่น ปังเนยกรอบอบไอน้ำ"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "โปรโมชั่น มันไทยอบ ดั้งเดิม"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "โปรโมชั่น วาฟเฟิลเบลเยียมโฮมเมด ดั้งเดิม"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "โปรโมชั่น เค้กกล้วยหอม"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "เบเกอรี่ & ไอศครีม"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "Signature Drinks (เย็น, ปั่น)"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "ชานมสดคราฟต์ (เย็น, ปั่น)"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "ชา"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "ชานม (เย็น, ปั่น)"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "มัจฉะแท้"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "ผลไม้ปั่น & สมูทตี้"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "ชาผลไม้"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "กาแฟ (เย็น, ปั่น)"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "นม (เย็น, ปั่น)"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "เบาเบากับน้ำเต้าหู้ (เย็น, ปั่น)"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": true,
+      "label": "อิตาเลียน โซดา"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "0% แคล ชาเพื่อสุขภาพ"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "0% แคล โซดาซ่าเพื่อสุขภาพ"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "* กาแฟสดเข้มข้น"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "* กาแฟสดนมนุ่มละมุน"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "* กาแฟสดฟิวชันสดชื่น"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "* กาแฟสด อื่นๆ ร้อน"
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": false,
+      "label": "ทัอปปิ้ง"
+    },
+    {
+      "name": "recommended",
+      "id": "recommended",
+      "checked": false,
+      "label": ""
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": true,
+      "label": ""
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": true,
+      "label": ""
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": true,
+      "label": ""
+    },
+    {
+      "name": "",
+      "id": "",
+      "checked": true,
+      "label": ""
+    }
+  ],
+  "imgs": [
+    "https://merchant.wongnai.com/static/media/merchant-brand.60ba6e77901eff704665a190e3804626.svg",
+    "https://lmwn-img.line-scdn.net/p/400x0/2026/07/17/bbffed9f920a45f18685f47cbb27ce77.jpg",
+    "https://merchant.wongnai.com/static/media/star.577072f524ea62cad961.svg"
+  ]
+}

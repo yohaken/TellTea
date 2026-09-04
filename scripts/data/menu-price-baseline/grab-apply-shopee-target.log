@@ -1,0 +1,21 @@
+=== Grab price ×1 APPLY (target=Shopee baseline, no 15% cap) ===
+Queue: 15 (ยกราคา Shopee มาใส่ Grab)
+[1/15] blocked_menu_ui: ชานมไข่มุก (เย็น/ปั่น) 43→40 (เป้า Shopee 40)
+[2/15] reached_target: บ๊วยโซดา 43→40 (เป้า Shopee 40)
+[3/15] blocked_menu_ui: ชาเขียวนม (เย็น/ปั่น) 43→40 (เป้า Shopee 40)
+[4/15] reached_target: โกโก้ลาวาช็อกขูด (เย็น/ปั่น) 73→75 (เป้า Shopee 75)
+[5/15] reached_target: ลาเต้ (เย็น/ปั่น) 52→50 (เป้า Shopee 50)
+[6/15] blocked_menu_ui: มันไทยอบ ดั้งเดิม 23→25 (เป้า Shopee 25)
+[7/15] reached_target: ชานมเผือก (เย็น/ปั่น) 52→50 (เป้า Shopee 50)
+[8/15] blocked_menu_ui: กาแฟสด โอเลี้ยงเฮเซลนัท เย็น 16 ออนซ 52→50 (เป้า Shopee 50)
+[9/15] blocked_menu_ui: กาแฟสด โอเลี้ยง เย็น 16 ออนซ์ 52→50 (เป้า Shopee 50)
+[10/15] blocked_menu_ui: (สมูทตี้) สตรอเบอร์รี่ แก้วใหญ่ 22 อ 67→65 (เป้า Shopee 65)
+[11/15] reached_target: มอคค่า (เย็น/ปั่น) 52→50 (เป้า Shopee 50)
+[12/15] blocked_menu_ui: ครีมซีส 37→35 (เป้า Shopee 35)
+[13/15] reached_target: ชาพีช 67→65 (เป้า Shopee 65)
+[14/15] blocked_menu_ui: วุ้นว่านหางจระเข้ หั่นลูกเต๋า 26→25 (เป้า Shopee 25)
+[15/15] reached_target: วุ้นกบไต้หวัน 11→10 (เป้า Shopee 10)
+
+Done in 274s · changed 7 · ถึงเป้า Shopee 7 · blocked 8 · error 0 · no_change 0
+→ /Users/peerapongyohaken/TellTea/scripts/data/menu-price-baseline/grab-update-log.json
+→ /Users/peerapongyohaken/TellTea/scripts/data/menu-price-baseline/grab-price-tracker.json

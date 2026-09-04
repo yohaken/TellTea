@@ -1,0 +1,484 @@
+{
+  "at": "2026-09-03T12:11:40.604Z",
+  "source": "wongnai option parallel-4",
+  "groups": 20,
+  "okGroups": 19,
+  "options": [
+    {
+      "group": "ขนาด ปริมาณ แก้วกาแฟ",
+      "name": "แก้วมาตรฐาน",
+      "price": 0,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoMb84lQ0nYbvpQDizV0jYMwpQ1P/edit",
+      "id": "0leoMb84lQ0nYbvpQDizV0jYMwpQ1P"
+    },
+    {
+      "group": "ขนาด ปริมาณ แก้วกาแฟ",
+      "name": "แก้วใหญ่ 22oz เข้ม +1 ช๊อต ซีลแน่น",
+      "price": 12,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoMb84lQ0nYbvpQDizV0jYMwpQ1P/edit",
+      "id": "0leoMb84lQ0nYbvpQDizV0jYMwpQ1P"
+    },
+    {
+      "group": "ความหวาน",
+      "name": "ไม่หวาน 0%",
+      "price": 0,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leo36HGy9al2dkvZ6m0NbB1Moe85U/edit",
+      "id": "0leo36HGy9al2dkvZ6m0NbB1Moe85U"
+    },
+    {
+      "group": "ความหวาน",
+      "name": "หวานน้อยมาก 25%",
+      "price": 0,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leo36HGy9al2dkvZ6m0NbB1Moe85U/edit",
+      "id": "0leo36HGy9al2dkvZ6m0NbB1Moe85U"
+    },
+    {
+      "group": "ความหวาน",
+      "name": "หวานน้อย 50%",
+      "price": 0,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leo36HGy9al2dkvZ6m0NbB1Moe85U/edit",
+      "id": "0leo36HGy9al2dkvZ6m0NbB1Moe85U"
+    },
+    {
+      "group": "ความหวาน",
+      "name": "หวานปกติ 100%",
+      "price": 0,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leo36HGy9al2dkvZ6m0NbB1Moe85U/edit",
+      "id": "0leo36HGy9al2dkvZ6m0NbB1Moe85U"
+    },
+    {
+      "group": "ความหวาน",
+      "name": "หวานมาก 125%",
+      "price": 0,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leo36HGy9al2dkvZ6m0NbB1Moe85U/edit",
+      "id": "0leo36HGy9al2dkvZ6m0NbB1Moe85U"
+    },
+    {
+      "group": "ความหวาน",
+      "name": "หวานมาก 150%",
+      "price": 0,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leo36HGy9al2dkvZ6m0NbB1Moe85U/edit",
+      "id": "0leo36HGy9al2dkvZ6m0NbB1Moe85U"
+    },
+    {
+      "group": "ความหวาน",
+      "name": "หวานมาก 200%",
+      "price": 0,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leo36HGy9al2dkvZ6m0NbB1Moe85U/edit",
+      "id": "0leo36HGy9al2dkvZ6m0NbB1Moe85U"
+    },
+    {
+      "group": "ชิโอปัง เพิ่มไส้พิเศษ",
+      "name": "ไม่เพิ่ม",
+      "price": 0,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoQLRwzJAtsHyiliXYXgm83n0z7H/edit",
+      "id": "0leoQLRwzJAtsHyiliXYXgm83n0z7H"
+    },
+    {
+      "group": "ชิโอปัง เพิ่มไส้พิเศษ",
+      "name": "ช็อคโกแลต",
+      "price": 5,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoQLRwzJAtsHyiliXYXgm83n0z7H/edit",
+      "id": "0leoQLRwzJAtsHyiliXYXgm83n0z7H"
+    },
+    {
+      "group": "ชิโอปัง เพิ่มไส้พิเศษ",
+      "name": "วนิลา",
+      "price": 5,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoQLRwzJAtsHyiliXYXgm83n0z7H/edit",
+      "id": "0leoQLRwzJAtsHyiliXYXgm83n0z7H"
+    },
+    {
+      "group": "ชิโอปัง เพิ่มไส้พิเศษ",
+      "name": "สตรอเบอรี่",
+      "price": 5,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoQLRwzJAtsHyiliXYXgm83n0z7H/edit",
+      "id": "0leoQLRwzJAtsHyiliXYXgm83n0z7H"
+    },
+    {
+      "group": "ชิโอปัง เพิ่มไส้พิเศษ",
+      "name": "บลูเบอรี่",
+      "price": 5,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoQLRwzJAtsHyiliXYXgm83n0z7H/edit",
+      "id": "0leoQLRwzJAtsHyiliXYXgm83n0z7H"
+    },
+    {
+      "group": "ชิโอปัง เพิ่มไส้พิเศษ",
+      "name": "ส้ม",
+      "price": 5,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoQLRwzJAtsHyiliXYXgm83n0z7H/edit",
+      "id": "0leoQLRwzJAtsHyiliXYXgm83n0z7H"
+    },
+    {
+      "group": "ช็อตกาแฟ",
+      "name": "ไม่เพิ่ม",
+      "price": 0,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoI1MLfk8DOVygOZVQ6SIAEYlCR1/edit",
+      "id": "0leoI1MLfk8DOVygOZVQ6SIAEYlCR1"
+    },
+    {
+      "group": "ช็อตกาแฟ",
+      "name": "เพิ่มช็อตกาแฟ 1 ช็อต",
+      "price": 13,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoI1MLfk8DOVygOZVQ6SIAEYlCR1/edit",
+      "id": "0leoI1MLfk8DOVygOZVQ6SIAEYlCR1"
+    },
+    {
+      "group": "ช็อตกาแฟ",
+      "name": "เพิ่มช็อตกาแฟ 2 ช็อต",
+      "price": 19,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoI1MLfk8DOVygOZVQ6SIAEYlCR1/edit",
+      "id": "0leoI1MLfk8DOVygOZVQ6SIAEYlCR1"
+    },
+    {
+      "group": "ช็อตมะนาว",
+      "name": "ไม่เพิ่ม",
+      "price": 0,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoOQU7rTZXqItvRVom7ePH6Nk4oE/edit",
+      "id": "0leoOQU7rTZXqItvRVom7ePH6Nk4oE"
+    },
+    {
+      "group": "ช็อตมะนาว",
+      "name": "เพิ่ม 1 ช็อต",
+      "price": 5,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoOQU7rTZXqItvRVom7ePH6Nk4oE/edit",
+      "id": "0leoOQU7rTZXqItvRVom7ePH6Nk4oE"
+    },
+    {
+      "group": "ช็อตมัทฉะ",
+      "name": "ไม่เพิ่ม",
+      "price": 0,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoMOXeLjn3KnhhbtX5SLMPuLfGVL/edit",
+      "id": "0leoMOXeLjn3KnhhbtX5SLMPuLfGVL"
+    },
+    {
+      "group": "ช็อตมัทฉะ",
+      "name": "เพิ่มช็อตมัทฉะ 1 กรัม",
+      "price": 25,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoMOXeLjn3KnhhbtX5SLMPuLfGVL/edit",
+      "id": "0leoMOXeLjn3KnhhbtX5SLMPuLfGVL"
+    },
+    {
+      "group": "ช็อตมัทฉะ",
+      "name": "เพิ่มช็อตมัทฉะ 2 กรัม",
+      "price": 15,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoMOXeLjn3KnhhbtX5SLMPuLfGVL/edit",
+      "id": "0leoMOXeLjn3KnhhbtX5SLMPuLfGVL"
+    },
+    {
+      "group": "ซอฟต์คุกกี้ เลือกรสชาติ",
+      "name": "ซอฟต์คุกกี้ - ดั่งเดิม",
+      "price": 0,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoWrI0gg4TsSoET3OZ6DoOIaqRDP/edit",
+      "id": "0leoWrI0gg4TsSoET3OZ6DoOIaqRDP"
+    },
+    {
+      "group": "ซอฟต์คุกกี้ เลือกรสชาติ",
+      "name": "ซอฟต์คุกกี้ - โกโก้",
+      "price": 0,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoWrI0gg4TsSoET3OZ6DoOIaqRDP/edit",
+      "id": "0leoWrI0gg4TsSoET3OZ6DoOIaqRDP"
+    },
+    {
+      "group": "ซอฟต์คุกกี้ เลือกรสชาติ",
+      "name": "ซอฟต์คุกกี้ - มัจฉะ",
+      "price": 0,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoWrI0gg4TsSoET3OZ6DoOIaqRDP/edit",
+      "id": "0leoWrI0gg4TsSoET3OZ6DoOIaqRDP"
+    },
+    {
+      "group": "ท็อปปิ้งขนมปัง",
+      "name": "ไม่เพิ่ม (ต้นตำรับ)",
+      "price": 0,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoNsIOxDkyUgDLgNkrs38FUEBnbn/edit",
+      "id": "0leoNsIOxDkyUgDLgNkrs38FUEBnbn"
+    },
+    {
+      "group": "ท็อปปิ้งขนมปัง",
+      "name": "โรยน้ำตาล",
+      "price": 0,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoNsIOxDkyUgDLgNkrs38FUEBnbn/edit",
+      "id": "0leoNsIOxDkyUgDLgNkrs38FUEBnbn"
+    },
+    {
+      "group": "ท็อปปิ้งขนมปัง",
+      "name": "ราดนมฉ่ำ ๆ",
+      "price": 0,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoNsIOxDkyUgDLgNkrs38FUEBnbn/edit",
+      "id": "0leoNsIOxDkyUgDLgNkrs38FUEBnbn"
+    },
+    {
+      "group": "ท็อปปิ้งขนมปัง",
+      "name": "โรยผงโกโก้ + ซอสช็อกโกแลต",
+      "price": 3,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoNsIOxDkyUgDLgNkrs38FUEBnbn/edit",
+      "id": "0leoNsIOxDkyUgDLgNkrs38FUEBnbn"
+    },
+    {
+      "group": "ท็อปปิ้งขนมปัง",
+      "name": "ราดคาราเมล ฉ่ำๆ",
+      "price": 3,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoNsIOxDkyUgDLgNkrs38FUEBnbn/edit",
+      "id": "0leoNsIOxDkyUgDLgNkrs38FUEBnbn"
+    },
+    {
+      "group": "ท็อปปิ้งขนมปัง",
+      "name": "ราดน้ำผึ้ง",
+      "price": 3,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoNsIOxDkyUgDLgNkrs38FUEBnbn/edit",
+      "id": "0leoNsIOxDkyUgDLgNkrs38FUEBnbn"
+    },
+    {
+      "group": "ท็อปปิ้งขนมปัง",
+      "name": "แยมสตรอว์เบอร์รี่",
+      "price": 3,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoNsIOxDkyUgDLgNkrs38FUEBnbn/edit",
+      "id": "0leoNsIOxDkyUgDLgNkrs38FUEBnbn"
+    },
+    {
+      "group": "ท็อปปิ้งขนมปัง",
+      "name": "แยมส้ม",
+      "price": 3,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoNsIOxDkyUgDLgNkrs38FUEBnbn/edit",
+      "id": "0leoNsIOxDkyUgDLgNkrs38FUEBnbn"
+    },
+    {
+      "group": "ท็อปปิ้งขนมปัง",
+      "name": "แยมบลูเบอร์รี่",
+      "price": 3,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoNsIOxDkyUgDLgNkrs38FUEBnbn/edit",
+      "id": "0leoNsIOxDkyUgDLgNkrs38FUEBnbn"
+    },
+    {
+      "group": "ท้อปปิ้ง",
+      "name": "ไม่เพิ่ม",
+      "price": 0,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leo36960PQJ5M5z7y7QVMRjlvsdjY/edit",
+      "id": "0leo36960PQJ5M5z7y7QVMRjlvsdjY"
+    },
+    {
+      "group": "ท้อปปิ้ง",
+      "name": "วุ้นกบไต้หวัน",
+      "price": 8,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leo36960PQJ5M5z7y7QVMRjlvsdjY/edit",
+      "id": "0leo36960PQJ5M5z7y7QVMRjlvsdjY"
+    },
+    {
+      "group": "ท้อปปิ้ง",
+      "name": "ชีส",
+      "price": 25,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leo36960PQJ5M5z7y7QVMRjlvsdjY/edit",
+      "id": "0leo36960PQJ5M5z7y7QVMRjlvsdjY"
+    },
+    {
+      "group": "ท้อปปิ้ง",
+      "name": "เจลลี่ผลไม้",
+      "price": 5,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leo36960PQJ5M5z7y7QVMRjlvsdjY/edit",
+      "id": "0leo36960PQJ5M5z7y7QVMRjlvsdjY"
+    },
+    {
+      "group": "ท้อปปิ้ง",
+      "name": "ไข่มุก",
+      "price": 5,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leo36960PQJ5M5z7y7QVMRjlvsdjY/edit",
+      "id": "0leo36960PQJ5M5z7y7QVMRjlvsdjY"
+    },
+    {
+      "group": "ท้อปปิ้ง",
+      "name": "เฉาก๊วยหนึบเนื้อแน่น",
+      "price": 12,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leo36960PQJ5M5z7y7QVMRjlvsdjY/edit",
+      "id": "0leo36960PQJ5M5z7y7QVMRjlvsdjY"
+    },
+    {
+      "group": "ท้อปปิ้ง",
+      "name": "บุกน้ำตาล",
+      "price": 12,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leo36960PQJ5M5z7y7QVMRjlvsdjY/edit",
+      "id": "0leo36960PQJ5M5z7y7QVMRjlvsdjY"
+    },
+    {
+      "group": "ท้อปปิ้ง",
+      "name": "บุกน้ำผึ้ง",
+      "price": 12,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leo36960PQJ5M5z7y7QVMRjlvsdjY/edit",
+      "id": "0leo36960PQJ5M5z7y7QVMRjlvsdjY"
+    },
+    {
+      "group": "ท้อปปิ้ง",
+      "name": "บุกบราวน์",
+      "price": 12,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leo36960PQJ5M5z7y7QVMRjlvsdjY/edit",
+      "id": "0leo36960PQJ5M5z7y7QVMRjlvsdjY"
+    },
+    {
+      "group": "ท้อปปิ้ง",
+      "name": "วุ้นว่านหางจระเข้ หั่นลูกเต๋า",
+      "price": 19,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leo36960PQJ5M5z7y7QVMRjlvsdjY/edit",
+      "id": "0leo36960PQJ5M5z7y7QVMRjlvsdjY"
+    },
+    {
+      "group": "ท้อปปิ้ง",
+      "name": "ซอสบราวน์",
+      "price": 19,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leo36960PQJ5M5z7y7QVMRjlvsdjY/edit",
+      "id": "0leo36960PQJ5M5z7y7QVMRjlvsdjY"
+    },
+    {
+      "group": "ท้อปปิ้ง",
+      "name": "ช็อคขูด",
+      "price": 19,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leo36960PQJ5M5z7y7QVMRjlvsdjY/edit",
+      "id": "0leo36960PQJ5M5z7y7QVMRjlvsdjY"
+    },
+    {
+      "group": "ประเภท",
+      "name": "เย็น",
+      "price": 0,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoMCQS8v3I8DKHlllxVMfp2RD9bs/edit",
+      "id": "0leoMCQS8v3I8DKHlllxVMfp2RD9bs"
+    },
+    {
+      "group": "ประเภท",
+      "name": "ปั่น (สูตรเข้ม)",
+      "price": 12,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoMCQS8v3I8DKHlllxVMfp2RD9bs/edit",
+      "id": "0leoMCQS8v3I8DKHlllxVMfp2RD9bs"
+    },
+    {
+      "group": "รสชาติ ไอศครีม",
+      "name": ">รสอื่นๆ<  (แรนด้อม)",
+      "price": 0,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoQ2TgjfBJ8KV0neXer2Lx9qZqr7/edit",
+      "id": "0leoQ2TgjfBJ8KV0neXer2Lx9qZqr7"
+    },
+    {
+      "group": "โปรโมชั่น Soft Cookie โฮมเมด",
+      "name": "ไม่เพิ่ม",
+      "price": 0,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoT4RRn8viUDqbpj8WPfp2JDHIZr/edit",
+      "id": "0leoT4RRn8viUDqbpj8WPfp2JDHIZr"
+    },
+    {
+      "group": "โปรโมชั่น Soft Cookie โฮมเมด",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้นแบบเดียวกัน",
+      "price": 12,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoT4RRn8viUDqbpj8WPfp2JDHIZr/edit",
+      "id": "0leoT4RRn8viUDqbpj8WPfp2JDHIZr"
+    },
+    {
+      "group": "โปรโมชั่น ชิโอปัง",
+      "name": "ไม่เพิ่ม",
+      "price": 0,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoPQ76xbG3f7NOTSwg2Exk5o8cuk/edit",
+      "id": "0leoPQ76xbG3f7NOTSwg2Exk5o8cuk"
+    },
+    {
+      "group": "โปรโมชั่น ชิโอปัง",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+      "price": 19,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoPQ76xbG3f7NOTSwg2Exk5o8cuk/edit",
+      "id": "0leoPQ76xbG3f7NOTSwg2Exk5o8cuk"
+    },
+    {
+      "group": "โปรโมชั่น บราวนี่",
+      "name": "ไม่เพิ่ม",
+      "price": 0,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoRkV2Pdu2tKzEWlyf0fIji5KxBU/edit",
+      "id": "0leoRkV2Pdu2tKzEWlyf0fIji5KxBU"
+    },
+    {
+      "group": "โปรโมชั่น บราวนี่",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+      "price": 12,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoRkV2Pdu2tKzEWlyf0fIji5KxBU/edit",
+      "id": "0leoRkV2Pdu2tKzEWlyf0fIji5KxBU"
+    },
+    {
+      "group": "โปรโมชั่น ปังมันม่วง",
+      "name": "ไม่เพิ่ม",
+      "price": 0,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoPQwedaiCmwYxcp1UY2LtuYwEjT/edit",
+      "id": "0leoPQwedaiCmwYxcp1UY2LtuYwEjT"
+    },
+    {
+      "group": "โปรโมชั่น ปังมันม่วง",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+      "price": 19,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoPQwedaiCmwYxcp1UY2LtuYwEjT/edit",
+      "id": "0leoPQwedaiCmwYxcp1UY2LtuYwEjT"
+    },
+    {
+      "group": "โปรโมชั่น ปังเนยกรอบอบไอน้ำ",
+      "name": "ไม่เพิ่ม",
+      "price": 0,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoO0SAeVyeGpiq0n14BLQyE3jxiW/edit",
+      "id": "0leoO0SAeVyeGpiq0n14BLQyE3jxiW"
+    },
+    {
+      "group": "โปรโมชั่น ปังเนยกรอบอบไอน้ำ",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+      "price": 12,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoO0SAeVyeGpiq0n14BLQyE3jxiW/edit",
+      "id": "0leoO0SAeVyeGpiq0n14BLQyE3jxiW"
+    },
+    {
+      "group": "โปรโมชั่น มันไทยอบ ดั้งเดิม",
+      "name": "ไม่เพิ่ม",
+      "price": 0,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoXRo4JyMwgZ4PKOkVqXBwonmTTB/edit",
+      "id": "0leoXRo4JyMwgZ4PKOkVqXBwonmTTB"
+    },
+    {
+      "group": "โปรโมชั่น มันไทยอบ ดั้งเดิม",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+      "price": 12,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoXRo4JyMwgZ4PKOkVqXBwonmTTB/edit",
+      "id": "0leoXRo4JyMwgZ4PKOkVqXBwonmTTB"
+    },
+    {
+      "group": "โปรโมชั่น วาฟเฟิลเบลเยียมโฮมเมด ดั้งเดิม",
+      "name": "ไม่เพิ่ม",
+      "price": 0,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leocrvG1exIm991mgKkbKMbyyOVaf/edit",
+      "id": "0leocrvG1exIm991mgKkbKMbyyOVaf"
+    },
+    {
+      "group": "โปรโมชั่น วาฟเฟิลเบลเยียมโฮมเมด ดั้งเดิม",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+      "price": 12,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leocrvG1exIm991mgKkbKMbyyOVaf/edit",
+      "id": "0leocrvG1exIm991mgKkbKMbyyOVaf"
+    },
+    {
+      "group": "โปรโมชั่น เค้กกล้วยหอม",
+      "name": "ไม่เพิ่ม",
+      "price": 0,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoYBNOeRgb6dPGTPX6RHWZpZ79Af/edit",
+      "id": "0leoYBNOeRgb6dPGTPX6RHWZpZ79Af"
+    },
+    {
+      "group": "โปรโมชั่น เค้กกล้วยหอม",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้นแบบเดียวกัน",
+      "price": 12,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoYBNOeRgb6dPGTPX6RHWZpZ79Af/edit",
+      "id": "0leoYBNOeRgb6dPGTPX6RHWZpZ79Af"
+    },
+    {
+      "group": "แยกน้ำแข็ง",
+      "name": "แยกน้ำแข็ง",
+      "price": 3,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leo36AHstNTug53EChOy1kk5mDgc4/edit",
+      "id": "0leo36AHstNTug53EChOy1kk5mDgc4"
+    },
+    {
+      "group": "รสชาติ ไอศครีม",
+      "name": "นม",
+      "price": 0,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoQ2TgjfBJ8KV0neXer2Lx9qZqr7/edit",
+      "id": "0leoQ2TgjfBJ8KV0neXer2Lx9qZqr7"
+    }
+  ]
+}

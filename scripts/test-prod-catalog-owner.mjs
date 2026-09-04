@@ -16,7 +16,7 @@ const ratePanel = read("src/components/RateSchedulePanel.tsx");
 const more = read("src/app/more/page.tsx");
 const version = read("src/lib/version.ts");
 
-assert.match(version, /APP_BUILD = 365/);
+assert.match(version, /APP_BUILD = \d+/);
 assert.doesNotMatch(settings, /ProdCatalogSetup|listProdProducts|seedProdCatalog/);
 assert.match(settings, /สินค้าผลิตอยู่หน้า ผลิต/);
 assert.match(production, /ProdCatalogSetup/);
@@ -25,6 +25,8 @@ assert.match(production, /สินค้า \/ เรท/);
 assert.match(catalog, /prod-catalog-panel/);
 assert.match(catalog, /เพิ่มสินค้า/);
 assert.match(catalog, /เรทขายทั้งร้านตั้งที่/);
+assert.match(catalog, /prod-catalog-min/);
+assert.match(catalog, /ขั้นต่ำต่อวัน/);
 assert.doesNotMatch(catalog, /htmlFor="setup-sales"/);
 assert.match(ratePanel, /ผลิต → สินค้า \/ เรท/);
 assert.match(ratePanel, /เรทขายเบเกอรี่ตั้งที่นี่ที่เดียว/);

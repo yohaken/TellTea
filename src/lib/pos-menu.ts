@@ -11,6 +11,7 @@ import {
   query,
   updateDoc,
   where,
+  writeBatch,
   type Unsubscribe,
 } from "firebase/firestore";
 import { getMenuDb, menuErrorHint, type MenuPriceChannel } from "./pos-menu-db";
@@ -72,6 +73,10 @@ function mapItem(id: string, data: Record<string, unknown>): MenuItem {
     active: data.active !== false,
     visibleOnPos: data.visibleOnPos !== false,
     recommended: data.recommended === true,
+    ...(data.storeOnly === true ? { storeOnly: true } : {}),
+    ...(typeof data.hubNote === "string" && data.hubNote.trim()
+      ? { hubNote: data.hubNote.trim() }
+      : {}),
     imageUrl: typeof data.imageUrl === "string" && data.imageUrl ? data.imageUrl : undefined,
     description: typeof data.description === "string" ? data.description : undefined,
     optionGroupIds: optionGroupIds?.length ? optionGroupIds : undefined,
@@ -323,6 +328,7 @@ export type MenuItemPatch = Partial<
       | "description"
       | "optionGroupIds"
       | "sortOrder"
+      | "storeOnly"
     >,
     never
   >
@@ -331,6 +337,10 @@ export type MenuItemPatch = Partial<
   deliveryPrice?: number | null;
   /** null / ว่าง = ลบรหัสเมนู */
   code?: string | null;
+  /** null = ลบฟิลด์ ใช้ fallback จากชื่อ */
+  storeOnly?: boolean | null;
+  /** null / ว่าง = ลบโน้ต hub */
+  hubNote?: string | null;
 };
 
 export async function updateMenuItem(id: string, patch: MenuItemPatch): Promise<void> {
@@ -352,6 +362,15 @@ export async function updateMenuItem(id: string, patch: MenuItemPatch): Promise<
   if (patch.description != null) next.description = patch.description.trim();
   if (patch.optionGroupIds != null) next.optionGroupIds = patch.optionGroupIds;
   if (patch.sortOrder != null) next.sortOrder = patch.sortOrder;
+  if (patch.storeOnly !== undefined) {
+    next.storeOnly = patch.storeOnly === true ? true : deleteField();
+  }
+  if (patch.hubNote !== undefined) {
+    next.hubNote =
+      patch.hubNote == null || !String(patch.hubNote).trim()
+        ? deleteField()
+        : String(patch.hubNote).trim();
+  }
   if (patch.code !== undefined) {
     next.code = patch.code == null || !String(patch.code).trim() ? deleteField() : String(patch.code).trim();
   }
@@ -361,6 +380,45 @@ export async function updateMenuItem(id: string, patch: MenuItemPatch): Promise<
   } catch (err) {
     throw new Error(mapFirestoreError(err, "อัปเดตเมนู", menuErrorHint()));
   }
+}
+
+/** ใส่ hubNote ชุดเดียวกันหลายแถว — ไม่แตะราคา/ชื่อ/สูตร · ว่าง = ลบฟิลด์ */
+export async function setMenuItemHubNotes(ids: string[], note: string): Promise<number> {
+  const unique = [...new Set(ids.filter(Boolean))];
+  if (!unique.length) return 0;
+  const text = String(note || "").trim();
+  const db = getMenuDb();
+  const now = Date.now();
+  let batch = writeBatch(db);
+  let ops = 0;
+  let n = 0;
+  const commit = async () => {
+    if (!ops) return;
+    await batch.commit();
+    batch = writeBatch(db);
+    ops = 0;
+  };
+  try {
+    for (const id of unique) {
+      batch.update(doc(db, MENU_ITEMS_COL, id), {
+        hubNote: text ? text : deleteField(),
+        updatedAt: now,
+      });
+      ops += 1;
+      n += 1;
+      if (ops >= 400) await commit();
+    }
+    await commit();
+    if (n) void bumpMenuVersion();
+    return n;
+  } catch (err) {
+    throw new Error(mapFirestoreError(err, "ใส่โน้ตเมนู", menuErrorHint()));
+  }
+}
+
+/** ลบ hubNote ทุก id ที่ส่งมา — ไม่แตะราคา/ชื่อ/สูตร */
+export async function clearMenuItemHubNotes(ids: string[]): Promise<number> {
+  return setMenuItemHubNotes(ids, "");
 }
 
 export async function deleteMenuItem(id: string): Promise<void> {

@@ -1,0 +1,5043 @@
+{
+  "round": 9,
+  "items": {
+    "0leDlFHBrtMGCIlIs6dKI5TxzGWUBh": {
+      "name": "0% แคล ชาแคนตาลูป",
+      "id": "0leDlFHBrtMGCIlIs6dKI5TxzGWUBh",
+      "targetPrice": 24,
+      "rounds": [
+        {
+          "round": 1,
+          "at": "2026-09-01T14:26:53.037Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:11:28.974Z",
+          "before": 27,
+          "attempted": 24,
+          "after": 24,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 24,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41638745"
+    },
+    "0leDl947zIY46OoXcX4JAh7NCm133t": {
+      "name": "0% แคล ชาน้ำผึ้ง",
+      "id": "0leDl947zIY46OoXcX4JAh7NCm133t",
+      "targetPrice": 24,
+      "rounds": [
+        {
+          "round": 1,
+          "at": "2026-09-01T14:27:02.217Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:11:29.684Z",
+          "before": 27,
+          "attempted": 24,
+          "after": 24,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 24,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41608489"
+    },
+    "0leDl94RhWIupLBGAcvhQARqgkM1i7": {
+      "name": "0% แคล ชาน้ำผึ้งมะนาว",
+      "id": "0leDl94RhWIupLBGAcvhQARqgkM1i7",
+      "targetPrice": 24,
+      "rounds": [
+        {
+          "round": 2,
+          "at": "2026-09-01T14:27:13.749Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:11:29.962Z",
+          "before": 27,
+          "attempted": 24,
+          "after": 24,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 24,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41608527"
+    },
+    "0leDl93zhiZRj28gaHSyw2tUfeEu8k": {
+      "name": "0% แคล ชาพีช",
+      "id": "0leDl93zhiZRj28gaHSyw2tUfeEu8k",
+      "targetPrice": 24,
+      "rounds": [
+        {
+          "round": 2,
+          "at": "2026-09-01T14:27:22.948Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:11:30.467Z",
+          "before": 27,
+          "attempted": 24,
+          "after": 24,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 24,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41608475"
+    },
+    "0leDlFHJipTwDp8XPl1Vglt5m2aIO1": {
+      "name": "0% แคล ชาฟรุตพันช์",
+      "id": "0leDlFHJipTwDp8XPl1Vglt5m2aIO1",
+      "targetPrice": 24,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T14:27:34.502Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:11:39.172Z",
+          "before": 27,
+          "attempted": 24,
+          "after": 24,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 24,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41638755"
+    },
+    "0leDlFHREEHrhmOOqr1xmK1V6qIXfz": {
+      "name": "0% แคล ชามะลิ",
+      "id": "0leDlFHREEHrhmOOqr1xmK1V6qIXfz",
+      "targetPrice": 24,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T14:27:43.698Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:11:39.830Z",
+          "before": 27,
+          "attempted": 24,
+          "after": 24,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 24,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41638761"
+    },
+    "0leDl6SLDYPRcx2van5AIDrMbardGz": {
+      "name": "0% แคล ชาลิ้นจี่",
+      "id": "0leDl6SLDYPRcx2van5AIDrMbardGz",
+      "targetPrice": 24,
+      "rounds": [
+        {
+          "round": 4,
+          "at": "2026-09-01T14:27:55.487Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:11:40.422Z",
+          "before": 27,
+          "attempted": 24,
+          "after": 24,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 24,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41589715"
+    },
+    "0leDl6SZhSBFu4oVpxOfAArp0HIwX3": {
+      "name": "0% แคล ชาสละ",
+      "id": "0leDl6SZhSBFu4oVpxOfAArp0HIwX3",
+      "targetPrice": 24,
+      "rounds": [
+        {
+          "round": 4,
+          "at": "2026-09-01T14:28:04.668Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:11:41.125Z",
+          "before": 27,
+          "attempted": 24,
+          "after": 24,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 24,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41589746"
+    },
+    "0leDl6SfQCG4NEwYQawIjGxctyq5vY": {
+      "name": "0% แคล ชาองุ่น",
+      "id": "0leDl6SfQCG4NEwYQawIjGxctyq5vY",
+      "targetPrice": 24,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:32:14.937Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:11:49.168Z",
+          "before": 27,
+          "attempted": 24,
+          "after": 24,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 24,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41589757"
+    },
+    "0leDlIAYtUiRN9meMRXvgJtILst5rF": {
+      "name": "0% แคล โซดาแคนตาลูป",
+      "id": "0leDlIAYtUiRN9meMRXvgJtILst5rF",
+      "targetPrice": 22,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:32:15.325Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:11:50.279Z",
+          "before": 27,
+          "attempted": 22,
+          "after": 22,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 22,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41655205"
+    },
+    "0leDlFJq4HzveumCnvZea4E1Rp8CbH": {
+      "name": "0% แคล โซดาน้ำผึ้ง",
+      "id": "0leDlFJq4HzveumCnvZea4E1Rp8CbH",
+      "targetPrice": 22,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:32:15.722Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:11:51.211Z",
+          "before": 27,
+          "attempted": 22,
+          "after": 22,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 22,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41638870"
+    },
+    "0leDlFKAMGykZz1J2z4pIU34Hep4gl": {
+      "name": "0% แคล โซดาน้ำผึ้งมะนาว",
+      "id": "0leDlFKAMGykZz1J2z4pIU34Hep4gl",
+      "targetPrice": 22,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:32:16.052Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:11:51.622Z",
+          "before": 27,
+          "attempted": 22,
+          "after": 22,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 22,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41638888"
+    },
+    "0leDlIB1Uwv87aOO0f1HOJmsodWWvU": {
+      "name": "0% แคล โซดาพีช",
+      "id": "0leDlIB1Uwv87aOO0f1HOJmsodWWvU",
+      "targetPrice": 22,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:32:35.479Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:11:59.777Z",
+          "before": 27,
+          "attempted": 22,
+          "after": 22,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 22,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41655229"
+    },
+    "0leDlIBHGuyne6MNbMPsansd76GdUI": {
+      "name": "0% แคล โซดาฟรุตพันช์",
+      "id": "0leDlIBHGuyne6MNbMPsansd76GdUI",
+      "targetPrice": 22,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:32:38.302Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:12:00.842Z",
+          "before": 27,
+          "attempted": 22,
+          "after": 22,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 22,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41655299"
+    },
+    "0leDlFJOAjpUJJdaIHYHxZY5GxLdYx": {
+      "name": "0% แคล โซดาลิ้นจี่",
+      "id": "0leDlFJOAjpUJJdaIHYHxZY5GxLdYx",
+      "targetPrice": 22,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:32:41.104Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:12:01.320Z",
+          "before": 27,
+          "attempted": 22,
+          "after": 22,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 22,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41638847"
+    },
+    "0leDlFKSAqJ3ls7EnHfuPl336em1lL": {
+      "name": "0% แคล โซดาองุ่น",
+      "id": "0leDlFKSAqJ3ls7EnHfuPl336em1lL",
+      "targetPrice": 22,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:32:43.889Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:12:02.553Z",
+          "before": 27,
+          "attempted": 22,
+          "after": 22,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 22,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41638902"
+    },
+    "0leDlp8fdpV6YnQg0lGLFQ9jVRzAR6": {
+      "name": "0% โคล่าโซดา",
+      "id": "0leDlp8fdpV6YnQg0lGLFQ9jVRzAR6",
+      "targetPrice": 22,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:32:46.755Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:12:10.771Z",
+          "before": 27,
+          "attempted": 22,
+          "after": 22,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 22,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41836328"
+    },
+    "0leDlp8XPmgFlOHV7GuKhFsQOtAYKH": {
+      "name": "0% โคล่าโซดามะนาว",
+      "id": "0leDlp8XPmgFlOHV7GuKhFsQOtAYKH",
+      "targetPrice": 22,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:32:50.473Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:12:11.477Z",
+          "before": 27,
+          "attempted": 22,
+          "after": 22,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 22,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41836317"
+    },
+    "0leDW48OQvqpsfgqyn2ftrvEsPxUS0": {
+      "name": "กาแฟโบราณ บราวน์ชูการ์ (เย็น/ปั่น)",
+      "id": "0leDW48OQvqpsfgqyn2ftrvEsPxUS0",
+      "targetPrice": 49,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:32:51.855Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:12:12.075Z",
+          "before": 56,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 49,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33768737"
+    },
+    "0leDkoI2lsI6FyDYCIZJHuJ1JCK7OR": {
+      "name": "กาแฟสด กาแฟโบราณ เย็น 16 ออนซ์",
+      "id": "0leDkoI2lsI6FyDYCIZJHuJ1JCK7OR",
+      "targetPrice": 37,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:32:54.620Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:12:14.520Z",
+          "before": 41,
+          "attempted": 37,
+          "after": 37,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 37,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41411740"
+    },
+    "0leDkUbCGQA4RiR14dU4YjgSu6XROA": {
+      "name": "กาแฟสด คาปูชิโน่ เย็น 16 ออนซ์",
+      "id": "0leDkUbCGQA4RiR14dU4YjgSu6XROA",
+      "targetPrice": 45,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:32:57.919Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:12:21.413Z",
+          "before": 50,
+          "attempted": 45,
+          "after": 45,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 45,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41279794"
+    },
+    "0leDkkVUhAz3px9jMDpkbjFX6uAVaR": {
+      "name": "กาแฟสด คาราเมลมัคคิอาโต้ เย็น 16 ออนซ์",
+      "id": "0leDkkVUhAz3px9jMDpkbjFX6uAVaR",
+      "targetPrice": 45,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:33:01.691Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 67,
+          "changed": false,
+          "status": "blocked_popup",
+          "popupText": ""
+        },
+        {
+          "round": 6,
+          "at": "2026-09-01T14:38:27.372Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 67,
+          "changed": false,
+          "status": "blocked_popup",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T14:38:51.963Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 67,
+          "changed": false,
+          "status": "blocked_popup",
+          "popupText": ""
+        },
+        {
+          "round": 8,
+          "at": "2026-09-01T14:45:52.592Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:12:22.247Z",
+          "before": 56,
+          "attempted": 45,
+          "after": 45,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 45,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41391590"
+    },
+    "0leDkvRpbyMd674375R0dPODdX6bKg": {
+      "name": "กาแฟสด ช็อกโกแลตเอสเปรสโซ่ เย็น 16 ออนซ์",
+      "id": "0leDkvRpbyMd674375R0dPODdX6bKg",
+      "targetPrice": 37,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:33:04.855Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:12:31.441Z",
+          "before": 41,
+          "attempted": 37,
+          "after": 37,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 37,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41456583"
+    },
+    "0leDkyHuwjtKWkbnHwMcqpiKbxVKpa": {
+      "name": "กาแฟสดโซดา เอสเปรสโซ่บลูฮาวาย เย็น 16 ออนซ์",
+      "id": "0leDkyHuwjtKWkbnHwMcqpiKbxVKpa",
+      "targetPrice": 32,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:33:07.636Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:12:32.307Z",
+          "before": 36,
+          "attempted": 32,
+          "after": 32,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 32,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41486377"
+    },
+    "0leDkyIuk2yTikoIqyvnMHgm2n8brv": {
+      "name": "กาแฟสดโซดา เอสเปรสโซ่บ๊วย เย็น 16 ออนซ์",
+      "id": "0leDkyIuk2yTikoIqyvnMHgm2n8brv",
+      "targetPrice": 32,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:33:11.023Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:12:33.051Z",
+          "before": 36,
+          "attempted": 32,
+          "after": 32,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 32,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41486436"
+    },
+    "0leDkyIl2XVshlu4No7K0KEqNP458r": {
+      "name": "กาแฟสดโซดา เอสเปรสโซ่ลิ้นจี่ เย็น 16 ออนซ์",
+      "id": "0leDkyIl2XVshlu4No7K0KEqNP458r",
+      "targetPrice": 32,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:33:12.605Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:12:41.837Z",
+          "before": 36,
+          "attempted": 32,
+          "after": 32,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 32,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41486430"
+    },
+    "0leDkyIWg6HegCZT4rCBUeUbpCKBqu": {
+      "name": "กาแฟสดโซดา เอสเปรสโซ่เสาวรส เย็น 16 ออนซ์",
+      "id": "0leDkyIWg6HegCZT4rCBUeUbpCKBqu",
+      "targetPrice": 32,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:33:15.889Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:12:42.126Z",
+          "before": 36,
+          "attempted": 32,
+          "after": 32,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 32,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41486422"
+    },
+    "0leDkvcNkD5HtexuxUgBdBYgHxl14Q": {
+      "name": "กาแฟสด น้ำผึ้งมะนาว เย็น 16 ออนซ์",
+      "id": "0leDkvcNkD5HtexuxUgBdBYgHxl14Q",
+      "targetPrice": 37,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:33:18.687Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:12:43.441Z",
+          "before": 41,
+          "attempted": 37,
+          "after": 37,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 37,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41466326"
+    },
+    "0leDksd9jEMeNFcfxJxAi0dB6Il0gE": {
+      "name": "กาแฟสด บลูฮาวายเอสเปรสโซ่ เย็น 16 ออนซ์",
+      "id": "0leDksd9jEMeNFcfxJxAi0dB6Il0gE",
+      "targetPrice": 32,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:33:22.703Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:12:45.772Z",
+          "before": 36,
+          "attempted": 32,
+          "after": 32,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 32,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41444782"
+    },
+    "0leDkseB9pMXH9xB7qfJXg87MHcpwY": {
+      "name": "กาแฟสด บ๊วยเอสเปรสโซ่ เย็น 16 ออนซ์",
+      "id": "0leDkseB9pMXH9xB7qfJXg87MHcpwY",
+      "targetPrice": 32,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:33:24.323Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:12:52.089Z",
+          "before": 36,
+          "attempted": 32,
+          "after": 32,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 32,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41444824"
+    },
+    "0leDkvcyBbvchpsTme6LMDXHVy2tzf": {
+      "name": "กาแฟสด บุกบราวน์ชูการ์ เย็น 16 ออนซ์",
+      "id": "0leDkvcyBbvchpsTme6LMDXHVy2tzf",
+      "targetPrice": 37,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:33:26.722Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:12:52.708Z",
+          "before": 41,
+          "attempted": 37,
+          "after": 37,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 37,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41467100"
+    },
+    "0leDkaLoVnb7KfG7Pi1dW2Vo4iNLV3": {
+      "name": "กาแฟสด แฟลตไวท์ เย็น 16 ออนซ์",
+      "id": "0leDkaLoVnb7KfG7Pi1dW2Vo4iNLV3",
+      "targetPrice": 45,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:33:28.306Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:12:55.975Z",
+          "before": 50,
+          "attempted": 45,
+          "after": 45,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 45,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41321223"
+    },
+    "0leDkkUaHGD2EdHf6NUJNJuA0JWHLk": {
+      "name": "กาแฟสด มอคค่า เย็น 16 ออนซ์",
+      "id": "0leDkkUaHGD2EdHf6NUJNJuA0JWHLk",
+      "targetPrice": 45,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:33:32.990Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:13:03.429Z",
+          "before": 50,
+          "attempted": 45,
+          "after": 45,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 45,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41391572"
+    },
+    "0leDkvWWWR0OntPcMRaP8P2RggN6Cu": {
+      "name": "กาแฟสด มอคค่า ร้อน 12 ออนซ์",
+      "id": "0leDkvWWWR0OntPcMRaP8P2RggN6Cu",
+      "targetPrice": 37,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:33:33.989Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:13:03.833Z",
+          "before": 41,
+          "attempted": 37,
+          "after": 37,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 37,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41460373"
+    },
+    "0leDkvSIXqwlfcDHmZ2znDXJTGb3AR": {
+      "name": "กาแฟสด ไมโลกาแฟ เย็น 16 ออนซ์",
+      "id": "0leDkvSIXqwlfcDHmZ2znDXJTGb3AR",
+      "targetPrice": 37,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:33:37.423Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:13:06.489Z",
+          "before": 41,
+          "attempted": 37,
+          "after": 37,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 37,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41456676"
+    },
+    "0leDkaL0vkOH1yJ3Ni5mzhpmxgfXI3": {
+      "name": "กาแฟสด ลองแบล็ค เย็น 16 ออนซ์",
+      "id": "0leDkaL0vkOH1yJ3Ni5mzhpmxgfXI3",
+      "targetPrice": 37,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:33:39.052Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:13:12.922Z",
+          "before": 41,
+          "attempted": 37,
+          "after": 37,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 37,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41321144"
+    },
+    "0leDkTI75bRTRmyna4UB6lnY6TRFfh": {
+      "name": "กาแฟสด ลาเต้ เย็น 16 ออนซ์",
+      "id": "0leDkTI75bRTRmyna4UB6lnY6TRFfh",
+      "targetPrice": 45,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:33:42.463Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:13:13.546Z",
+          "before": 50,
+          "attempted": 45,
+          "after": 45,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 45,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41277718"
+    },
+    "0leDkaQCydik9U5iMvIwr0ixdoLNv3": {
+      "name": "กาแฟสด ลาเต้ (Latte) ร้อน 12 ออนซ์",
+      "id": "0leDkaQCydik9U5iMvIwr0ixdoLNv3",
+      "targetPrice": 37,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:33:42.791Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:13:14.789Z",
+          "before": 41,
+          "attempted": 37,
+          "after": 37,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 37,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41321986"
+    },
+    "0leDkserYiNGuuO9Qbspdfrd7n8Z8x": {
+      "name": "กาแฟสด เสาวรสเอสเปรสโซ่ เย็น 16 ออนซ์",
+      "id": "0leDkserYiNGuuO9Qbspdfrd7n8Z8x",
+      "targetPrice": 32,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:33:47.442Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:13:16.683Z",
+          "before": 36,
+          "attempted": 32,
+          "after": 32,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 32,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41444851"
+    },
+    "0leDkT5qFs5SYGCvZ10pfHEp2oMmuR": {
+      "name": "กาแฟสด อเมริกาโน่ เย็น 16 ออนซ์",
+      "id": "0leDkT5qFs5SYGCvZ10pfHEp2oMmuR",
+      "targetPrice": 37,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:33:49.057Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:13:23.039Z",
+          "before": 41,
+          "attempted": 37,
+          "after": 37,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 37,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41276630"
+    },
+    "0leDkaOg5qRX5k5YUc9Hx5Ej5RNvM8": {
+      "name": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
+      "id": "0leDkaOg5qRX5k5YUc9Hx5Ej5RNvM8",
+      "targetPrice": 32,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:33:52.809Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:13:24.096Z",
+          "before": 36,
+          "attempted": 32,
+          "after": 32,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 32,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41321830"
+    },
+    "0leDkTIrz9F2F25ZqHfhSklBFcUAcD": {
+      "name": "กาแฟสด เอสเปรสโซ่ เย็น 16 ออนซ์",
+      "id": "0leDkTIrz9F2F25ZqHfhSklBFcUAcD",
+      "targetPrice": 45,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:33:53.220Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:13:27.866Z",
+          "before": 50,
+          "attempted": 45,
+          "after": 45,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 45,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41277766"
+    },
+    "0leDkoHe33VNybZGbhaqq1NaK2kOCf": {
+      "name": "กาแฟสด โอเลี้ยง เย็น 16 ออนซ์",
+      "id": "0leDkoHe33VNybZGbhaqq1NaK2kOCf",
+      "targetPrice": 37,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:33:56.722Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:13:33.677Z",
+          "before": 41,
+          "attempted": 37,
+          "after": 37,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 37,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41411727"
+    },
+    "0leDkvRLnrVXCoT2MqEFkXUqpHqDdJ": {
+      "name": "กาแฟสด โอเลี้ยงเฮเซลนัท เย็น 16 ออนซ์",
+      "id": "0leDkvRLnrVXCoT2MqEFkXUqpHqDdJ",
+      "targetPrice": 37,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:33:58.324Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:13:34.343Z",
+          "before": 41,
+          "attempted": 37,
+          "after": 37,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 37,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41456560"
+    },
+    "0leDkvSq5j6lWLwVezI0t5MQjjhtjz": {
+      "name": "กาแฟสด โอวัลตินช็อตกาแฟ เย็น 16 ออนซ์",
+      "id": "0leDkvSq5j6lWLwVezI0t5MQjjhtjz",
+      "targetPrice": 37,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:34:01.972Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:13:37.538Z",
+          "before": 41,
+          "attempted": 37,
+          "after": 37,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 37,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41457162"
+    },
+    "0leDkaRvFLHOYfNWWhKL6HmyOJymQa": {
+      "name": "กาแฟสด Cappuccino (คาปูชิโน่) ร้อน 12 ออนซ์",
+      "id": "0leDkaRvFLHOYfNWWhKL6HmyOJymQa",
+      "targetPrice": 37,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:34:02.394Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:13:44.952Z",
+          "before": 41,
+          "attempted": 37,
+          "after": 37,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 37,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41322135"
+    },
+    "0leDkbUGUg4hOj616fEm7qxK6P9nYQ": {
+      "name": "กาแฟสด Caramel Macchiato (คาราเมลมัคคิอาโต้) ร้อน 12 ออนซ์",
+      "id": "0leDkbUGUg4hOj616fEm7qxK6P9nYQ",
+      "targetPrice": 45,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:34:05.785Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:13:47.480Z",
+          "before": 50,
+          "attempted": 45,
+          "after": 45,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 45,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41331368"
+    },
+    "0leDkaPPK2lJMBC6zRxy67EyxDy5au": {
+      "name": "กาแฟสด Espresso (เอสเปรสโซ่) ร้อน 12 ออนซ์",
+      "id": "0leDkaPPK2lJMBC6zRxy67EyxDy5au",
+      "targetPrice": 37,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:34:07.401Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:13:49.104Z",
+          "before": 41,
+          "attempted": 37,
+          "after": 37,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 37,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41321907"
+    },
+    "0leDkaTpOGtRqVbejPGmOvU9ierFyg": {
+      "name": "กาแฟสด Flat White (แฟลตไวท์) ร้อน 12 ออนซ์",
+      "id": "0leDkaTpOGtRqVbejPGmOvU9ierFyg",
+      "targetPrice": 37,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:34:11.073Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:13:54.067Z",
+          "before": 41,
+          "attempted": 37,
+          "after": 37,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 37,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41322288"
+    },
+    "0leDkaTPOoAyfLVLzPOh7M5nVM50bC": {
+      "name": "กาแฟสด Long Black (ลองแบล็ค) ร้อน 12 ออนซ์",
+      "id": "0leDkaTPOoAyfLVLzPOh7M5nVM50bC",
+      "targetPrice": 32,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:34:12.022Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:13:55.373Z",
+          "before": 36,
+          "attempted": 32,
+          "after": 32,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 32,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41322247"
+    },
+    "0leDVTacPa4dNPeIaEJ55ujq8v5hF0": {
+      "name": "โกโก้มิ้นต์ (เย็น/ปั่น)",
+      "id": "0leDVTacPa4dNPeIaEJ55ujq8v5hF0",
+      "targetPrice": 44,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:34:14.804Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:13:57.702Z",
+          "before": 49,
+          "attempted": 44,
+          "after": 44,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 44,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559309"
+    },
+    "0leDVTV5lvQwH2AOlltbnXPhmz2MLE": {
+      "name": "โกโก้ (เย็น/ปั่น)",
+      "id": "0leDVTV5lvQwH2AOlltbnXPhmz2MLE",
+      "targetPrice": 29,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:34:16.454Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:13:59.168Z",
+          "before": 34,
+          "attempted": 29,
+          "after": 29,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 29,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559286"
+    },
+    "0leE0omLq28ADZWKwRAcjGmj8VwCFz": {
+      "name": "โกโก้ลาวาช็อกขูด (เย็น/ปั่น)",
+      "id": "0leE0omLq28ADZWKwRAcjGmj8VwCFz",
+      "targetPrice": 54,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:34:19.890Z",
+          "before": 73,
+          "attempted": 63,
+          "after": 63,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:14:04.156Z",
+          "before": 63,
+          "attempted": 54,
+          "after": 54,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 54,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_47385144"
+    },
+    "0leDVTfZvHbiWIRYUXDLWOSprbQKup": {
+      "name": "โกโก้สตรอว์เบอร์รี (เย็น/ปั่น)",
+      "id": "0leDVTfZvHbiWIRYUXDLWOSprbQKup",
+      "targetPrice": 44,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:34:21.006Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:14:05.590Z",
+          "before": 49,
+          "attempted": 44,
+          "after": 44,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 44,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559319"
+    },
+    "0leDVTUAeZHGOrOuOisfnTtI43XbIV": {
+      "name": "โกปี๊ โบราณ (เย็น/ปั่น)",
+      "id": "0leDVTUAeZHGOrOuOisfnTtI43XbIV",
+      "targetPrice": 29,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:34:24.054Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:14:07.958Z",
+          "before": 34,
+          "attempted": 29,
+          "after": 29,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 29,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559284"
+    },
+    "0leDVT0HE8AaiKY5pfAQ5ZSi2IyaXH": {
+      "name": "โกปี๊ ยกล้อ (ใส่นม) (เย็น/ปั่น)",
+      "id": "0leDVT0HE8AaiKY5pfAQ5ZSi2IyaXH",
+      "targetPrice": 29,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:34:25.220Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:14:09.471Z",
+          "before": 34,
+          "attempted": 29,
+          "after": 29,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 29,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559267"
+    },
+    "0leDVTWXcwk2OdyYNQdRGyFifEBGDk": {
+      "name": "โกปี๊อ้อ (โอเลี้ยง) (เย็น/ปั่น)",
+      "id": "0leDVTWXcwk2OdyYNQdRGyFifEBGDk",
+      "targetPrice": 24,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:34:29.021Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:14:14.520Z",
+          "before": 27,
+          "attempted": 24,
+          "after": 24,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 24,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559287"
+    },
+    "0leE1V8enPyqOu8d15jsqOWaZiVd4d": {
+      "name": "เค้กกล้วยหอม โฮมเมด",
+      "id": "0leE1V8enPyqOu8d15jsqOWaZiVd4d",
+      "targetPrice": 15,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:34:30.488Z",
+          "before": 23,
+          "attempted": 19,
+          "after": 19,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:14:26.028Z",
+          "before": 19,
+          "attempted": 15,
+          "after": 15,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 15,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_47642235"
+    },
+    "0leDkoHItcSd6RMWlXjg1cDtbMzcNM": {
+      "name": "ช็อกโกแลตมิลค์ เย็น 16 ออนซ์",
+      "id": "0leDkoHItcSd6RMWlXjg1cDtbMzcNM",
+      "targetPrice": 37,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:34:33.924Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:14:35.100Z",
+          "before": 41,
+          "attempted": 37,
+          "after": 37,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 37,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41411718"
+    },
+    "0leDVTRgJWAacZmXnH0LIVSep88W34": {
+      "name": "ชาเขียวนม (เย็น/ปั่น)",
+      "id": "0leDVTRgJWAacZmXnH0LIVSep88W34",
+      "targetPrice": 29,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:34:34.421Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:14:38.958Z",
+          "before": 34,
+          "attempted": 29,
+          "after": 29,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 29,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559328"
+    },
+    "0leDVTTRZESYQtafFwCcSKiQ1jG34o": {
+      "name": "ชาเขียวมะลิ",
+      "id": "0leDVTTRZESYQtafFwCcSKiQ1jG34o",
+      "targetPrice": 24,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:34:38.438Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:14:40.496Z",
+          "before": 27,
+          "attempted": 24,
+          "after": 24,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 24,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559279"
+    },
+    "0leDzzRB01gBlA1z2J1MfvbWupPmcM": {
+      "name": "ชาจัสมินฝูเจี้ยน (เย็น/ปั่น) 16 oz",
+      "id": "0leDzzRB01gBlA1z2J1MfvbWupPmcM",
+      "targetPrice": 37,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:34:39.705Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 52,
+          "changed": false,
+          "status": "blocked_popup",
+          "popupText": ""
+        },
+        {
+          "round": 6,
+          "at": "2026-09-01T14:38:27.788Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 52,
+          "changed": false,
+          "status": "blocked_popup",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T14:38:52.279Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 52,
+          "changed": false,
+          "status": "blocked_popup",
+          "popupText": ""
+        },
+        {
+          "round": 8,
+          "at": "2026-09-01T14:46:02.711Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:14:46.039Z",
+          "before": 41,
+          "attempted": 37,
+          "after": 37,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 37,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_47068210"
+    },
+    "0leDVTbT2NSfbBh5OBaRwoGP3brVTd": {
+      "name": "ชาดำเย็น",
+      "id": "0leDVTbT2NSfbBh5OBaRwoGP3brVTd",
+      "targetPrice": 24,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:34:43.043Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:14:46.919Z",
+          "before": 27,
+          "attempted": 24,
+          "after": 24,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 24,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559312"
+    },
+    "0leDW48bsf5NrQ8syXB60NhYrl1Xja": {
+      "name": "ชาไทยชีส (เย็น/ปั่น)",
+      "id": "0leDW48bsf5NrQ8syXB60NhYrl1Xja",
+      "targetPrice": 54,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:34:43.366Z",
+          "before": 73,
+          "attempted": 63,
+          "after": 63,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:14:50.599Z",
+          "before": 63,
+          "attempted": 54,
+          "after": 54,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 54,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33768746"
+    },
+    "0leDqbmTwZUhbOqmPisetQROt2Apen": {
+      "name": "ชาไทยมันม่วง",
+      "id": "0leDqbmTwZUhbOqmPisetQROt2Apen",
+      "targetPrice": 49,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:34:47.254Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:14:51.744Z",
+          "before": 56,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 49,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_43577153"
+    },
+    "0leDVTTpIccpbfQF9x68nk5oaOjFpz": {
+      "name": "ชาไทย (เย็น/ปั่น)",
+      "id": "0leDVTTpIccpbfQF9x68nk5oaOjFpz",
+      "targetPrice": 29,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:34:48.638Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:14:56.723Z",
+          "before": 34,
+          "attempted": 29,
+          "after": 29,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 29,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559280"
+    },
+    "0leDVBhBzISnItJ6uLofJU96X90lG2": {
+      "name": "ชานม",
+      "id": "0leDVBhBzISnItJ6uLofJU96X90lG2",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:34:52.189Z",
+          "before": 25,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 41,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559268"
+    },
+    "0leDVTePw5NP1e6gIF5A0KLr82XmNk": {
+      "name": "ชานมกาแฟ (เย็น/ปั่น)",
+      "id": "0leDVTePw5NP1e6gIF5A0KLr82XmNk",
+      "targetPrice": 29,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:34:52.603Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:14:57.762Z",
+          "before": 34,
+          "attempted": 29,
+          "after": 29,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 29,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559338"
+    },
+    "0leDVTd4qoqwCaECDmtoihhNb8SLWH": {
+      "name": "ชานมไข่มุกบราวน์ชูการ์ (เย็น/ปั่น)",
+      "id": "0leDVTd4qoqwCaECDmtoihhNb8SLWH",
+      "targetPrice": 49,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:34:56.254Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:15:01.127Z",
+          "before": 56,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 49,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559326"
+    },
+    "0leDVTbnNIwwOK4o25HjFUvQRWneMh": {
+      "name": "ชานมไข่มุก (เย็น/ปั่น)",
+      "id": "0leDVTbnNIwwOK4o25HjFUvQRWneMh",
+      "targetPrice": 29,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:34:57.866Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:15:02.349Z",
+          "before": 34,
+          "attempted": 29,
+          "after": 29,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 29,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559314"
+    },
+    "0leDVTQIDA0Ulv16THcjMVaKoAgFm1": {
+      "name": "ชานมคาราเมล (เย็น/ปั่น)",
+      "id": "0leDVTQIDA0Ulv16THcjMVaKoAgFm1",
+      "targetPrice": 37,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:35:01.201Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:15:07.318Z",
+          "before": 41,
+          "attempted": 37,
+          "after": 37,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 37,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559271"
+    },
+    "0leDVTcRh4tCDrViplL80H0M5dVpTB": {
+      "name": "ชานมชีส (เย็น/ปั่น)",
+      "id": "0leDVTcRh4tCDrViplL80H0M5dVpTB",
+      "targetPrice": 49,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:35:01.622Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:15:08.473Z",
+          "before": 56,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 49,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559318"
+    },
+    "0leDVTdBFzGldnh6DUSJhS0m0wxfwK": {
+      "name": "ชานมใต้หวัน (เย็น/ปั่น)",
+      "id": "0leDVTdBFzGldnh6DUSJhS0m0wxfwK",
+      "targetPrice": 24,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:35:05.172Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:15:11.719Z",
+          "before": 27,
+          "attempted": 24,
+          "after": 24,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 24,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559327"
+    },
+    "0leDVTNpdUo7TubJgwdmCxQF0zANE4": {
+      "name": "ชานมเผือก (เย็น/ปั่น)",
+      "id": "0leDVTNpdUo7TubJgwdmCxQF0zANE4",
+      "targetPrice": 37,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:35:06.783Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:15:13.175Z",
+          "before": 41,
+          "attempted": 37,
+          "after": 37,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 37,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559268"
+    },
+    "0leDqbnTWAYu4WFUI0NY2ISRyrBFoa": {
+      "name": "ชานมมันม่วง",
+      "id": "0leDqbnTWAYu4WFUI0NY2ISRyrBFoa",
+      "targetPrice": 49,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:35:10.234Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:15:17.453Z",
+          "before": 56,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 49,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_43577260"
+    },
+    "0leDVTPxjIEWRPvk4Tq55sc1ypQdvj": {
+      "name": "ชานมมิ้นต์ (เย็น/ปั่น)",
+      "id": "0leDVTPxjIEWRPvk4Tq55sc1ypQdvj",
+      "targetPrice": 37,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:35:11.187Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:15:18.804Z",
+          "before": 41,
+          "attempted": 37,
+          "after": 37,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 37,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559270"
+    },
+    "0leDVTPYiSueZZsyeoImYvOreUML3t": {
+      "name": "ชานมเฮเซลนัท (เย็น/ปั่น)",
+      "id": "0leDVTPYiSueZZsyeoImYvOreUML3t",
+      "targetPrice": 37,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:35:14.287Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:15:22.474Z",
+          "before": 41,
+          "attempted": 37,
+          "after": 37,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 37,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559269"
+    },
+    "0leDVTT5glqCay9uabVyCsgWzN16ZY": {
+      "name": "ชาบลูเบอร์รี่",
+      "id": "0leDVTT5glqCay9uabVyCsgWzN16ZY",
+      "targetPrice": 24,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:35:15.883Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:15:23.886Z",
+          "before": 27,
+          "attempted": 24,
+          "after": 24,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 24,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559276"
+    },
+    "0leDW44ZVncajhmFY7oYBmFgkfKL5H": {
+      "name": "ชาผลไม้รวม",
+      "id": "0leDW44ZVncajhmFY7oYBmFgkfKL5H",
+      "targetPrice": 49,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:35:19.488Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:15:27.562Z",
+          "before": 56,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 49,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33768547"
+    },
+    "0leDW47h5xNkY2hwWcyaTTX8l7tXlT": {
+      "name": "ชาพีช",
+      "id": "0leDW47h5xNkY2hwWcyaTTX8l7tXlT",
+      "targetPrice": 49,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:35:20.811Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:15:28.911Z",
+          "before": 56,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 49,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33768707"
+    },
+    "0leDW4899iNp0PYzIvbZRFUVJjUYiq": {
+      "name": "ชาพีชส้มยูสุ",
+      "id": "0leDW4899iNp0PYzIvbZRFUVJjUYiq",
+      "targetPrice": 70,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:35:23.801Z",
+          "before": 82,
+          "attempted": 70,
+          "after": 70,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 70,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33768729"
+    },
+    "0leDVTQQzQn0KnTDZ0D2zCKvyITDvU": {
+      "name": "ชามะนาว",
+      "id": "0leDVTQQzQn0KnTDZ0D2zCKvyITDvU",
+      "targetPrice": 29,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:35:24.988Z",
+          "before": 0,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:15:32.751Z",
+          "before": 34,
+          "attempted": 29,
+          "after": 29,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 29,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559272"
+    },
+    "0leDVvbd9URoumrSfFDVxHkoiyJWBY": {
+      "name": "ชามิกซ์เบอร์รี่",
+      "id": "0leDVvbd9URoumrSfFDVxHkoiyJWBY",
+      "targetPrice": 49,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:35:28.821Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:15:33.771Z",
+          "before": 56,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 49,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33752414"
+    },
+    "0leDVTdLX9Rx4Z9V3bXqFhWaNjzf5A": {
+      "name": "ชาลิ้นจี่",
+      "id": "0leDVTdLX9Rx4Z9V3bXqFhWaNjzf5A",
+      "targetPrice": 24,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:35:30.053Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:15:37.767Z",
+          "before": 27,
+          "attempted": 24,
+          "after": 24,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 24,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559329"
+    },
+    "0leDW482Sv1Mf605Vij5S0rAPfSOHg": {
+      "name": "ชาส้มยูสุ",
+      "id": "0leDW482Sv1Mf605Vij5S0rAPfSOHg",
+      "targetPrice": 49,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:35:32.866Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:15:43.234Z",
+          "before": 56,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 49,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33768723"
+    },
+    "0leDVTTEh89G1JTb3sQ7Z98gfDfyDx": {
+      "name": "ชาเสาวรส",
+      "id": "0leDVTTEh89G1JTb3sQ7Z98gfDfyDx",
+      "targetPrice": 24,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:35:34.089Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:15:44.050Z",
+          "before": 27,
+          "attempted": 24,
+          "after": 24,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 24,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559277"
+    },
+    "0leDtfWkTRHl0rMHhKBdbqKO4LJTzB": {
+      "name": "ชาอู่หลงน้ำผึ้ง",
+      "id": "0leDtfWkTRHl0rMHhKBdbqKO4LJTzB",
+      "targetPrice": 29,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:35:38.004Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:15:48.339Z",
+          "before": 34,
+          "attempted": 29,
+          "after": 29,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 29,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_44722825"
+    },
+    "0leDtfWUcd0n8en0F0mNAgqp3dY3qH": {
+      "name": "ชาอู่หลงน้ำผึ้งมะนาว",
+      "id": "0leDtfWUcd0n8en0F0mNAgqp3dY3qH",
+      "targetPrice": 29,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:35:39.133Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:15:50.607Z",
+          "before": 34,
+          "attempted": 29,
+          "after": 29,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 29,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_44722799"
+    },
+    "0leDtfWEvsSiODXxyoCNOvsCFiGgS2": {
+      "name": "ชาอู่หลงเย็น",
+      "id": "0leDtfWEvsSiODXxyoCNOvsCFiGgS2",
+      "targetPrice": 24,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:35:42.371Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:15:53.698Z",
+          "before": 27,
+          "attempted": 24,
+          "after": 24,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 24,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_44722774"
+    },
+    "0leDVTdVQygjGNNYYKCeYbydmW1rke": {
+      "name": "ชาแอปเปิ้ล",
+      "id": "0leDVTdVQygjGNNYYKCeYbydmW1rke",
+      "targetPrice": 24,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:35:43.533Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:15:54.415Z",
+          "before": 27,
+          "attempted": 24,
+          "after": 24,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 24,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559331"
+    },
+    "0leDsCeTf71tRimV8r5E16eNmTP9wv": {
+      "name": "ชิโอปัง (Shio Pan) โฮมเมด ใหญ่ขึ้น",
+      "id": "0leDsCeTf71tRimV8r5E16eNmTP9wv",
+      "targetPrice": 20,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:35:48.116Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 37,
+          "changed": false,
+          "status": "blocked_popup",
+          "popupText": ""
+        },
+        {
+          "round": 6,
+          "at": "2026-09-01T14:38:28.191Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 37,
+          "changed": false,
+          "status": "blocked_popup",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T14:38:52.618Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 37,
+          "changed": false,
+          "status": "blocked_popup",
+          "popupText": ""
+        },
+        {
+          "round": 8,
+          "at": "2026-09-01T14:46:05.193Z",
+          "before": 27,
+          "after": 27,
+          "changed": false,
+          "status": "skip_at_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:15:58.830Z",
+          "before": 27,
+          "attempted": 20,
+          "after": 20,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 20,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_44187147"
+    },
+    "0leDwOD6GVemff3xC8lmBy9EdTHGCI": {
+      "name": "ซอฟต์คุกกี้ โฮมเมด (เลือกได้)",
+      "id": "0leDwOD6GVemff3xC8lmBy9EdTHGCI",
+      "targetPrice": 17,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:35:49.201Z",
+          "before": 26,
+          "attempted": 21,
+          "after": 21,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:16:01.299Z",
+          "before": 21,
+          "attempted": 17,
+          "after": 17,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 17,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_45717125"
+    },
+    "0leDVTY76FRw1xu4D0Cau3ddmp8mAm": {
+      "name": "แดงมะนาวโซดา",
+      "id": "0leDVTY76FRw1xu4D0Cau3ddmp8mAm",
+      "targetPrice": 24,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:35:52.952Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:16:09.727Z",
+          "before": 41,
+          "attempted": 24,
+          "after": 24,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 24,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559289"
+    },
+    "0leDVTa6PVbWTMfoA7PKCTemltMatx": {
+      "name": "นมชมพู (เย็น/ปั่น)",
+      "id": "0leDVTa6PVbWTMfoA7PKCTemltMatx",
+      "targetPrice": 37,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:35:54.720Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:16:12.717Z",
+          "before": 41,
+          "attempted": 37,
+          "after": 37,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 37,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559303"
+    },
+    "0leDVTaD8dW59htDuYeH3SH6bzClwe": {
+      "name": "นมมรกต (เย็น/ปั่น)",
+      "id": "0leDVTaD8dW59htDuYeH3SH6bzClwe",
+      "targetPrice": 37,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:35:59.185Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:16:15.100Z",
+          "before": 41,
+          "attempted": 37,
+          "after": 37,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 37,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559304"
+    },
+    "0leDl46DZ9M6pNwmLC72oRhFa2Afnr": {
+      "name": "นมร้อน 12 ออนซ์",
+      "id": "0leDl46DZ9M6pNwmLC72oRhFa2Afnr",
+      "targetPrice": 24,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:36:00.807Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:16:16.571Z",
+          "before": 27,
+          "attempted": 24,
+          "after": 24,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 24,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41574233"
+    },
+    "0leDVTaM89jbBnBBNwIU4dVOIxY3e4": {
+      "name": "นมสดคาราเมล (เย็น/ปั่น)",
+      "id": "0leDVTaM89jbBnBBNwIU4dVOIxY3e4",
+      "targetPrice": 49,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:36:04.640Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 49,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559306"
+    },
+    "0leDVTdZhZayUkaxJPuYH0t7mKFIjo": {
+      "name": "นมสดน้ำผึ้ง (เย็น/ปั่น)",
+      "id": "0leDVTdZhZayUkaxJPuYH0t7mKFIjo",
+      "targetPrice": 49,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:36:06.170Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 49,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559332"
+    },
+    "0leDVTYzRn8lVhbZBiFfgJmTCqjMiG": {
+      "name": "นมสดเผือก (เย็น/ปั่น)",
+      "id": "0leDVTYzRn8lVhbZBiFfgJmTCqjMiG",
+      "targetPrice": 49,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:36:10.454Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 49,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559295"
+    },
+    "0leDVTdt0NMQJSBCGJwWRH7n75otOp": {
+      "name": "นมสดมิ้นต์ (เย็น/ปั่น)",
+      "id": "0leDVTdt0NMQJSBCGJwWRH7n75otOp",
+      "targetPrice": 49,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:36:12.083Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 49,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559336"
+    },
+    "0leDVTYuLOqwfVjI5foEbPC4lwrC8L": {
+      "name": "นมสดเย็น (เย็น/ปั่น)",
+      "id": "0leDVTYuLOqwfVjI5foEbPC4lwrC8L",
+      "targetPrice": 29,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:36:15.837Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:16:25.459Z",
+          "before": 34,
+          "attempted": 29,
+          "after": 29,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 29,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559294"
+    },
+    "0leDVTaIfQxv17DwimimC9tSS5Otbx": {
+      "name": "นมสดเฮเซลนัท (เย็น/ปั่น)",
+      "id": "0leDVTaIfQxv17DwimimC9tSS5Otbx",
+      "targetPrice": 49,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:36:17.483Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 49,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559305"
+    },
+    "0leDobrptQv7MSwm0XiurVe2GOfJGC": {
+      "name": "น้ำเต้าหู้โกโก้ (เย็น/ปั่น)",
+      "id": "0leDobrptQv7MSwm0XiurVe2GOfJGC",
+      "targetPrice": 29,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:36:21.904Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:16:27.104Z",
+          "before": 34,
+          "attempted": 29,
+          "after": 29,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 29,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_42818456"
+    },
+    "0leDoboa7a7H7kkkTazsOkgmMA0bnv": {
+      "name": "น้ำเต้าหู้นมสด (เย็น/ปั่น)",
+      "id": "0leDoboa7a7H7kkkTazsOkgmMA0bnv",
+      "targetPrice": 29,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:36:23.516Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:16:30.794Z",
+          "before": 34,
+          "attempted": 29,
+          "after": 29,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 29,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_42818071"
+    },
+    "0leDobrEyQFKX5zwMpTRgI7dnr8iGV": {
+      "name": "น้ำเต้าหู้เผือก (เย็น/ปั่น)",
+      "id": "0leDobrEyQFKX5zwMpTRgI7dnr8iGV",
+      "targetPrice": 39,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:36:27.140Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:16:34.400Z",
+          "before": 49,
+          "attempted": 39,
+          "after": 39,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 39,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_42818404"
+    },
+    "0leDobmCSpEsxMCHo6IkZfRCMiEfZF": {
+      "name": "น้ำเต้าหู้สูตรดั้งเดิม (เย็น/ปั่น)",
+      "id": "0leDobmCSpEsxMCHo6IkZfRCMiEfZF",
+      "targetPrice": 29,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:36:28.755Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:16:35.741Z",
+          "before": 34,
+          "attempted": 29,
+          "after": 29,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 29,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_42817721"
+    },
+    "0leDobqfcH3kHIkpK5jfgozoKmFSy7": {
+      "name": "น้ำเต้าหู้โอวัลติน (เย็น/ปั่น)",
+      "id": "0leDobqfcH3kHIkpK5jfgozoKmFSy7",
+      "targetPrice": 29,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:36:32.321Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:16:37.250Z",
+          "before": 34,
+          "attempted": 29,
+          "after": 29,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 29,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_42818345"
+    },
+    "0leDVTZbFOpHz5jU843arY4WZ40ruv": {
+      "name": "น้ำผึ้งมะนาวโซดา",
+      "id": "0leDVTZbFOpHz5jU843arY4WZ40ruv",
+      "targetPrice": 24,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:36:34.075Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:16:41.028Z",
+          "before": 41,
+          "attempted": 24,
+          "after": 24,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 24,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559299"
+    },
+    "0leDVTU4BpCsHpO5R24hRCWgIJ8pBs": {
+      "name": "เนสกาแฟ (เย็น/ปั่น)",
+      "id": "0leDVTU4BpCsHpO5R24hRCWgIJ8pBs",
+      "targetPrice": 29,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:36:37.471Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:16:44.267Z",
+          "before": 34,
+          "attempted": 29,
+          "after": 29,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 29,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559283"
+    },
+    "0leDuA9kPGHie7NCHYQSgWNHkrQir5": {
+      "name": "บราวนี่โฮมเมด",
+      "id": "0leDuA9kPGHie7NCHYQSgWNHkrQir5",
+      "targetPrice": 15,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:36:39.120Z",
+          "before": 23,
+          "attempted": 19,
+          "after": 19,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:16:45.599Z",
+          "before": 19,
+          "attempted": 15,
+          "after": 15,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 15,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_44909012"
+    },
+    "0leDVTZ7pcUvDywsnHQpAkDtjyD8dI": {
+      "name": "บลูเบอร์รี่โซดา",
+      "id": "0leDVTZ7pcUvDywsnHQpAkDtjyD8dI",
+      "targetPrice": 22,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:36:42.605Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:16:47.159Z",
+          "before": 27,
+          "attempted": 22,
+          "after": 22,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 22,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559297"
+    },
+    "0leDVTZhrmHQVAZPDyz6yzkB8YyFN1": {
+      "name": "บลูฮาวายโซดา",
+      "id": "0leDVTZhrmHQVAZPDyz6yzkB8YyFN1",
+      "targetPrice": 22,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:36:44.455Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:16:50.531Z",
+          "before": 27,
+          "attempted": 22,
+          "after": 22,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 22,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559300"
+    },
+    "0leDVTZB58e19f6g9ACGOmxDF67OPX": {
+      "name": "บ๊วยโซดา",
+      "id": "0leDVTZB58e19f6g9ACGOmxDF67OPX",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:36:48.156Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:16:54.030Z",
+          "before": 34,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559298"
+    },
+    "0leDrC1sTrTkYTCEk5INzXoQQ50lZN": {
+      "name": "ปังเนยกรอบอบไอน้ำ",
+      "id": "0leDrC1sTrTkYTCEk5INzXoQQ50lZN",
+      "targetPrice": 20,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:36:49.790Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:17:03.952Z",
+          "before": 27,
+          "attempted": 20,
+          "after": 20,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 20,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_43772079"
+    },
+    "0leDshdWwIDk233jcI0YC7Rlq68c38": {
+      "name": "ปังมันม่วง อบสด โฮมเมด",
+      "id": "0leDshdWwIDk233jcI0YC7Rlq68c38",
+      "targetPrice": 20,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:36:53.354Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 37,
+          "changed": false,
+          "status": "blocked_popup",
+          "popupText": ""
+        },
+        {
+          "round": 6,
+          "at": "2026-09-01T14:38:28.551Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 37,
+          "changed": false,
+          "status": "blocked_popup",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T14:38:52.926Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 37,
+          "changed": false,
+          "status": "blocked_popup",
+          "popupText": ""
+        },
+        {
+          "round": 8,
+          "at": "2026-09-01T14:46:14.890Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:17:05.301Z",
+          "before": 27,
+          "attempted": 20,
+          "after": 20,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 20,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_44359362"
+    },
+    "0leDmn0lRLYDwyZBXinL1tOr7twDjI": {
+      "name": "เพียวมัทฉะ (Pure Matcha)",
+      "id": "0leDmn0lRLYDwyZBXinL1tOr7twDjI",
+      "targetPrice": 37,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:36:54.984Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:17:06.779Z",
+          "before": 41,
+          "attempted": 37,
+          "after": 37,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 37,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_42221869"
+    },
+    "0leDVTTzzm4L3lGvgyHRbEtEoEjjhK": {
+      "name": "มอคค่า (เย็น/ปั่น)",
+      "id": "0leDVTTzzm4L3lGvgyHRbEtEoEjjhK",
+      "targetPrice": 37,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:36:58.667Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:17:10.318Z",
+          "before": 41,
+          "attempted": 37,
+          "after": 37,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 37,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559282"
+    },
+    "0leDVTeEETpl7Uy2bUvNquH2X3zUX0": {
+      "name": "มะนาวโซดา",
+      "id": "0leDVTeEETpl7Uy2bUvNquH2X3zUX0",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:37:00.191Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:17:13.850Z",
+          "before": 34,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559337"
+    },
+    "0leDqHk0nYW8krVaZJbsed5ZXp9OPU": {
+      "name": "มะม่วงปั่น แก้วใหญ่ 22 ออนซ์",
+      "id": "0leDqHk0nYW8krVaZJbsed5ZXp9OPU",
+      "targetPrice": 44,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:37:04.421Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:17:15.267Z",
+          "before": 49,
+          "attempted": 44,
+          "after": 44,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 44,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_43461233"
+    },
+    "0leDmmwama0xr5MSiBaYt9PaLMC4yK": {
+      "name": "มัทฉะครีมชีส (Matcha Cheese Tea)",
+      "id": "0leDmmwama0xr5MSiBaYt9PaLMC4yK",
+      "targetPrice": 59,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:37:06.036Z",
+          "before": 82,
+          "attempted": 70,
+          "after": 70,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:17:16.651Z",
+          "before": 70,
+          "attempted": 59,
+          "after": 59,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 59,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_42221555"
+    },
+    "0leDmmyJWaS9IY1ZGuZW4xm5UtX8D8": {
+      "name": "มัทฉะบราวน์ชูการ์ไข่มุก (Matcha Brown Sugar Boba)",
+      "id": "0leDmmyJWaS9IY1ZGuZW4xm5UtX8D8",
+      "targetPrice": 55,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:37:09.972Z",
+          "before": 73,
+          "attempted": 64,
+          "after": 64,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:17:20.209Z",
+          "before": 64,
+          "attempted": 55,
+          "after": 55,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 55,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_42221669"
+    },
+    "0leDns4gurcYsFLRzsQOQlUAIBQcPz": {
+      "name": "มัทฉะมะพร้าว",
+      "id": "0leDns4gurcYsFLRzsQOQlUAIBQcPz",
+      "targetPrice": 55,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:37:11.584Z",
+          "before": 73,
+          "attempted": 64,
+          "after": 64,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:17:23.584Z",
+          "before": 64,
+          "attempted": 55,
+          "after": 55,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 55,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_42571021"
+    },
+    "0leDns5xkih8aWK46Ik8Q8UuhihwPr": {
+      "name": "มัทฉะมะพร้าวนม",
+      "id": "0leDns5xkih8aWK46Ik8Q8UuhihwPr",
+      "targetPrice": 55,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:37:15.306Z",
+          "before": 73,
+          "attempted": 64,
+          "after": 64,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:17:24.949Z",
+          "before": 64,
+          "attempted": 55,
+          "after": 55,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 55,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_42571194"
+    },
+    "0leDmmNvXs744bLz5srrvzs8TvMbZm": {
+      "name": "มัทฉะลาเต้ (Matcha Latte)",
+      "id": "0leDmmNvXs744bLz5srrvzs8TvMbZm",
+      "targetPrice": 49,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:37:17.901Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:17:26.509Z",
+          "before": 56,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 49,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_42217588"
+    },
+    "0leDre2AjqHtcQDSecAOwbQS0Yfoas": {
+      "name": "มัทฉะเลม่อนเย็น (Matcha Lemon)",
+      "id": "0leDre2AjqHtcQDSecAOwbQS0Yfoas",
+      "targetPrice": 45,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:37:20.908Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:17:29.729Z",
+          "before": 50,
+          "attempted": 45,
+          "after": 45,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 45,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_43979100"
+    },
+    "0leE0igg0z4uN84il8mM5gMpSWqUd3": {
+      "name": "มันไทยอบ ดั้งเดิม",
+      "id": "0leE0igg0z4uN84il8mM5gMpSWqUd3",
+      "targetPrice": 15,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:37:23.621Z",
+          "before": 25,
+          "attempted": 19,
+          "after": 25,
+          "changed": false,
+          "status": "blocked_popup",
+          "popupText": ""
+        },
+        {
+          "round": 6,
+          "at": "2026-09-01T14:38:37.968Z",
+          "before": 25,
+          "attempted": 19,
+          "after": 25,
+          "changed": false,
+          "status": "blocked_popup",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T14:39:02.004Z",
+          "before": 25,
+          "attempted": 19,
+          "after": 25,
+          "changed": false,
+          "status": "blocked_popup",
+          "popupText": ""
+        },
+        {
+          "round": 8,
+          "at": "2026-09-01T14:46:24.694Z",
+          "before": 25,
+          "attempted": 19,
+          "after": 19,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:17:33.442Z",
+          "before": 19,
+          "attempted": 15,
+          "after": 15,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 15,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_47343036"
+    },
+    "0leDq9bGH7uJgcL5b2YNvOV61vIsFS": {
+      "name": "มิกซ์เบอร์รี่ปั่น แก้วใหญ่ 22 ออนซ์",
+      "id": "0leDq9bGH7uJgcL5b2YNvOV61vIsFS",
+      "targetPrice": 56,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:37:26.567Z",
+          "before": 73,
+          "attempted": 63,
+          "after": 63,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:17:34.661Z",
+          "before": 63,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 56,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_43406368"
+    },
+    "0leDVTaT7fVirZXnGWw8xqRVXIT8tS": {
+      "name": "ไมโล (เย็น/ปั่น)",
+      "id": "0leDVTaT7fVirZXnGWw8xqRVXIT8tS",
+      "targetPrice": 29,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:37:29.504Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:17:36.163Z",
+          "before": 34,
+          "attempted": 29,
+          "after": 29,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 29,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559308"
+    },
+    "0leDVTTvXe2rouetPf2gWlF7sJ0Pkd": {
+      "name": "ลาเต้ (เย็น/ปั่น)",
+      "id": "0leDVTTvXe2rouetPf2gWlF7sJ0Pkd",
+      "targetPrice": 37,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:37:32.767Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:17:39.654Z",
+          "before": 41,
+          "attempted": 37,
+          "after": 37,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 37,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559281"
+    },
+    "0leDVTZ2uJEzz5W3b3aVCRrROeG1YN": {
+      "name": "ลิ้นจี่โซดา",
+      "id": "0leDVTZ2uJEzz5W3b3aVCRrROeG1YN",
+      "targetPrice": 22,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:37:35.739Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:17:43.171Z",
+          "before": 27,
+          "attempted": 22,
+          "after": 22,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 22,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559296"
+    },
+    "0leE6BgVnv19dSoAsqD5n3jTXLhkow": {
+      "name": "วาฟเฟิลเบลเยียม โฮมเมด",
+      "id": "0leE6BgVnv19dSoAsqD5n3jTXLhkow",
+      "targetPrice": 15,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:37:38.787Z",
+          "before": 23,
+          "attempted": 19,
+          "after": 19,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:17:44.334Z",
+          "before": 19,
+          "attempted": 15,
+          "after": 15,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 15,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_49538393"
+    },
+    "0leDq0YwsBR4rg4b8eu5VcPE6AyBLN": {
+      "name": "สตรอเบอร์รี่ปั่น แก้วใหญ่ 22 ออนซ์",
+      "id": "0leDq0YwsBR4rg4b8eu5VcPE6AyBLN",
+      "targetPrice": 37,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:37:41.974Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:17:52.817Z",
+          "before": 41,
+          "attempted": 37,
+          "after": 37,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 37,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_43337115"
+    },
+    "0leDVTdiuzBvCcTh1A2LHyedRFfY9K": {
+      "name": "สตรอว์เบอร์รีโซดา",
+      "id": "0leDVTdiuzBvCcTh1A2LHyedRFfY9K",
+      "targetPrice": 22,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:37:44.905Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:17:54.109Z",
+          "before": 27,
+          "attempted": 22,
+          "after": 22,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 22,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559334"
+    },
+    "0leDqBVXpRTMcJIT6oZGdwr9QndmYc": {
+      "name": "ส้มปั่น แก้วใหญ่ 22 ออนซ์",
+      "id": "0leDqBVXpRTMcJIT6oZGdwr9QndmYc",
+      "targetPrice": 44,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:37:47.118Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:17:55.671Z",
+          "before": 49,
+          "attempted": 44,
+          "after": 44,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 44,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_43412772"
+    },
+    "0leDqHksSvbJ4e16Y7rIdW2nZ2G1Hn": {
+      "name": "(สมูทตี้) มะม่วง แก้วใหญ่ 22 ออนซ์",
+      "id": "0leDqHksSvbJ4e16Y7rIdW2nZ2G1Hn",
+      "targetPrice": 69,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:37:50.033Z",
+          "before": 87,
+          "attempted": 77,
+          "after": 77,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:17:59.157Z",
+          "before": 77,
+          "attempted": 69,
+          "after": 69,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 69,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_43461330"
+    },
+    "0leDqbob409dsdRahSB9pHyBeuPuPp": {
+      "name": "(สมูทตี้) มันม่วง แก้วใหญ่ 22 ออนซ์",
+      "id": "0leDqbob409dsdRahSB9pHyBeuPuPp",
+      "targetPrice": 59,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:37:52.787Z",
+          "before": 82,
+          "attempted": 70,
+          "after": 70,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:18:02.548Z",
+          "before": 70,
+          "attempted": 59,
+          "after": 59,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 59,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_43577356"
+    },
+    "0leDq9bzkxCb9kkFuoyXnndaBdiBn0": {
+      "name": "(สมูทตี้) มิกซ์เบอร์รี่ แก้วใหญ่ 22 ออนซ์",
+      "id": "0leDq9bzkxCb9kkFuoyXnndaBdiBn0",
+      "targetPrice": 69,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:37:56.204Z",
+          "before": 87,
+          "attempted": 77,
+          "after": 77,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:18:03.767Z",
+          "before": 77,
+          "attempted": 69,
+          "after": 69,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 69,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_43406465"
+    },
+    "0leDq0bVw7aNlYzOrue2XuVyXoEuhQ": {
+      "name": "(สมูทตี้) สตรอเบอร์รี่ แก้วใหญ่ 22 ออนซ์",
+      "id": "0leDq0bVw7aNlYzOrue2XuVyXoEuhQ",
+      "targetPrice": 49,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:37:57.802Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:18:05.330Z",
+          "before": 56,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 49,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_43337275"
+    },
+    "0leDqBXMHV01Guv8qgKvMnelxQcEo0": {
+      "name": "(สมูทตี้) ส้ม แก้วใหญ่ 22 ออนซ์",
+      "id": "0leDqBXMHV01Guv8qgKvMnelxQcEo0",
+      "targetPrice": 59,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:38:01.604Z",
+          "before": 82,
+          "attempted": 70,
+          "after": 70,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:18:08.896Z",
+          "before": 70,
+          "attempted": 59,
+          "after": 59,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 59,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_43412845"
+    },
+    "0leDVTdeLgZu4qoMqla1ffmNOyzh2L": {
+      "name": "เสาวรสโซดา",
+      "id": "0leDVTdeLgZu4qoMqla1ffmNOyzh2L",
+      "targetPrice": 22,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:38:03.234Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:18:12.261Z",
+          "before": 27,
+          "attempted": 22,
+          "after": 22,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 22,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559333"
+    },
+    "0leDVTYJPpoUUwk6R7Ix9mk4FVKJQ9": {
+      "name": "แอปเปิ้ลโซดา",
+      "id": "0leDVTYJPpoUUwk6R7Ix9mk4FVKJQ9",
+      "targetPrice": 22,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:38:07.438Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:18:13.442Z",
+          "before": 27,
+          "attempted": 22,
+          "after": 22,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 22,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559291"
+    },
+    "0leDVTaQHClttNPzQlS6yibCywgEg4": {
+      "name": "โอวัลติน (เย็น/ปั่น)",
+      "id": "0leDVTaQHClttNPzQlS6yibCywgEg4",
+      "targetPrice": 29,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:38:09.034Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:18:15.055Z",
+          "before": 34,
+          "attempted": 29,
+          "after": 29,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 29,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559307"
+    },
+    "0leDtMFBrftK0MMXP0dWJDUBijkxnT": {
+      "name": "Ice Cream To-Go แก้วใหญ่ 16oz (แถมถุงเย็น)",
+      "id": "0leDtMFBrftK0MMXP0dWJDUBijkxnT",
+      "targetPrice": 29,
+      "rounds": [
+        {
+          "round": 5,
+          "at": "2026-09-01T14:38:12.078Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-03T09:18:18.425Z",
+          "before": 36,
+          "attempted": 29,
+          "after": 29,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 29,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_44595674"
+    },
+    "0leDl472vuUBVR2Ke1XVTS8NhKdeSP": {
+      "name": "กาแฟสด โกโก้มอคค่าร้อน",
+      "id": "0leDl472vuUBVR2Ke1XVTS8NhKdeSP",
+      "targetPrice": 37,
+      "rounds": [
+        {
+          "round": 9,
+          "at": "2026-09-03T09:12:20.844Z",
+          "before": 41,
+          "attempted": 37,
+          "after": 37,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 37,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41574391"
+    },
+    "0leDl46gUnDMTZClJSCQYLyn6ykyfP": {
+      "name": "กาแฟสด คาราเมลลาเต้ร้อน 12 ออนซ์",
+      "id": "0leDl46gUnDMTZClJSCQYLyn6ykyfP",
+      "targetPrice": 45,
+      "rounds": [
+        {
+          "round": 9,
+          "at": "2026-09-03T09:12:25.481Z",
+          "before": 50,
+          "attempted": 45,
+          "after": 45,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 45,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41574254"
+    },
+    "0leDkyJ6oxa8N2J44Dyrwsw6ynGxml": {
+      "name": "กาแฟสดโซดา เอสเปรสโซ่มะม่วง เย็น 16 ออนซ์",
+      "id": "0leDkyJ6oxa8N2J44Dyrwsw6ynGxml",
+      "targetPrice": 32,
+      "rounds": [
+        {
+          "round": 9,
+          "at": "2026-09-03T09:12:35.324Z",
+          "before": 36,
+          "attempted": 32,
+          "after": 32,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 32,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41486445"
+    },
+    "0leDl47ITNhj1hE9s3ERnCXrT2AfaW": {
+      "name": "กาแฟสด เผือกลาเต้ร้อน",
+      "id": "0leDl47ITNhj1hE9s3ERnCXrT2AfaW",
+      "targetPrice": 37,
+      "rounds": [
+        {
+          "round": 9,
+          "at": "2026-09-03T09:12:53.762Z",
+          "before": 41,
+          "attempted": 37,
+          "after": 37,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 37,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41574401"
+    },
+    "0leDl47Ako8qcHdMynDLKOOdhB8ew5": {
+      "name": "กาแฟสด มอคค่ามิ้นต์ร้อน",
+      "id": "0leDl47Ako8qcHdMynDLKOOdhB8ew5",
+      "targetPrice": 45,
+      "rounds": [
+        {
+          "round": 9,
+          "at": "2026-09-03T09:13:02.290Z",
+          "before": 50,
+          "attempted": 45,
+          "after": 45,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 45,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41574397"
+    },
+    "0leDkkVreUaMa5JzU30GmqLnNKcThL": {
+      "name": "กาแฟสด เอสเปรสโซ่ไทยสไตล์ เย็น 16 ออนซ์",
+      "id": "0leDkkVreUaMa5JzU30GmqLnNKcThL",
+      "targetPrice": 37,
+      "rounds": [
+        {
+          "round": 9,
+          "at": "2026-09-03T09:13:25.745Z",
+          "before": 41,
+          "attempted": 37,
+          "after": 37,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 37,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41391600"
+    },
+    "0leDl46umYFn7RtZJ3HKnpBzxprqlA": {
+      "name": "กาแฟสด โอวัลตินเอสเปรสโซ่ร้อน",
+      "id": "0leDl46umYFn7RtZJ3HKnpBzxprqlA",
+      "targetPrice": 45,
+      "rounds": [
+        {
+          "round": 9,
+          "at": "2026-09-03T09:13:38.155Z",
+          "before": 50,
+          "attempted": 45,
+          "after": 45,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 45,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41574263"
+    },
+    "0leDl46oXNVidJ1Do2a4xGjjkMwaU2": {
+      "name": "กาแฟสด เฮเซลนัทมอคค่าร้อน 12 ออนซ์",
+      "id": "0leDl46oXNVidJ1Do2a4xGjjkMwaU2",
+      "targetPrice": 45,
+      "rounds": [
+        {
+          "round": 9,
+          "at": "2026-09-03T09:13:43.886Z",
+          "before": 50,
+          "attempted": 45,
+          "after": 45,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 45,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41574255"
+    },
+    "0leDVTYBKP4C777yEB40elhWQITet3": {
+      "name": "เขียวโซดา",
+      "id": "0leDVTYBKP4C777yEB40elhWQITet3",
+      "targetPrice": 22,
+      "rounds": [
+        {
+          "round": 9,
+          "at": "2026-09-03T09:14:15.656Z",
+          "before": 27,
+          "attempted": 22,
+          "after": 22,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 22,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559290"
+    },
+    "0leDVTWceITg3fi71RwXExsGgTpRFH": {
+      "name": "เขียวมะนาวโซดา",
+      "id": "0leDVTWceITg3fi71RwXExsGgTpRFH",
+      "targetPrice": 24,
+      "rounds": [
+        {
+          "round": 9,
+          "at": "2026-09-03T09:14:18.064Z",
+          "before": 41,
+          "attempted": 24,
+          "after": 24,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 24,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559288"
+    },
+    "0leDVTczcJTIchAfdKQLof5arbdKkE": {
+      "name": "ไข่มุก",
+      "id": "0leDVTczcJTIchAfdKQLof5arbdKkE",
+      "targetPrice": 6,
+      "rounds": [
+        {
+          "round": 9,
+          "at": "2026-09-03T09:14:19.480Z",
+          "before": 7,
+          "attempted": 6,
+          "after": 6,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 6,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559325"
+    },
+    "0leDVTSAOst42K58yjkdQKsoWGhqbQ": {
+      "name": "ครีมซีส",
+      "id": "0leDVTSAOst42K58yjkdQKsoWGhqbQ",
+      "targetPrice": 25,
+      "rounds": [
+        {
+          "round": 9,
+          "at": "2026-09-03T09:14:24.539Z",
+          "before": 29,
+          "attempted": 25,
+          "after": 25,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 25,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559274"
+    },
+    "0leDVTcw8k6F7BbhvaiLsmJJ8YZb3O": {
+      "name": "เจลลี่ผลไม้",
+      "id": "0leDVTcw8k6F7BbhvaiLsmJJ8YZb3O",
+      "targetPrice": 6,
+      "rounds": [
+        {
+          "round": 9,
+          "at": "2026-09-03T09:14:28.343Z",
+          "before": 7,
+          "attempted": 6,
+          "after": 6,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 6,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559324"
+    },
+    "0leDoELf1wWGXGgOeqtSdADXB9Qnd4": {
+      "name": "เฉาก๊วยหนึบเนื้อแน่น",
+      "id": "0leDoELf1wWGXGgOeqtSdADXB9Qnd4",
+      "targetPrice": 9,
+      "rounds": [
+        {
+          "round": 9,
+          "at": "2026-09-03T09:14:29.854Z",
+          "before": 13,
+          "attempted": 9,
+          "after": 9,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 9,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_42692654"
+    },
+    "0leDl46XoAjHPuVyDDSQg1uhRPkEk4": {
+      "name": "ช็อกโกแลตมิลค์ร้อน 12 ออนซ์",
+      "id": "0leDl46XoAjHPuVyDDSQg1uhRPkEk4",
+      "targetPrice": 32,
+      "rounds": [
+        {
+          "round": 9,
+          "at": "2026-09-03T09:14:36.309Z",
+          "before": 36,
+          "attempted": 32,
+          "after": 32,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 32,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_41574246"
+    },
+    "0leDVTTfFPcjfQTaboyX9U8UsRCDEB": {
+      "name": "ชาสตรอว์เบอร์รี",
+      "id": "0leDVTTfFPcjfQTaboyX9U8UsRCDEB",
+      "targetPrice": 24,
+      "rounds": [
+        {
+          "round": 9,
+          "at": "2026-09-03T09:15:39.391Z",
+          "before": 27,
+          "attempted": 24,
+          "after": 24,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 24,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559278"
+    },
+    "0leDVTbMBa8dxcayIEcvvDGmIuJDac": {
+      "name": "ซอสบราวน์ชูการ์",
+      "id": "0leDVTbMBa8dxcayIEcvvDGmIuJDac",
+      "targetPrice": 19,
+      "rounds": [
+        {
+          "round": 9,
+          "at": "2026-09-03T09:16:05.038Z",
+          "before": 21,
+          "attempted": 19,
+          "after": 19,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 19,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559311"
+    },
+    "0leDVTdmgbwt9P2DYXGMz7TCf5zsfG": {
+      "name": "แดงโซดา",
+      "id": "0leDVTdmgbwt9P2DYXGMz7TCf5zsfG",
+      "targetPrice": 22,
+      "rounds": [
+        {
+          "round": 9,
+          "at": "2026-09-03T09:16:05.847Z",
+          "before": 27,
+          "attempted": 22,
+          "after": 22,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 22,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559335"
+    },
+    "0leDVTZmAtaBoSFGY02QzQDJ8kWcOv": {
+      "name": "นมสดไข่มุกบราวน์ชูการ์ (เย็น/ปั่น)",
+      "id": "0leDVTZmAtaBoSFGY02QzQDJ8kWcOv",
+      "targetPrice": 29,
+      "rounds": [
+        {
+          "round": 9,
+          "at": "2026-09-03T09:16:20.236Z",
+          "before": 63,
+          "attempted": 29,
+          "after": 29,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 29,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559301"
+    },
+    "0leDqbo3uFMpMjHF1eNukS5omMG5Nk": {
+      "name": "นมสดมันม่วง",
+      "id": "0leDqbo3uFMpMjHF1eNukS5omMG5Nk",
+      "targetPrice": 49,
+      "rounds": [
+        {
+          "round": 9,
+          "at": "2026-09-03T09:16:23.692Z",
+          "before": 56,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 49,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_43577310"
+    },
+    "0leDVTcsWQeHzDMQqaSj2gGX03bQZ0": {
+      "name": "บุกน้ำตาล",
+      "id": "0leDVTcsWQeHzDMQqaSj2gGX03bQZ0",
+      "targetPrice": 13,
+      "rounds": [
+        {
+          "round": 9,
+          "at": "2026-09-03T09:16:55.338Z",
+          "before": 14,
+          "attempted": 13,
+          "after": 13,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 13,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559323"
+    },
+    "0leDVTciaShgvDSIS7qN6PkW1S6CFU": {
+      "name": "บุกน้ำผึ้ง",
+      "id": "0leDVTciaShgvDSIS7qN6PkW1S6CFU",
+      "targetPrice": 13,
+      "rounds": [
+        {
+          "round": 9,
+          "at": "2026-09-03T09:16:56.947Z",
+          "before": 14,
+          "attempted": 13,
+          "after": 13,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 13,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559321"
+    },
+    "0leDVTcoYyVkJnjjiCy6PQvkQnfU20": {
+      "name": "บุกบราวน์ชูการ์",
+      "id": "0leDVTcoYyVkJnjjiCy6PQvkQnfU20",
+      "targetPrice": 13,
+      "rounds": [
+        {
+          "round": 9,
+          "at": "2026-09-03T09:17:00.372Z",
+          "before": 14,
+          "attempted": 13,
+          "after": 13,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 13,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_33559322"
+    },
+    "0leDpEjSlJawCBJr7fzbz99eejvXDs": {
+      "name": "วุ้นกบไต้หวัน",
+      "id": "0leDpEjSlJawCBJr7fzbz99eejvXDs",
+      "targetPrice": 8,
+      "rounds": [
+        {
+          "round": 9,
+          "at": "2026-09-03T09:17:45.915Z",
+          "before": 9,
+          "attempted": 8,
+          "after": 8,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 8,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_43051427"
+    },
+    "0leDpElQyEYGHKwIWY7Tm0DuUGNilJ": {
+      "name": "วุ้นว่านหางจระเข้ หั่นลูกเต๋า",
+      "id": "0leDpElQyEYGHKwIWY7Tm0DuUGNilJ",
+      "targetPrice": 19,
+      "rounds": [
+        {
+          "round": 9,
+          "at": "2026-09-03T09:17:49.331Z",
+          "before": 21,
+          "attempted": 19,
+          "after": 19,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": "แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ | แก้ไขสินค้าสำเร็จ"
+        }
+      ],
+      "currentLive": 19,
+      "reachedTarget": true,
+      "source": "hub",
+      "posId": "fs_item_43052296"
+    }
+  },
+  "updatedAt": "2026-09-03T09:18:18.425Z"
+}

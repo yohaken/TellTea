@@ -1,0 +1,2682 @@
+{
+  "items": [
+    {
+      "at": "2026-09-03T01:32:18.892Z",
+      "posId": "fs_item_33559278",
+      "name": "ชาสตรอว์เบอร์รี",
+      "nameEn": "Strawberry Tea",
+      "category": "ชา",
+      "mode": "other",
+      "storePrice": 19,
+      "onlinePrice": 27,
+      "pickupPrice": 27,
+      "offlinePrice": 19,
+      "optionNames": [
+        "ความหวาน",
+        "ท้อปปิ้ง",
+        "แยกน้ำแข็ง"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20260307083858327000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู lineman",
+      "fromNote": true,
+      "siblingName": "ชาบลูเบอร์รี่",
+      "siblingLmId": "0leDVTT5glqCay9uabVyCsgWzN16ZY",
+      "siblingOptions": [
+        "ความหวาน",
+        "ท้อปปิ้ง",
+        "แยกน้ำแข็ง"
+      ],
+      "filled": {
+        "names": {
+          "okName": true,
+          "okOnline": true,
+          "name": "ชาสตรอว์เบอร์รี",
+          "online": "฿27",
+          "pickup": "฿27",
+          "offline": "฿19",
+          "photo": {
+            "ok": true,
+            "bytes": 554174,
+            "mime": "application/octet-stream",
+            "files": 1
+          }
+        },
+        "ticks": [
+          "checked:true, label:ความหวาน, ok:true",
+          "checked:true, label:ท้อปปิ้ง, ok:true",
+          "checked:true, label:แยกน้ำแข็ง, ok:true",
+          "checked:true, label:ชา, ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/create",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": false,
+          "stillCreate": true,
+          "blocked": false,
+          "popup": ""
+        }
+      },
+      "createdId": null,
+      "live": null,
+      "cmp": {
+        "match": false,
+        "mismatches": [
+          "ไม่เจอหน้าแก้ไข"
+        ]
+      },
+      "status": "unknown"
+    },
+    {
+      "at": "2026-09-03T01:32:40.922Z",
+      "posId": "fs_item_33559325",
+      "name": "ไข่มุก",
+      "nameEn": "Boba",
+      "category": "ทัอปปิ้ง",
+      "mode": "topping",
+      "storePrice": 5,
+      "onlinePrice": 7,
+      "pickupPrice": 7,
+      "offlinePrice": 5,
+      "optionNames": [],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250417083736061000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู lineman",
+      "fromNote": true,
+      "siblingName": "",
+      "siblingLmId": "",
+      "siblingOptions": [],
+      "filled": {
+        "names": {
+          "okName": true,
+          "okOnline": true,
+          "name": "ไข่มุก",
+          "online": "฿7",
+          "pickup": "฿7",
+          "offline": "฿5",
+          "photo": {
+            "ok": false,
+            "error": "size 1502073"
+          }
+        },
+        "ticks": [
+          "checked:true, label:ทัอปปิ้ง, ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/create",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": false,
+          "stillCreate": true,
+          "blocked": false,
+          "popup": ""
+        }
+      },
+      "createdId": null,
+      "live": null,
+      "cmp": {
+        "match": false,
+        "mismatches": [
+          "ไม่เจอหน้าแก้ไข"
+        ]
+      },
+      "status": "unknown"
+    },
+    {
+      "at": "2026-09-03T01:32:57.390Z",
+      "posId": "fs_item_33559274",
+      "name": "ครีมซีส",
+      "nameEn": "Cheese",
+      "category": "ทัอปปิ้ง",
+      "mode": "topping",
+      "storePrice": 20,
+      "onlinePrice": 29,
+      "pickupPrice": 29,
+      "offlinePrice": 20,
+      "optionNames": [],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250417084543495000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู lineman",
+      "fromNote": true,
+      "siblingName": "",
+      "siblingLmId": "",
+      "siblingOptions": [],
+      "filled": {
+        "names": {
+          "okName": true,
+          "okOnline": true,
+          "name": "ครีมซีส",
+          "online": "฿29",
+          "pickup": "฿29",
+          "offline": "฿20",
+          "photo": {
+            "ok": true,
+            "bytes": 92071,
+            "mime": "image/jpeg",
+            "files": 1
+          }
+        },
+        "ticks": [
+          "checked:true, label:ทัอปปิ้ง, ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/create",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": false,
+          "stillCreate": true,
+          "blocked": false,
+          "popup": ""
+        }
+      },
+      "createdId": null,
+      "live": null,
+      "cmp": {
+        "match": false,
+        "mismatches": [
+          "ไม่เจอหน้าแก้ไข"
+        ]
+      },
+      "status": "unknown"
+    },
+    {
+      "at": "2026-09-03T01:33:15.197Z",
+      "posId": "fs_item_33559324",
+      "name": "เจลลี่ผลไม้",
+      "nameEn": "Fruit Jelly",
+      "category": "ทัอปปิ้ง",
+      "mode": "topping",
+      "storePrice": 5,
+      "onlinePrice": 7,
+      "pickupPrice": 7,
+      "offlinePrice": 5,
+      "optionNames": [
+        "แยกน้ำแข็ง"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250417083431248000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู lineman",
+      "fromNote": true,
+      "siblingName": "",
+      "siblingLmId": "",
+      "siblingOptions": [],
+      "filled": {
+        "names": {
+          "okName": true,
+          "okOnline": true,
+          "name": "เจลลี่ผลไม้",
+          "online": "฿7",
+          "pickup": "฿7",
+          "offline": "฿5",
+          "photo": {
+            "ok": true,
+            "bytes": 144418,
+            "mime": "image/jpeg",
+            "files": 1
+          }
+        },
+        "ticks": [
+          "checked:true, label:แยกน้ำแข็ง, ok:true",
+          "checked:true, label:ทัอปปิ้ง, ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/create",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": false,
+          "stillCreate": true,
+          "blocked": false,
+          "popup": ""
+        }
+      },
+      "createdId": null,
+      "live": null,
+      "cmp": {
+        "match": false,
+        "mismatches": [
+          "ไม่เจอหน้าแก้ไข"
+        ]
+      },
+      "status": "unknown"
+    },
+    {
+      "at": "2026-09-03T01:33:31.667Z",
+      "posId": "fs_item_42692654",
+      "name": "เฉาก๊วยหนึบเนื้อแน่น",
+      "nameEn": "",
+      "category": "ทัอปปิ้ง",
+      "mode": "topping",
+      "storePrice": 9,
+      "onlinePrice": 13,
+      "pickupPrice": 13,
+      "offlinePrice": 9,
+      "optionNames": [],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250521033516288000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู lineman",
+      "fromNote": true,
+      "siblingName": "",
+      "siblingLmId": "",
+      "siblingOptions": [],
+      "filled": {
+        "names": {
+          "okName": true,
+          "okOnline": true,
+          "name": "เฉาก๊วยหนึบเนื้อแน่น",
+          "online": "฿13",
+          "pickup": "฿13",
+          "offline": "฿9",
+          "photo": {
+            "ok": true,
+            "bytes": 90753,
+            "mime": "image/jpeg",
+            "files": 1
+          }
+        },
+        "ticks": [
+          "checked:true, label:ทัอปปิ้ง, ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/create",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": false,
+          "stillCreate": true,
+          "blocked": false,
+          "popup": ""
+        }
+      },
+      "createdId": null,
+      "live": null,
+      "cmp": {
+        "match": false,
+        "mismatches": [
+          "ไม่เจอหน้าแก้ไข"
+        ]
+      },
+      "status": "unknown"
+    },
+    {
+      "at": "2026-09-03T01:33:42.835Z",
+      "posId": "fs_item_33559290",
+      "name": "เขียวโซดา",
+      "nameEn": "Green Soda",
+      "category": "อิตาเลียน โซดา",
+      "mode": "other",
+      "storePrice": 19,
+      "onlinePrice": 27,
+      "pickupPrice": 27,
+      "offlinePrice": 19,
+      "optionNames": [
+        "ความหวาน",
+        "ท้อปปิ้ง",
+        "แยกน้ำแข็ง"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20260308092328792000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู lineman",
+      "fromNote": true,
+      "siblingName": "แอปเปิ้ลโซดา",
+      "siblingLmId": "0leDVTYJPpoUUwk6R7Ix9mk4FVKJQ9",
+      "siblingOptions": [
+        "ความหวาน",
+        "ท้อปปิ้ง",
+        "แยกน้ำแข็ง"
+      ],
+      "filled": {
+        "names": {
+          "okName": true,
+          "okOnline": true,
+          "name": "เขียวโซดา",
+          "online": "฿27",
+          "pickup": "฿27",
+          "offline": "฿19",
+          "photo": {
+            "ok": false,
+            "error": "no file input"
+          }
+        },
+        "ticks": [
+          "checked:true, label:ความหวาน, ok:true",
+          "checked:true, label:ท้อปปิ้ง, ok:true",
+          "checked:true, label:แยกน้ำแข็ง, ok:true",
+          "checked:true, label:อิตาเลียน โซดา, ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "error": "no save"
+        },
+        "after": {
+          "url": "https://www.set.or.th/th/market/product/stock/quote/SCL/factsheet",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": false,
+          "stillCreate": false,
+          "blocked": true,
+          "popup": ""
+        }
+      },
+      "createdId": null,
+      "live": null,
+      "cmp": {
+        "match": false,
+        "mismatches": [
+          "ไม่เจอหน้าแก้ไข"
+        ]
+      },
+      "status": "quota_or_blocked"
+    },
+    {
+      "at": "2026-09-03T01:46:04.536Z",
+      "posId": "fs_item_33559325",
+      "name": "ไข่มุก",
+      "nameEn": "Boba",
+      "category": "ทัอปปิ้ง",
+      "mode": "topping",
+      "storePrice": 5,
+      "onlinePrice": 7,
+      "pickupPrice": 7,
+      "offlinePrice": 5,
+      "optionNames": [],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250417083736061000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู lineman",
+      "fromNote": true,
+      "siblingName": "",
+      "siblingLmId": "",
+      "siblingOptions": [],
+      "filled": {
+        "names": {
+          "okName": true,
+          "okOnline": true,
+          "name": "ไข่มุก",
+          "online": "฿7",
+          "pickup": "฿7",
+          "offline": "฿5"
+        },
+        "ticks": [
+          "checked:true, label:ทัอปปิ้ง, ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true,
+          "n": 2
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/create",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": false,
+          "stillCreate": true,
+          "blocked": false,
+          "genericErr": false,
+          "popup": ""
+        }
+      },
+      "createdId": null,
+      "live": null,
+      "cmp": {
+        "match": false,
+        "mismatches": [
+          "ไม่เจอหน้าแก้ไข"
+        ]
+      },
+      "status": "unknown"
+    },
+    {
+      "at": "2026-09-03T02:14:08.267Z",
+      "posId": "fs_item_33559278",
+      "name": "ชาสตรอว์เบอร์รี",
+      "nameEn": "Strawberry Tea",
+      "category": "ชา",
+      "mode": "other",
+      "storePrice": 19,
+      "onlinePrice": 27,
+      "pickupPrice": 27,
+      "offlinePrice": 19,
+      "optionNames": [
+        "ความหวาน",
+        "ท้อปปิ้ง",
+        "แยกน้ำแข็ง"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20260307083858327000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู lineman",
+      "fromNote": true,
+      "lmId": "0leDVTTfFPcjfQTaboyX9U8UsRCDEB",
+      "siblingName": "ชาบลูเบอร์รี่",
+      "siblingLmId": "0leDVTT5glqCay9uabVyCsgWzN16ZY",
+      "siblingOptions": [
+        "ความหวาน",
+        "ท้อปปิ้ง",
+        "แยกน้ำแข็ง"
+      ],
+      "filled": {
+        "names": {
+          "online": 27,
+          "pickup": 27,
+          "offline": 19,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/0leDVTTfFPcjfQTaboyX9U8UsRCDEB/edit"
+        },
+        "ticks": [
+          "checked:true, label:ความหวาน, ok:true",
+          "checked:true, label:ท้อปปิ้ง, ok:true",
+          "checked:true, label:แยกน้ำแข็ง, ok:true",
+          "checked:true, label:ชา, ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true,
+          "n": 2
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": true,
+          "stillCreate": false,
+          "blocked": false,
+          "genericErr": false,
+          "popup": ""
+        }
+      },
+      "createdId": "0leDVTTfFPcjfQTaboyX9U8UsRCDEB",
+      "live": {
+        "id": "0leDVTTfFPcjfQTaboyX9U8UsRCDEB",
+        "name": "ชาสตรอว์เบอร์รี",
+        "nameEn": "Strawberry Tea",
+        "status": "AVAILABLE",
+        "online": 27,
+        "pickup": 27,
+        "offline": 19,
+        "optionNames": [
+          "ความหวาน",
+          "ท้อปปิ้ง",
+          "แยกน้ำแข็ง"
+        ],
+        "categoryIds": [
+          "0lfz5W7fMpCMElPB6PDwuuZhUTj226"
+        ],
+        "hasPhoto": true
+      },
+      "cmp": {
+        "nameOk": true,
+        "priceOk": true,
+        "pickupOk": true,
+        "offlineOk": true,
+        "catOk": true,
+        "missingOpts": [],
+        "match": true,
+        "mismatches": []
+      },
+      "status": "aligned_match"
+    },
+    {
+      "at": "2026-09-03T02:14:25.538Z",
+      "posId": "fs_item_33559325",
+      "name": "ไข่มุก",
+      "nameEn": "Boba",
+      "category": "ทัอปปิ้ง",
+      "mode": "topping",
+      "storePrice": 5,
+      "onlinePrice": 7,
+      "pickupPrice": 7,
+      "offlinePrice": 5,
+      "optionNames": [],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250417083736061000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู lineman",
+      "fromNote": true,
+      "lmId": "0leDVTczcJTIchAfdKQLof5arbdKkE",
+      "siblingName": "ครีมซีส",
+      "siblingLmId": "0leDVTSAOst42K58yjkdQKsoWGhqbQ",
+      "siblingOptions": [],
+      "filled": {
+        "names": {
+          "online": 7,
+          "pickup": 7,
+          "offline": 5,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/0leDVTczcJTIchAfdKQLof5arbdKkE/edit"
+        },
+        "ticks": [
+          "checked:true, label:ทัอปปิ้ง, ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true,
+          "n": 2
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": true,
+          "stillCreate": false,
+          "blocked": false,
+          "genericErr": false,
+          "popup": ""
+        }
+      },
+      "createdId": "0leDVTczcJTIchAfdKQLof5arbdKkE",
+      "live": {
+        "id": "0leDVTczcJTIchAfdKQLof5arbdKkE",
+        "name": "ไข่มุก",
+        "nameEn": "Boba",
+        "status": "AVAILABLE",
+        "online": 7,
+        "pickup": 7,
+        "offline": 5,
+        "optionNames": [],
+        "categoryIds": [
+          "0lfz5W9OvdPWFUNEiWenDzh4grDhj3"
+        ],
+        "hasPhoto": true
+      },
+      "cmp": {
+        "nameOk": true,
+        "priceOk": true,
+        "pickupOk": true,
+        "offlineOk": true,
+        "catOk": true,
+        "missingOpts": [],
+        "match": true,
+        "mismatches": []
+      },
+      "status": "aligned_match"
+    },
+    {
+      "at": "2026-09-03T02:14:42.369Z",
+      "posId": "fs_item_33559274",
+      "name": "ครีมซีส",
+      "nameEn": "Cheese",
+      "category": "ทัอปปิ้ง",
+      "mode": "topping",
+      "storePrice": 20,
+      "onlinePrice": 29,
+      "pickupPrice": 29,
+      "offlinePrice": 20,
+      "optionNames": [],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250417084543495000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู lineman",
+      "fromNote": true,
+      "lmId": "0leDVTSAOst42K58yjkdQKsoWGhqbQ",
+      "siblingName": "ครีมซีส",
+      "siblingLmId": "0leDVTSAOst42K58yjkdQKsoWGhqbQ",
+      "siblingOptions": [],
+      "filled": {
+        "names": {
+          "online": 29,
+          "pickup": 29,
+          "offline": 20,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/0leDVTSAOst42K58yjkdQKsoWGhqbQ/edit"
+        },
+        "ticks": [
+          "checked:true, label:ทัอปปิ้ง, ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true,
+          "n": 2
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": true,
+          "stillCreate": false,
+          "blocked": false,
+          "genericErr": false,
+          "popup": ""
+        }
+      },
+      "createdId": "0leDVTSAOst42K58yjkdQKsoWGhqbQ",
+      "live": {
+        "id": "0leDVTSAOst42K58yjkdQKsoWGhqbQ",
+        "name": "ครีมซีส",
+        "nameEn": "Cheese",
+        "status": "AVAILABLE",
+        "online": 29,
+        "pickup": 29,
+        "offline": 20,
+        "optionNames": [],
+        "categoryIds": [
+          "0lfz5W9OvdPWFUNEiWenDzh4grDhj3"
+        ],
+        "hasPhoto": true
+      },
+      "cmp": {
+        "nameOk": true,
+        "priceOk": true,
+        "pickupOk": true,
+        "offlineOk": true,
+        "catOk": true,
+        "missingOpts": [],
+        "match": true,
+        "mismatches": []
+      },
+      "status": "aligned_match"
+    },
+    {
+      "at": "2026-09-03T02:14:59.876Z",
+      "posId": "fs_item_33559324",
+      "name": "เจลลี่ผลไม้",
+      "nameEn": "Fruit Jelly",
+      "category": "ทัอปปิ้ง",
+      "mode": "topping",
+      "storePrice": 5,
+      "onlinePrice": 7,
+      "pickupPrice": 7,
+      "offlinePrice": 5,
+      "optionNames": [
+        "แยกน้ำแข็ง"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250417083431248000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู lineman",
+      "fromNote": true,
+      "lmId": "0leDVTcw8k6F7BbhvaiLsmJJ8YZb3O",
+      "siblingName": "บุกบราวน์ชูการ์",
+      "siblingLmId": "0leDVTcoYyVkJnjjiCy6PQvkQnfU20",
+      "siblingOptions": [
+        "แยกน้ำแข็ง"
+      ],
+      "filled": {
+        "names": {
+          "online": 7,
+          "pickup": 7,
+          "offline": 5,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/0leDVTcw8k6F7BbhvaiLsmJJ8YZb3O/edit"
+        },
+        "ticks": [
+          "checked:true, label:แยกน้ำแข็ง, ok:true",
+          "checked:true, label:ทัอปปิ้ง, ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true,
+          "n": 2
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": true,
+          "stillCreate": false,
+          "blocked": false,
+          "genericErr": false,
+          "popup": ""
+        }
+      },
+      "createdId": "0leDVTcw8k6F7BbhvaiLsmJJ8YZb3O",
+      "live": {
+        "id": "0leDVTcw8k6F7BbhvaiLsmJJ8YZb3O",
+        "name": "เจลลี่ผลไม้",
+        "nameEn": "Fruit Jelly",
+        "status": "AVAILABLE",
+        "online": 7,
+        "pickup": 7,
+        "offline": 5,
+        "optionNames": [
+          "แยกน้ำแข็ง"
+        ],
+        "categoryIds": [
+          "0lfz5W9OvdPWFUNEiWenDzh4grDhj3"
+        ],
+        "hasPhoto": true
+      },
+      "cmp": {
+        "nameOk": true,
+        "priceOk": true,
+        "pickupOk": true,
+        "offlineOk": true,
+        "catOk": true,
+        "missingOpts": [],
+        "match": true,
+        "mismatches": []
+      },
+      "status": "aligned_match"
+    },
+    {
+      "at": "2026-09-03T02:15:16.475Z",
+      "posId": "fs_item_42692654",
+      "name": "เฉาก๊วยหนึบเนื้อแน่น",
+      "nameEn": "",
+      "category": "ทัอปปิ้ง",
+      "mode": "topping",
+      "storePrice": 9,
+      "onlinePrice": 13,
+      "pickupPrice": 13,
+      "offlinePrice": 9,
+      "optionNames": [],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250521033516288000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู lineman",
+      "fromNote": true,
+      "lmId": "0leDoELf1wWGXGgOeqtSdADXB9Qnd4",
+      "siblingName": "ครีมซีส",
+      "siblingLmId": "0leDVTSAOst42K58yjkdQKsoWGhqbQ",
+      "siblingOptions": [],
+      "filled": {
+        "names": {
+          "online": 13,
+          "pickup": 13,
+          "offline": 9,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/0leDoELf1wWGXGgOeqtSdADXB9Qnd4/edit"
+        },
+        "ticks": [
+          "checked:true, label:ทัอปปิ้ง, ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "error": "wrong tab",
+          "url": "https://www.youtube.com/watch?v=EfaghvwTeC0"
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/0leDoELf1wWGXGgOeqtSdADXB9Qnd4/edit",
+          "createdId": "0leDoELf1wWGXGgOeqtSdADXB9Qnd4",
+          "onEdit": true,
+          "backOnList": false,
+          "stillCreate": false,
+          "blocked": false,
+          "genericErr": false,
+          "popup": ""
+        }
+      },
+      "createdId": "0leDoELf1wWGXGgOeqtSdADXB9Qnd4",
+      "live": {
+        "id": "0leDoELf1wWGXGgOeqtSdADXB9Qnd4",
+        "name": "เฉาก๊วยหนึบเนื้อแน่น",
+        "nameEn": "",
+        "status": "AVAILABLE",
+        "online": 18,
+        "pickup": 18,
+        "offline": 12,
+        "optionNames": [],
+        "categoryIds": [
+          "0lfz5W9OvdPWFUNEiWenDzh4grDhj3"
+        ],
+        "hasPhoto": true
+      },
+      "cmp": {
+        "nameOk": true,
+        "priceOk": false,
+        "pickupOk": false,
+        "offlineOk": false,
+        "catOk": true,
+        "missingOpts": [],
+        "match": false,
+        "mismatches": [
+          "เดลิเวอรี 18≠13",
+          "รับที่ร้าน 18≠13",
+          "หน้าร้าน 12≠9"
+        ]
+      },
+      "status": "aligned_mismatch"
+    },
+    {
+      "at": "2026-09-03T02:23:05.360Z",
+      "posId": "fs_item_42692654",
+      "name": "เฉาก๊วยหนึบเนื้อแน่น",
+      "nameEn": "",
+      "category": "ทัอปปิ้ง",
+      "mode": "topping",
+      "storePrice": 9,
+      "onlinePrice": 13,
+      "pickupPrice": 13,
+      "offlinePrice": 9,
+      "optionNames": [],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250521033516288000S",
+      "recommended": false,
+      "hubNote": "L:มีแล้ว 18 · ไม่ตรง เดลิเวอรี 18≠13 · รับที่ร้าน 18≠13 · หน้าร้าน 12≠9",
+      "fromNote": false,
+      "lmId": "0leDoELf1wWGXGgOeqtSdADXB9Qnd4",
+      "siblingName": "",
+      "siblingLmId": "",
+      "siblingOptions": [],
+      "filled": {
+        "names": {
+          "online": 13,
+          "pickup": 13,
+          "offline": 9,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/0leDoELf1wWGXGgOeqtSdADXB9Qnd4/edit"
+        },
+        "ticks": [
+          "checked:true, label:ทัอปปิ้ง, ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true,
+          "n": 2
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": true,
+          "stillCreate": false,
+          "blocked": false,
+          "genericErr": false,
+          "popup": ""
+        }
+      },
+      "createdId": "0leDoELf1wWGXGgOeqtSdADXB9Qnd4",
+      "live": {
+        "id": "0leDoELf1wWGXGgOeqtSdADXB9Qnd4",
+        "name": "เฉาก๊วยหนึบเนื้อแน่น",
+        "nameEn": "",
+        "status": "AVAILABLE",
+        "online": 13,
+        "pickup": 13,
+        "offline": 9,
+        "optionNames": [],
+        "categoryIds": [
+          "0lfz5W9OvdPWFUNEiWenDzh4grDhj3"
+        ],
+        "hasPhoto": true
+      },
+      "cmp": {
+        "nameOk": true,
+        "priceOk": true,
+        "pickupOk": true,
+        "offlineOk": true,
+        "catOk": true,
+        "missingOpts": [],
+        "match": true,
+        "mismatches": []
+      },
+      "status": "aligned_match"
+    },
+    {
+      "at": "2026-09-03T02:23:28.468Z",
+      "posId": "fs_item_33559290",
+      "name": "เขียวโซดา",
+      "nameEn": "Green Soda",
+      "category": "อิตาเลียน โซดา",
+      "mode": "other",
+      "storePrice": 19,
+      "onlinePrice": 27,
+      "pickupPrice": 27,
+      "offlinePrice": 19,
+      "optionNames": [
+        "ความหวาน",
+        "ท้อปปิ้ง",
+        "แยกน้ำแข็ง"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20260308092328792000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู lineman",
+      "fromNote": true,
+      "lmId": "0leDVTYBKP4C777yEB40elhWQITet3",
+      "siblingName": "เขียวโซดา",
+      "siblingLmId": "0leDVTYBKP4C777yEB40elhWQITet3",
+      "siblingOptions": [
+        "ความหวาน",
+        "ท้อปปิ้ง",
+        "แยกน้ำแข็ง"
+      ],
+      "filled": {
+        "names": {
+          "online": 27,
+          "pickup": 27,
+          "offline": 19,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/0leDVTYBKP4C777yEB40elhWQITet3/edit"
+        },
+        "ticks": [
+          "checked:true, label:ความหวาน, ok:true",
+          "checked:true, label:ท้อปปิ้ง, ok:true",
+          "checked:true, label:แยกน้ำแข็ง, ok:true",
+          "checked:true, label:อิตาเลียน โซดา, ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true,
+          "n": 2
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": true,
+          "stillCreate": false,
+          "blocked": false,
+          "genericErr": false,
+          "popup": ""
+        }
+      },
+      "createdId": "0leDVTYBKP4C777yEB40elhWQITet3",
+      "live": {
+        "id": "0leDVTYBKP4C777yEB40elhWQITet3",
+        "name": "เขียวโซดา",
+        "nameEn": "Green Soda",
+        "status": "AVAILABLE",
+        "online": 27,
+        "pickup": 27,
+        "offline": 19,
+        "optionNames": [
+          "ความหวาน",
+          "ท้อปปิ้ง",
+          "แยกน้ำแข็ง"
+        ],
+        "categoryIds": [
+          "0lfz5WDr0MZb1NmQDx2hGWsveucNlr"
+        ],
+        "hasPhoto": true
+      },
+      "cmp": {
+        "nameOk": true,
+        "priceOk": true,
+        "pickupOk": true,
+        "offlineOk": true,
+        "catOk": true,
+        "missingOpts": [],
+        "match": true,
+        "mismatches": []
+      },
+      "status": "aligned_match"
+    },
+    {
+      "at": "2026-09-03T02:35:01.072Z",
+      "posId": "fs_item_33559323",
+      "name": "บุกน้ำตาล",
+      "nameEn": "Sugar Konjac",
+      "category": "ทัอปปิ้ง",
+      "mode": "topping",
+      "storePrice": 10,
+      "onlinePrice": 14,
+      "pickupPrice": 14,
+      "offlinePrice": 10,
+      "optionNames": [],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250417082842826000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDVTcsWQeHzDMQqaSj2gGX03bQZ0",
+      "siblingName": "ครีมซีส",
+      "siblingLmId": "0leDVTSAOst42K58yjkdQKsoWGhqbQ",
+      "siblingOptions": [],
+      "filled": {
+        "names": {
+          "online": 14,
+          "pickup": 14,
+          "offline": 10,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/0leDVTcsWQeHzDMQqaSj2gGX03bQZ0/edit"
+        },
+        "ticks": [
+          "checked:true, label:ทัอปปิ้ง, ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true,
+          "n": 2
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": true,
+          "stillCreate": false,
+          "blocked": false,
+          "genericErr": false,
+          "popup": ""
+        }
+      },
+      "createdId": "0leDVTcsWQeHzDMQqaSj2gGX03bQZ0",
+      "live": {
+        "id": "0leDVTcsWQeHzDMQqaSj2gGX03bQZ0",
+        "name": "บุกน้ำตาล",
+        "nameEn": "Sugar Konjac",
+        "status": "AVAILABLE",
+        "online": 14,
+        "pickup": 14,
+        "offline": 10,
+        "deliveryAvailable": true,
+        "selfPickupAvailable": false,
+        "offlineAvailable": false,
+        "optionNames": [],
+        "categoryIds": [
+          "0lfz5W9OvdPWFUNEiWenDzh4grDhj3"
+        ],
+        "hasPhoto": true
+      },
+      "cmp": {
+        "nameOk": true,
+        "priceOk": true,
+        "pickupOff": true,
+        "offlineOff": true,
+        "catOk": true,
+        "missingOpts": [],
+        "match": true,
+        "mismatches": []
+      },
+      "status": "aligned_match"
+    },
+    {
+      "at": "2026-09-03T02:35:20.771Z",
+      "posId": "fs_item_33559321",
+      "name": "บุกน้ำผึ้ง",
+      "nameEn": "Honey Konjac",
+      "category": "ทัอปปิ้ง",
+      "mode": "topping",
+      "storePrice": 10,
+      "onlinePrice": 14,
+      "pickupPrice": 14,
+      "offlinePrice": 10,
+      "optionNames": [],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250417081347195000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDVTciaShgvDSIS7qN6PkW1S6CFU",
+      "siblingName": "ครีมซีส",
+      "siblingLmId": "0leDVTSAOst42K58yjkdQKsoWGhqbQ",
+      "siblingOptions": [],
+      "filled": {
+        "names": {
+          "online": 14,
+          "pickup": 14,
+          "offline": 10,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/0leDVTciaShgvDSIS7qN6PkW1S6CFU/edit"
+        },
+        "ticks": [
+          "checked:true, label:ทัอปปิ้ง, ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true,
+          "n": 2
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": true,
+          "stillCreate": false,
+          "blocked": false,
+          "genericErr": false,
+          "popup": ""
+        }
+      },
+      "createdId": "0leDVTciaShgvDSIS7qN6PkW1S6CFU",
+      "live": {
+        "id": "0leDVTciaShgvDSIS7qN6PkW1S6CFU",
+        "name": "บุกน้ำผึ้ง",
+        "nameEn": "Honey Konjac",
+        "status": "AVAILABLE",
+        "online": 14,
+        "pickup": 14,
+        "offline": 10,
+        "deliveryAvailable": true,
+        "selfPickupAvailable": false,
+        "offlineAvailable": false,
+        "optionNames": [],
+        "categoryIds": [
+          "0lfz5W9OvdPWFUNEiWenDzh4grDhj3"
+        ],
+        "hasPhoto": true
+      },
+      "cmp": {
+        "nameOk": true,
+        "priceOk": true,
+        "pickupOff": true,
+        "offlineOff": true,
+        "catOk": true,
+        "missingOpts": [],
+        "match": true,
+        "mismatches": []
+      },
+      "status": "aligned_match"
+    },
+    {
+      "at": "2026-09-03T02:35:40.917Z",
+      "posId": "fs_item_33559322",
+      "name": "บุกบราวน์ชูการ์",
+      "nameEn": "Brown Sugar Konjac",
+      "category": "ทัอปปิ้ง",
+      "mode": "topping",
+      "storePrice": 10,
+      "onlinePrice": 14,
+      "pickupPrice": 14,
+      "offlinePrice": 10,
+      "optionNames": [
+        "แยกน้ำแข็ง"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250417081901071000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDVTcoYyVkJnjjiCy6PQvkQnfU20",
+      "siblingName": "บุกบราวน์ชูการ์",
+      "siblingLmId": "0leDVTcoYyVkJnjjiCy6PQvkQnfU20",
+      "siblingOptions": [
+        "แยกน้ำแข็ง"
+      ],
+      "filled": {
+        "names": {
+          "online": 14,
+          "pickup": 14,
+          "offline": 10,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/0leDVTcoYyVkJnjjiCy6PQvkQnfU20/edit"
+        },
+        "ticks": [
+          "checked:true, label:แยกน้ำแข็ง, ok:true",
+          "checked:true, label:ทัอปปิ้ง, ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true,
+          "n": 2
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": true,
+          "stillCreate": false,
+          "blocked": false,
+          "genericErr": false,
+          "popup": ""
+        }
+      },
+      "createdId": "0leDVTcoYyVkJnjjiCy6PQvkQnfU20",
+      "live": {
+        "id": "0leDVTcoYyVkJnjjiCy6PQvkQnfU20",
+        "name": "บุกบราวน์ชูการ์",
+        "nameEn": "Brown Sugar Konjac",
+        "status": "AVAILABLE",
+        "online": 14,
+        "pickup": 14,
+        "offline": 10,
+        "deliveryAvailable": true,
+        "selfPickupAvailable": false,
+        "offlineAvailable": false,
+        "optionNames": [
+          "แยกน้ำแข็ง"
+        ],
+        "categoryIds": [
+          "0lfz5W9OvdPWFUNEiWenDzh4grDhj3"
+        ],
+        "hasPhoto": true
+      },
+      "cmp": {
+        "nameOk": true,
+        "priceOk": true,
+        "pickupOff": true,
+        "offlineOff": true,
+        "catOk": true,
+        "missingOpts": [],
+        "match": true,
+        "mismatches": []
+      },
+      "status": "aligned_match"
+    },
+    {
+      "at": "2026-09-03T02:36:00.597Z",
+      "posId": "fs_item_43051427",
+      "name": "วุ้นกบไต้หวัน",
+      "nameEn": "",
+      "category": "ทัอปปิ้ง",
+      "mode": "topping",
+      "storePrice": 6,
+      "onlinePrice": 9,
+      "pickupPrice": 9,
+      "offlinePrice": 6,
+      "optionNames": [],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250612053842000000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDpEjSlJawCBJr7fzbz99eejvXDs",
+      "siblingName": "ครีมซีส",
+      "siblingLmId": "0leDVTSAOst42K58yjkdQKsoWGhqbQ",
+      "siblingOptions": [],
+      "filled": {
+        "names": {
+          "online": 9,
+          "pickup": 9,
+          "offline": 6,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/0leDpEjSlJawCBJr7fzbz99eejvXDs/edit"
+        },
+        "ticks": [
+          "error:checkbox not found, label:ทัอปปิ้ง, ok:false"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true,
+          "n": 2
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": true,
+          "stillCreate": false,
+          "blocked": false,
+          "genericErr": false,
+          "popup": ""
+        }
+      },
+      "createdId": "0leDpEjSlJawCBJr7fzbz99eejvXDs",
+      "live": {
+        "id": "0leDpEjSlJawCBJr7fzbz99eejvXDs",
+        "name": "วุ้นกบไต้หวัน",
+        "nameEn": "",
+        "status": "AVAILABLE",
+        "online": 9,
+        "pickup": 9,
+        "offline": 6,
+        "deliveryAvailable": true,
+        "selfPickupAvailable": false,
+        "offlineAvailable": false,
+        "optionNames": [],
+        "categoryIds": [
+          "0lfz5W9OvdPWFUNEiWenDzh4grDhj3"
+        ],
+        "hasPhoto": true
+      },
+      "cmp": {
+        "nameOk": true,
+        "priceOk": true,
+        "pickupOff": true,
+        "offlineOff": true,
+        "catOk": true,
+        "missingOpts": [],
+        "match": true,
+        "mismatches": []
+      },
+      "status": "aligned_match"
+    },
+    {
+      "at": "2026-09-03T02:36:20.348Z",
+      "posId": "fs_item_43052296",
+      "name": "วุ้นว่านหางจระเข้ หั่นลูกเต๋า",
+      "nameEn": "",
+      "category": "ทัอปปิ้ง",
+      "mode": "topping",
+      "storePrice": 15,
+      "onlinePrice": 21,
+      "pickupPrice": 21,
+      "offlinePrice": 15,
+      "optionNames": [],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250612055449622000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDpElQyEYGHKwIWY7Tm0DuUGNilJ",
+      "siblingName": "ครีมซีส",
+      "siblingLmId": "0leDVTSAOst42K58yjkdQKsoWGhqbQ",
+      "siblingOptions": [],
+      "filled": {
+        "names": {
+          "online": 21,
+          "pickup": 21,
+          "offline": 15,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/0leDpElQyEYGHKwIWY7Tm0DuUGNilJ/edit"
+        },
+        "ticks": [
+          "checked:true, label:ทัอปปิ้ง, ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true,
+          "n": 2
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": true,
+          "stillCreate": false,
+          "blocked": false,
+          "genericErr": false,
+          "popup": ""
+        }
+      },
+      "createdId": "0leDpElQyEYGHKwIWY7Tm0DuUGNilJ",
+      "live": {
+        "id": "0leDpElQyEYGHKwIWY7Tm0DuUGNilJ",
+        "name": "วุ้นว่านหางจระเข้ หั่นลูกเต๋า",
+        "nameEn": "",
+        "status": "AVAILABLE",
+        "online": 21,
+        "pickup": 21,
+        "offline": 15,
+        "deliveryAvailable": true,
+        "selfPickupAvailable": false,
+        "offlineAvailable": false,
+        "optionNames": [],
+        "categoryIds": [
+          "0lfz5W9OvdPWFUNEiWenDzh4grDhj3"
+        ],
+        "hasPhoto": true
+      },
+      "cmp": {
+        "nameOk": true,
+        "priceOk": true,
+        "pickupOff": true,
+        "offlineOff": true,
+        "catOk": true,
+        "missingOpts": [],
+        "match": true,
+        "mismatches": []
+      },
+      "status": "aligned_match"
+    },
+    {
+      "at": "2026-09-03T02:36:41.258Z",
+      "posId": "fs_item_33559301",
+      "name": "นมสดไข่มุกบราวน์ชูการ์ (เย็น/ปั่น)",
+      "nameEn": "Fresh Milk with boba & brown sugar",
+      "category": "นม (เย็น, ปั่น)",
+      "mode": "iced-blend",
+      "storePrice": 44,
+      "onlinePrice": 63,
+      "pickupPrice": 63,
+      "offlinePrice": 44,
+      "optionNames": [
+        "ประเภท",
+        "ความหวาน",
+        "ท้อปปิ้ง",
+        "แยกน้ำแข็ง"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20260308054158255000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDVTZmAtaBoSFGY02QzQDJ8kWcOv",
+      "siblingName": "นมสดเย็น (เย็น/ปั่น)",
+      "siblingLmId": "0leDVTYuLOqwfVjI5foEbPC4lwrC8L",
+      "siblingOptions": [
+        "ประเภท",
+        "แยกน้ำแข็ง",
+        "ท้อปปิ้ง",
+        "ความหวาน"
+      ],
+      "filled": {
+        "names": {
+          "online": 63,
+          "pickup": 63,
+          "offline": 44,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/0leDVTZmAtaBoSFGY02QzQDJ8kWcOv/edit"
+        },
+        "ticks": [
+          "checked:true, label:ประเภท, ok:true",
+          "checked:true, label:ความหวาน, ok:true",
+          "checked:true, label:ท้อปปิ้ง, ok:true",
+          "checked:true, label:แยกน้ำแข็ง, ok:true",
+          "checked:true, label:นม (เย็น, ปั่น), ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true,
+          "n": 2
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": true,
+          "stillCreate": false,
+          "blocked": false,
+          "genericErr": false,
+          "popup": ""
+        }
+      },
+      "createdId": "0leDVTZmAtaBoSFGY02QzQDJ8kWcOv",
+      "live": {
+        "id": "0leDVTZmAtaBoSFGY02QzQDJ8kWcOv",
+        "name": "นมสดไข่มุกบราวน์ชูการ์ (เย็น/ปั่น)",
+        "nameEn": "Fresh Milk with boba & brown sugar",
+        "status": "AVAILABLE",
+        "online": 63,
+        "pickup": 63,
+        "offline": 44,
+        "deliveryAvailable": true,
+        "selfPickupAvailable": false,
+        "offlineAvailable": false,
+        "optionNames": [
+          "ประเภท",
+          "ความหวาน",
+          "ท้อปปิ้ง",
+          "แยกน้ำแข็ง"
+        ],
+        "categoryIds": [
+          "0lfz5WCK7bfTbAEHleAu3qsTOoMkoQ"
+        ],
+        "hasPhoto": true
+      },
+      "cmp": {
+        "nameOk": true,
+        "priceOk": true,
+        "pickupOff": true,
+        "offlineOff": true,
+        "catOk": true,
+        "missingOpts": [],
+        "match": true,
+        "mismatches": []
+      },
+      "status": "aligned_match"
+    },
+    {
+      "at": "2026-09-03T02:37:02.465Z",
+      "posId": "fs_item_33559288",
+      "name": "เขียวมะนาวโซดา",
+      "nameEn": "Green Soda with Lime",
+      "category": "อิตาเลียน โซดา",
+      "mode": "lime",
+      "storePrice": 29,
+      "onlinePrice": 41,
+      "pickupPrice": 41,
+      "offlinePrice": 29,
+      "optionNames": [
+        "แยกน้ำแข็ง",
+        "ท้อปปิ้ง",
+        "ความหวาน",
+        "ช็อตมะนาว"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20260308102714170000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDVTWceITg3fi71RwXExsGgTpRFH",
+      "siblingName": "เขียวมะนาวโซดา",
+      "siblingLmId": "0leDVTWceITg3fi71RwXExsGgTpRFH",
+      "siblingOptions": [
+        "แยกน้ำแข็ง",
+        "ท้อปปิ้ง",
+        "ความหวาน",
+        "ช็อตมะนาว"
+      ],
+      "filled": {
+        "names": {
+          "online": 41,
+          "pickup": 41,
+          "offline": 29,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/0leDVTWceITg3fi71RwXExsGgTpRFH/edit"
+        },
+        "ticks": [
+          "checked:true, label:แยกน้ำแข็ง, ok:true",
+          "checked:true, label:ท้อปปิ้ง, ok:true",
+          "checked:true, label:ความหวาน, ok:true",
+          "checked:true, label:ช็อตมะนาว, ok:true",
+          "checked:true, label:อิตาเลียน โซดา, ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true,
+          "n": 2
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": true,
+          "stillCreate": false,
+          "blocked": false,
+          "genericErr": false,
+          "popup": ""
+        }
+      },
+      "createdId": "0leDVTWceITg3fi71RwXExsGgTpRFH",
+      "live": {
+        "id": "0leDVTWceITg3fi71RwXExsGgTpRFH",
+        "name": "เขียวมะนาวโซดา",
+        "nameEn": "Green Soda with Lime",
+        "status": "AVAILABLE",
+        "online": 41,
+        "pickup": 41,
+        "offline": 29,
+        "deliveryAvailable": true,
+        "selfPickupAvailable": false,
+        "offlineAvailable": false,
+        "optionNames": [
+          "แยกน้ำแข็ง",
+          "ท้อปปิ้ง",
+          "ความหวาน",
+          "ช็อตมะนาว"
+        ],
+        "categoryIds": [
+          "0lfz5WDr0MZb1NmQDx2hGWsveucNlr"
+        ],
+        "hasPhoto": true
+      },
+      "cmp": {
+        "nameOk": true,
+        "priceOk": true,
+        "pickupOff": true,
+        "offlineOff": true,
+        "catOk": true,
+        "missingOpts": [],
+        "match": true,
+        "mismatches": []
+      },
+      "status": "aligned_match"
+    },
+    {
+      "at": "2026-09-03T02:51:16.717Z",
+      "posId": "fs_item_41391600",
+      "name": "กาแฟสด เอสเปรสโซ่ไทยสไตล์ เย็น 16 ออนซ์",
+      "nameEn": "Thai Style Iced Espresso",
+      "category": "* กาแฟสดนมนุ่มละมุน",
+      "mode": "cold",
+      "storePrice": 29,
+      "onlinePrice": 41,
+      "pickupPrice": 41,
+      "offlinePrice": 29,
+      "optionNames": [
+        "แยกน้ำแข็ง",
+        "ความหวาน",
+        "ช็อตกาแฟ",
+        "ท้อปปิ้ง"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250305173931689000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDkkVreUaMa5JzU30GmqLnNKcThL",
+      "siblingName": "กาแฟสด ลาเต้ เย็น 16 ออนซ์",
+      "siblingLmId": "0leDkTI75bRTRmyna4UB6lnY6TRFfh",
+      "siblingOptions": [
+        "ช็อตกาแฟ",
+        "แยกน้ำแข็ง",
+        "ความหวาน",
+        "ท้อปปิ้ง"
+      ],
+      "filled": {
+        "names": {
+          "online": 41,
+          "pickup": 41,
+          "offline": 29,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/0leDkkVreUaMa5JzU30GmqLnNKcThL/edit"
+        },
+        "ticks": [
+          "checked:true, label:แยกน้ำแข็ง, ok:true",
+          "checked:true, label:ความหวาน, ok:true",
+          "checked:true, label:ช็อตกาแฟ, ok:true",
+          "checked:true, label:ท้อปปิ้ง, ok:true",
+          "checked:true, label:* กาแฟสดนมนุ่มละมุน, ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true,
+          "n": 2
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": true,
+          "stillCreate": false,
+          "blocked": false,
+          "genericErr": false,
+          "popup": ""
+        }
+      },
+      "createdId": "0leDkkVreUaMa5JzU30GmqLnNKcThL",
+      "live": {
+        "id": "0leDkkVreUaMa5JzU30GmqLnNKcThL",
+        "name": "กาแฟสด เอสเปรสโซ่ไทยสไตล์ เย็น 16 ออนซ์",
+        "nameEn": "Thai Style Iced Espresso",
+        "status": "SUSPENDED",
+        "online": 41,
+        "pickup": 41,
+        "offline": 29,
+        "deliveryAvailable": true,
+        "selfPickupAvailable": false,
+        "offlineAvailable": false,
+        "optionNames": [
+          "แยกน้ำแข็ง",
+          "ความหวาน",
+          "ช็อตกาแฟ",
+          "ท้อปปิ้ง"
+        ],
+        "categoryIds": [
+          "0lfzKyHYpAEvOk5Jku0IxZYalL3yjJ"
+        ],
+        "hasPhoto": true
+      },
+      "cmp": {
+        "nameOk": true,
+        "priceOk": true,
+        "pickupOff": true,
+        "offlineOff": true,
+        "catOk": true,
+        "missingOpts": [],
+        "match": true,
+        "mismatches": []
+      },
+      "status": "aligned_match"
+    },
+    {
+      "at": "2026-09-03T02:51:38.265Z",
+      "posId": "fs_item_41486445",
+      "name": "กาแฟสดโซดา เอสเปรสโซ่มะม่วง เย็น 16 ออนซ์",
+      "nameEn": "Fresh Coffee Soda, Iced Mango Espresso",
+      "category": "* กาแฟสดฟิวชันสดชื่น",
+      "mode": "cold",
+      "storePrice": 25,
+      "onlinePrice": 36,
+      "pickupPrice": 36,
+      "offlinePrice": 25,
+      "optionNames": [
+        "แยกน้ำแข็ง",
+        "ความหวาน",
+        "ท้อปปิ้ง",
+        "ช็อตกาแฟ"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250310145249705000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDkyJ6oxa8N2J44Dyrwsw6ynGxml",
+      "siblingName": "กาแฟสด บลูฮาวายเอสเปรสโซ่ เย็น 16 ออนซ์",
+      "siblingLmId": "0leDksd9jEMeNFcfxJxAi0dB6Il0gE",
+      "siblingOptions": [
+        "แยกน้ำแข็ง",
+        "ความหวาน",
+        "ช็อตกาแฟ",
+        "ท้อปปิ้ง"
+      ],
+      "filled": {
+        "names": {
+          "online": 36,
+          "pickup": 36,
+          "offline": 25,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/0leDkyJ6oxa8N2J44Dyrwsw6ynGxml/edit"
+        },
+        "ticks": [
+          "checked:true, label:แยกน้ำแข็ง, ok:true",
+          "checked:true, label:ความหวาน, ok:true",
+          "checked:true, label:ท้อปปิ้ง, ok:true",
+          "checked:true, label:ช็อตกาแฟ, ok:true",
+          "checked:true, label:* กาแฟสดฟิวชันสดชื่น, ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true,
+          "n": 2
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": true,
+          "stillCreate": false,
+          "blocked": false,
+          "genericErr": false,
+          "popup": ""
+        }
+      },
+      "createdId": "0leDkyJ6oxa8N2J44Dyrwsw6ynGxml",
+      "live": {
+        "id": "0leDkyJ6oxa8N2J44Dyrwsw6ynGxml",
+        "name": "กาแฟสดโซดา เอสเปรสโซ่มะม่วง เย็น 16 ออนซ์",
+        "nameEn": "Fresh Coffee Soda, Iced Mango Espresso",
+        "status": "AVAILABLE",
+        "online": 36,
+        "pickup": 36,
+        "offline": 25,
+        "deliveryAvailable": true,
+        "selfPickupAvailable": false,
+        "offlineAvailable": false,
+        "optionNames": [
+          "แยกน้ำแข็ง",
+          "ความหวาน",
+          "ท้อปปิ้ง",
+          "ช็อตกาแฟ"
+        ],
+        "categoryIds": [
+          "0lfzKyHvclTA4ncZaTrxIVa9ABzlz9"
+        ],
+        "hasPhoto": true
+      },
+      "cmp": {
+        "nameOk": true,
+        "priceOk": true,
+        "pickupOff": true,
+        "offlineOff": true,
+        "catOk": true,
+        "missingOpts": [],
+        "match": true,
+        "mismatches": []
+      },
+      "status": "aligned_match"
+    },
+    {
+      "at": "2026-09-03T02:51:58.959Z",
+      "posId": "fs_item_41574391",
+      "name": "กาแฟสด โกโก้มอคค่าร้อน",
+      "nameEn": "Fresh Coffee, Hot Cocoa Mocha",
+      "category": "* กาแฟสด อื่นๆ ร้อน",
+      "mode": "hot",
+      "storePrice": 29,
+      "onlinePrice": 41,
+      "pickupPrice": 41,
+      "offlinePrice": 29,
+      "optionNames": [
+        "ความหวาน",
+        "ช็อตกาแฟ"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250312161229150000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDl472vuUBVR2Ke1XVTS8NhKdeSP",
+      "siblingName": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
+      "siblingLmId": "0leDkaOg5qRX5k5YUc9Hx5Ej5RNvM8",
+      "siblingOptions": [
+        "ความหวาน",
+        "ช็อตกาแฟ"
+      ],
+      "filled": {
+        "names": {
+          "online": 41,
+          "pickup": 41,
+          "offline": 29,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/0leDl472vuUBVR2Ke1XVTS8NhKdeSP/edit"
+        },
+        "ticks": [
+          "checked:true, label:ความหวาน, ok:true",
+          "checked:true, label:ช็อตกาแฟ, ok:true",
+          "checked:true, label:* กาแฟสด อื่นๆ ร้อน, ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true,
+          "n": 2
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": true,
+          "stillCreate": false,
+          "blocked": false,
+          "genericErr": false,
+          "popup": ""
+        }
+      },
+      "createdId": "0leDl472vuUBVR2Ke1XVTS8NhKdeSP",
+      "live": {
+        "id": "0leDl472vuUBVR2Ke1XVTS8NhKdeSP",
+        "name": "กาแฟสด โกโก้มอคค่าร้อน",
+        "nameEn": "Fresh Coffee, Hot Cocoa Mocha",
+        "status": "AVAILABLE",
+        "online": 41,
+        "pickup": 41,
+        "offline": 29,
+        "deliveryAvailable": true,
+        "selfPickupAvailable": false,
+        "offlineAvailable": false,
+        "optionNames": [
+          "ความหวาน",
+          "ช็อตกาแฟ"
+        ],
+        "categoryIds": [
+          "0lfzKd4Lvk01ETqmLSSaMboNuTKg7x"
+        ],
+        "hasPhoto": true
+      },
+      "cmp": {
+        "nameOk": true,
+        "priceOk": true,
+        "pickupOff": true,
+        "offlineOff": true,
+        "catOk": true,
+        "missingOpts": [],
+        "match": true,
+        "mismatches": []
+      },
+      "status": "aligned_match"
+    },
+    {
+      "at": "2026-09-03T02:52:19.525Z",
+      "posId": "fs_item_41574254",
+      "name": "กาแฟสด คาราเมลลาเต้ร้อน 12 ออนซ์",
+      "nameEn": "Hot Caramel Latte",
+      "category": "* กาแฟสด อื่นๆ ร้อน",
+      "mode": "hot",
+      "storePrice": 35,
+      "onlinePrice": 50,
+      "pickupPrice": 50,
+      "offlinePrice": 35,
+      "optionNames": [
+        "ความหวาน",
+        "ช็อตกาแฟ"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250312160931810000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDl46gUnDMTZClJSCQYLyn6ykyfP",
+      "siblingName": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
+      "siblingLmId": "0leDkaOg5qRX5k5YUc9Hx5Ej5RNvM8",
+      "siblingOptions": [
+        "ความหวาน",
+        "ช็อตกาแฟ"
+      ],
+      "filled": {
+        "names": {
+          "online": 50,
+          "pickup": 50,
+          "offline": 35,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/0leDl46gUnDMTZClJSCQYLyn6ykyfP/edit"
+        },
+        "ticks": [
+          "checked:true, label:ความหวาน, ok:true",
+          "checked:true, label:ช็อตกาแฟ, ok:true",
+          "checked:true, label:* กาแฟสด อื่นๆ ร้อน, ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true,
+          "n": 2
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": true,
+          "stillCreate": false,
+          "blocked": false,
+          "genericErr": false,
+          "popup": ""
+        }
+      },
+      "createdId": "0leDl46gUnDMTZClJSCQYLyn6ykyfP",
+      "live": {
+        "id": "0leDl46gUnDMTZClJSCQYLyn6ykyfP",
+        "name": "กาแฟสด คาราเมลลาเต้ร้อน 12 ออนซ์",
+        "nameEn": "Hot Caramel Latte",
+        "status": "AVAILABLE",
+        "online": 50,
+        "pickup": 50,
+        "offline": 35,
+        "deliveryAvailable": true,
+        "selfPickupAvailable": false,
+        "offlineAvailable": false,
+        "optionNames": [
+          "ความหวาน",
+          "ช็อตกาแฟ"
+        ],
+        "categoryIds": [
+          "0lfzKd4Lvk01ETqmLSSaMboNuTKg7x"
+        ],
+        "hasPhoto": true
+      },
+      "cmp": {
+        "nameOk": true,
+        "priceOk": true,
+        "pickupOff": true,
+        "offlineOff": true,
+        "catOk": true,
+        "missingOpts": [],
+        "match": true,
+        "mismatches": []
+      },
+      "status": "aligned_match"
+    },
+    {
+      "at": "2026-09-03T02:52:40.321Z",
+      "posId": "fs_item_41574401",
+      "name": "กาแฟสด เผือกลาเต้ร้อน",
+      "nameEn": "Fresh Coffee Hot Taro Latte",
+      "category": "* กาแฟสด อื่นๆ ร้อน",
+      "mode": "hot",
+      "storePrice": 29,
+      "onlinePrice": 41,
+      "pickupPrice": 41,
+      "offlinePrice": 29,
+      "optionNames": [
+        "ความหวาน",
+        "ช็อตกาแฟ"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250312161433575000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDl47ITNhj1hE9s3ERnCXrT2AfaW",
+      "siblingName": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
+      "siblingLmId": "0leDkaOg5qRX5k5YUc9Hx5Ej5RNvM8",
+      "siblingOptions": [
+        "ความหวาน",
+        "ช็อตกาแฟ"
+      ],
+      "filled": {
+        "names": {
+          "online": 41,
+          "pickup": 41,
+          "offline": 29,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/0leDl47ITNhj1hE9s3ERnCXrT2AfaW/edit"
+        },
+        "ticks": [
+          "checked:true, label:ความหวาน, ok:true",
+          "checked:true, label:ช็อตกาแฟ, ok:true",
+          "checked:true, label:* กาแฟสด อื่นๆ ร้อน, ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true,
+          "n": 2
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": true,
+          "stillCreate": false,
+          "blocked": false,
+          "genericErr": false,
+          "popup": ""
+        }
+      },
+      "createdId": "0leDl47ITNhj1hE9s3ERnCXrT2AfaW",
+      "live": {
+        "id": "0leDl47ITNhj1hE9s3ERnCXrT2AfaW",
+        "name": "กาแฟสด เผือกลาเต้ร้อน",
+        "nameEn": "Fresh Coffee Hot Taro Latte",
+        "status": "AVAILABLE",
+        "online": 41,
+        "pickup": 41,
+        "offline": 29,
+        "deliveryAvailable": true,
+        "selfPickupAvailable": false,
+        "offlineAvailable": false,
+        "optionNames": [
+          "ความหวาน",
+          "ช็อตกาแฟ"
+        ],
+        "categoryIds": [
+          "0lfzKd4Lvk01ETqmLSSaMboNuTKg7x"
+        ],
+        "hasPhoto": true
+      },
+      "cmp": {
+        "nameOk": true,
+        "priceOk": true,
+        "pickupOff": true,
+        "offlineOff": true,
+        "catOk": true,
+        "missingOpts": [],
+        "match": true,
+        "mismatches": []
+      },
+      "status": "aligned_match"
+    },
+    {
+      "at": "2026-09-03T02:53:00.958Z",
+      "posId": "fs_item_41574397",
+      "name": "กาแฟสด มอคค่ามิ้นต์ร้อน",
+      "nameEn": "Hot Mint Mocha Coffee",
+      "category": "* กาแฟสด อื่นๆ ร้อน",
+      "mode": "hot",
+      "storePrice": 35,
+      "onlinePrice": 50,
+      "pickupPrice": 50,
+      "offlinePrice": 35,
+      "optionNames": [
+        "ความหวาน",
+        "ช็อตกาแฟ"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250312161332629000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDl47Ako8qcHdMynDLKOOdhB8ew5",
+      "siblingName": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
+      "siblingLmId": "0leDkaOg5qRX5k5YUc9Hx5Ej5RNvM8",
+      "siblingOptions": [
+        "ความหวาน",
+        "ช็อตกาแฟ"
+      ],
+      "filled": {
+        "names": {
+          "online": 50,
+          "pickup": 50,
+          "offline": 35,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/0leDl47Ako8qcHdMynDLKOOdhB8ew5/edit"
+        },
+        "ticks": [
+          "checked:true, label:ความหวาน, ok:true",
+          "checked:true, label:ช็อตกาแฟ, ok:true",
+          "checked:true, label:* กาแฟสด อื่นๆ ร้อน, ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true,
+          "n": 2
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": true,
+          "stillCreate": false,
+          "blocked": false,
+          "genericErr": false,
+          "popup": ""
+        }
+      },
+      "createdId": "0leDl47Ako8qcHdMynDLKOOdhB8ew5",
+      "live": {
+        "id": "0leDl47Ako8qcHdMynDLKOOdhB8ew5",
+        "name": "กาแฟสด มอคค่ามิ้นต์ร้อน",
+        "nameEn": "Hot Mint Mocha Coffee",
+        "status": "AVAILABLE",
+        "online": 50,
+        "pickup": 50,
+        "offline": 35,
+        "deliveryAvailable": true,
+        "selfPickupAvailable": false,
+        "offlineAvailable": false,
+        "optionNames": [
+          "ความหวาน",
+          "ช็อตกาแฟ"
+        ],
+        "categoryIds": [
+          "0lfzKd4Lvk01ETqmLSSaMboNuTKg7x"
+        ],
+        "hasPhoto": true
+      },
+      "cmp": {
+        "nameOk": true,
+        "priceOk": true,
+        "pickupOff": true,
+        "offlineOff": true,
+        "catOk": true,
+        "missingOpts": [],
+        "match": true,
+        "mismatches": []
+      },
+      "status": "aligned_match"
+    },
+    {
+      "at": "2026-09-03T02:53:21.440Z",
+      "posId": "fs_item_41574263",
+      "name": "กาแฟสด โอวัลตินเอสเปรสโซ่ร้อน",
+      "nameEn": "Fresh Coffee, Hot Ovaltine Espresso",
+      "category": "* กาแฟสด อื่นๆ ร้อน",
+      "mode": "hot",
+      "storePrice": 35,
+      "onlinePrice": 50,
+      "pickupPrice": 50,
+      "offlinePrice": 35,
+      "optionNames": [
+        "ความหวาน",
+        "ช็อตกาแฟ"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250312161125632000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDl46umYFn7RtZJ3HKnpBzxprqlA",
+      "siblingName": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
+      "siblingLmId": "0leDkaOg5qRX5k5YUc9Hx5Ej5RNvM8",
+      "siblingOptions": [
+        "ความหวาน",
+        "ช็อตกาแฟ"
+      ],
+      "filled": {
+        "names": {
+          "online": 50,
+          "pickup": 50,
+          "offline": 35,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/0leDl46umYFn7RtZJ3HKnpBzxprqlA/edit"
+        },
+        "ticks": [
+          "checked:true, label:ความหวาน, ok:true",
+          "checked:true, label:ช็อตกาแฟ, ok:true",
+          "checked:true, label:* กาแฟสด อื่นๆ ร้อน, ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true,
+          "n": 2
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": true,
+          "stillCreate": false,
+          "blocked": false,
+          "genericErr": false,
+          "popup": ""
+        }
+      },
+      "createdId": "0leDl46umYFn7RtZJ3HKnpBzxprqlA",
+      "live": {
+        "id": "0leDl46umYFn7RtZJ3HKnpBzxprqlA",
+        "name": "กาแฟสด โอวัลตินเอสเปรสโซ่ร้อน",
+        "nameEn": "Fresh Coffee, Hot Ovaltine Espresso",
+        "status": "AVAILABLE",
+        "online": 50,
+        "pickup": 50,
+        "offline": 35,
+        "deliveryAvailable": true,
+        "selfPickupAvailable": false,
+        "offlineAvailable": false,
+        "optionNames": [
+          "ความหวาน",
+          "ช็อตกาแฟ"
+        ],
+        "categoryIds": [
+          "0lfzKd4Lvk01ETqmLSSaMboNuTKg7x"
+        ],
+        "hasPhoto": true
+      },
+      "cmp": {
+        "nameOk": true,
+        "priceOk": true,
+        "pickupOff": true,
+        "offlineOff": true,
+        "catOk": true,
+        "missingOpts": [],
+        "match": true,
+        "mismatches": []
+      },
+      "status": "aligned_match"
+    },
+    {
+      "at": "2026-09-03T02:53:42.011Z",
+      "posId": "fs_item_41574255",
+      "name": "กาแฟสด เฮเซลนัทมอคค่าร้อน 12 ออนซ์",
+      "nameEn": "Hot Hazelnut Mocha Coffee",
+      "category": "* กาแฟสด อื่นๆ ร้อน",
+      "mode": "hot",
+      "storePrice": 35,
+      "onlinePrice": 50,
+      "pickupPrice": 50,
+      "offlinePrice": 35,
+      "optionNames": [
+        "ความหวาน",
+        "ช็อตกาแฟ"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250312161035078000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDl46oXNVidJ1Do2a4xGjjkMwaU2",
+      "siblingName": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
+      "siblingLmId": "0leDkaOg5qRX5k5YUc9Hx5Ej5RNvM8",
+      "siblingOptions": [
+        "ความหวาน",
+        "ช็อตกาแฟ"
+      ],
+      "filled": {
+        "names": {
+          "online": 50,
+          "pickup": 50,
+          "offline": 35,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/0leDl46oXNVidJ1Do2a4xGjjkMwaU2/edit"
+        },
+        "ticks": [
+          "checked:true, label:ความหวาน, ok:true",
+          "checked:true, label:ช็อตกาแฟ, ok:true",
+          "checked:true, label:* กาแฟสด อื่นๆ ร้อน, ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true,
+          "n": 2
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": true,
+          "stillCreate": false,
+          "blocked": false,
+          "genericErr": false,
+          "popup": ""
+        }
+      },
+      "createdId": "0leDl46oXNVidJ1Do2a4xGjjkMwaU2",
+      "live": {
+        "id": "0leDl46oXNVidJ1Do2a4xGjjkMwaU2",
+        "name": "กาแฟสด เฮเซลนัทมอคค่าร้อน 12 ออนซ์",
+        "nameEn": "Hot Hazelnut Mocha Coffee",
+        "status": "AVAILABLE",
+        "online": 50,
+        "pickup": 50,
+        "offline": 35,
+        "deliveryAvailable": true,
+        "selfPickupAvailable": false,
+        "offlineAvailable": false,
+        "optionNames": [
+          "ความหวาน",
+          "ช็อตกาแฟ"
+        ],
+        "categoryIds": [
+          "0lfzKd4Lvk01ETqmLSSaMboNuTKg7x"
+        ],
+        "hasPhoto": true
+      },
+      "cmp": {
+        "nameOk": true,
+        "priceOk": true,
+        "pickupOff": true,
+        "offlineOff": true,
+        "catOk": true,
+        "missingOpts": [],
+        "match": true,
+        "mismatches": []
+      },
+      "status": "aligned_match"
+    },
+    {
+      "at": "2026-09-03T02:54:02.587Z",
+      "posId": "fs_item_41574246",
+      "name": "ช็อกโกแลตมิลค์ร้อน 12 ออนซ์",
+      "nameEn": "Hot Chocolate Milk",
+      "category": "* กาแฟสด อื่นๆ ร้อน",
+      "mode": "hot",
+      "storePrice": 25,
+      "onlinePrice": 36,
+      "pickupPrice": 36,
+      "offlinePrice": 25,
+      "optionNames": [
+        "ความหวาน",
+        "ช็อตกาแฟ"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250312160823289000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDl46XoAjHPuVyDDSQg1uhRPkEk4",
+      "siblingName": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
+      "siblingLmId": "0leDkaOg5qRX5k5YUc9Hx5Ej5RNvM8",
+      "siblingOptions": [
+        "ความหวาน",
+        "ช็อตกาแฟ"
+      ],
+      "filled": {
+        "names": {
+          "online": 36,
+          "pickup": 36,
+          "offline": 25,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/0leDl46XoAjHPuVyDDSQg1uhRPkEk4/edit"
+        },
+        "ticks": [
+          "checked:true, label:ความหวาน, ok:true",
+          "checked:true, label:ช็อตกาแฟ, ok:true",
+          "checked:true, label:* กาแฟสด อื่นๆ ร้อน, ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true,
+          "n": 2
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": true,
+          "stillCreate": false,
+          "blocked": false,
+          "genericErr": false,
+          "popup": ""
+        }
+      },
+      "createdId": "0leDl46XoAjHPuVyDDSQg1uhRPkEk4",
+      "live": {
+        "id": "0leDl46XoAjHPuVyDDSQg1uhRPkEk4",
+        "name": "ช็อกโกแลตมิลค์ร้อน 12 ออนซ์",
+        "nameEn": "Hot Chocolate Milk",
+        "status": "AVAILABLE",
+        "online": 36,
+        "pickup": 36,
+        "offline": 25,
+        "deliveryAvailable": true,
+        "selfPickupAvailable": false,
+        "offlineAvailable": false,
+        "optionNames": [
+          "ความหวาน",
+          "ช็อตกาแฟ"
+        ],
+        "categoryIds": [
+          "0lfzKd4Lvk01ETqmLSSaMboNuTKg7x"
+        ],
+        "hasPhoto": true
+      },
+      "cmp": {
+        "nameOk": true,
+        "priceOk": true,
+        "pickupOff": true,
+        "offlineOff": true,
+        "catOk": true,
+        "missingOpts": [],
+        "match": true,
+        "mismatches": []
+      },
+      "status": "aligned_match"
+    },
+    {
+      "at": "2026-09-03T02:54:23.534Z",
+      "posId": "fs_item_33559311",
+      "name": "ซอสบราวน์ชูการ์",
+      "nameEn": "Brown Sugar Sauce",
+      "category": "ทัอปปิ้ง",
+      "mode": "topping",
+      "storePrice": 15,
+      "onlinePrice": 21,
+      "pickupPrice": 21,
+      "offlinePrice": 15,
+      "optionNames": [
+        "แยกน้ำแข็ง",
+        "ท้อปปิ้ง",
+        "ความหวาน"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250417084106880000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDVTbMBa8dxcayIEcvvDGmIuJDac",
+      "siblingName": "ซอสบราวน์ชูการ์",
+      "siblingLmId": "0leDVTbMBa8dxcayIEcvvDGmIuJDac",
+      "siblingOptions": [
+        "แยกน้ำแข็ง",
+        "ท้อปปิ้ง",
+        "ความหวาน"
+      ],
+      "filled": {
+        "names": {
+          "online": 21,
+          "pickup": 21,
+          "offline": 15,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/0leDVTbMBa8dxcayIEcvvDGmIuJDac/edit"
+        },
+        "ticks": [
+          "checked:true, label:แยกน้ำแข็ง, ok:true",
+          "checked:true, label:ท้อปปิ้ง, ok:true",
+          "checked:true, label:ความหวาน, ok:true",
+          "checked:true, label:ทัอปปิ้ง, ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true,
+          "n": 2
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": true,
+          "stillCreate": false,
+          "blocked": false,
+          "genericErr": false,
+          "popup": ""
+        }
+      },
+      "createdId": "0leDVTbMBa8dxcayIEcvvDGmIuJDac",
+      "live": {
+        "id": "0leDVTbMBa8dxcayIEcvvDGmIuJDac",
+        "name": "ซอสบราวน์ชูการ์",
+        "nameEn": "Brown Sugar Sauce",
+        "status": "AVAILABLE",
+        "online": 21,
+        "pickup": 21,
+        "offline": 15,
+        "deliveryAvailable": true,
+        "selfPickupAvailable": false,
+        "offlineAvailable": false,
+        "optionNames": [
+          "แยกน้ำแข็ง",
+          "ท้อปปิ้ง",
+          "ความหวาน"
+        ],
+        "categoryIds": [
+          "0lfz5W9OvdPWFUNEiWenDzh4grDhj3"
+        ],
+        "hasPhoto": true
+      },
+      "cmp": {
+        "nameOk": true,
+        "priceOk": true,
+        "pickupOff": true,
+        "offlineOff": true,
+        "catOk": true,
+        "missingOpts": [],
+        "match": true,
+        "mismatches": []
+      },
+      "status": "aligned_match"
+    },
+    {
+      "at": "2026-09-03T02:54:44.277Z",
+      "posId": "fs_item_43577310",
+      "name": "นมสดมันม่วง",
+      "nameEn": "",
+      "category": "นม (เย็น, ปั่น)",
+      "mode": "other",
+      "storePrice": 39,
+      "onlinePrice": 56,
+      "pickupPrice": 56,
+      "offlinePrice": 39,
+      "optionNames": [
+        "ท้อปปิ้ง",
+        "ความหวาน",
+        "แยกน้ำแข็ง"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20260308053646256000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDqbo3uFMpMjHF1eNukS5omMG5Nk",
+      "siblingName": "นมสดมันม่วง",
+      "siblingLmId": "0leDqbo3uFMpMjHF1eNukS5omMG5Nk",
+      "siblingOptions": [
+        "ท้อปปิ้ง",
+        "ความหวาน",
+        "แยกน้ำแข็ง"
+      ],
+      "filled": {
+        "names": {
+          "online": 56,
+          "pickup": 56,
+          "offline": 39,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/0leDqbo3uFMpMjHF1eNukS5omMG5Nk/edit"
+        },
+        "ticks": [
+          "checked:true, label:ท้อปปิ้ง, ok:true",
+          "checked:true, label:ความหวาน, ok:true",
+          "checked:true, label:แยกน้ำแข็ง, ok:true",
+          "checked:true, label:นม (เย็น, ปั่น), ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true,
+          "n": 2
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": true,
+          "stillCreate": false,
+          "blocked": false,
+          "genericErr": false,
+          "popup": ""
+        }
+      },
+      "createdId": "0leDqbo3uFMpMjHF1eNukS5omMG5Nk",
+      "live": {
+        "id": "0leDqbo3uFMpMjHF1eNukS5omMG5Nk",
+        "name": "นมสดมันม่วง",
+        "nameEn": "",
+        "status": "AVAILABLE",
+        "online": 56,
+        "pickup": 56,
+        "offline": 39,
+        "deliveryAvailable": true,
+        "selfPickupAvailable": false,
+        "offlineAvailable": false,
+        "optionNames": [
+          "ท้อปปิ้ง",
+          "ความหวาน",
+          "แยกน้ำแข็ง"
+        ],
+        "categoryIds": [
+          "0lfz5WCK7bfTbAEHleAu3qsTOoMkoQ"
+        ],
+        "hasPhoto": true
+      },
+      "cmp": {
+        "nameOk": true,
+        "priceOk": true,
+        "pickupOff": true,
+        "offlineOff": true,
+        "catOk": true,
+        "missingOpts": [],
+        "match": true,
+        "mismatches": []
+      },
+      "status": "aligned_match"
+    },
+    {
+      "at": "2026-09-03T02:55:05.054Z",
+      "posId": "fs_item_33559335",
+      "name": "แดงโซดา",
+      "nameEn": "Red Soda",
+      "category": "อิตาเลียน โซดา",
+      "mode": "other",
+      "storePrice": 19,
+      "onlinePrice": 27,
+      "pickupPrice": 27,
+      "offlinePrice": 19,
+      "optionNames": [
+        "ความหวาน",
+        "ท้อปปิ้ง",
+        "แยกน้ำแข็ง"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20260308092058709000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDVTdmgbwt9P2DYXGMz7TCf5zsfG",
+      "siblingName": "เขียวโซดา",
+      "siblingLmId": "0leDVTYBKP4C777yEB40elhWQITet3",
+      "siblingOptions": [
+        "ความหวาน",
+        "ท้อปปิ้ง",
+        "แยกน้ำแข็ง"
+      ],
+      "filled": {
+        "names": {
+          "online": 27,
+          "pickup": 27,
+          "offline": 19,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu/0leDVTdmgbwt9P2DYXGMz7TCf5zsfG/edit"
+        },
+        "ticks": [
+          "checked:true, label:ความหวาน, ok:true",
+          "checked:true, label:ท้อปปิ้ง, ok:true",
+          "checked:true, label:แยกน้ำแข็ง, ok:true",
+          "checked:true, label:อิตาเลียน โซดา, ok:true"
+        ]
+      },
+      "saved": {
+        "clicked": {
+          "saved": true,
+          "n": 2
+        },
+        "after": {
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu",
+          "createdId": null,
+          "onEdit": false,
+          "backOnList": true,
+          "stillCreate": false,
+          "blocked": false,
+          "genericErr": false,
+          "popup": ""
+        }
+      },
+      "createdId": "0leDVTdmgbwt9P2DYXGMz7TCf5zsfG",
+      "live": {
+        "id": "0leDVTdmgbwt9P2DYXGMz7TCf5zsfG",
+        "name": "แดงโซดา",
+        "nameEn": "Red Soda",
+        "status": "AVAILABLE",
+        "online": 27,
+        "pickup": 27,
+        "offline": 19,
+        "deliveryAvailable": true,
+        "selfPickupAvailable": false,
+        "offlineAvailable": false,
+        "optionNames": [
+          "ความหวาน",
+          "ท้อปปิ้ง",
+          "แยกน้ำแข็ง"
+        ],
+        "categoryIds": [
+          "0lfz5WDr0MZb1NmQDx2hGWsveucNlr"
+        ],
+        "hasPhoto": true
+      },
+      "cmp": {
+        "nameOk": true,
+        "priceOk": true,
+        "pickupOff": true,
+        "offlineOff": true,
+        "catOk": true,
+        "missingOpts": [],
+        "match": true,
+        "mismatches": []
+      },
+      "status": "aligned_match"
+    }
+  ]
+}

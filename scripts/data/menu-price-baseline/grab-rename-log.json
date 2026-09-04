@@ -1,0 +1,157 @@
+{
+  "at": "2026-09-03T03:24:21.862Z",
+  "log": [
+    {
+      "grabName": "กาแฟสด อเมริกาโน่ (Americano) เย็น 16 ออนซ์",
+      "grabId": "THITE2025022802341811174",
+      "grabCategory": "* กาแฟสดเข้มข้น",
+      "posName": "กาแฟสด อเมริกาโน่ เย็น 16 ออนซ์",
+      "posId": "fs_item_41276630",
+      "hubNote": "",
+      "score": 1,
+      "reason": "exact-variant-en-parens",
+      "action": "rename_grab_to_pos",
+      "status": "blocked_menu_ui",
+      "page": {
+        "onEdit": false,
+        "listPrice": null,
+        "name": "",
+        "nameEditable": false,
+        "inventoryBlocked": false,
+        "itemId": "THITE2025022802341811174",
+        "url": "https://merchant.grab.com/food/menu/3-C6J1BCNXTYKTLX/menuOverview/THITE2025022802341811174"
+      }
+    },
+    {
+      "grabName": "กาแฟสด ลาเต้ (Latte) เย็น 16 ออนซ์",
+      "grabId": "THITE2025022802352904031",
+      "grabCategory": "* กาแฟสดนมนุ่มละมุน",
+      "posName": "กาแฟสด ลาเต้ เย็น 16 ออนซ์",
+      "posId": "fs_item_41277718",
+      "hubNote": "",
+      "score": 1,
+      "reason": "exact-variant-en-parens",
+      "action": "rename_grab_to_pos",
+      "status": "blocked_menu_ui",
+      "page": {
+        "onEdit": false,
+        "listPrice": null,
+        "name": "",
+        "nameEditable": false,
+        "inventoryBlocked": false,
+        "itemId": "THITE2025022802352904031",
+        "url": "https://merchant.grab.com/food/menu/3-C6J1BCNXTYKTLX/menuOverview/THITE2025022802352904031"
+      }
+    },
+    {
+      "grabName": "กาแฟสด เอสเปรสโซ่ (Espresso) เย็น 16 ออนซ์",
+      "grabId": "THITE2025022802363923759",
+      "grabCategory": "* กาแฟสดเข้มข้น",
+      "posName": "กาแฟสด เอสเปรสโซ่ เย็น 16 ออนซ์",
+      "posId": "fs_item_41277766",
+      "hubNote": "",
+      "score": 1,
+      "reason": "exact-variant-en-parens",
+      "action": "rename_grab_to_pos",
+      "status": "blocked_menu_ui",
+      "page": {
+        "onEdit": false,
+        "listPrice": null,
+        "name": "",
+        "nameEditable": false,
+        "inventoryBlocked": false,
+        "itemId": "THITE2025022802363923759",
+        "url": "https://merchant.grab.com/food/menu/3-C6J1BCNXTYKTLX/menuOverview/THITE2025022802363923759"
+      }
+    },
+    {
+      "grabName": "กาแฟสด คาปูชิโน่ (Cappuccino) เย็น 16 ออนซ์",
+      "grabId": "THITE2025022802373259359",
+      "grabCategory": "* กาแฟสดนมนุ่มละมุน",
+      "posName": "กาแฟสด คาปูชิโน่ เย็น 16 ออนซ์",
+      "posId": "fs_item_41279794",
+      "hubNote": "สร้างเมนู grab",
+      "score": 1,
+      "reason": "exact-variant-en-parens",
+      "action": "rename_grab_to_pos",
+      "status": "blocked_menu_ui",
+      "page": {
+        "onEdit": false,
+        "listPrice": null,
+        "name": "",
+        "nameEditable": false,
+        "inventoryBlocked": false,
+        "itemId": "THITE2025022802373259359",
+        "url": "https://merchant.grab.com/food/menu/3-C6J1BCNXTYKTLX/menuOverview/THITE2025022802373259359"
+      }
+    },
+    {
+      "grabName": "กาแฟสด Long Black (ลองแบล็ค) เย็น 16 ออนซ์",
+      "grabId": "THITE2025030203155620292",
+      "grabCategory": "* กาแฟสดเข้มข้น",
+      "posName": "กาแฟสด ลองแบล็ค เย็น 16 ออนซ์",
+      "posId": "fs_item_41321144",
+      "hubNote": "สร้างเมนู grab",
+      "score": 1,
+      "reason": "exact-variant-en-parens",
+      "action": "rename_grab_to_pos",
+      "status": "blocked_menu_ui",
+      "page": {
+        "onEdit": false,
+        "listPrice": null,
+        "name": "",
+        "nameEditable": false,
+        "inventoryBlocked": false,
+        "itemId": "THITE2025030203155620292",
+        "url": "https://merchant.grab.com/food/menu/3-C6J1BCNXTYKTLX/menuOverview/THITE2025030203155620292"
+      }
+    },
+    {
+      "grabName": "กาแฟสด แฟลตไวท์ (Flat White) เย็น 16 ออนซ์",
+      "grabId": "THITE2025030203221737606",
+      "grabCategory": "* กาแฟสดนมนุ่มละมุน",
+      "posName": "กาแฟสด แฟลตไวท์ เย็น 16 ออนซ์",
+      "posId": "fs_item_41321223",
+      "hubNote": "สร้างเมนู grab",
+      "score": 1,
+      "reason": "exact-variant-en-parens",
+      "action": "rename_grab_to_pos",
+      "status": "blocked_menu_ui",
+      "page": {
+        "onEdit": false,
+        "listPrice": null,
+        "name": "",
+        "nameEditable": false,
+        "inventoryBlocked": false,
+        "itemId": "THITE2025030203221737606",
+        "url": "https://merchant.grab.com/food/menu/3-C6J1BCNXTYKTLX/menuOverview/THITE2025030203221737606"
+      }
+    },
+    {
+      "grabName": "กาแฟสด คาปูชิโน่ร้อน (Cappuccino) ร้อน",
+      "grabId": "THITE2025030204120972961",
+      "grabCategory": "* กาแฟสด อื่นๆ ร้อน",
+      "posName": "กาแฟสด Cappuccino (คาปูชิโน่) ร้อน 12 ออนซ์",
+      "posId": "fs_item_41322135",
+      "hubNote": "",
+      "score": 1,
+      "reason": "exact-variant-en-parens",
+      "action": "rename_grab_to_pos",
+      "status": "skip_already",
+      "beforeName": "กาแฟสด Cappuccino (คาปูชิโน่) ร้อน 12 ออนซ์"
+    },
+    {
+      "grabName": "ช็อกโกแลตมิลค์ร้อน",
+      "grabId": "THITE2025031216180413409",
+      "grabCategory": "* กาแฟสด อื่นๆ ร้อน",
+      "posName": "ช็อกโกแลตมิลค์ร้อน 12 ออนซ์",
+      "posId": "fs_item_41574246",
+      "hubNote": "",
+      "score": 1,
+      "reason": "exact-variant-en-parens",
+      "action": "rename_grab_to_pos",
+      "status": "skip_already",
+      "beforeName": "ช็อกโกแลตมิลค์ร้อน 12 ออนซ์"
+    }
+  ]
+}

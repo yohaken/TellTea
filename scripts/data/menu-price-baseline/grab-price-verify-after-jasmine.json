@@ -1,0 +1,18 @@
+{
+  "at": "2026-09-03T03:49:09.526Z",
+  "jasmine": {
+    "name": "0% แคล ชามะลิ",
+    "baht": 27,
+    "availableStatus": 1
+  },
+  "statusCounts": {
+    "1": 157,
+    "3": 10
+  },
+  "matched": 167,
+  "atTarget": 167,
+  "mismatches": [],
+  "nameMis": [],
+  "posOnly": [],
+  "grabOnly": []
+}

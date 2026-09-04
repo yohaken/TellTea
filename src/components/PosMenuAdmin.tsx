@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ChevronDown, Copy, Link2, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Copy, Link2, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { PosHardLink } from "@/components/PosHardLink";
 import { PosMenuItemEditor } from "@/components/PosMenuItemEditor";
 import { PosMenuModal } from "@/components/PosMenuModal";
-import { PosMenuItemPriceTable } from "@/components/PosMenuItemPriceTable";
-import { PosMenuOptionPriceTable } from "@/components/PosMenuOptionPriceTable";
+import { PosMenuChannelPriceHub } from "@/components/PosMenuChannelPriceHub";
 import { PosOptionGroupEditor } from "@/components/PosOptionGroupEditor";
 import { PosSortableList } from "@/components/PosSortableList";
 import { ensurePosDeviceAuth } from "@/lib/pos-auth";
@@ -56,7 +55,6 @@ type DeleteTarget =
   | { kind: "category"; category: MenuCategory; mode: "archive" | "hard" };
 
 type Tab = "categories" | "groups" | "prices" | "promotions";
-type PriceScope = "items" | "options";
 type Screen =
   | { kind: "list" }
   | { kind: "edit-item"; id: string }
@@ -105,8 +103,8 @@ export function PosMenuAdmin({
   const seeded = isBoh
     ? { categories: [] as MenuCategory[], items: [] as MenuItem[], optionGroups: [] as MenuOptionGroup[] }
     : initialMenuFromCache();
-  const [tab, setTab] = useState<Tab>("categories");
-  const [priceScope, setPriceScope] = useState<PriceScope>("items");
+  const [tab, setTab] = useState<Tab>("prices");
+  const [navCollapsed, setNavCollapsed] = useState(true);
   const [screen, setScreen] = useState<Screen>({ kind: "list" });
   const [quickAdd, setQuickAdd] = useState<QuickAdd>(null);
   const [quickName, setQuickName] = useState("");
@@ -137,6 +135,32 @@ export function PosMenuAdmin({
   /** Soft pulse when Firestore pushes a change (e.g. nPos sold-out / CRUD). */
   const [liveSyncNote, setLiveSyncNote] = useState("");
   const itemsCountRef = useRef(0);
+
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem("telltea_menu_nav_collapsed") === "1") {
+        setNavCollapsed(true);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    if (tab === "prices") setNavCollapsed(true);
+  }, [tab]);
+
+  function toggleNavCollapsed() {
+    setNavCollapsed((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem("telltea_menu_nav_collapsed", next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }
 
   useEffect(() => {
     freshItemIdRef.current = freshItemId;
@@ -400,7 +424,7 @@ export function PosMenuAdmin({
 
   return (
     <div
-      className={`pos-menu-admin ${embedded ? "pos-menu-admin--embedded" : ""}${isBoh ? " pos-menu-admin--boh" : ""}`}
+      className={`pos-menu-admin ${embedded ? "pos-menu-admin--embedded" : ""}${isBoh ? " pos-menu-admin--boh" : ""}${tab === "prices" ? " pos-menu-admin--prices-full" : ""}${navCollapsed ? " pos-menu-admin--nav-collapsed" : ""}`}
     >
       {!isBoh ? (
         <p className="pos-menu-boh-banner muted" role="status">
@@ -429,47 +453,68 @@ export function PosMenuAdmin({
         </header>
       ) : null}
 
-      <div className="pos-menu-shell">
+      <div className={`pos-menu-shell${navCollapsed ? " pos-menu-shell--nav-collapsed" : ""}`}>
         {embedded ? (
           <nav className="pos-menu-subnav" aria-label="เมนูย่อย">
             <button
               type="button"
-              className={tab === "categories" ? "is-active" : ""}
-              onClick={() => setTab("categories")}
+              className="pos-menu-subnav-toggle"
+              onClick={toggleNavCollapsed}
+              title={navCollapsed ? "ขยายเมนูซ้าย" : "พับเมนูซ้าย"}
+              aria-expanded={!navCollapsed}
             >
-              เมนูอาหาร
-            </button>
-            <button
-              type="button"
-              className={tab === "groups" ? "is-active" : ""}
-              onClick={() => setTab("groups")}
-            >
-              กลุ่มตัวเลือก
+              {navCollapsed ? <ChevronRight size={16} aria-hidden /> : <ChevronLeft size={16} aria-hidden />}
+              {!navCollapsed ? <span>พับ</span> : null}
             </button>
             <button
               type="button"
               className={tab === "prices" ? "is-active" : ""}
               onClick={() => setTab("prices")}
+              title="ตั้งราคา"
             >
-              ตั้งราคา
+              {navCollapsed ? "รา" : "ตั้งราคา"}
             </button>
-            <button type="button" className={tab === "promotions" ? "is-active" : ""} onClick={() => setTab("promotions")}>
-              โปรโมชั่น
+            <button
+              type="button"
+              className={tab === "categories" ? "is-active" : ""}
+              onClick={() => setTab("categories")}
+              title="เมนูอาหาร"
+            >
+              {navCollapsed ? "เม" : "เมนูอาหาร"}
+            </button>
+            <button
+              type="button"
+              className={tab === "groups" ? "is-active" : ""}
+              onClick={() => setTab("groups")}
+              title="กลุ่มตัวเลือก"
+            >
+              {navCollapsed ? "กล" : "กลุ่มตัวเลือก"}
+            </button>
+            <button
+              type="button"
+              className={tab === "promotions" ? "is-active" : ""}
+              onClick={() => setTab("promotions")}
+              title="โปรโมชั่น"
+            >
+              {navCollapsed ? "โปร" : "โปรโมชั่น"}
             </button>
           </nav>
         ) : null}
 
         <div className="pos-menu-shell-main">
           {embedded ? (
+            tab === "prices" ? (
+              liveSyncNote ? (
+                <p className="muted pos-menu-live-sync pos-menu-live-sync--prices">{liveSyncNote}</p>
+              ) : null
+            ) : (
             <header className="pos-menu-admin-head pos-menu-admin-head--compact">
               <h1>
                 {tab === "groups"
                   ? "กลุ่มตัวเลือก"
-                  : tab === "prices"
-                    ? "ตั้งราคา"
-                    : tab === "promotions"
-                      ? "โปรโมชั่น"
-                      : "เมนูอาหาร"}
+                  : tab === "promotions"
+                    ? "โปรโมชั่น"
+                    : "เมนูอาหาร"}
               </h1>
               {tab === "categories" || tab === "groups" ? (
                 <button
@@ -486,8 +531,16 @@ export function PosMenuAdmin({
               ) : null}
               {liveSyncNote ? <p className="muted pos-menu-live-sync">{liveSyncNote}</p> : null}
             </header>
+            )
           ) : (
             <div className="pos-menu-tabs">
+              <button
+                type="button"
+                className={tab === "prices" ? "is-active" : ""}
+                onClick={() => setTab("prices")}
+              >
+                ตั้งราคา
+              </button>
               <button
                 type="button"
                 className={tab === "categories" ? "is-active" : ""}
@@ -501,13 +554,6 @@ export function PosMenuAdmin({
                 onClick={() => setTab("groups")}
               >
                 กลุ่มตัวเลือก
-              </button>
-              <button
-                type="button"
-                className={tab === "prices" ? "is-active" : ""}
-                onClick={() => setTab("prices")}
-              >
-                ตั้งราคา
               </button>
             </div>
           )}
@@ -572,32 +618,12 @@ export function PosMenuAdmin({
           ) : null}
 
           {authReady && tab === "prices" ? (
-            <div className="pos-menu-price-hub">
-              <div className="pos-menu-price-scope" role="tablist" aria-label="ชนิดราคา">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={priceScope === "items"}
-                  className={priceScope === "items" ? "is-active" : ""}
-                  onClick={() => setPriceScope("items")}
-                >
-                  เมนู
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={priceScope === "options"}
-                  className={priceScope === "options" ? "is-active" : ""}
-                  onClick={() => setPriceScope("options")}
-                >
-                  ตัวเลือก
-                </button>
-              </div>
-              {priceScope === "items" ? (
-                <PosMenuItemPriceTable items={items} categories={categories} />
-              ) : (
-                <PosMenuOptionPriceTable optionGroups={optionGroups} />
-              )}
+            <div className="pos-menu-price-hub pos-menu-price-hub--channels pos-menu-price-hub--dense">
+              <PosMenuChannelPriceHub
+                items={items}
+                categories={categories}
+                optionGroups={optionGroups}
+              />
             </div>
           ) : null}
 

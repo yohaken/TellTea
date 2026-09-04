@@ -22,6 +22,7 @@ function normalizeSource(source: number): number {
 export function computeSfSendAmount(source: number, pct: number): number {
   const s = normalizeSource(source);
   const p = clampSfSendPct(pct);
+  if (p <= 0 || s <= 0) return 0;
   return Math.round(((s * p) / 100) * 100) / 100;
 }
 

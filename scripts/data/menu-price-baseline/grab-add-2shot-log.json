@@ -1,0 +1,26 @@
+{
+  "at": "2026-09-01T09:12:23.630Z",
+  "add": {
+    "clicked": true
+  },
+  "fill": {
+    "nameId": "modifierName[CQqRh]",
+    "name": "เพิ่มช็อตกาแฟ 2 ช็อต",
+    "priceId": "additionalPrice[CQqRh]",
+    "price": "26"
+  },
+  "save": {
+    "error": "no save",
+    "disabled": []
+  },
+  "verify": {
+    "url": "https://merchant.grab.com/food/menu/3-C6J1BCNXTYKTLX/modifierGroups/THMOG20260717152944025236",
+    "has2": false,
+    "has1": true,
+    "coffeeNames": [
+      "ไม่เพิ่ม",
+      "เพิ่มช็อตกาแฟ 1 ช็อต"
+    ],
+    "drawerOpen": true
+  }
+}

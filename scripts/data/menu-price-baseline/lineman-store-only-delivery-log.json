@@ -1,0 +1,100 @@
+{
+  "at": "2026-09-01T06:55:54.030Z",
+  "actions": [
+    {
+      "action": "disable-delivery-and-pickup",
+      "id": "0leE6eBCOWfSRqprI99fInpjLYhbo6",
+      "name": "น้ำเปล่า",
+      "reason": "POS store-only → น้ำเปล่า (เฉพาะหน้าร้าน)",
+      "result": {
+        "name": "น้ำเปล่า",
+        "online": false,
+        "pickup": false,
+        "offline": true
+      },
+      "ok": true
+    },
+    {
+      "action": "disable-delivery-and-pickup",
+      "id": "0leDcwwoDPVXvltMKzTjE8eqe52tCh",
+      "name": "(เล็ก) ไอศกรีมซอฟต์เสิร์ฟ",
+      "before": {
+        "name": "(เล็ก) ไอศกรีมซอฟต์เสิร์ฟ",
+        "online": false,
+        "pickup": false,
+        "offline": true
+      },
+      "result": {
+        "name": "(เล็ก) ไอศกรีมซอฟต์เสิร์ฟ",
+        "online": false,
+        "pickup": false,
+        "offline": true
+      },
+      "ok": true,
+      "status": "disabled"
+    },
+    {
+      "action": "disable-delivery-and-pickup",
+      "id": "0leDcxIFaPXnUkYEXdVqxpB1cQWqTp",
+      "name": "(กลาง) ไอศกรีมซอฟต์เสิร์ฟ",
+      "before": {
+        "name": "(กลาง) ไอศกรีมซอฟต์เสิร์ฟ",
+        "online": false,
+        "pickup": false,
+        "offline": true
+      },
+      "result": {
+        "name": "(กลาง) ไอศกรีมซอฟต์เสิร์ฟ",
+        "online": false,
+        "pickup": false,
+        "offline": true
+      },
+      "ok": true,
+      "status": "disabled"
+    },
+    {
+      "action": "disable-delivery-and-pickup",
+      "id": "0leDcxIMZSJ1daq8nMUNf8YsZbL4eG",
+      "name": "(ใหญ่) ไอศกรีมซอฟต์เสิร์ฟ",
+      "before": {
+        "name": "(ใหญ่) ไอศกรีมซอฟต์เสิร์ฟ",
+        "online": false,
+        "pickup": false,
+        "offline": true
+      },
+      "result": {
+        "name": "(ใหญ่) ไอศกรีมซอฟต์เสิร์ฟ",
+        "online": false,
+        "pickup": false,
+        "offline": true
+      },
+      "ok": true,
+      "status": "disabled"
+    }
+  ],
+  "softServeOnLM": [
+    {
+      "id": "0leDcwwoDPVXvltMKzTjE8eqe52tCh",
+      "name": "(เล็ก) ไอศกรีมซอฟต์เสิร์ฟ",
+      "href": "https://merchant.wongnai.com/businesses/2688343/menu/0leDcwwoDPVXvltMKzTjE8eqe52tCh/edit"
+    },
+    {
+      "id": "0leDcxIFaPXnUkYEXdVqxpB1cQWqTp",
+      "name": "(กลาง) ไอศกรีมซอฟต์เสิร์ฟ",
+      "href": "https://merchant.wongnai.com/businesses/2688343/menu/0leDcxIFaPXnUkYEXdVqxpB1cQWqTp/edit"
+    },
+    {
+      "id": "0leDcxIMZSJ1daq8nMUNf8YsZbL4eG",
+      "name": "(ใหญ่) ไอศกรีมซอฟต์เสิร์ฟ",
+      "href": "https://merchant.wongnai.com/businesses/2688343/menu/0leDcxIMZSJ1daq8nMUNf8YsZbL4eG/edit"
+    }
+  ],
+  "nameMismatchesRemaining": [
+    {
+      "id": "0leDVBhBzISnItJ6uLofJU96X90lG2",
+      "name": "ชานม",
+      "note": "no exact POS name"
+    }
+  ],
+  "namesAlreadyMatchPos": true
+}

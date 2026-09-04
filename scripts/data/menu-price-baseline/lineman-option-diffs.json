@@ -1,0 +1,37 @@
+{
+  "at": "2026-09-03T12:04:01.868Z",
+  "rule": {
+    "mode": "gp",
+    "value": 30
+  },
+  "diffs": [
+    {
+      "group": "ช็อตมัทฉะ",
+      "name": "เพิ่มช็อตมัทฉะ 1 กรัม",
+      "current": 9,
+      "target": 25,
+      "store": 6,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoMOXeLjn3KnhhbtX5SLMPuLfGVL/edit",
+      "id": "0leoMOXeLjn3KnhhbtX5SLMPuLfGVL",
+      "posKey": "fs_opt_41309539::fs_c_41756674"
+    }
+  ],
+  "byUrl": [
+    {
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoMOXeLjn3KnhhbtX5SLMPuLfGVL/edit",
+      "group": "ช็อตมัทฉะ",
+      "rows": [
+        {
+          "group": "ช็อตมัทฉะ",
+          "name": "เพิ่มช็อตมัทฉะ 1 กรัม",
+          "current": 9,
+          "target": 25,
+          "store": 6,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoMOXeLjn3KnhhbtX5SLMPuLfGVL/edit",
+          "id": "0leoMOXeLjn3KnhhbtX5SLMPuLfGVL",
+          "posKey": "fs_opt_41309539::fs_c_41756674"
+        }
+      ]
+    }
+  ]
+}

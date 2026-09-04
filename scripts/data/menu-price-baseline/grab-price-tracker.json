@@ -1,0 +1,7348 @@
+{
+  "round": 20,
+  "items": {
+    "THITE2025071208361503136": {
+      "name": "(สมูทตี้) มันม่วง แก้วใหญ่ 22 ออนซ์",
+      "itemId": "THITE2025071208361503136",
+      "targetPrice": 70,
+      "rounds": [
+        {
+          "round": 1,
+          "at": "2026-09-01T06:22:37.364Z",
+          "before": 82,
+          "attempted": 65,
+          "after": 82,
+          "changed": false,
+          "status": "no_change",
+          "popupText": "รายละเอียดรายการ\nหากต้องการแก้ไข ไปที่หน้าเมนู TELL TEA เทลที - กรมหลวงประจักษ์\n\nเพิ่มรูป\n\nชื่อ\nคำอธิบาย\nคำแปล\nชื่อรายการและคำอธิบายได้รับการแปลเป็น 4 ภาษา\n\nแก้ไขคำแปล\nหมวดหมู่\nผลไม้ปั่น & สมูทตี้\nเวลาที่จำหน่าย\nตลอดช่วงที่ร้านเปิด\nจันทร์ - อาทิตย์\t\nเวลาเปิดร้าน - เวลาปิดร้าน\n\nใช้กับคำสั่งซื้อ\nเลือกอย่างน้อย 1 ตัวเลือก\nจัดส่ง\nสั่งล่วงหน้า\nลูกค้ารับที่ร้าน\nราคา\n฿\t\nปรับราคาตามประเภท\nตัวเลือกเสริม\nท็อปปิ้ง\n12 ตัวเลือก | เลือกได้ 1 ถึง 12\nความหวาน\n7 ตัวเลือก | ต้องเลือก 1\nจัดการสต็อกคงเหลือ\nตั้งสต็อ"
+        },
+        {
+          "round": 2,
+          "at": "2026-09-01T06:28:08.808Z",
+          "before": 82,
+          "attempted": 65,
+          "after": 65,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 3,
+          "at": "2026-09-01T06:29:01.204Z",
+          "before": 65,
+          "attempted": 65,
+          "after": 65,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:22:43.568Z",
+          "before": 82,
+          "attempted": 70,
+          "after": 70,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:46.224Z",
+          "before": 82,
+          "attempted": 70,
+          "after": 70,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 70,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025072504393328576": {
+      "name": "ปังเนยกรอบอบไอน้ำ",
+      "itemId": "THITE2025072504393328576",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 1,
+          "at": "2026-09-01T06:22:31.880Z",
+          "before": 37,
+          "attempted": 25,
+          "after": 37,
+          "changed": false,
+          "status": "no_change",
+          "popupText": ""
+        },
+        {
+          "round": 2,
+          "at": "2026-09-01T06:28:09.409Z",
+          "before": 37,
+          "attempted": 25,
+          "after": 25,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 3,
+          "at": "2026-09-01T06:28:51.075Z",
+          "before": 25,
+          "after": 25,
+          "changed": false,
+          "status": "skip_at_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:08:07.410Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:43.005Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025091016480045690": {
+      "name": "Ice Cream To-Go แก้วใหญ่ 16oz (แถมถุงเย็น)",
+      "itemId": "THITE2025091016480045690",
+      "targetPrice": 36,
+      "rounds": [
+        {
+          "round": 1,
+          "at": "2026-09-01T06:22:29.831Z",
+          "status": "error",
+          "popupText": ""
+        },
+        {
+          "round": 2,
+          "at": "2026-09-01T06:28:07.447Z",
+          "before": 43,
+          "attempted": 35,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 3,
+          "at": "2026-09-01T06:29:02.012Z",
+          "before": 43,
+          "attempted": 35,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:24:30.093Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:53.672Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "reachedTarget": true,
+      "currentLive": 36,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025030517315435977": {
+      "name": "กาแฟสด มอคค่า เย็น 16 ออนซ์",
+      "itemId": "THITE2025030517315435977",
+      "targetPrice": 50,
+      "rounds": [
+        {
+          "round": 1,
+          "at": "2026-09-01T06:22:32.460Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 58,
+          "changed": false,
+          "status": "no_change",
+          "popupText": ""
+        },
+        {
+          "round": 2,
+          "at": "2026-09-01T06:28:24.375Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 58,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 3,
+          "at": "2026-09-01T06:29:13.905Z",
+          "status": "error",
+          "popupText": ""
+        },
+        {
+          "round": 4,
+          "at": "2026-09-01T06:59:42.674Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 58,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:55:44.266Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:48.121Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 50,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040717444560970": {
+      "name": "ลิ้นจี่โซดา",
+      "itemId": "THITE2024040717444560970",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 1,
+          "at": "2026-09-01T06:22:42.264Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 37,
+          "changed": false,
+          "status": "no_change",
+          "popupText": ""
+        },
+        {
+          "round": 4,
+          "at": "2026-09-01T06:59:59.309Z",
+          "before": 30,
+          "attempted": 30,
+          "after": 30,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:20:15.616Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:57.158Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025031410215706264": {
+      "name": "0% แคล ชาพีช",
+      "itemId": "THITE2025031410215706264",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 2,
+          "at": "2026-09-01T06:28:28.425Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 30,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 3,
+          "at": "2026-09-01T06:29:18.572Z",
+          "before": 30,
+          "attempted": 30,
+          "after": 30,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:47:53.562Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:54.826Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025031313372896735": {
+      "name": "0% แคล ชาองุ่น",
+      "itemId": "THITE2025031313372896735",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:29:22.424Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 30,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:06:01.676Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:44.744Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025031615093192911": {
+      "name": "0% แคล ชาฟรุตพันช์",
+      "itemId": "THITE2025031615093192911",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:29:34.140Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 30,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:06:07.593Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:58.796Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040707304376427": {
+      "name": "ชาลิ้นจี่",
+      "itemId": "THITE2024040707304376427",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:29:53.925Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 0,
+          "changed": true,
+          "status": "partial",
+          "popupText": ""
+        },
+        {
+          "round": 4,
+          "at": "2026-09-01T06:59:26.551Z",
+          "before": 30,
+          "after": 30,
+          "changed": false,
+          "status": "skip_at_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:06:16.672Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:59.880Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040707320902022": {
+      "name": "ชาบลูเบอร์รี่",
+      "itemId": "THITE2024040707320902022",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:29:41.901Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 30,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:06:33.040Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:57.338Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024041801552319145": {
+      "name": "ชาพีชส้มยูสุ",
+      "itemId": "THITE2024041801552319145",
+      "targetPrice": 70,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:29:53.238Z",
+          "before": 82,
+          "attempted": 75,
+          "after": 75,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:05:55.789Z",
+          "before": 82,
+          "attempted": 70,
+          "after": 82,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:08:30.887Z",
+          "before": 82,
+          "attempted": 70,
+          "after": 70,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:53.188Z",
+          "before": 82,
+          "attempted": 70,
+          "after": 70,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 70,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040707325415876": {
+      "name": "ชาสตรอว์เบอร์รี",
+      "itemId": "THITE2024040707325415876",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:30:01.712Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 30,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:06:24.624Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 37,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:09:23.704Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:49.585Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025031715392960627": {
+      "name": "0% แคล โซดาแคนตาลูป",
+      "itemId": "THITE2025031715392960627",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:30:10.032Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 37,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:48:32.832Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:50.049Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025031615221452892": {
+      "name": "0% แคล โซดาลิ้นจี่",
+      "itemId": "THITE2025031615221452892",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:30:11.077Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 37,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:50:11.287Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:57.434Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040717510158162": {
+      "name": "แดงโซดา",
+      "itemId": "THITE2024040717510158162",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:30:21.467Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 30,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:06:48.539Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 0,
+          "changed": true,
+          "status": "partial",
+          "popupText": ""
+        },
+        {
+          "round": 8,
+          "at": "2026-09-01T13:09:11.177Z",
+          "before": 27,
+          "after": 27,
+          "changed": false,
+          "status": "skip_at_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:52.844Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040717425233219": {
+      "name": "เสาวรสโซดา",
+      "itemId": "THITE2024040717425233219",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:30:26.841Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 37,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:24:08.469Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:54.734Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040710340384853": {
+      "name": "ชานมใต้หวัน (เย็น/ปั่น)",
+      "itemId": "THITE2024040710340384853",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:30:31.144Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 30,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:06:52.908Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:59.293Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025031715441937496": {
+      "name": "0% แคล โซดาฟรุตพันช์",
+      "itemId": "THITE2025031715441937496",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:30:39.128Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 37,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:49:51.448Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:54.472Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040706435529563": {
+      "name": "โกปี๊อ้อ (โอเลี้ยง) (เย็น/ปั่น)",
+      "itemId": "THITE2024040706435529563",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:30:47.160Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 30,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:06:45.640Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 37,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:02:05.375Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:48.029Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025031615280773790": {
+      "name": "0% แคล โซดาน้ำผึ้งมะนาว",
+      "itemId": "THITE2025031615280773790",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:30:49.053Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 37,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:49:12.118Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:55.334Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040717452913889": {
+      "name": "บลูเบอร์รี่โซดา",
+      "itemId": "THITE2024040717452913889",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:31:10.875Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 30,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:06:55.774Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:46.810Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025081608253288439": {
+      "name": "ชิโอปัง (Shio Pan) โฮมเมด ใหญ่ขึ้น",
+      "itemId": "THITE2025081608253288439",
+      "targetPrice": 20,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:31:03.982Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 37,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:11:10.555Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:46.679Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 16,
+          "at": "2026-09-03T08:16:31.966Z",
+          "before": 27,
+          "attempted": 20,
+          "after": 27,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 20,
+          "at": "2026-09-03T08:30:38.446Z",
+          "before": 27,
+          "attempted": 20,
+          "after": 20,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 20,
+      "reachedTarget": true,
+      "source": "hub"
+    },
+    "THITE2024040707312107590": {
+      "name": "ชาแอปเปิ้ล",
+      "itemId": "THITE2024040707312107590",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:31:05.016Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 37,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:10:50.490Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:51.328Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025031410234653483": {
+      "name": "0% แคล ชาน้ำผึ้ง",
+      "itemId": "THITE2025031410234653483",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:31:24.054Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 30,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:07:08.442Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:54.166Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040707292383933": {
+      "name": "ชาดำเย็น",
+      "itemId": "THITE2024040707292383933",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:31:22.238Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 37,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:05:32.392Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:48.585Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040706063632592": {
+      "name": "ชาเสาวรส",
+      "itemId": "THITE2024040706063632592",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:31:28.192Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 37,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:09:50.188Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 37,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:49.238Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:50.334Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040717493302365": {
+      "name": "แอปเปิ้ลโซดา",
+      "itemId": "THITE2024040717493302365",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:31:42.285Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 30,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:07:11.308Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:51.582Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025031410255226364": {
+      "name": "0% แคล ชาน้ำผึ้งมะนาว",
+      "itemId": "THITE2025031410255226364",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:31:43.760Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 30,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:07:16.457Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:59.029Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025031615083861257": {
+      "name": "0% แคล ชาแคนตาลูป",
+      "itemId": "THITE2025031615083861257",
+      "targetPrice": 24,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:31:47.740Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 30,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:07:18.757Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 37,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:47:33.700Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:55.031Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 17,
+          "at": "2026-09-03T08:21:51.491Z",
+          "before": 27,
+          "attempted": 24,
+          "after": 27,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": false,
+      "source": "hub"
+    },
+    "THITE2025031313362137067": {
+      "name": "0% แคล ชาสละ",
+      "itemId": "THITE2025031313362137067",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:32:02.083Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 30,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:07:29.376Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:46.367Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040717473631579": {
+      "name": "บลูฮาวายโซดา",
+      "itemId": "THITE2024040717473631579",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:32:03.844Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 30,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:07:32.574Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:44.353Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025031615302567651": {
+      "name": "0% แคล โซดาองุ่น",
+      "itemId": "THITE2025031615302567651",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:32:04.663Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 37,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:50:31.034Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:53.011Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025031615252960163": {
+      "name": "0% แคล โซดาน้ำผึ้ง",
+      "itemId": "THITE2025031615252960163",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:32:19.057Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 37,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:48:52.453Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:50.907Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040717420086096": {
+      "name": "สตรอว์เบอร์รีโซดา",
+      "itemId": "THITE2024040717420086096",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:32:20.116Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 37,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:22:00.837Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 37,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:50.472Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:48.236Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025031313345655541": {
+      "name": "0% แคล ชาลิ้นจี่",
+      "itemId": "THITE2025031313345655541",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:32:23.100Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 37,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:48:13.300Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:56.259Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025031715420228735": {
+      "name": "0% แคล โซดาพีช",
+      "itemId": "THITE2025031715420228735",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:32:36.223Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 37,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:49:31.630Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:48.861Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040707283813818": {
+      "name": "ชาเขียวมะลิ",
+      "itemId": "THITE2024040707283813818",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:32:38.983Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 37,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:04:52.535Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:58.367Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040717501751626": {
+      "name": "เขียวโซดา",
+      "itemId": "THITE2024040717501751626",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:32:43.445Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 30,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:07:42.723Z",
+          "status": "error",
+          "popupText": ""
+        },
+        {
+          "round": 8,
+          "at": "2026-09-01T13:10:09.009Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:51.850Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025031615104196908": {
+      "name": "0% แคล ชามะลิ",
+      "itemId": "THITE2025031615104196908",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:32:57.209Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 30,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:07:44.690Z",
+          "status": "error",
+          "popupText": ""
+        },
+        {
+          "round": 8,
+          "at": "2026-09-01T13:10:13.142Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:49.293Z",
+          "before": 9,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025091712364162544": {
+      "name": "ชาอู่หลงเย็น",
+      "itemId": "THITE2025091712364162544",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:32:58.872Z",
+          "before": 37,
+          "attempted": 30,
+          "after": 30,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:07:51.524Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 37,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:10:30.141Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:58.196Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025052911074637852": {
+      "name": "น้ำเต้าหู้สูตรดั้งเดิม (เย็น/ปั่น)",
+      "itemId": "THITE2025052911074637852",
+      "targetPrice": 34,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:33:02.820Z",
+          "before": 43,
+          "attempted": 40,
+          "after": 40,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:04:09.007Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:44.452Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 34,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025070301062095896": {
+      "name": "ส้มปั่น แก้วใหญ่ 22 ออนซ์",
+      "itemId": "THITE2025070301062095896",
+      "targetPrice": 49,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:33:17.586Z",
+          "before": 58,
+          "attempted": 55,
+          "after": 55,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:04:11.910Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:57.927Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 49,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040707231404048": {
+      "name": "ไมโล (เย็น/ปั่น)",
+      "itemId": "THITE2024040707231404048",
+      "targetPrice": 34,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:33:18.966Z",
+          "before": 43,
+          "attempted": 40,
+          "after": 40,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:04:13.975Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:43.225Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 34,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025091712415541662": {
+      "name": "ชาอู่หลงน้ำผึ้งมะนาว",
+      "itemId": "THITE2025091712415541662",
+      "targetPrice": 34,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:33:19.538Z",
+          "before": 43,
+          "attempted": 40,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:10:10.189Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:50.135Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 34,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040707212092808": {
+      "name": "นมสดเฮเซลนัท (เย็น/ปั่น)",
+      "itemId": "THITE2024040707212092808",
+      "targetPrice": 49,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:33:39.562Z",
+          "status": "error",
+          "popupText": ""
+        },
+        {
+          "round": 4,
+          "at": "2026-09-01T07:00:16.065Z",
+          "before": 55,
+          "attempted": 55,
+          "after": 55,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:14:34.179Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:48.767Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "reachedTarget": true,
+      "currentLive": 49,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025041914141523907": {
+      "name": "บุกบราวน์ชูการ์",
+      "itemId": "THITE2025041914141523907",
+      "targetPrice": 14,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:33:35.226Z",
+          "before": 18,
+          "attempted": 15,
+          "after": 18,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:18:12.668Z",
+          "before": 18,
+          "attempted": 14,
+          "after": 18,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:47.680Z",
+          "before": 18,
+          "attempted": 14,
+          "after": 14,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:52.928Z",
+          "before": 18,
+          "attempted": 14,
+          "after": 14,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 14,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025041914110920164": {
+      "name": "ไข่มุก",
+      "itemId": "THITE2025041914110920164",
+      "targetPrice": 6,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:33:36.005Z",
+          "before": 11,
+          "attempted": 8,
+          "after": 11,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:02:32.419Z",
+          "before": 11,
+          "attempted": 7,
+          "after": 11,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:47.812Z",
+          "before": 11,
+          "attempted": 7,
+          "after": 7,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:58.114Z",
+          "before": 11,
+          "attempted": 7,
+          "after": 7,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 16,
+          "at": "2026-09-03T08:10:34.261Z",
+          "before": 7,
+          "attempted": 6,
+          "after": 7,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 7,
+      "reachedTarget": false,
+      "source": "hub"
+    },
+    "THITE2025052103271268930": {
+      "name": "เฉาก๊วยหนึบเนื้อแน่น",
+      "itemId": "THITE2025052103271268930",
+      "targetPrice": 9,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:33:52.362Z",
+          "before": 18,
+          "attempted": 15,
+          "after": 18,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:03:52.239Z",
+          "before": 18,
+          "attempted": 13,
+          "after": 18,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:48.256Z",
+          "before": 18,
+          "attempted": 13,
+          "after": 13,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:56.457Z",
+          "before": 18,
+          "attempted": 13,
+          "after": 13,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 16,
+          "at": "2026-09-03T08:12:57.136Z",
+          "status": "error",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 13,
+      "reachedTarget": false,
+      "source": "hub"
+    },
+    "THITE2024040717440019808": {
+      "name": "มะนาวโซดา",
+      "itemId": "THITE2024040717440019808",
+      "targetPrice": 34,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:33:54.054Z",
+          "before": 43,
+          "attempted": 40,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:18:53.355Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:47.641Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 34,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025070506145483735": {
+      "name": "มะม่วงปั่น แก้วใหญ่ 22 ออนซ์",
+      "itemId": "THITE2025070506145483735",
+      "targetPrice": 49,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:34:09.927Z",
+          "before": 58,
+          "attempted": 55,
+          "after": 55,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:04:34.957Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 0,
+          "changed": true,
+          "status": "partial",
+          "popupText": ""
+        },
+        {
+          "round": 8,
+          "at": "2026-09-01T13:09:27.623Z",
+          "status": "error",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-01T13:11:17.210Z",
+          "before": 49,
+          "after": 49,
+          "changed": false,
+          "status": "skip_at_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:56.782Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 49,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040707252340725": {
+      "name": "โกโก้สตรอว์เบอร์รี (เย็น/ปั่น)",
+      "itemId": "THITE2024040707252340725",
+      "targetPrice": 44,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:34:12.399Z",
+          "before": 58,
+          "attempted": 55,
+          "after": 55,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:04:30.625Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 58,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:01:25.506Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:52.285Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 16,
+          "at": "2026-09-03T08:09:57.529Z",
+          "before": 49,
+          "attempted": 44,
+          "after": 49,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 49,
+      "reachedTarget": false,
+      "source": "hub"
+    },
+    "THITE2024040707271418803": {
+      "name": "ชาไทย (เย็น/ปั่น)",
+      "itemId": "THITE2024040707271418803",
+      "targetPrice": 34,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:34:10.604Z",
+          "before": 43,
+          "attempted": 40,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:06:05.289Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:53.592Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 34,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040707295087456": {
+      "name": "ชามะนาว",
+      "itemId": "THITE2024040707295087456",
+      "targetPrice": 34,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:34:30.409Z",
+          "before": 43,
+          "attempted": 40,
+          "after": 40,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:04:48.922Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:51.753Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 34,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040707260098745": {
+      "name": "โกโก้มิ้นต์ (เย็น/ปั่น)",
+      "itemId": "THITE2024040707260098745",
+      "targetPrice": 44,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:34:28.070Z",
+          "before": 58,
+          "attempted": 55,
+          "after": 58,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:00:45.605Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:49.670Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 16,
+          "at": "2026-09-03T08:08:05.960Z",
+          "before": 49,
+          "attempted": 44,
+          "after": 49,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 49,
+      "reachedTarget": false,
+      "source": "hub"
+    },
+    "THITE2024040707202281144": {
+      "name": "นมสดเผือก (เย็น/ปั่น)",
+      "itemId": "THITE2024040707202281144",
+      "targetPrice": 49,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:34:32.425Z",
+          "before": 58,
+          "attempted": 55,
+          "after": 55,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:04:40.873Z",
+          "status": "error",
+          "popupText": ""
+        },
+        {
+          "round": 8,
+          "at": "2026-09-01T13:09:52.912Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:58.473Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 49,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040707184769083": {
+      "name": "นมสดคาราเมล (เย็น/ปั่น)",
+      "itemId": "THITE2024040707184769083",
+      "targetPrice": 49,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:34:44.880Z",
+          "before": 58,
+          "attempted": 55,
+          "after": 58,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:13:06.025Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:57.833Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 49,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040710404575752": {
+      "name": "ชานมกาแฟ (เย็น/ปั่น)",
+      "itemId": "THITE2024040710404575752",
+      "targetPrice": 34,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:35:01.653Z",
+          "before": 43,
+          "attempted": 40,
+          "after": 40,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:04:53.585Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:49.861Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 34,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040707172854825": {
+      "name": "นมสดมิ้นต์ (เย็น/ปั่น)",
+      "itemId": "THITE2024040707172854825",
+      "targetPrice": 49,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:34:49.898Z",
+          "before": 58,
+          "attempted": 55,
+          "after": 58,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:14:00.327Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 58,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:48.832Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:47.781Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 49,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025041914183022301": {
+      "name": "บุกน้ำตาล",
+      "itemId": "THITE2025041914183022301",
+      "targetPrice": 13,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:35:02.968Z",
+          "before": 18,
+          "attempted": 15,
+          "after": 18,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:17:18.479Z",
+          "before": 18,
+          "attempted": 14,
+          "after": 18,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:48.949Z",
+          "before": 18,
+          "attempted": 14,
+          "after": 14,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:58.932Z",
+          "before": 18,
+          "attempted": 14,
+          "after": 14,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 16,
+          "at": "2026-09-03T08:18:58.603Z",
+          "before": 14,
+          "attempted": 13,
+          "after": 14,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 14,
+      "reachedTarget": false,
+      "source": "hub"
+    },
+    "THITE2024040707240308720": {
+      "name": "โอวัลติน (เย็น/ปั่น)",
+      "itemId": "THITE2024040707240308720",
+      "targetPrice": 34,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:35:10.618Z",
+          "before": 43,
+          "attempted": 40,
+          "after": 40,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:05:18.341Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:56.347Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 34,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040706445891803": {
+      "name": "โกปี๊ ยกล้อ (ใส่นม) (เย็น/ปั่น)",
+      "itemId": "THITE2024040706445891803",
+      "targetPrice": 34,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:35:34.488Z",
+          "before": 43,
+          "attempted": 40,
+          "after": 40,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:05:32.973Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:49.755Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 34,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040710315731824": {
+      "name": "ชานมไข่มุก (เย็น/ปั่น)",
+      "itemId": "THITE2024040710315731824",
+      "targetPrice": 29,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:35:25.985Z",
+          "status": "error",
+          "popupText": ""
+        },
+        {
+          "round": 5,
+          "at": "2026-09-01T07:01:59.072Z",
+          "before": 43,
+          "attempted": 40,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:06:58.288Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:45.997Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 16,
+          "at": "2026-09-03T08:15:16.384Z",
+          "before": 34,
+          "attempted": 29,
+          "after": 34,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        }
+      ],
+      "reachedTarget": false,
+      "currentLive": 34,
+      "source": "hub"
+    },
+    "THITE2025052911300384543": {
+      "name": "น้ำเต้าหู้โกโก้ (เย็น/ปั่น)",
+      "itemId": "THITE2025052911300384543",
+      "targetPrice": 34,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:35:28.443Z",
+          "before": 43,
+          "attempted": 40,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:15:01.195Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:49.470Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:53.407Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 34,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040717465154956": {
+      "name": "บ๊วยโซดา",
+      "itemId": "THITE2024040717465154956",
+      "targetPrice": 34,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:35:50.159Z",
+          "status": "error",
+          "popupText": ""
+        },
+        {
+          "round": 5,
+          "at": "2026-09-01T07:02:18.419Z",
+          "before": 43,
+          "attempted": 40,
+          "after": 40,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:05:22.672Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:16:51.799Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:50.998Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "reachedTarget": true,
+      "currentLive": 34,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040707225137437": {
+      "name": "โกโก้ (เย็น/ปั่น)",
+      "itemId": "THITE2024040707225137437",
+      "targetPrice": 29,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:35:45.269Z",
+          "before": 43,
+          "attempted": 40,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:01:05.647Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:48.504Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 16,
+          "at": "2026-09-03T08:08:42.556Z",
+          "before": 34,
+          "attempted": 29,
+          "after": 34,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 34,
+      "reachedTarget": false,
+      "source": "hub"
+    },
+    "THITE2025052911173620595": {
+      "name": "น้ำเต้าหู้โอวัลติน (เย็น/ปั่น)",
+      "itemId": "THITE2025052911173620595",
+      "targetPrice": 34,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:35:52.297Z",
+          "before": 43,
+          "attempted": 40,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:15:22.291Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:53.101Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 34,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040706364776567": {
+      "name": "เนสกาแฟ (เย็น/ปั่น)",
+      "itemId": "THITE2024040706364776567",
+      "targetPrice": 34,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:36:03.102Z",
+          "before": 43,
+          "attempted": 40,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:16:10.430Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:58.276Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 34,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040707221309972": {
+      "name": "นมสดเย็น (เย็น/ปั่น)",
+      "itemId": "THITE2024040707221309972",
+      "targetPrice": 34,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:36:11.604Z",
+          "before": 43,
+          "attempted": 40,
+          "after": 40,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:05:33.340Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:43.935Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 34,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025041914072452405": {
+      "name": "เจลลี่ผลไม้",
+      "itemId": "THITE2025041914072452405",
+      "targetPrice": 6,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:36:09.811Z",
+          "before": 11,
+          "attempted": 8,
+          "after": 11,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:03:25.589Z",
+          "before": 11,
+          "attempted": 7,
+          "after": 11,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:49.896Z",
+          "before": 11,
+          "attempted": 7,
+          "after": 7,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:53.506Z",
+          "before": 11,
+          "attempted": 7,
+          "after": 7,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 16,
+          "at": "2026-09-03T08:12:25.079Z",
+          "before": 7,
+          "attempted": 6,
+          "after": 7,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 7,
+      "reachedTarget": false,
+      "source": "hub"
+    },
+    "THITE2024040707180976866": {
+      "name": "นมสดน้ำผึ้ง (เย็น/ปั่น)",
+      "itemId": "THITE2024040707180976866",
+      "targetPrice": 49,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:36:21.602Z",
+          "before": 58,
+          "attempted": 55,
+          "after": 58,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:13:32.931Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 58,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:49.986Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:49.395Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 49,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025052911092659849": {
+      "name": "น้ำเต้าหู้นมสด (เย็น/ปั่น)",
+      "itemId": "THITE2025052911092659849",
+      "targetPrice": 34,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:36:40.965Z",
+          "before": 43,
+          "attempted": 40,
+          "after": 40,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:05:41.239Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:47.549Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 34,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025052911224715011": {
+      "name": "น้ำเต้าหู้เผือก (เย็น/ปั่น)",
+      "itemId": "THITE2025052911224715011",
+      "targetPrice": 49,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:36:31.762Z",
+          "before": 58,
+          "attempted": 55,
+          "after": 55,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:05:45.425Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:45.616Z",
+          "before": 58,
+          "attempted": 49,
+          "after": 49,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 49,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040707275712045": {
+      "name": "ชาเขียวนม (เย็น/ปั่น)",
+      "itemId": "THITE2024040707275712045",
+      "targetPrice": 29,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:36:45.200Z",
+          "status": "error",
+          "popupText": ""
+        },
+        {
+          "round": 5,
+          "at": "2026-09-01T07:02:34.965Z",
+          "before": 43,
+          "attempted": 40,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:04:32.576Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:48.947Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 16,
+          "at": "2026-09-03T08:13:29.130Z",
+          "status": "error",
+          "popupText": ""
+        }
+      ],
+      "reachedTarget": false,
+      "currentLive": 34,
+      "source": "hub"
+    },
+    "THITE2025031014552562150": {
+      "name": "กาแฟสดโซดา เอสเปรสโซ่เสาวรส เย็น 16 ออนซ์",
+      "itemId": "THITE2025031014552562150",
+      "targetPrice": 36,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:36:51.254Z",
+          "before": 43,
+          "attempted": 40,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:53:34.951Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 13,
+          "at": "2026-09-01T15:08:12.491Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:50.945Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:47.949Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 36,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025091712403938448": {
+      "name": "ชาอู่หลงน้ำผึ้ง",
+      "itemId": "THITE2025091712403938448",
+      "targetPrice": 34,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:37:01.912Z",
+          "before": 43,
+          "attempted": 40,
+          "after": 40,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:05:56.223Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:43.628Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 34,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040706410295183": {
+      "name": "โกปี๊ โบราณ (เย็น/ปั่น)",
+      "itemId": "THITE2024040706410295183",
+      "targetPrice": 34,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:37:03.109Z",
+          "before": 43,
+          "attempted": 40,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:01:45.622Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:56.136Z",
+          "before": 43,
+          "attempted": 34,
+          "after": 34,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 34,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025041914163553207": {
+      "name": "บุกน้ำผึ้ง",
+      "itemId": "THITE2025041914163553207",
+      "targetPrice": 14,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:37:09.771Z",
+          "before": 18,
+          "attempted": 15,
+          "after": 18,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:17:45.402Z",
+          "before": 18,
+          "attempted": 14,
+          "after": 18,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:51.557Z",
+          "before": 18,
+          "attempted": 14,
+          "after": 14,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:53.976Z",
+          "before": 18,
+          "attempted": 14,
+          "after": 14,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 14,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025030517414777580": {
+      "name": "กาแฟสด เอสเปรสโซ่ไทยสไตล์ เย็น 16 ออนซ์",
+      "itemId": "THITE2025030517414777580",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:37:21.729Z",
+          "before": 52,
+          "attempted": 50,
+          "after": 52,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:57:20.570Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:59.596Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 41,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040717405049396": {
+      "name": "แดงมะนาวโซดา",
+      "itemId": "THITE2024040717405049396",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:37:23.033Z",
+          "before": 52,
+          "attempted": 50,
+          "after": 52,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:12:19.471Z",
+          "status": "error",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:47.351Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:56.032Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 41,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025062904070710229": {
+      "name": "สตรอเบอร์รี่ปั่น แก้วใหญ่ 22 ออนซ์",
+      "itemId": "THITE2025062904070710229",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:37:30.527Z",
+          "before": 52,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:00:54.240Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:50.440Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 41,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025030701390513267": {
+      "name": "ช็อกโกแลตมิลค์ เย็น 16 ออนซ์",
+      "itemId": "THITE2025030701390513267",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:37:39.076Z",
+          "before": 52,
+          "attempted": 50,
+          "after": 52,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:04:12.094Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:43.363Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 41,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040710371374638": {
+      "name": "ชานมไข่มุกบราวน์ชูการ์ (เย็น/ปั่น)",
+      "itemId": "THITE2024040710371374638",
+      "targetPrice": 49,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:37:40.201Z",
+          "before": 67,
+          "attempted": 65,
+          "after": 67,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:06:38.489Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:55.533Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 16,
+          "at": "2026-09-03T08:14:38.759Z",
+          "status": "error",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 56,
+      "reachedTarget": false,
+      "source": "hub"
+    },
+    "THITE2025030517370006186": {
+      "name": "กาแฟสด คาราเมลมัคคิอาโต้ เย็น 16 ออนซ์",
+      "itemId": "THITE2025030517370006186",
+      "targetPrice": 56,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:37:50.578Z",
+          "before": 67,
+          "attempted": 65,
+          "after": 67,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:51:10.615Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:46.102Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 56,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2026022110521721472": {
+      "name": "โกโก้ลาวาช็อกขูด (เย็น/ปั่น)",
+      "itemId": "THITE2026022110521721472",
+      "targetPrice": 54,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:38:03.914Z",
+          "status": "error",
+          "popupText": ""
+        },
+        {
+          "round": 5,
+          "at": "2026-09-01T07:02:54.633Z",
+          "before": 73,
+          "attempted": 75,
+          "after": 75,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 6,
+          "at": "2026-09-01T12:53:15.841Z",
+          "before": 73,
+          "attempted": 63,
+          "after": 63,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:55.919Z",
+          "before": 73,
+          "attempted": 63,
+          "after": 63,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 16,
+          "at": "2026-09-03T08:09:19.508Z",
+          "before": 63,
+          "attempted": 54,
+          "after": 63,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        }
+      ],
+      "reachedTarget": false,
+      "currentLive": 63,
+      "source": "hub"
+    },
+    "THITE2024040717514916315": {
+      "name": "เขียวมะนาวโซดา",
+      "itemId": "THITE2024040717514916315",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:38:01.345Z",
+          "before": 52,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:00:56.188Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:54.644Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 41,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040706423059338": {
+      "name": "ลาเต้ (เย็น/ปั่น)",
+      "itemId": "THITE2024040706423059338",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:38:14.303Z",
+          "status": "error",
+          "popupText": ""
+        },
+        {
+          "round": 5,
+          "at": "2026-09-01T07:03:14.333Z",
+          "before": 52,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:00:57.391Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:54.918Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "reachedTarget": true,
+      "currentLive": 41,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025030701462873604": {
+      "name": "กาแฟสด กาแฟโบราณ เย็น 16 ออนซ์",
+      "itemId": "THITE2025030701462873604",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:38:19.641Z",
+          "before": 52,
+          "attempted": 50,
+          "after": 52,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:50:50.833Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:59.497Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 41,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025041911581296670": {
+      "name": "มัทฉะครีมชีส (Matcha Cheese Tea)",
+      "itemId": "THITE2025041911581296670",
+      "targetPrice": 70,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:38:24.335Z",
+          "before": 82,
+          "attempted": 80,
+          "after": 80,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:00:32.170Z",
+          "before": 82,
+          "attempted": 70,
+          "after": 70,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:51.670Z",
+          "before": 82,
+          "attempted": 70,
+          "after": 70,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 70,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2026021907084210490": {
+      "name": "มันไทยอบ ดั้งเดิม",
+      "itemId": "THITE2026021907084210490",
+      "targetPrice": 19,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:38:39.214Z",
+          "status": "error",
+          "popupText": ""
+        },
+        {
+          "round": 5,
+          "at": "2026-09-01T07:03:31.401Z",
+          "before": 23,
+          "attempted": 25,
+          "after": 23,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:19:55.066Z",
+          "before": 23,
+          "attempted": 19,
+          "after": 19,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:57.532Z",
+          "before": 23,
+          "attempted": 19,
+          "after": 19,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "reachedTarget": true,
+      "currentLive": 19,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025080402183651028": {
+      "name": "มัทฉะเลม่อนเย็น (Matcha Lemon)",
+      "itemId": "THITE2025080402183651028",
+      "targetPrice": 50,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:38:37.119Z",
+          "before": 58,
+          "attempted": 60,
+          "after": 58,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:19:35.233Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:44.148Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 50,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025041912131389395": {
+      "name": "มัทฉะบราวน์ชูการ์ไข่มุก (Matcha Brown Sugar Boba)",
+      "itemId": "THITE2025041912131389395",
+      "targetPrice": 64,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:38:44.988Z",
+          "before": 73,
+          "attempted": 75,
+          "after": 75,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T12:59:25.423Z",
+          "before": 73,
+          "attempted": 64,
+          "after": 64,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:56.586Z",
+          "before": 73,
+          "attempted": 64,
+          "after": 64,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 64,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040710375695244": {
+      "name": "ชานมเผือก (เย็น/ปั่น)",
+      "itemId": "THITE2024040710375695244",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:39:01.441Z",
+          "status": "error",
+          "popupText": ""
+        },
+        {
+          "round": 5,
+          "at": "2026-09-01T07:03:51.109Z",
+          "before": 52,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:01:15.376Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:55.734Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "reachedTarget": true,
+      "currentLive": 41,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025070209011084247": {
+      "name": "(สมูทตี้) มิกซ์เบอร์รี่ แก้วใหญ่ 22 ออนซ์",
+      "itemId": "THITE2025070209011084247",
+      "targetPrice": 77,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:38:56.222Z",
+          "before": 87,
+          "attempted": 85,
+          "after": 87,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:23:04.153Z",
+          "before": 87,
+          "attempted": 77,
+          "after": 77,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:50.213Z",
+          "before": 87,
+          "attempted": 77,
+          "after": 77,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 77,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025071208272094748": {
+      "name": "ชานมมันม่วง",
+      "itemId": "THITE2025071208272094748",
+      "targetPrice": 56,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:39:03.591Z",
+          "before": 67,
+          "attempted": 65,
+          "after": 67,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:07:38.059Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:46.458Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 56,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025082707425593276": {
+      "name": "ปังมันม่วง อบสด โฮมเมด",
+      "itemId": "THITE2025082707425593276",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:39:13.935Z",
+          "before": 37,
+          "attempted": 35,
+          "after": 37,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:18:32.815Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:47.464Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025071208195239463": {
+      "name": "ชาไทยมันม่วง",
+      "itemId": "THITE2025071208195239463",
+      "targetPrice": 56,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:39:32.341Z",
+          "before": 67,
+          "attempted": 65,
+          "after": 65,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:01:15.910Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:59.109Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 56,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025030914322512524": {
+      "name": "กาแฟสด โอเลี้ยงเฮเซลนัท เย็น 16 ออนซ์",
+      "itemId": "THITE2025030914322512524",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:39:26.410Z",
+          "status": "error",
+          "popupText": ""
+        },
+        {
+          "round": 5,
+          "at": "2026-09-01T07:04:07.764Z",
+          "before": 52,
+          "attempted": 50,
+          "after": 52,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:58:00.099Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:44.554Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "reachedTarget": true,
+      "currentLive": 41,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025030701423684359": {
+      "name": "กาแฟสด โอเลี้ยง เย็น 16 ออนซ์",
+      "itemId": "THITE2025030701423684359",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:39:36.712Z",
+          "status": "error",
+          "popupText": ""
+        },
+        {
+          "round": 5,
+          "at": "2026-09-01T07:04:24.975Z",
+          "before": 52,
+          "attempted": 50,
+          "after": 52,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:57:40.120Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:52.459Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "reachedTarget": true,
+      "currentLive": 41,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2026020307474365114": {
+      "name": "ชาจัสมินฝูเจี้ยน (เย็น/ปั่น) 16 oz",
+      "itemId": "THITE2026020307474365114",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:39:43.417Z",
+          "before": 52,
+          "attempted": 50,
+          "after": 52,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:05:12.406Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:47.119Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 41,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2026061907370104061": {
+      "name": "วาฟเฟิลเบลเยียม โฮมเมด",
+      "itemId": "THITE2026061907370104061",
+      "targetPrice": 19,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:39:52.199Z",
+          "before": 23,
+          "attempted": 25,
+          "after": 25,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:05:01.780Z",
+          "before": 23,
+          "attempted": 19,
+          "after": 23,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:20:37.404Z",
+          "before": 23,
+          "attempted": 19,
+          "after": 19,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:59.210Z",
+          "before": 23,
+          "attempted": 19,
+          "after": 19,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 19,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025030914433436301": {
+      "name": "กาแฟสด โอวัลตินช็อตกาแฟ เย็น 16 ออนซ์",
+      "itemId": "THITE2025030914433436301",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:39:54.227Z",
+          "before": 52,
+          "attempted": 50,
+          "after": 52,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:58:19.834Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:58.674Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 41,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025071208321337950": {
+      "name": "นมสดมันม่วง",
+      "itemId": "THITE2025071208321337950",
+      "targetPrice": 56,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:40:04.613Z",
+          "before": 67,
+          "attempted": 65,
+          "after": 65,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:01:21.054Z",
+          "status": "error",
+          "popupText": ""
+        },
+        {
+          "round": 8,
+          "at": "2026-09-01T13:09:31.585Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:45.210Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 56,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040707214483215": {
+      "name": "นมมรกต (เย็น/ปั่น)",
+      "itemId": "THITE2024040707214483215",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:40:24.618Z",
+          "before": 52,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:01:18.019Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:59.395Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 41,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040707263973803": {
+      "name": "นมสดไข่มุกบราวน์ชูการ์ (เย็น/ปั่น)",
+      "itemId": "THITE2024040707263973803",
+      "targetPrice": 63,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:40:14.323Z",
+          "before": 73,
+          "attempted": 75,
+          "after": 75,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 6,
+          "at": "2026-09-01T12:53:35.452Z",
+          "before": 73,
+          "attempted": 63,
+          "after": 63,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:55.818Z",
+          "before": 73,
+          "attempted": 63,
+          "after": 63,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 63,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025062904281409246": {
+      "name": "(สมูทตี้) สตรอเบอร์รี่ แก้วใหญ่ 22 ออนซ์",
+      "itemId": "THITE2025062904281409246",
+      "targetPrice": 56,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:40:28.135Z",
+          "status": "error",
+          "popupText": ""
+        },
+        {
+          "round": 5,
+          "at": "2026-09-01T07:04:41.529Z",
+          "before": 67,
+          "attempted": 65,
+          "after": 67,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:23:25.345Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:59.973Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "reachedTarget": true,
+      "currentLive": 56,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2026030810483894399": {
+      "name": "เค้กกล้วยหอม โฮมเมด",
+      "itemId": "THITE2026030810483894399",
+      "targetPrice": 15,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:40:46.736Z",
+          "before": 23,
+          "attempted": 25,
+          "after": 25,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:05:11.656Z",
+          "before": 23,
+          "attempted": 19,
+          "after": 19,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:57.736Z",
+          "before": 23,
+          "attempted": 19,
+          "after": 19,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 16,
+          "at": "2026-09-03T08:11:47.951Z",
+          "before": 19,
+          "attempted": 15,
+          "after": 19,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 18,
+          "at": "2026-09-03T08:24:58.781Z",
+          "status": "error",
+          "popupText": ""
+        },
+        {
+          "round": 19,
+          "at": "2026-09-03T08:29:46.572Z",
+          "before": 19,
+          "attempted": 15,
+          "after": 15,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 20,
+          "at": "2026-09-03T08:30:18.682Z",
+          "before": 15,
+          "after": 15,
+          "changed": false,
+          "status": "skip_at_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 15,
+      "reachedTarget": true,
+      "source": "hub"
+    },
+    "THITE2025070208584110777": {
+      "name": "มิกซ์เบอร์รี่ปั่น แก้วใหญ่ 22 ออนซ์",
+      "itemId": "THITE2025070208584110777",
+      "targetPrice": 63,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:40:46.131Z",
+          "before": 73,
+          "attempted": 75,
+          "after": 75,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 6,
+          "at": "2026-09-01T12:53:54.905Z",
+          "before": 73,
+          "attempted": 63,
+          "after": 63,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:53.876Z",
+          "before": 73,
+          "attempted": 63,
+          "after": 63,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 63,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040706413750755": {
+      "name": "มอคค่า (เย็น/ปั่น)",
+      "itemId": "THITE2024040706413750755",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:40:51.310Z",
+          "status": "error",
+          "popupText": ""
+        },
+        {
+          "round": 5,
+          "at": "2026-09-01T07:05:01.459Z",
+          "before": 52,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:01:36.676Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:45.303Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "reachedTarget": true,
+      "currentLive": 41,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025030916034890533": {
+      "name": "กาแฟสด น้ำผึ้งมะนาว เย็น 16 ออนซ์",
+      "itemId": "THITE2025030916034890533",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:41:03.333Z",
+          "before": 52,
+          "attempted": 50,
+          "after": 52,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:54:02.967Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 52,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:49.623Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:51.095Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 41,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025051306313953891": {
+      "name": "มัทฉะมะพร้าวนม",
+      "itemId": "THITE2025051306313953891",
+      "targetPrice": 64,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:41:07.761Z",
+          "before": 73,
+          "attempted": 75,
+          "after": 75,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T12:59:50.538Z",
+          "before": 73,
+          "attempted": 64,
+          "after": 64,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:42.827Z",
+          "before": 73,
+          "attempted": 64,
+          "after": 64,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 64,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040710343875816": {
+      "name": "ชานมชีส (เย็น/ปั่น)",
+      "itemId": "THITE2024040710343875816",
+      "targetPrice": 49,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:41:12.147Z",
+          "before": 67,
+          "attempted": 65,
+          "after": 65,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:01:37.137Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:57.052Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 16,
+          "at": "2026-09-03T08:15:54.337Z",
+          "before": 56,
+          "attempted": 49,
+          "after": 56,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 56,
+      "reachedTarget": false,
+      "source": "hub"
+    },
+    "THITE2024042114222935612": {
+      "name": "ชาไทยชีส (เย็น/ปั่น)",
+      "itemId": "THITE2024042114222935612",
+      "targetPrice": 54,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:41:24.130Z",
+          "before": 73,
+          "attempted": 75,
+          "after": 75,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 6,
+          "at": "2026-09-01T12:54:14.835Z",
+          "before": 73,
+          "attempted": 63,
+          "after": 63,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:45.479Z",
+          "before": 73,
+          "attempted": 63,
+          "after": 63,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 16,
+          "at": "2026-09-03T08:14:06.323Z",
+          "before": 63,
+          "attempted": 54,
+          "after": 63,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 63,
+      "reachedTarget": false,
+      "source": "hub"
+    },
+    "THITE2025041914214231373": {
+      "name": "ครีมซีส",
+      "itemId": "THITE2025041914214231373",
+      "targetPrice": 25,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:41:31.529Z",
+          "status": "error",
+          "popupText": ""
+        },
+        {
+          "round": 5,
+          "at": "2026-09-01T07:05:17.810Z",
+          "before": 37,
+          "attempted": 35,
+          "after": 37,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:02:58.546Z",
+          "before": 37,
+          "attempted": 29,
+          "after": 37,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:49.763Z",
+          "before": 37,
+          "attempted": 29,
+          "after": 29,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:50.724Z",
+          "before": 37,
+          "attempted": 29,
+          "after": 29,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 16,
+          "at": "2026-09-03T08:11:11.055Z",
+          "before": 29,
+          "attempted": 25,
+          "after": 29,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        }
+      ],
+      "reachedTarget": false,
+      "currentLive": 29,
+      "source": "hub"
+    },
+    "THITE2025041907163643607": {
+      "name": "มัทฉะลาเต้ (Matcha Latte)",
+      "itemId": "THITE2025041907163643607",
+      "targetPrice": 56,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:41:28.872Z",
+          "before": 67,
+          "attempted": 65,
+          "after": 67,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:19:14.799Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:59.682Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 56,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024041801473341445": {
+      "name": "ชาผลไม้รวม",
+      "itemId": "THITE2024041801473341445",
+      "targetPrice": 56,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:41:56.078Z",
+          "before": 67,
+          "attempted": 65,
+          "after": 65,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:01:39.674Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:55.234Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 56,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025070506164520452": {
+      "name": "(สมูทตี้) มะม่วง แก้วใหญ่ 22 ออนซ์",
+      "itemId": "THITE2025070506164520452",
+      "targetPrice": 77,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:41:47.992Z",
+          "before": 87,
+          "attempted": 85,
+          "after": 87,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:22:23.050Z",
+          "before": 87,
+          "attempted": 77,
+          "after": 77,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:44.244Z",
+          "before": 87,
+          "attempted": 77,
+          "after": 77,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 77,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024041805543052610": {
+      "name": "กาแฟโบราณ บราวน์ชูการ์ (เย็น/ปั่น)",
+      "itemId": "THITE2024041805543052610",
+      "targetPrice": 49,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:42:03.530Z",
+          "before": 67,
+          "attempted": 65,
+          "after": 65,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:01:56.695Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:47.218Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 16,
+          "at": "2026-09-03T08:07:28.894Z",
+          "before": 56,
+          "attempted": 49,
+          "after": 56,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 56,
+      "reachedTarget": false,
+      "source": "hub"
+    },
+    "THITE2024041801493175997": {
+      "name": "ชามิกซ์เบอร์รี่",
+      "itemId": "THITE2024041801493175997",
+      "targetPrice": 56,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:42:07.056Z",
+          "before": 67,
+          "attempted": 65,
+          "after": 67,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:08:50.313Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:55.447Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 56,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025030914361370675": {
+      "name": "กาแฟสด ช็อกโกแลตเอสเปรสโซ่ เย็น 16 ออนซ์",
+      "itemId": "THITE2025030914361370675",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:42:16.030Z",
+          "before": 52,
+          "attempted": 50,
+          "after": 52,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:51:30.403Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:52.372Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 41,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040710400760215": {
+      "name": "ชานมเฮเซลนัท (เย็น/ปั่น)",
+      "itemId": "THITE2024040710400760215",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:42:36.060Z",
+          "before": 52,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:01:58.853Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:44.969Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 41,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025070301214813758": {
+      "name": "(สมูทตี้) ส้ม แก้วใหญ่ 22 ออนซ์",
+      "itemId": "THITE2025070301214813758",
+      "targetPrice": 70,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:42:24.944Z",
+          "before": 82,
+          "attempted": 80,
+          "after": 82,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:23:46.269Z",
+          "before": 82,
+          "attempted": 70,
+          "after": 70,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:52.748Z",
+          "before": 82,
+          "attempted": 70,
+          "after": 70,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 70,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024041801482224017": {
+      "name": "ชาพีช",
+      "itemId": "THITE2024041801482224017",
+      "targetPrice": 56,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:42:39.344Z",
+          "status": "error",
+          "popupText": ""
+        },
+        {
+          "round": 5,
+          "at": "2026-09-01T07:05:37.478Z",
+          "before": 67,
+          "attempted": 65,
+          "after": 65,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:01:59.724Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:50.520Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "reachedTarget": true,
+      "currentLive": 56,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024041801540777155": {
+      "name": "ชาส้มยูสุ",
+      "itemId": "THITE2024041801540777155",
+      "targetPrice": 56,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:42:46.514Z",
+          "before": 67,
+          "attempted": 65,
+          "after": 65,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:02:00.594Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:50.813Z",
+          "before": 67,
+          "attempted": 56,
+          "after": 56,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 56,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040717412705402": {
+      "name": "น้ำผึ้งมะนาวโซดา",
+      "itemId": "THITE2024040717412705402",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:42:55.080Z",
+          "before": 52,
+          "attempted": 50,
+          "after": 52,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:15:49.912Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 52,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:51.063Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:45.903Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 41,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025041912314756634": {
+      "name": "เพียวมัทฉะ (Pure Matcha)",
+      "itemId": "THITE2025041912314756634",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:43:00.077Z",
+          "before": 52,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:02:18.840Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:54.076Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 41,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025051306225277163": {
+      "name": "มัทฉะมะพร้าว",
+      "itemId": "THITE2025051306225277163",
+      "targetPrice": 64,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:43:06.972Z",
+          "before": 73,
+          "attempted": 75,
+          "after": 75,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:00:09.790Z",
+          "before": 73,
+          "attempted": 64,
+          "after": 64,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:51.983Z",
+          "before": 73,
+          "attempted": 64,
+          "after": 64,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 64,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040710383302455": {
+      "name": "ชานมคาราเมล (เย็น/ปั่น)",
+      "itemId": "THITE2024040710383302455",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:43:12.831Z",
+          "before": 52,
+          "attempted": 50,
+          "after": 52,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:07:18.210Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:43.100Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 41,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2024040710392207291": {
+      "name": "ชานมมิ้นต์ (เย็น/ปั่น)",
+      "itemId": "THITE2024040710392207291",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:43:19.817Z",
+          "before": 52,
+          "attempted": 50,
+          "after": 52,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:07:58.142Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:43.733Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 41,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025092808511424302": {
+      "name": "บราวนี่โฮมเมด",
+      "itemId": "THITE2025092808511424302",
+      "targetPrice": 15,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:43:27.229Z",
+          "before": 23,
+          "attempted": 25,
+          "after": 23,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:16:30.364Z",
+          "before": 23,
+          "attempted": 19,
+          "after": 19,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:52.541Z",
+          "before": 23,
+          "attempted": 19,
+          "after": 19,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 16,
+          "at": "2026-09-03T08:18:22.187Z",
+          "before": 19,
+          "attempted": 15,
+          "after": 19,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 20,
+          "at": "2026-09-03T08:31:18.380Z",
+          "before": 19,
+          "attempted": 15,
+          "after": 15,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 15,
+      "reachedTarget": true,
+      "source": "hub"
+    },
+    "THITE2024040707194946026": {
+      "name": "นมชมพู (เย็น/ปั่น)",
+      "itemId": "THITE2024040707194946026",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:43:33.256Z",
+          "before": 52,
+          "attempted": 50,
+          "after": 52,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:12:45.956Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 52,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:51.454Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:47.014Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 41,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025111605543759976": {
+      "name": "ซอฟต์คุกกี้ โฮมเมด (เลือกได้)",
+      "itemId": "THITE2025111605543759976",
+      "targetPrice": 17,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:43:39.387Z",
+          "before": 26,
+          "attempted": 25,
+          "after": 26,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:11:30.599Z",
+          "before": 26,
+          "attempted": 21,
+          "after": 21,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:56.909Z",
+          "before": 26,
+          "attempted": 21,
+          "after": 21,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 16,
+          "at": "2026-09-03T08:17:08.686Z",
+          "before": 21,
+          "attempted": 17,
+          "after": 21,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 20,
+          "at": "2026-09-03T08:30:58.410Z",
+          "before": 21,
+          "attempted": 17,
+          "after": 17,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 17,
+      "reachedTarget": true,
+      "source": "hub"
+    },
+    "THITE2025041914201885296": {
+      "name": "ซอสบราวน์ชูการ์",
+      "itemId": "THITE2025041914201885296",
+      "targetPrice": 19,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:43:47.491Z",
+          "before": 26,
+          "attempted": 25,
+          "after": 26,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:11:57.272Z",
+          "before": 26,
+          "attempted": 21,
+          "after": 26,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:48.686Z",
+          "before": 26,
+          "attempted": 21,
+          "after": 21,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:53.279Z",
+          "before": 26,
+          "attempted": 21,
+          "after": 21,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 16,
+          "at": "2026-09-03T08:17:45.307Z",
+          "before": 21,
+          "attempted": 19,
+          "after": 21,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        }
+      ],
+      "currentLive": 21,
+      "reachedTarget": false,
+      "source": "hub"
+    },
+    "THITE2025061205575822050": {
+      "name": "วุ้นว่านหางจระเข้ หั่นลูกเต๋า",
+      "itemId": "THITE2025061205575822050",
+      "targetPrice": 21,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:43:57.747Z",
+          "status": "error",
+          "popupText": ""
+        },
+        {
+          "round": 5,
+          "at": "2026-09-01T07:05:53.700Z",
+          "before": 26,
+          "attempted": 25,
+          "after": 26,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:21:32.549Z",
+          "before": 26,
+          "attempted": 21,
+          "after": 26,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:50.112Z",
+          "before": 26,
+          "attempted": 21,
+          "after": 21,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:48.363Z",
+          "before": 26,
+          "attempted": 21,
+          "after": 21,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "reachedTarget": true,
+      "currentLive": 21,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025061205483737785": {
+      "name": "วุ้นกบไต้หวัน",
+      "itemId": "THITE2025061205483737785",
+      "targetPrice": 9,
+      "rounds": [
+        {
+          "round": 3,
+          "at": "2026-09-01T06:44:02.004Z",
+          "status": "error",
+          "popupText": ""
+        },
+        {
+          "round": 5,
+          "at": "2026-09-01T07:06:12.901Z",
+          "before": 11,
+          "attempted": 10,
+          "after": 10,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 7,
+          "at": "2026-09-01T13:08:06.440Z",
+          "status": "error",
+          "popupText": ""
+        },
+        {
+          "round": 8,
+          "at": "2026-09-01T13:10:38.958Z",
+          "before": 27,
+          "attempted": 9,
+          "after": 11,
+          "changed": true,
+          "status": "partial",
+          "popupText": ""
+        },
+        {
+          "round": 9,
+          "at": "2026-09-01T13:11:36.409Z",
+          "before": 11,
+          "attempted": 9,
+          "after": 11,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:21:04.599Z",
+          "before": 11,
+          "attempted": 9,
+          "after": 11,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:50.603Z",
+          "before": 11,
+          "attempted": 9,
+          "after": 9,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:51.222Z",
+          "before": 11,
+          "attempted": 9,
+          "after": 9,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "reachedTarget": true,
+      "currentLive": 9,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025030914395083402": {
+      "name": "กาแฟสด ไมโลกาแฟ เย็น 16 ออนซ์",
+      "itemId": "THITE2025030914395083402",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 6,
+          "at": "2026-09-01T12:54:34.528Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:45.795Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 41,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025030204120972961": {
+      "name": "กาแฟสด Cappuccino (คาปูชิโน่) ร้อน 12 ออนซ์",
+      "itemId": "THITE2025030204120972961",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T12:59:25.961Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 52,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:58:46.186Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 52,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:47.965Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:44.848Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 41,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025030203565749761": {
+      "name": "กาแฟสด ลาเต้ (Latte) ร้อน 12 ออนซ์",
+      "itemId": "THITE2025030203565749761",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T12:59:27.414Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 52,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:56:12.248Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 52,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:48.393Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:45.707Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 41,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025030915204210292": {
+      "name": "กาแฟสด มอคค่า ร้อน 12 ออนซ์",
+      "itemId": "THITE2025030915204210292",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T12:59:28.350Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:48.670Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 41,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025022802341811174": {
+      "name": "กาแฟสด อเมริกาโน่ เย็น 16 ออนซ์",
+      "itemId": "THITE2025022802341811174",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T12:59:48.355Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:54.558Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 41,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025031216260943721": {
+      "name": "กาแฟสด เผือกลาเต้ร้อน",
+      "itemId": "THITE2025031216260943721",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T12:59:48.923Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:55.634Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 41,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025030203520684151": {
+      "name": "กาแฟสด Espresso (เอสเปรสโซ่) ร้อน 12 ออนซ์",
+      "itemId": "THITE2025030203520684151",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T12:59:49.843Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 52,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:59:32.719Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 52,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:49.366Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:43.815Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 41,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025030916073825415": {
+      "name": "กาแฟสด บุกบราวน์ชูการ์ เย็น 16 ออนซ์",
+      "itemId": "THITE2025030916073825415",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T13:00:09.340Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 52,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:55:24.483Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 52,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:51.231Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:47.868Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 41,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025030204271845735": {
+      "name": "กาแฟสด Flat White (แฟลตไวท์) ร้อน 12 ออนซ์",
+      "itemId": "THITE2025030204271845735",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T13:00:10.195Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 52,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:59:59.373Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 52,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:51.350Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:44.636Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 41,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025030203155620292": {
+      "name": "กาแฟสด ลองแบล็ค เย็น 16 ออนซ์",
+      "itemId": "THITE2025030203155620292",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T13:00:12.544Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:53.789Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 41,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025031216222687111": {
+      "name": "กาแฟสด โกโก้มอคค่าร้อน",
+      "itemId": "THITE2025031216222687111",
+      "targetPrice": 41,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T13:00:31.578Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:58.577Z",
+          "before": 52,
+          "attempted": 41,
+          "after": 41,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 41,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025032907504195386": {
+      "name": "0% โคล่าโซดา",
+      "itemId": "THITE2025032907504195386",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T13:00:32.809Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:47.341Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025031216164357806": {
+      "name": "นมร้อน 12 ออนซ์",
+      "itemId": "THITE2025031216164357806",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T13:00:34.898Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:57.646Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025032907481742300": {
+      "name": "0% โคล่าโซดามะนาว",
+      "itemId": "THITE2025032907481742300",
+      "targetPrice": 27,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T13:00:53.456Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:46.583Z",
+          "before": 37,
+          "attempted": 27,
+          "after": 27,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 27,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025031216212849882": {
+      "name": "กาแฟสด โอวัลตินเอสเปรสโซ่ร้อน",
+      "itemId": "THITE2025031216212849882",
+      "targetPrice": 50,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T13:02:19.646Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:45.388Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 50,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025030203221737606": {
+      "name": "กาแฟสด แฟลตไวท์ เย็น 16 ออนซ์",
+      "itemId": "THITE2025030203221737606",
+      "targetPrice": 50,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T13:02:21.879Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:52.626Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 50,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025022802352904031": {
+      "name": "กาแฟสด ลาเต้ เย็น 16 ออนซ์",
+      "itemId": "THITE2025022802352904031",
+      "targetPrice": 50,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T13:02:22.873Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:49.203Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 50,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025022802373259359": {
+      "name": "กาแฟสด คาปูชิโน่ เย็น 16 ออนซ์",
+      "itemId": "THITE2025022802373259359",
+      "targetPrice": 50,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T13:02:41.475Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:55.122Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 50,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025031216202713290": {
+      "name": "กาแฟสด เฮเซลนัทมอคค่าร้อน 12 ออนซ์",
+      "itemId": "THITE2025031216202713290",
+      "targetPrice": 50,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T13:02:42.931Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:46.910Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 50,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025031216373120216": {
+      "name": "กาแฟสด มอคค่ามิ้นต์ร้อน",
+      "itemId": "THITE2025031216373120216",
+      "targetPrice": 50,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T13:02:43.612Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:44.033Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 50,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025022802363923759": {
+      "name": "กาแฟสด เอสเปรสโซ่ เย็น 16 ออนซ์",
+      "itemId": "THITE2025022802363923759",
+      "targetPrice": 50,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T13:02:45.519Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:54.270Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 50,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025030213003197830": {
+      "name": "กาแฟสด Caramel Macchiato (คาราเมลมัคคิอาโต้) ร้อน 12 ออนซ์",
+      "itemId": "THITE2025030213003197830",
+      "targetPrice": 50,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T13:03:03.125Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 58,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:59:05.835Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:49.075Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 50,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025031216192272991": {
+      "name": "กาแฟสด คาราเมลลาเต้ร้อน 12 ออนซ์",
+      "itemId": "THITE2025031216192272991",
+      "targetPrice": 50,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T13:03:03.825Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:43.492Z",
+          "before": 58,
+          "attempted": 50,
+          "after": 50,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 50,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025030814395904894": {
+      "name": "กาแฟสด บลูฮาวายเอสเปรสโซ่ เย็น 16 ออนซ์",
+      "itemId": "THITE2025030814395904894",
+      "targetPrice": 36,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T13:03:04.927Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:54:30.251Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:47.112Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:49.943Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 36,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025031014594009959": {
+      "name": "กาแฟสดโซดา เอสเปรสโซ่ลิ้นจี่ เย็น 16 ออนซ์",
+      "itemId": "THITE2025031014594009959",
+      "targetPrice": 36,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T13:03:06.910Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:53:07.396Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 13,
+          "at": "2026-09-01T15:07:36.232Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:47.531Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:59.795Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 36,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025031015014747584": {
+      "name": "กาแฟสดโซดา เอสเปรสโซ่มะม่วง เย็น 16 ออนซ์",
+      "itemId": "THITE2025031015014747584",
+      "targetPrice": 36,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T13:03:23.324Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:52:40.279Z",
+          "status": "error",
+          "popupText": ""
+        },
+        {
+          "round": 11,
+          "at": "2026-09-01T14:57:52.997Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 12,
+          "at": "2026-09-01T15:02:23.047Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 13,
+          "at": "2026-09-01T15:06:58.492Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:48.139Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:54.368Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 36,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025030814484113955": {
+      "name": "กาแฟสด บ๊วยเอสเปรสโซ่ เย็น 16 ออนซ์",
+      "itemId": "THITE2025030814484113955",
+      "targetPrice": 36,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T13:03:24.678Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:54:57.182Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:48.513Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:52.101Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 36,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025031014540871357": {
+      "name": "กาแฟสดโซดา เอสเปรสโซ่บลูฮาวาย เย็น 16 ออนซ์",
+      "itemId": "THITE2025031014540871357",
+      "targetPrice": 36,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T13:03:26.701Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:51:52.301Z",
+          "status": "error",
+          "popupText": ""
+        },
+        {
+          "round": 11,
+          "at": "2026-09-01T14:56:39.944Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 12,
+          "at": "2026-09-01T15:01:03.831Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 13,
+          "at": "2026-09-01T15:05:44.496Z",
+          "before": 36,
+          "after": 36,
+          "changed": false,
+          "status": "skip_at_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:45.092Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 36,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025031015005084849": {
+      "name": "กาแฟสดโซดา เอสเปรสโซ่บ๊วย เย็น 16 ออนซ์",
+      "itemId": "THITE2025031015005084849",
+      "targetPrice": 36,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T13:03:28.193Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:52:18.684Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 11,
+          "at": "2026-09-01T14:57:16.878Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 12,
+          "at": "2026-09-01T15:01:42.062Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 13,
+          "at": "2026-09-01T15:06:21.830Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:49.115Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:51.433Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 36,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025030203453808475": {
+      "name": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
+      "itemId": "THITE2025030203453808475",
+      "targetPrice": 36,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T13:03:45.255Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:57:00.887Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:50.252Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:50.643Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 36,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025031216180413409": {
+      "name": "ช็อกโกแลตมิลค์ร้อน 12 ออนซ์",
+      "itemId": "THITE2025031216180413409",
+      "targetPrice": 36,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T13:03:47.729Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:52.200Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 36,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025030204230004357": {
+      "name": "กาแฟสด Long Black (ลองแบล็ค) ร้อน 12 ออนซ์",
+      "itemId": "THITE2025030204230004357",
+      "targetPrice": 36,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T13:03:49.640Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T14:00:25.670Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:50.829Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:57.255Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "currentLive": 36,
+      "reachedTarget": true,
+      "source": "hub-bulk-zip"
+    },
+    "THITE2025030814535696845": {
+      "name": "กาแฟสด เสาวรสเอสเปรสโซ่ เย็น 16 ออนซ์",
+      "itemId": "THITE2025030814535696845",
+      "targetPrice": 36,
+      "rounds": [
+        {
+          "round": 7,
+          "at": "2026-09-01T13:03:54.539Z",
+          "status": "error",
+          "popupText": ""
+        },
+        {
+          "round": 8,
+          "at": "2026-09-01T13:09:48.675Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 43,
+          "changed": false,
+          "status": "blocked_menu_ui",
+          "popupText": ""
+        },
+        {
+          "round": 10,
+          "at": "2026-09-01T13:56:34.149Z",
+          "status": "error",
+          "popupText": ""
+        },
+        {
+          "round": 14,
+          "at": "2026-09-01T15:14:50.718Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "bulk_uploaded"
+        },
+        {
+          "round": 15,
+          "at": "2026-09-02T08:38:56.685Z",
+          "before": 43,
+          "attempted": 36,
+          "after": 36,
+          "changed": true,
+          "status": "bulk_uploaded"
+        }
+      ],
+      "reachedTarget": true,
+      "source": "hub-bulk-zip",
+      "currentLive": 36
+    }
+  },
+  "updatedAt": "2026-09-03T08:31:18.381Z"
+}

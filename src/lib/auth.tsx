@@ -13,6 +13,7 @@ import {
   GoogleAuthProvider,
   getRedirectResult,
   onAuthStateChanged,
+  signInAnonymously,
   signInWithCredential,
   signInWithPopup,
   signInWithRedirect,
@@ -24,11 +25,13 @@ import { deleteDoc, doc, getDocFromServer } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { clearAppCaches, loadCachedStaff, saveCachedStaff } from "./cache";
 import {
+  OWNER_EMAIL,
   getDb,
   getFirebaseAuth,
   getFirebaseFunctions,
   isAppOwnerEmail,
   isFirebaseConfigured,
+  isLocalDevOwnerBypassEnabled,
 } from "./firebase";
 import { confirmPhoneOtp, resetPhoneRecaptcha, sendPhoneOtp } from "./phone-auth";
 import { migrateAllBonusCloseSideDocs } from "./bonus-close-migrate";
@@ -94,6 +97,8 @@ type AuthContextValue = {
   actorId: string;
   error: string | null;
   signIn: () => Promise<void>;
+  /** Localhost only — anonymous Auth + owner staff (NEXT_PUBLIC_DEV_OWNER_BYPASS=1) */
+  signInLocalDevOwner: () => Promise<void>;
   signInWithStaffEmailPassword: (email: string, password: string) => Promise<void>;
   sendPhoneLoginOtp: (phone: string, recaptchaContainerId: string) => Promise<void>;
   confirmPhoneLoginOtp: (code: string) => Promise<void>;
@@ -327,7 +332,10 @@ async function resolveStaff(user: User): Promise<StaffMember | null> {
   const member =
     fromServer ||
     local ||
-    (isAppOwnerEmail(email) ? ownerFallbackMember(user, email) : null);
+    (isAppOwnerEmail(email) ? ownerFallbackMember(user, email) : null) ||
+    (isLocalDevOwnerBypassEnabled()
+      ? ownerFallbackMember(user, email || OWNER_EMAIL)
+      : null);
   if (!member) return null;
   try {
     await user.getIdToken(true);
@@ -682,9 +690,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }, 6000);
 
-    void auth.authStateReady().then(() => {
+    void auth.authStateReady().then(async () => {
       if (cancelled || bridgePending) return;
       if (!auth.currentUser) {
+        if (isLocalDevOwnerBypassEnabled()) {
+          try {
+            setBusyReason("boot");
+            setStatus("loading");
+            await signInAnonymously(auth);
+            return;
+          } catch (err) {
+            if (!cancelled) {
+              setError(mapAuthError(err));
+              setBusyReason(null);
+              setStatus("signedOut");
+            }
+            return;
+          }
+        }
         setBusyReason(null);
         setStatus((prev) => (prev === "loading" ? "signedOut" : prev));
       }
@@ -845,6 +868,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const signInLocalDevOwner = useCallback(async () => {
+    if (!isLocalDevOwnerBypassEnabled()) {
+      setError("Local owner bypass ใช้ได้เฉพาะ localhost + NEXT_PUBLIC_DEV_OWNER_BYPASS=1");
+      return;
+    }
+    if (!isFirebaseConfigured()) {
+      setError("Firebase ยังไม่ได้ตั้งค่า");
+      return;
+    }
+    setError(null);
+    setBusyReason("boot");
+    setStatus("loading");
+    try {
+      await signInAnonymously(getFirebaseAuth());
+    } catch (err) {
+      setBusyReason(null);
+      setStatus("signedOut");
+      setError(mapAuthError(err));
+      throw err;
+    }
+  }, []);
+
   const sendPhoneLoginOtp = useCallback(
     async (phone: string, recaptchaContainerId: string) => {
       if (!isFirebaseConfigured()) {
@@ -944,6 +989,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       actorId,
       error,
       signIn,
+      signInLocalDevOwner,
       signInWithStaffEmailPassword,
       sendPhoneLoginOtp,
       confirmPhoneLoginOtp,
@@ -964,6 +1010,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       actorId,
       error,
       signIn,
+      signInLocalDevOwner,
       signInWithStaffEmailPassword,
       sendPhoneLoginOtp,
       confirmPhoneLoginOtp,

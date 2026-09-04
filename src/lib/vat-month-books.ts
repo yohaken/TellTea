@@ -85,9 +85,13 @@ export type MonthBooksView = {
   profitAfterVat: number | null;
   /** D — VAT */
   salesTotal: number;
+  /** ยอดขายไม่รวม VAT — ภ.พ.30 ช่องยอดขายในเดือนนี้ */
+  salesExVat: number;
   outputVat: number;
   inputGpVat: number;
   inputBooksVat: number;
+  /** ภาษีซื้อ GP รายช่องทาง (ใบกำกับ / ประมาณจากคชจ.) */
+  gpVatByChannel: Record<MonthChannel, number>;
   /** ภาษีซื้อที่คำนวณได้ (โชว์เสมอ) */
   inputVat: number;
   /** ภาษีซื้อที่นำมาหักจริง (0 ถ้าปิดติ๊ก) */
@@ -98,6 +102,114 @@ export type MonthBooksView = {
   storefront: VatSegmentState;
   gpByChannel: GpByChannel;
 };
+
+/** ภาษีขายที่สรรพากรคิด = ยอดขายรวม VAT × เรท/100 (เช่น ×7%) */
+export function outputVatFromSalesInclusive(gross: number, pct = 7): number {
+  const g = normalizeMoney(gross);
+  const p = Number.isFinite(pct) && pct > 0 ? pct : 7;
+  if (!(g > 0)) return 0;
+  return roundMoney((g * p) / 100);
+}
+
+export function purchaseBaseFromVat(vat: number, pct = 7): number {
+  const v = normalizeMoney(vat);
+  const p = Number.isFinite(pct) && pct > 0 ? pct : 7;
+  if (!(v > 0)) return 0;
+  return roundMoney((v * 100) / p);
+}
+
+export function sumPurchaseBaseFromVatAmounts(
+  vats: number[],
+  pct = 7,
+): number {
+  let s = 0;
+  for (const vat of vats) {
+    s = roundMoney(s + purchaseBaseFromVat(vat, pct));
+  }
+  return s;
+}
+
+/**
+ * ภาษีซื้อสองบช. ที่ใช้คิดข้อ 6
+ * ตรงผลรวมรายใบ → ใช้รายใบ · ถ้าแก้ยอดรวมมือ → คิดจากยอดที่กรอก
+ */
+export function bookVatsForPp30(
+  claimedVats: number[],
+  filedBooksVat: number,
+): number[] {
+  const filed = normalizeMoney(filedBooksVat);
+  const claimed = claimedVats
+    .map((v) => normalizeMoney(v))
+    .filter((v) => v > 0);
+  if (claimed.length === 0) return filed > 0 ? [filed] : [];
+  const sum = claimed.reduce((s, v) => roundMoney(s + v), 0);
+  if (Math.abs(sum - filed) > 0.009) return filed > 0 ? [filed] : [];
+  return claimed;
+}
+
+export type Pp30Filing = {
+  /** ยอดขายรวม VAT — ตรงตารางด้านบน ไม่หักแวท */
+  salesInclusive: number;
+  salesExVat: number;
+  outputVat: number;
+  purchaseBaseGp: number;
+  purchaseBaseBooks: number;
+  purchaseBase: number;
+  inputVat: number;
+  netVat: number;
+};
+
+/** ตัวเลขคัดลอก — ยอดขายรวม VAT + VAT ในยอด · ยอดซื้อจากภาษีซื้อรายใบ */
+export function buildPp30Filing(opts: {
+  salesInclusive: number;
+  salesExVat: number;
+  outputVat: number;
+  gpVats: number[];
+  bookVats: number[];
+  inputVat: number;
+  includeInputVat: boolean;
+  pct?: number;
+}): Pp30Filing {
+  const pct = opts.pct && opts.pct > 0 ? opts.pct : 7;
+  const purchaseBaseGp = sumPurchaseBaseFromVatAmounts(opts.gpVats, pct);
+  const purchaseBaseBooks = sumPurchaseBaseFromVatAmounts(opts.bookVats, pct);
+  const include = opts.includeInputVat !== false;
+  const purchaseBase = include
+    ? roundMoney(purchaseBaseGp + purchaseBaseBooks)
+    : 0;
+  const inputVat = include ? normalizeMoney(opts.inputVat) : 0;
+  const outputVat = normalizeMoney(opts.outputVat);
+  return {
+    salesInclusive: normalizeMoney(opts.salesInclusive),
+    salesExVat: normalizeMoney(opts.salesExVat),
+    outputVat,
+    purchaseBaseGp: include ? purchaseBaseGp : 0,
+    purchaseBaseBooks: include ? purchaseBaseBooks : 0,
+    purchaseBase,
+    inputVat,
+    netVat: roundMoney(outputVat - inputVat),
+  };
+}
+
+export function formatPp30CopyText(filing: Pp30Filing): string {
+  const n = (v: number) => v.toFixed(2);
+  return [
+    `ยอดขายรวม VAT\t${n(filing.salesInclusive)}`,
+    `ภาษีขาย ×7%\t${n(filing.outputVat)}`,
+    `ยอดซื้อไม่รวม VAT\t${n(filing.purchaseBase)}`,
+    `ภาษีซื้อ\t${n(filing.inputVat)}`,
+  ].join("\n");
+}
+
+function resolvedChannelGpVat(
+  fee: number,
+  override: number,
+  pct: number,
+): number {
+  const o = normalizeMoney(override);
+  if (o > 0) return o;
+  return gpVatFromFee(fee, "incVat", pct);
+}
 
 function emptyTransfer(): MonthBooksDraft["transfer"] {
   return { shopee: 0, grab: 0, lineman: 0, storefront: 0 };
@@ -217,11 +329,13 @@ export function draftToSegments(draft: MonthBooksDraft): {
   const gpMap = draftToGpByChannel(draft);
   let deliveryGpVat = 0;
   for (const k of MONTH_CHANNELS) {
-    const override = gpMap[k].gpVatOverride;
-    const fee = gpMap[k].amount;
     deliveryGpVat = roundMoney(
       deliveryGpVat +
-        (override > 0 ? override : gpVatFromFee(fee, "incVat", draft.outputPct)),
+        resolvedChannelGpVat(
+          gpMap[k].amount,
+          gpMap[k].gpVatOverride,
+          draft.outputPct,
+        ),
     );
   }
   const delivery = recomputeSegment({
@@ -297,7 +411,25 @@ export function deriveMonthBooksView(
   const salesTotal = roundMoney(
     delivery.reportedGross + storefront.reportedGross,
   );
-  const outputVat = roundMoney(delivery.outputVat + storefront.outputVat);
+  const salesExVat = roundMoney(delivery.vatBase + storefront.vatBase);
+  const pct = draft.outputPct || 7;
+  const deliveryOutputVat = outputVatFromSalesInclusive(
+    delivery.reportedGross,
+    pct,
+  );
+  const storefrontOutputVat = outputVatFromSalesInclusive(
+    storefront.reportedGross,
+    pct,
+  );
+  const outputVat = roundMoney(deliveryOutputVat + storefrontOutputVat);
+  const gpVatByChannel = emptyGp();
+  for (const k of MONTH_CHANNELS) {
+    gpVatByChannel[k] = resolvedChannelGpVat(
+      gpByChannel[k].amount,
+      gpByChannel[k].gpVatOverride,
+      draft.outputPct,
+    );
+  }
   const inputGpVat = bridge.deliveryGpVat;
   const inputBooksVat = normalizeMoney(storefront.ingredientVatClaimed);
   const inputVat = roundMoney(inputGpVat + inputBooksVat);
@@ -320,15 +452,17 @@ export function deriveMonthBooksView(
     monthProfit,
     profitAfterVat,
     salesTotal,
+    salesExVat,
     outputVat,
     inputGpVat,
     inputBooksVat,
+    gpVatByChannel,
     inputVat,
     inputVatApplied,
     netVat,
     includeInputVat,
-    delivery,
-    storefront,
+    delivery: { ...delivery, outputVat: deliveryOutputVat },
+    storefront: { ...storefront, outputVat: storefrontOutputVat },
     gpByChannel,
   };
 }

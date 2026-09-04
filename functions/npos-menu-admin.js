@@ -84,6 +84,8 @@ function mapChoice(o, idx) {
   if (typeof o.deliveryPriceDelta === "number") {
     row.deliveryPriceDelta = numPrice(o.deliveryPriceDelta);
   }
+  const hubNote = sanitizeLabel(o.hubNote, 200);
+  if (hubNote) row.hubNote = hubNote;
   return row;
 }
 

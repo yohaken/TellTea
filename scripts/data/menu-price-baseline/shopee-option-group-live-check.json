@@ -1,0 +1,1589 @@
+{
+  "at": "2026-09-01T06:37:36.250Z",
+  "ok": [
+    {
+      "group": "ช็อตมะนาว",
+      "name": "ไม่เพิ่ม",
+      "live": 0,
+      "target": 0,
+      "store": "0"
+    },
+    {
+      "group": "โปรโมชั่น ปังเนยกรอบอบไอน้ำ",
+      "name": "ไม่เพิ่ม",
+      "live": 0,
+      "target": 0,
+      "store": "0"
+    },
+    {
+      "group": "ท็อปปิ้งขนมปัง",
+      "name": "ไม่เพิ่ม (ต้นตำรับ)",
+      "live": 0,
+      "target": 0,
+      "store": "0"
+    },
+    {
+      "group": "ท็อปปิ้งขนมปัง",
+      "name": "โรยน้ำตาล",
+      "live": 0,
+      "target": 0,
+      "store": "0"
+    },
+    {
+      "group": "ขนาด ปริมาณ แก้วกาแฟ",
+      "name": "แก้วมาตรฐาน",
+      "live": 0,
+      "target": 0,
+      "store": "0"
+    },
+    {
+      "group": "ช็อตมัทฉะ",
+      "name": "ไม่เพิ่ม",
+      "live": 0,
+      "target": 0,
+      "store": "0"
+    },
+    {
+      "group": "ประเภท",
+      "name": "เย็น",
+      "live": 0,
+      "target": 0,
+      "store": "0"
+    },
+    {
+      "group": "ความหวาน",
+      "name": "ไม่หวาน 0%",
+      "live": 0,
+      "target": 0,
+      "store": "0"
+    },
+    {
+      "group": "ความหวาน",
+      "name": "หวานน้อยมาก 25%",
+      "live": 0,
+      "target": 0,
+      "store": "0"
+    },
+    {
+      "group": "ความหวาน",
+      "name": "หวานน้อย 50%",
+      "live": 0,
+      "target": 0,
+      "store": "0"
+    },
+    {
+      "group": "ความหวาน",
+      "name": "หวานปกติ 100%",
+      "live": 0,
+      "target": 0,
+      "store": "0"
+    },
+    {
+      "group": "ความหวาน",
+      "name": "หวานมาก 125%",
+      "live": 0,
+      "target": 0,
+      "store": "0"
+    },
+    {
+      "group": "ความหวาน",
+      "name": "หวานมาก 150%",
+      "live": 0,
+      "target": 0,
+      "store": "0"
+    },
+    {
+      "group": "ความหวาน",
+      "name": "หวานมาก 200%",
+      "live": 0,
+      "target": 0,
+      "store": "0"
+    },
+    {
+      "group": "ท็อปปิ้ง",
+      "name": "ไม่เพิ่ม",
+      "live": 0,
+      "target": 0,
+      "store": "0"
+    },
+    {
+      "group": "โปรโมชั่น วาฟเฟิลเบลเยียมโฮมเมด ดั้งเดิม",
+      "name": "ไม่เพิ่ม",
+      "live": 0,
+      "target": 0,
+      "store": "0"
+    },
+    {
+      "group": "โปรโมชั่น เค้กกล้วยหอม",
+      "name": "ไม่เพิ่ม",
+      "live": 0,
+      "target": 0,
+      "store": "0"
+    },
+    {
+      "group": "โปรโมชั่น มันไทยอบ ดั้งเดิม",
+      "name": "ไม่เพิ่ม",
+      "live": 0,
+      "target": 0,
+      "store": "0"
+    },
+    {
+      "group": "ซอฟต์คุกกี้ เลือกรสชาติ",
+      "name": "ซอฟต์คุกกี้ - ดั่งเดิม",
+      "live": 0,
+      "target": 0,
+      "store": "0"
+    },
+    {
+      "group": "ซอฟต์คุกกี้ เลือกรสชาติ",
+      "name": "ซอฟต์คุกกี้ - โกโก้",
+      "live": 0,
+      "target": 0,
+      "store": "0"
+    },
+    {
+      "group": "ซอฟต์คุกกี้ เลือกรสชาติ",
+      "name": "ซอฟต์คุกกี้ - มัจฉะ",
+      "live": 0,
+      "target": 0,
+      "store": "0"
+    },
+    {
+      "group": "โปรโมชั่น Soft Cookie โฮมเมด",
+      "name": "ไม่เพิ่ม",
+      "live": 0,
+      "target": 0,
+      "store": "0"
+    },
+    {
+      "group": "โปรโมชั่น บราวนี่",
+      "name": "ไม่เพิ่ม",
+      "live": 0,
+      "target": 0,
+      "store": "0"
+    },
+    {
+      "group": "ชิโอปัง เพิ่มไส้พิเศษ",
+      "name": "ไม่เพิ่ม",
+      "live": 0,
+      "target": 0,
+      "store": "0"
+    },
+    {
+      "group": "รสชาติ ไอศครีม",
+      "name": "นม",
+      "live": 0,
+      "target": 0,
+      "store": "0"
+    },
+    {
+      "group": "โปรโมชั่น ปังมันม่วง",
+      "name": "ไม่เพิ่ม",
+      "live": 0,
+      "target": 0,
+      "store": "0"
+    },
+    {
+      "group": "โปรโมชั่น ชิโอปัง",
+      "name": "ไม่เพิ่ม",
+      "live": 0,
+      "target": 0,
+      "store": "0"
+    }
+  ],
+  "mismatch": [
+    {
+      "group": "กาแฟ",
+      "name": "เพิ่มช็อตกาแฟ",
+      "live": 18,
+      "target": 0,
+      "store": "12"
+    },
+    {
+      "group": "ขนาด ปริมาณ แก้วกาแฟ",
+      "name": "แก้วใหญ่ 22oz เข้ม +1 ช๊อต ซีลแน่น",
+      "live": 18,
+      "target": 0,
+      "store": "12"
+    },
+    {
+      "group": "ช็อตมะนาว",
+      "name": "เพิ่ม 1 ช็อต",
+      "live": 11,
+      "target": 0,
+      "store": "7"
+    },
+    {
+      "group": "ช็อตมัทฉะ",
+      "name": "เพิ่มช็อตมัทฉะ 1 กรัม",
+      "live": 9,
+      "target": 0,
+      "store": "7"
+    },
+    {
+      "group": "ช็อตมัทฉะ",
+      "name": "เพิ่มช็อตมัทฉะ 2 กรัม",
+      "live": 18,
+      "target": 0,
+      "store": "13"
+    },
+    {
+      "group": "ชิโอปัง เพิ่มไส้พิเศษ",
+      "name": "ช็อคโกแลต",
+      "live": 9,
+      "target": 0,
+      "store": "7"
+    },
+    {
+      "group": "ชิโอปัง เพิ่มไส้พิเศษ",
+      "name": "วนิลา",
+      "live": 9,
+      "target": 0,
+      "store": "7"
+    },
+    {
+      "group": "ชิโอปัง เพิ่มไส้พิเศษ",
+      "name": "สตรอเบอรี่",
+      "live": 9,
+      "target": 0,
+      "store": "7"
+    },
+    {
+      "group": "ชิโอปัง เพิ่มไส้พิเศษ",
+      "name": "บลูเบอรี่",
+      "live": 9,
+      "target": 0,
+      "store": "7"
+    },
+    {
+      "group": "ชิโอปัง เพิ่มไส้พิเศษ",
+      "name": "ส้ม",
+      "live": 9,
+      "target": 0,
+      "store": "7"
+    },
+    {
+      "group": "ท็อปปิ้ง",
+      "name": "เจลลี่ผลไม้",
+      "live": 8,
+      "target": 0,
+      "store": "5"
+    },
+    {
+      "group": "ท็อปปิ้ง",
+      "name": "ไข่มุก",
+      "live": 8,
+      "target": 0,
+      "store": "5"
+    },
+    {
+      "group": "ท็อปปิ้ง",
+      "name": "วุ้นกบไต้หวัน",
+      "live": 9,
+      "target": 0,
+      "store": "6"
+    },
+    {
+      "group": "ท็อปปิ้ง",
+      "name": "เฉาก๊วยหนึบเนื้อแน่น",
+      "live": 13,
+      "target": 0,
+      "store": "10"
+    },
+    {
+      "group": "ท็อปปิ้ง",
+      "name": "บุกน้ำตาล",
+      "live": 15,
+      "target": 0,
+      "store": "10"
+    },
+    {
+      "group": "ท็อปปิ้ง",
+      "name": "บุกน้ำผึ้ง",
+      "live": 15,
+      "target": 0,
+      "store": "10"
+    },
+    {
+      "group": "ท็อปปิ้ง",
+      "name": "บุกบราวน์ชูก้า",
+      "live": 18,
+      "target": 0,
+      "store": "12"
+    },
+    {
+      "group": "ท็อปปิ้ง",
+      "name": "วุ้นว่านหางจระเข้ หั่นลูกเต๋า",
+      "live": 23,
+      "target": 0,
+      "store": "15"
+    },
+    {
+      "group": "ท็อปปิ้ง",
+      "name": "ซอสบราวน์ชูก้า",
+      "live": 23,
+      "target": 0,
+      "store": "17"
+    },
+    {
+      "group": "ท็อปปิ้ง",
+      "name": "ช็อคขูด",
+      "live": 23,
+      "target": 0,
+      "store": "17"
+    },
+    {
+      "group": "ท็อปปิ้ง",
+      "name": "ครีมชีส",
+      "live": 31,
+      "target": 0,
+      "store": "25"
+    },
+    {
+      "group": "ท็อปปิ้งขนมปัง",
+      "name": "ราดนมฉ่ำ ๆ",
+      "live": 3,
+      "target": 0,
+      "store": "7"
+    },
+    {
+      "group": "ท็อปปิ้งขนมปัง",
+      "name": "โรยผงโกโก้ + ซอสช็อกโกแลต",
+      "live": 5,
+      "target": 0,
+      "store": "7"
+    },
+    {
+      "group": "ท็อปปิ้งขนมปัง",
+      "name": "ราดคาราเมล ฉ่ำๆ",
+      "live": 5,
+      "target": 0,
+      "store": "7"
+    },
+    {
+      "group": "ท็อปปิ้งขนมปัง",
+      "name": "ราดน้ำผึ้ง",
+      "live": 5,
+      "target": 0,
+      "store": "7"
+    },
+    {
+      "group": "ท็อปปิ้งขนมปัง",
+      "name": "แยมสตรอว์เบอร์รี่",
+      "live": 5,
+      "target": 0,
+      "store": "7"
+    },
+    {
+      "group": "ท็อปปิ้งขนมปัง",
+      "name": "แยมส้ม",
+      "live": 5,
+      "target": 0,
+      "store": "7"
+    },
+    {
+      "group": "ท็อปปิ้งขนมปัง",
+      "name": "แยมบลูเบอร์รี่",
+      "live": 5,
+      "target": 0,
+      "store": "7"
+    },
+    {
+      "group": "ประเภท",
+      "name": "ปั่น (สูตรเข้ม)",
+      "live": 15,
+      "target": 0,
+      "store": "12"
+    },
+    {
+      "group": "โปรโมชั่น เค้กกล้วยหอม",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้นแบบเดียวกัน",
+      "live": 17,
+      "target": 0,
+      "store": "12"
+    },
+    {
+      "group": "โปรโมชั่น ชิโอปัง",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+      "live": 25,
+      "target": 0,
+      "store": "12"
+    },
+    {
+      "group": "โปรโมชั่น บราวนี่",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+      "live": 17,
+      "target": 0,
+      "store": "12"
+    },
+    {
+      "group": "โปรโมชั่น ปังเนยกรอบอบไอน้ำ",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+      "live": 15,
+      "target": 0,
+      "store": "12"
+    },
+    {
+      "group": "โปรโมชั่น ปังมันม่วง",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+      "live": 27,
+      "target": 0,
+      "store": "12"
+    },
+    {
+      "group": "โปรโมชั่น มันไทยอบ ดั้งเดิม",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+      "live": 17,
+      "target": 0,
+      "store": "12"
+    },
+    {
+      "group": "โปรโมชั่น วาฟเฟิลเบลเยียมโฮมเมด ดั้งเดิม",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+      "live": 23,
+      "target": 0,
+      "store": "12"
+    },
+    {
+      "group": "โปรโมชั่น Soft Cookie โฮมเมด",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้นแบบเดียวกัน",
+      "live": 20,
+      "target": 0,
+      "store": "12"
+    },
+    {
+      "group": "แยกน้ำแข็ง",
+      "name": "แยกน้ำแข็ง",
+      "live": 3,
+      "target": 0,
+      "store": "7"
+    }
+  ],
+  "noTarget": [],
+  "scanned": [
+    {
+      "url": "https://partner.shopee.co.th/shopee-pos/menu-management/option-group/edit?id=2688610151785472&storeId=10212109",
+      "group": "ช็อตมะนาว",
+      "options": [
+        {
+          "name": "ไม่เพิ่ม",
+          "price": 0
+        },
+        {
+          "name": "เพิ่ม 1 ช็อต",
+          "price": 11
+        }
+      ]
+    },
+    {
+      "url": "https://partner.shopee.co.th/shopee-pos/menu-management/option-group/edit?id=2675562478297600&storeId=10212109",
+      "group": "โปรโมชั่น ปังเนยกรอบอบไอน้ำ",
+      "options": [
+        {
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+          "price": 15
+        },
+        {
+          "name": "ไม่เพิ่ม",
+          "price": 0
+        }
+      ]
+    },
+    {
+      "url": "https://partner.shopee.co.th/shopee-pos/menu-management/option-group/edit?id=2671476543562752&storeId=10212109",
+      "group": "ท็อปปิ้งขนมปัง",
+      "options": [
+        {
+          "name": "ไม่เพิ่ม (ต้นตำรับ)",
+          "price": 0
+        },
+        {
+          "name": "โรยน้ำตาล",
+          "price": 0
+        },
+        {
+          "name": "ราดนมฉ่ำ ๆ",
+          "price": 3
+        },
+        {
+          "name": "โรยผงโกโก้ + ซอสช็อกโกแลต",
+          "price": 5
+        },
+        {
+          "name": "ราดคาราเมล ฉ่ำๆ",
+          "price": 5
+        },
+        {
+          "name": "ราดน้ำผึ้ง",
+          "price": 5
+        },
+        {
+          "name": "แยมสตรอว์เบอร์รี่",
+          "price": 5
+        },
+        {
+          "name": "แยมส้ม",
+          "price": 5
+        },
+        {
+          "name": "แยมบลูเบอร์รี่",
+          "price": 5
+        }
+      ]
+    },
+    {
+      "url": "https://partner.shopee.co.th/shopee-pos/menu-management/option-group/edit?id=2631797327109120&storeId=10212109",
+      "group": "ขนาด ปริมาณ แก้วกาแฟ",
+      "options": [
+        {
+          "name": "แก้วมาตรฐาน",
+          "price": 0
+        },
+        {
+          "name": "แก้วใหญ่ 22oz เข้ม +1 ช๊อต ซีลแน่น",
+          "price": 18
+        }
+      ]
+    },
+    {
+      "url": "https://partner.shopee.co.th/shopee-pos/menu-management/option-group/edit?id=2625496126904832&storeId=10212109",
+      "group": "ช็อตมัทฉะ",
+      "options": [
+        {
+          "name": "ไม่เพิ่ม",
+          "price": 0
+        },
+        {
+          "name": "เพิ่มช็อตมัทฉะ 1 กรัม",
+          "price": 9
+        },
+        {
+          "name": "เพิ่มช็อตมัทฉะ 2 กรัม",
+          "price": 18
+        }
+      ]
+    },
+    {
+      "url": "https://partner.shopee.co.th/shopee-pos/menu-management/option-group/edit?id=2619418001578496&storeId=10212109",
+      "group": "ประเภท",
+      "options": [
+        {
+          "name": "เย็น",
+          "price": 0
+        },
+        {
+          "name": "ปั่น (สูตรเข้ม) ",
+          "price": 15
+        }
+      ]
+    },
+    {
+      "url": "https://partner.shopee.co.th/shopee-pos/menu-management/option-group/edit?id=2489613938674688&storeId=10212109",
+      "group": "กาแฟ",
+      "options": [
+        {
+          "name": "เพิ่มช็อตกาแฟ",
+          "price": 18
+        }
+      ]
+    },
+    {
+      "url": "https://partner.shopee.co.th/shopee-pos/menu-management/option-group/edit?id=2025914426139136&storeId=10212109",
+      "group": "แยกน้ำแข็ง",
+      "options": [
+        {
+          "name": "แยกน้ำแข็ง",
+          "price": 3
+        }
+      ]
+    },
+    {
+      "url": "https://partner.shopee.co.th/shopee-pos/menu-management/option-group/edit?id=2025913542009344&storeId=10212109",
+      "group": "ความหวาน",
+      "options": [
+        {
+          "name": "ไม่หวาน 0%",
+          "price": 0
+        },
+        {
+          "name": "หวานน้อยมาก 25%",
+          "price": 0
+        },
+        {
+          "name": "หวานน้อย 50%",
+          "price": 0
+        },
+        {
+          "name": "หวานปกติ 100%",
+          "price": 0
+        },
+        {
+          "name": "หวานมาก 125%",
+          "price": 0
+        },
+        {
+          "name": "หวานมาก 150%",
+          "price": 0
+        },
+        {
+          "name": "หวานมาก 200%",
+          "price": 0
+        }
+      ]
+    },
+    {
+      "url": "https://partner.shopee.co.th/shopee-pos/menu-management/option-group/edit?id=2001824253843968&storeId=10212109",
+      "group": "ท็อปปิ้ง",
+      "options": [
+        {
+          "name": "ไม่เพิ่ม",
+          "price": 0
+        },
+        {
+          "name": "เจลลี่ผลไม้",
+          "price": 8
+        },
+        {
+          "name": "ไข่มุก",
+          "price": 8
+        },
+        {
+          "name": "วุ้นกบไต้หวัน",
+          "price": 9
+        },
+        {
+          "name": "เฉาก๊วยหนึบเนื้อแน่น",
+          "price": 13
+        },
+        {
+          "name": "บุกน้ำตาล",
+          "price": 15
+        },
+        {
+          "name": "บุกน้ำผึ้ง",
+          "price": 15
+        },
+        {
+          "name": "บุกบราวน์ชูก้า",
+          "price": 18
+        },
+        {
+          "name": "วุ้นว่านหางจระเข้ หั่นลูกเต๋า",
+          "price": 23
+        },
+        {
+          "name": "ซอสบราวน์ชูก้า",
+          "price": 23
+        },
+        {
+          "name": "ช็อคขูด ",
+          "price": 23
+        },
+        {
+          "name": "ครีมชีส",
+          "price": 31
+        }
+      ]
+    },
+    {
+      "group": "โปรโมชั่น วาฟเฟิลเบลเยียมโฮมเมด ดั้งเดิม",
+      "options": [
+        {
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+          "price": 23
+        },
+        {
+          "name": "ไม่เพิ่ม",
+          "price": 0
+        }
+      ]
+    },
+    {
+      "group": "โปรโมชั่น เค้กกล้วยหอม",
+      "options": [
+        {
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้นแบบเดียวกัน",
+          "price": 17
+        },
+        {
+          "name": "ไม่เพิ่ม",
+          "price": 0
+        }
+      ]
+    },
+    {
+      "group": "โปรโมชั่น มันไทยอบ ดั้งเดิม",
+      "options": [
+        {
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+          "price": 17
+        },
+        {
+          "name": "ไม่เพิ่ม",
+          "price": 0
+        }
+      ]
+    },
+    {
+      "group": "ซอฟต์คุกกี้ เลือกรสชาติ",
+      "options": [
+        {
+          "name": "ซอฟต์คุกกี้ - ดั่งเดิม",
+          "price": 0
+        },
+        {
+          "name": "ซอฟต์คุกกี้ - โกโก้",
+          "price": 0
+        },
+        {
+          "name": "ซอฟต์คุกกี้ - มัจฉะ",
+          "price": 0
+        }
+      ]
+    },
+    {
+      "group": "โปรโมชั่น Soft Cookie โฮมเมด",
+      "options": [
+        {
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้นแบบเดียวกัน",
+          "price": 20
+        },
+        {
+          "name": "ไม่เพิ่ม",
+          "price": 0
+        }
+      ]
+    },
+    {
+      "group": "โปรโมชั่น บราวนี่",
+      "options": [
+        {
+          "name": "ไม่เพิ่ม",
+          "price": 0
+        },
+        {
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+          "price": 17
+        }
+      ]
+    },
+    {
+      "group": "ชิโอปัง เพิ่มไส้พิเศษ",
+      "options": [
+        {
+          "name": "ไม่เพิ่ม",
+          "price": 0
+        },
+        {
+          "name": "ช็อคโกแลต",
+          "price": 9
+        },
+        {
+          "name": "วนิลา",
+          "price": 9
+        },
+        {
+          "name": "สตรอเบอรี่",
+          "price": 9
+        },
+        {
+          "name": "บลูเบอรี่",
+          "price": 9
+        },
+        {
+          "name": "ส้ม",
+          "price": 9
+        }
+      ]
+    },
+    {
+      "group": "รสชาติ ไอศครีม",
+      "options": [
+        {
+          "name": "นม",
+          "price": 0
+        },
+        {
+          "name": ">รสอื่นๆ<  (แรนด้อม)",
+          "price": 0
+        }
+      ]
+    },
+    {
+      "group": "โปรโมชั่น ปังมันม่วง",
+      "options": [
+        {
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+          "price": 27
+        },
+        {
+          "name": "ไม่เพิ่ม",
+          "price": 0
+        }
+      ]
+    },
+    {
+      "group": "โปรโมชั่น ชิโอปัง",
+      "options": [
+        {
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+          "price": 25
+        },
+        {
+          "name": "ไม่เพิ่ม",
+          "price": 0
+        }
+      ]
+    }
+  ],
+  "stockTargets": [
+    {
+      "name": "ไม่เพิ่ม",
+      "target": 0,
+      "targetRaw": "",
+      "note": "",
+      "store": "0"
+    },
+    {
+      "name": ">รสอื่นๆ< (แรนด้อม)",
+      "target": 0,
+      "targetRaw": "",
+      "note": "",
+      "store": "0"
+    },
+    {
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+      "target": 0,
+      "targetRaw": "18",
+      "note": "group=โปรโมชั่น ปังเนยกรอบอบไอน้ำ before=15 after=15 toast=สำเร็จ\nบันทึกกลุ่มตัวเลือกเสริมเรียบร้อย",
+      "store": "12"
+    },
+    {
+      "name": "โรยผงโกโก้ + ซอสช็อกโกแลต",
+      "target": 0,
+      "targetRaw": "11",
+      "note": "group=ท็อปปิ้งขนมปัง before=5 after=5 toast=สำเร็จ\nบันทึกกลุ่มตัวเลือกเสริมเรียบร้อย",
+      "store": "7"
+    },
+    {
+      "name": "แยมสตรอว์เบอร์รี่",
+      "target": 0,
+      "targetRaw": "11",
+      "note": "group=ท็อปปิ้งขนมปัง before=5 after=5 toast=สำเร็จ\nบันทึกกลุ่มตัวเลือกเสริมเรียบร้อย",
+      "store": "7"
+    },
+    {
+      "name": "แยมส้ม",
+      "target": 0,
+      "targetRaw": "11",
+      "note": "group=ท็อปปิ้งขนมปัง before=5 after=5 toast=สำเร็จ\nบันทึกกลุ่มตัวเลือกเสริมเรียบร้อย",
+      "store": "7"
+    },
+    {
+      "name": "แยมบลูเบอร์รี่",
+      "target": 0,
+      "targetRaw": "11",
+      "note": "group=ท็อปปิ้งขนมปัง before=5 after=5 toast=สำเร็จ\nบันทึกกลุ่มตัวเลือกเสริมเรียบร้อย",
+      "store": "7"
+    },
+    {
+      "name": "ไข่มุก",
+      "target": 0,
+      "targetRaw": "8",
+      "note": "group=ท็อปปิ้ง before=8 after=8 toast=no_toast",
+      "store": "5"
+    },
+    {
+      "name": "เพิ่มช็อตกาแฟ 1 ช็อต",
+      "target": 0,
+      "targetRaw": "18",
+      "note": "keystroke verify=18 target=18",
+      "store": "12"
+    },
+    {
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้นแบบเดียวกัน",
+      "target": 0,
+      "targetRaw": "18",
+      "note": "group=โปรโมชั่น Soft Cookie โฮมเมด before=20 after=20 toast=สำเร็จ\nบันทึกกลุ่มตัวเลือกเสริมเรียบร้อย",
+      "store": "12"
+    },
+    {
+      "name": "เพิ่มช็อตมะนาว",
+      "target": 0,
+      "targetRaw": "11",
+      "note": "live=เพิ่ม 1 ช็อต group=ช็อตมะนาว before=9 after=11",
+      "store": "7"
+    },
+    {
+      "name": "ซอฟต์คุกกี้ - ดั่งเดิม",
+      "target": 0,
+      "targetRaw": "",
+      "note": "",
+      "store": "0"
+    },
+    {
+      "name": "ซอฟต์คุกกี้ - มัจฉะ",
+      "target": 0,
+      "targetRaw": "",
+      "note": "",
+      "store": "0"
+    },
+    {
+      "name": "เพิ่มช็อตมัทฉะ 1 กรัม",
+      "target": 0,
+      "targetRaw": "11",
+      "note": "group=ช็อตมัทฉะ before=9 after=9 toast=สำเร็จ\nบันทึกกลุ่มตัวเลือกเสริมเรียบร้อย",
+      "store": "7"
+    },
+    {
+      "name": "เพิ่มช็อตมัทฉะ 2 กรัม",
+      "target": 0,
+      "targetRaw": "20",
+      "note": "group=ช็อตมัทฉะ before=18 after=18 toast=สำเร็จ\nบันทึกกลุ่มตัวเลือกเสริมเรียบร้อย",
+      "store": "13"
+    },
+    {
+      "name": "เพิ่มช็อตกาแฟ 2 ช็อต",
+      "target": 0,
+      "targetRaw": "",
+      "note": "Shopee มีแค่เพิ่มช็อตกาแฟ ตัวเดียว (ไม่แยก 2 ช็อต) — ใช้ราคาเดียวกับ 1 ช็อต=18",
+      "store": "17"
+    },
+    {
+      "name": "แก้วใหญ่ 22oz เข้ม +1 ช๊อต ซีลแน่น",
+      "target": 0,
+      "targetRaw": "18",
+      "note": "group=ขนาด ปริมาณ แก้วกาแฟ before=15 after=15 toast=สำเร็จ\nบันทึกกลุ่มตัวเลือกเสริมเรียบร้อย",
+      "store": "12"
+    },
+    {
+      "name": "แก้วมาตรฐาน",
+      "target": 0,
+      "targetRaw": "",
+      "note": "",
+      "store": "0"
+    },
+    {
+      "name": "ราดน้ำผึ้ง",
+      "target": 0,
+      "targetRaw": "11",
+      "note": "group=ท็อปปิ้งขนมปัง before=5 after=5 toast=สำเร็จ\nบันทึกกลุ่มตัวเลือกเสริมเรียบร้อย",
+      "store": "7"
+    },
+    {
+      "name": "ราดคาราเมล ฉ่ำๆ",
+      "target": 0,
+      "targetRaw": "11",
+      "note": "group=ท็อปปิ้งขนมปัง before=5 after=5 toast=สำเร็จ\nบันทึกกลุ่มตัวเลือกเสริมเรียบร้อย",
+      "store": "7"
+    },
+    {
+      "name": "ไม่เพิ่ม (ต้นตำรับ)",
+      "target": 0,
+      "targetRaw": "",
+      "note": "",
+      "store": "0"
+    },
+    {
+      "name": "สุดคุ้ม 2 แถม 1 (รวม 3 ชิ้น)",
+      "target": 0,
+      "targetRaw": "23",
+      "note": "live=สุดคุ้ม เพิ่มอีก 1 ชิ้น... updated_groups=7/8",
+      "store": "15"
+    },
+    {
+      "name": "เย็น",
+      "target": 0,
+      "targetRaw": "",
+      "note": "",
+      "store": "0"
+    },
+    {
+      "name": "ปั่น (สูตรเข้ม)",
+      "target": 0,
+      "targetRaw": "18",
+      "note": "group=ประเภท before=15 after=15 toast=สำเร็จ\nบันทึกกลุ่มตัวเลือกเสริมเรียบร้อย",
+      "store": "12"
+    },
+    {
+      "name": "หวานมาก 125%",
+      "target": 0,
+      "targetRaw": "",
+      "note": "",
+      "store": "0"
+    },
+    {
+      "name": "หวานมาก 150%",
+      "target": 0,
+      "targetRaw": "",
+      "note": "",
+      "store": "0"
+    },
+    {
+      "name": "หวานมาก 200%",
+      "target": 0,
+      "targetRaw": "",
+      "note": "",
+      "store": "0"
+    },
+    {
+      "name": "แก้ว 14 ออนซ์",
+      "target": 0,
+      "targetRaw": "",
+      "note": "",
+      "store": "0"
+    },
+    {
+      "name": "แก้ว 22 ออนซ์",
+      "target": 0,
+      "targetRaw": "18",
+      "note": "live=แก้วใหญ่ 22oz เข้ม +1 ช๊อต ซีลแน่น group=ขนาด ปริมาณ แก้วกาแฟ before=15 after=18",
+      "store": "12"
+    },
+    {
+      "name": "ซอฟต์คุกกี้ - โกโก้",
+      "target": 0,
+      "targetRaw": "",
+      "note": "",
+      "store": "0"
+    },
+    {
+      "name": "ไส้แฮม",
+      "target": 0,
+      "targetRaw": "",
+      "note": "",
+      "store": "0"
+    },
+    {
+      "name": "ไส้ชีส",
+      "target": 0,
+      "targetRaw": "",
+      "note": "",
+      "store": "0"
+    },
+    {
+      "name": "ช็อคโกแลต",
+      "target": 0,
+      "targetRaw": "11",
+      "note": "group=ชิโอปัง เพิ่มไส้พิเศษ before=9 after=9 toast=สำเร็จ\nบันทึกกลุ่มตัวเลือกเสริมเรียบร้อย",
+      "store": "7"
+    },
+    {
+      "name": "วนิลา",
+      "target": 0,
+      "targetRaw": "11",
+      "note": "group=ชิโอปัง เพิ่มไส้พิเศษ before=9 after=9 toast=สำเร็จ\nบันทึกกลุ่มตัวเลือกเสริมเรียบร้อย",
+      "store": "7"
+    },
+    {
+      "name": "สตรอเบอรี่",
+      "target": 0,
+      "targetRaw": "11",
+      "note": "group=ชิโอปัง เพิ่มไส้พิเศษ before=9 after=9 toast=สำเร็จ\nบันทึกกลุ่มตัวเลือกเสริมเรียบร้อย",
+      "store": "7"
+    },
+    {
+      "name": "บลูเบอรี่",
+      "target": 0,
+      "targetRaw": "11",
+      "note": "group=ชิโอปัง เพิ่มไส้พิเศษ before=9 after=9 toast=สำเร็จ\nบันทึกกลุ่มตัวเลือกเสริมเรียบร้อย",
+      "store": "7"
+    },
+    {
+      "name": "เจลลี่ผลไม้",
+      "target": 0,
+      "targetRaw": "8",
+      "note": "group=ท็อปปิ้ง before=8 after=8 toast=no_toast",
+      "store": "5"
+    },
+    {
+      "name": "บุกน้ำตาล",
+      "target": 0,
+      "targetRaw": "15",
+      "note": "group=ท็อปปิ้ง before=15 after=15 toast=no_toast",
+      "store": "10"
+    },
+    {
+      "name": "บุกน้ำผึ้ง",
+      "target": 0,
+      "targetRaw": "15",
+      "note": "group=ท็อปปิ้ง before=15 after=15 toast=no_toast",
+      "store": "10"
+    },
+    {
+      "name": "บุกบราวน์",
+      "target": 0,
+      "targetRaw": "18",
+      "note": "live=บุกบราวน์ชูก้า group=ท็อปปิ้ง before=15 after=18",
+      "store": "12"
+    },
+    {
+      "name": "ซอสบราวน์",
+      "target": 0,
+      "targetRaw": "26",
+      "note": "live=ซอสบราวน์ชูก้า group=ท็อปปิ้ง before=23 after=23",
+      "store": "17"
+    },
+    {
+      "name": "ชีส",
+      "target": 0,
+      "targetRaw": "",
+      "note": "ไม่มีตัวเลือกนี้ใน Shopee target=37",
+      "store": "25"
+    },
+    {
+      "name": "ช็อคขูด",
+      "target": 0,
+      "targetRaw": "26",
+      "note": "group=ท็อปปิ้ง before=23 after=23 toast=สำเร็จ\nบันทึกกลุ่มตัวเลือกเสริมเรียบร้อย",
+      "store": "17"
+    },
+    {
+      "name": "วุ้นกบไต้หวัน",
+      "target": 0,
+      "targetRaw": "9",
+      "note": "group=ท็อปปิ้ง before=9 after=9 toast=no_toast",
+      "store": "6"
+    },
+    {
+      "name": "โรยน้ำตาล",
+      "target": 0,
+      "targetRaw": "",
+      "note": "",
+      "store": "0"
+    },
+    {
+      "name": "ราดนมฉ่ำ ๆ",
+      "target": 0,
+      "targetRaw": "11",
+      "note": "group=ท็อปปิ้งขนมปัง before=3 after=3 toast=สำเร็จ\nบันทึกกลุ่มตัวเลือกเสริมเรียบร้อย",
+      "store": "7"
+    },
+    {
+      "name": "เพิ่ม 1 ช็อต",
+      "target": 0,
+      "targetRaw": "11",
+      "note": "group=ช็อตมะนาว before=9 after=9 toast=สำเร็จ\nบันทึกกลุ่มตัวเลือกเสริมเรียบร้อย",
+      "store": "7"
+    },
+    {
+      "name": "ชีส (Cheese) เท่านั้น",
+      "target": 0,
+      "targetRaw": "",
+      "note": "ไม่มีตัวเลือกนี้ใน Shopee target=18",
+      "store": "12"
+    },
+    {
+      "name": "แฮม (Ham) เท่านั้น",
+      "target": 0,
+      "targetRaw": "",
+      "note": "ไม่มีตัวเลือกนี้ใน Shopee target=18",
+      "store": "12"
+    },
+    {
+      "name": "แฮม+ชีส (Ham & Cheese) อย่างละแผ่น",
+      "target": 0,
+      "targetRaw": "",
+      "note": "ไม่มีตัวเลือกนี้ใน Shopee target=37",
+      "store": "25"
+    },
+    {
+      "name": "ส้ม",
+      "target": 0,
+      "targetRaw": "11",
+      "note": "group=ชิโอปัง เพิ่มไส้พิเศษ before=9 after=9 toast=สำเร็จ\nบันทึกกลุ่มตัวเลือกเสริมเรียบร้อย",
+      "store": "7"
+    },
+    {
+      "name": "เฉาก๊วยหนึบเนื้อแน่น",
+      "target": 0,
+      "targetRaw": "15",
+      "note": "group=ท็อปปิ้ง before=13 after=13 toast=สำเร็จ\nบันทึกกลุ่มตัวเลือกเสริมเรียบร้อย",
+      "store": "10"
+    },
+    {
+      "name": "เดลิเวอรี่",
+      "target": 0,
+      "targetRaw": "",
+      "note": "ไม่มีตัวเลือกนี้ใน Shopee target=11",
+      "store": "7"
+    },
+    {
+      "name": "ไม่หวาน 0%",
+      "target": 0,
+      "targetRaw": "",
+      "note": "",
+      "store": "0"
+    },
+    {
+      "name": "หวานน้อยมาก 25%",
+      "target": 0,
+      "targetRaw": "",
+      "note": "",
+      "store": "0"
+    },
+    {
+      "name": "หวานน้อย 50%",
+      "target": 0,
+      "targetRaw": "",
+      "note": "",
+      "store": "0"
+    },
+    {
+      "name": "หวานปกติ 100%",
+      "target": 0,
+      "targetRaw": "",
+      "note": "",
+      "store": "0"
+    },
+    {
+      "name": "แยกน้ำแข็ง",
+      "target": 0,
+      "targetRaw": "11",
+      "note": "group=แยกน้ำแข็ง before=3 after=3 toast=สำเร็จ\nบันทึกกลุ่มตัวเลือกเสริมเรียบร้อย",
+      "store": "7"
+    },
+    {
+      "name": "นม",
+      "target": 0,
+      "targetRaw": "",
+      "note": "",
+      "store": "0"
+    },
+    {
+      "name": "วุ้นว่านหางจระเข้ หั่นลูกเต๋า",
+      "target": 0,
+      "targetRaw": "23",
+      "note": "group=ท็อปปิ้ง before=23 after=23 toast=no_toast",
+      "store": "15"
+    },
+    {
+      "name": "น้ำเปล่า",
+      "target": 0,
+      "targetRaw": "",
+      "note": "ไม่มีตัวเลือกนี้ใน Shopee target=20",
+      "store": "13"
+    }
+  ],
+  "comparison": {
+    "at": "2026-09-01T06:38:18.619Z",
+    "groupsScanned": 20,
+    "withTarget": 37,
+    "atTarget": 10,
+    "mismatchCount": 27,
+    "mismatch": [
+      {
+        "group": "ช็อตมัทฉะ",
+        "name": "เพิ่มช็อตมัทฉะ 1 กรัม",
+        "live": 9,
+        "target": 11,
+        "store": "7"
+      },
+      {
+        "group": "ช็อตมัทฉะ",
+        "name": "เพิ่มช็อตมัทฉะ 2 กรัม",
+        "live": 18,
+        "target": 20,
+        "store": "13"
+      },
+      {
+        "group": "ชิโอปัง เพิ่มไส้พิเศษ",
+        "name": "ช็อคโกแลต",
+        "live": 9,
+        "target": 11,
+        "store": "7"
+      },
+      {
+        "group": "ชิโอปัง เพิ่มไส้พิเศษ",
+        "name": "บลูเบอรี่",
+        "live": 9,
+        "target": 11,
+        "store": "7"
+      },
+      {
+        "group": "ชิโอปัง เพิ่มไส้พิเศษ",
+        "name": "วนิลา",
+        "live": 9,
+        "target": 11,
+        "store": "7"
+      },
+      {
+        "group": "ชิโอปัง เพิ่มไส้พิเศษ",
+        "name": "สตรอเบอรี่",
+        "live": 9,
+        "target": 11,
+        "store": "7"
+      },
+      {
+        "group": "ชิโอปัง เพิ่มไส้พิเศษ",
+        "name": "ส้ม",
+        "live": 9,
+        "target": 11,
+        "store": "7"
+      },
+      {
+        "group": "ท็อปปิ้ง",
+        "name": "เฉาก๊วยหนึบเนื้อแน่น",
+        "live": 13,
+        "target": 15,
+        "store": "10"
+      },
+      {
+        "group": "ท็อปปิ้ง",
+        "name": "ช็อคขูด",
+        "live": 23,
+        "target": 26,
+        "store": "17"
+      },
+      {
+        "group": "ท็อปปิ้ง",
+        "name": "ซอสบราวน์ชูก้า",
+        "live": 23,
+        "target": 26,
+        "store": "17"
+      },
+      {
+        "group": "ท็อปปิ้งขนมปัง",
+        "name": "แยมบลูเบอร์รี่",
+        "live": 5,
+        "target": 11,
+        "store": "7"
+      },
+      {
+        "group": "ท็อปปิ้งขนมปัง",
+        "name": "แยมสตรอว์เบอร์รี่",
+        "live": 5,
+        "target": 11,
+        "store": "7"
+      },
+      {
+        "group": "ท็อปปิ้งขนมปัง",
+        "name": "แยมส้ม",
+        "live": 5,
+        "target": 11,
+        "store": "7"
+      },
+      {
+        "group": "ท็อปปิ้งขนมปัง",
+        "name": "ราดคาราเมล ฉ่ำๆ",
+        "live": 5,
+        "target": 11,
+        "store": "7"
+      },
+      {
+        "group": "ท็อปปิ้งขนมปัง",
+        "name": "ราดนมฉ่ำ ๆ",
+        "live": 3,
+        "target": 11,
+        "store": "7"
+      },
+      {
+        "group": "ท็อปปิ้งขนมปัง",
+        "name": "ราดน้ำผึ้ง",
+        "live": 5,
+        "target": 11,
+        "store": "7"
+      },
+      {
+        "group": "ท็อปปิ้งขนมปัง",
+        "name": "โรยผงโกโก้ + ซอสช็อกโกแลต",
+        "live": 5,
+        "target": 11,
+        "store": "7"
+      },
+      {
+        "group": "ประเภท",
+        "name": "ปั่น (สูตรเข้ม)",
+        "live": 15,
+        "target": 18,
+        "store": "12"
+      },
+      {
+        "group": "โปรโมชั่น เค้กกล้วยหอม",
+        "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้นแบบเดียวกัน",
+        "live": 17,
+        "target": 18,
+        "store": "12"
+      },
+      {
+        "group": "โปรโมชั่น ชิโอปัง",
+        "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+        "live": 25,
+        "target": 18,
+        "store": "12"
+      },
+      {
+        "group": "โปรโมชั่น บราวนี่",
+        "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+        "live": 17,
+        "target": 18,
+        "store": "12"
+      },
+      {
+        "group": "โปรโมชั่น ปังเนยกรอบอบไอน้ำ",
+        "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+        "live": 15,
+        "target": 18,
+        "store": "12"
+      },
+      {
+        "group": "โปรโมชั่น ปังมันม่วง",
+        "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+        "live": 27,
+        "target": 18,
+        "store": "12"
+      },
+      {
+        "group": "โปรโมชั่น มันไทยอบ ดั้งเดิม",
+        "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+        "live": 17,
+        "target": 18,
+        "store": "12"
+      },
+      {
+        "group": "โปรโมชั่น วาฟเฟิลเบลเยียมโฮมเมด ดั้งเดิม",
+        "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+        "live": 23,
+        "target": 18,
+        "store": "12"
+      },
+      {
+        "group": "โปรโมชั่น Soft Cookie โฮมเมด",
+        "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้นแบบเดียวกัน",
+        "live": 20,
+        "target": 18,
+        "store": "12"
+      },
+      {
+        "group": "แยกน้ำแข็ง",
+        "name": "แยกน้ำแข็ง",
+        "live": 3,
+        "target": 11,
+        "store": "7"
+      }
+    ],
+    "atTargetPriced": [
+      {
+        "group": "ช็อตมะนาว",
+        "name": "เพิ่ม 1 ช็อต",
+        "live": 11,
+        "target": 11,
+        "store": "7"
+      },
+      {
+        "group": "ขนาด ปริมาณ แก้วกาแฟ",
+        "name": "แก้วใหญ่ 22oz เข้ม +1 ช๊อต ซีลแน่น",
+        "live": 18,
+        "target": 18,
+        "store": "12"
+      },
+      {
+        "group": "กาแฟ",
+        "name": "เพิ่มช็อตกาแฟ",
+        "live": 18,
+        "target": 18,
+        "store": "12"
+      },
+      {
+        "group": "ท็อปปิ้ง",
+        "name": "เจลลี่ผลไม้",
+        "live": 8,
+        "target": 8,
+        "store": "5"
+      },
+      {
+        "group": "ท็อปปิ้ง",
+        "name": "ไข่มุก",
+        "live": 8,
+        "target": 8,
+        "store": "5"
+      },
+      {
+        "group": "ท็อปปิ้ง",
+        "name": "วุ้นกบไต้หวัน",
+        "live": 9,
+        "target": 9,
+        "store": "6"
+      },
+      {
+        "group": "ท็อปปิ้ง",
+        "name": "บุกน้ำตาล",
+        "live": 15,
+        "target": 15,
+        "store": "10"
+      },
+      {
+        "group": "ท็อปปิ้ง",
+        "name": "บุกน้ำผึ้ง",
+        "live": 15,
+        "target": 15,
+        "store": "10"
+      },
+      {
+        "group": "ท็อปปิ้ง",
+        "name": "บุกบราวน์ชูก้า",
+        "live": 18,
+        "target": 18,
+        "store": "12"
+      },
+      {
+        "group": "ท็อปปิ้ง",
+        "name": "วุ้นว่านหางจระเข้ หั่นลูกเต๋า",
+        "live": 23,
+        "target": 23,
+        "store": "15"
+      }
+    ],
+    "menuVsOptionToppings": [
+      {
+        "name": "ไข่มุก",
+        "menuLive": 8,
+        "optionLive": 8,
+        "target": 8
+      },
+      {
+        "name": "เจลลี่ผลไม้",
+        "menuLive": 8,
+        "optionLive": 8,
+        "target": 8
+      },
+      {
+        "name": "บุกน้ำตาล",
+        "menuLive": 15,
+        "optionLive": 15,
+        "target": 15
+      },
+      {
+        "name": "บุกน้ำผึ้ง",
+        "menuLive": 15,
+        "optionLive": 15,
+        "target": 15
+      },
+      {
+        "name": "เฉาก๊วยหนึบเนื้อแน่น",
+        "menuLive": 15,
+        "optionLive": 13,
+        "target": 15
+      },
+      {
+        "name": "วุ้นกบไต้หวัน",
+        "menuLive": 10,
+        "optionLive": 9,
+        "target": 9
+      },
+      {
+        "name": "วุ้นว่านหางจระเข้ หั่นลูกเต๋า",
+        "menuLive": 25,
+        "optionLive": 23,
+        "target": 23
+      }
+    ],
+    "noTargetPriced": [
+      {
+        "group": "ท็อปปิ้ง",
+        "name": "ครีมชีส",
+        "live": 31
+      }
+    ]
+  }
+}

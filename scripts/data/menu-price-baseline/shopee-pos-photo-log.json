@@ -1,0 +1,27 @@
+{
+  "at": "2026-09-04T00:42:10.221Z",
+  "results": [
+    {
+      "name": "0% โคล่าโซดามะนาว",
+      "dishId": "3245263396127744",
+      "beforePic": "th-11134505-7rasd-m7fam00x3vj7b1",
+      "afterPic": "th-11134505-81zte-msovcaojqrd088",
+      "changed": true,
+      "preview": [
+        "https://down-aka-th.img.susercontent.com/th-11134505-7rasd-m7fam00x3vj7b1.webp"
+      ],
+      "status": "updated"
+    },
+    {
+      "name": "0% โคล่าโซดา",
+      "dishId": "3245263001568768",
+      "beforePic": "th-11134505-7ras8-m7fadgukmevu99",
+      "afterPic": "th-11134505-81ztd-msovcln9wpvqb4",
+      "changed": true,
+      "preview": [
+        "https://down-aka-th.img.susercontent.com/th-11134505-7ras8-m7fadgukmevu99.webp"
+      ],
+      "status": "updated"
+    }
+  ]
+}\n

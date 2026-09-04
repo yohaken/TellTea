@@ -1,0 +1,107 @@
+{
+  "grabRule": {
+    "mode": "gp",
+    "value": 30
+  },
+  "posGroups": 20,
+  "posChoices": 68,
+  "grabOpts": 68,
+  "matchedExact": 63,
+  "near": [
+    {
+      "key": "fs_opt_27722806::fs_c_23981611",
+      "groupId": "fs_opt_27722806",
+      "groupName": "ท้อปปิ้ง",
+      "choiceId": "fs_c_23981611",
+      "name": "บุกบราวน์",
+      "store": 10,
+      "target": 14,
+      "grabName": "บุกบราวน์ชูก้า",
+      "grabGroup": "ท้อปปิ้ง",
+      "grabPrice": 14,
+      "grabId": "THMOD20260901152504104156",
+      "score": 0.85,
+      "crossGroup": false
+    },
+    {
+      "key": "fs_opt_27722806::fs_c_23981610",
+      "groupId": "fs_opt_27722806",
+      "groupName": "ท้อปปิ้ง",
+      "choiceId": "fs_c_23981610",
+      "name": "ซอสบราวน์",
+      "store": 15,
+      "target": 21,
+      "grabName": "ซอสบราวน์ชูก้า",
+      "grabGroup": "ท้อปปิ้ง",
+      "grabPrice": 21,
+      "grabId": "THMOD20260901152504129943",
+      "score": 0.85,
+      "crossGroup": false
+    },
+    {
+      "key": "fs_opt_40769276::fs_c_40936699",
+      "groupId": "fs_opt_40769276",
+      "groupName": "ช็อตกาแฟ",
+      "choiceId": "fs_c_40936699",
+      "name": "เพิ่มช็อตกาแฟ 1 ช็อต",
+      "store": 9,
+      "target": 13,
+      "grabName": "เพิ่มช็อตกาแฟ",
+      "grabGroup": "ช็อตกาแฟ",
+      "grabPrice": 13,
+      "grabId": "THMOD20260901152504025024",
+      "score": 0.85,
+      "crossGroup": false
+    }
+  ],
+  "missingOnGrab": 2,
+  "grabOnly": 2,
+  "missing": [
+    {
+      "key": "fs_opt_27722806::fs_c_41662916",
+      "groupId": "fs_opt_27722806",
+      "groupName": "ท้อปปิ้ง",
+      "choiceId": "fs_c_41662916",
+      "name": "วุ้นว่านหางจระเข้ หั่นลูกเต๋า",
+      "store": 15,
+      "target": 21,
+      "grabGroup": "ท้อปปิ้ง",
+      "grabGroupId": "THMOG20260901152504029308",
+      "grabGroupScore": 1
+    },
+    {
+      "key": "fs_opt_40769276::fs_c_41756679",
+      "groupId": "fs_opt_40769276",
+      "groupName": "ช็อตกาแฟ",
+      "choiceId": "fs_c_41756679",
+      "name": "เพิ่มช็อตกาแฟ 2 ช็อต",
+      "store": 15,
+      "target": 21,
+      "grabGroup": "ช็อตกาแฟ",
+      "grabGroupId": "THMOG20260901152504018148",
+      "grabGroupScore": 1
+    }
+  ],
+  "unmatchedGrab": [
+    {
+      "group": "ชิโอปัง เพิ่มไส้พิเศษ",
+      "name": "ชีส",
+      "price": 29,
+      "prices": [
+        29
+      ],
+      "optionId": "THMOD20260901152511479139",
+      "groupId": "THMOG20260901152511129759"
+    },
+    {
+      "group": "ท้อปปิ้ง",
+      "name": "อโลเวร่าในน้ำองุ่นขาว",
+      "price": 23,
+      "prices": [
+        23
+      ],
+      "optionId": "THMOD20260901152504118346",
+      "groupId": "THMOG20260901152504029308"
+    }
+  ]
+}

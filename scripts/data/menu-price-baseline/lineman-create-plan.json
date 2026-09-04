@@ -1,0 +1,342 @@
+{
+  "at": "2026-09-03T02:50:55.438Z",
+  "linemanRule": {
+    "mode": "gp",
+    "value": 30
+  },
+  "lmCount": 168,
+  "posDelivery": 167,
+  "matchedExact": 167,
+  "missing": 0,
+  "noteExisting": 12,
+  "noteExistingRows": [
+    {
+      "posId": "fs_item_41391600",
+      "name": "กาแฟสด เอสเปรสโซ่ไทยสไตล์ เย็น 16 ออนซ์",
+      "nameEn": "Thai Style Iced Espresso",
+      "category": "* กาแฟสดนมนุ่มละมุน",
+      "mode": "cold",
+      "storePrice": 29,
+      "onlinePrice": 41,
+      "pickupPrice": 41,
+      "offlinePrice": 29,
+      "optionNames": [
+        "แยกน้ำแข็ง",
+        "ความหวาน",
+        "ช็อตกาแฟ",
+        "ท้อปปิ้ง"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250305173931689000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDkkVreUaMa5JzU30GmqLnNKcThL",
+      "siblingName": "กาแฟสด ลาเต้ เย็น 16 ออนซ์",
+      "siblingLmId": "0leDkTI75bRTRmyna4UB6lnY6TRFfh",
+      "siblingOptions": [
+        "ช็อตกาแฟ",
+        "แยกน้ำแข็ง",
+        "ความหวาน",
+        "ท้อปปิ้ง"
+      ]
+    },
+    {
+      "posId": "fs_item_41486445",
+      "name": "กาแฟสดโซดา เอสเปรสโซ่มะม่วง เย็น 16 ออนซ์",
+      "nameEn": "Fresh Coffee Soda, Iced Mango Espresso",
+      "category": "* กาแฟสดฟิวชันสดชื่น",
+      "mode": "cold",
+      "storePrice": 25,
+      "onlinePrice": 36,
+      "pickupPrice": 36,
+      "offlinePrice": 25,
+      "optionNames": [
+        "แยกน้ำแข็ง",
+        "ความหวาน",
+        "ท้อปปิ้ง",
+        "ช็อตกาแฟ"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250310145249705000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDkyJ6oxa8N2J44Dyrwsw6ynGxml",
+      "siblingName": "กาแฟสด บลูฮาวายเอสเปรสโซ่ เย็น 16 ออนซ์",
+      "siblingLmId": "0leDksd9jEMeNFcfxJxAi0dB6Il0gE",
+      "siblingOptions": [
+        "แยกน้ำแข็ง",
+        "ความหวาน",
+        "ช็อตกาแฟ",
+        "ท้อปปิ้ง"
+      ]
+    },
+    {
+      "posId": "fs_item_41574391",
+      "name": "กาแฟสด โกโก้มอคค่าร้อน",
+      "nameEn": "Fresh Coffee, Hot Cocoa Mocha",
+      "category": "* กาแฟสด อื่นๆ ร้อน",
+      "mode": "hot",
+      "storePrice": 29,
+      "onlinePrice": 41,
+      "pickupPrice": 41,
+      "offlinePrice": 29,
+      "optionNames": [
+        "ความหวาน",
+        "ช็อตกาแฟ"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250312161229150000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDl472vuUBVR2Ke1XVTS8NhKdeSP",
+      "siblingName": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
+      "siblingLmId": "0leDkaOg5qRX5k5YUc9Hx5Ej5RNvM8",
+      "siblingOptions": [
+        "ความหวาน",
+        "ช็อตกาแฟ"
+      ]
+    },
+    {
+      "posId": "fs_item_41574254",
+      "name": "กาแฟสด คาราเมลลาเต้ร้อน 12 ออนซ์",
+      "nameEn": "Hot Caramel Latte",
+      "category": "* กาแฟสด อื่นๆ ร้อน",
+      "mode": "hot",
+      "storePrice": 35,
+      "onlinePrice": 50,
+      "pickupPrice": 50,
+      "offlinePrice": 35,
+      "optionNames": [
+        "ความหวาน",
+        "ช็อตกาแฟ"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250312160931810000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDl46gUnDMTZClJSCQYLyn6ykyfP",
+      "siblingName": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
+      "siblingLmId": "0leDkaOg5qRX5k5YUc9Hx5Ej5RNvM8",
+      "siblingOptions": [
+        "ความหวาน",
+        "ช็อตกาแฟ"
+      ]
+    },
+    {
+      "posId": "fs_item_41574401",
+      "name": "กาแฟสด เผือกลาเต้ร้อน",
+      "nameEn": "Fresh Coffee Hot Taro Latte",
+      "category": "* กาแฟสด อื่นๆ ร้อน",
+      "mode": "hot",
+      "storePrice": 29,
+      "onlinePrice": 41,
+      "pickupPrice": 41,
+      "offlinePrice": 29,
+      "optionNames": [
+        "ความหวาน",
+        "ช็อตกาแฟ"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250312161433575000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDl47ITNhj1hE9s3ERnCXrT2AfaW",
+      "siblingName": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
+      "siblingLmId": "0leDkaOg5qRX5k5YUc9Hx5Ej5RNvM8",
+      "siblingOptions": [
+        "ความหวาน",
+        "ช็อตกาแฟ"
+      ]
+    },
+    {
+      "posId": "fs_item_41574397",
+      "name": "กาแฟสด มอคค่ามิ้นต์ร้อน",
+      "nameEn": "Hot Mint Mocha Coffee",
+      "category": "* กาแฟสด อื่นๆ ร้อน",
+      "mode": "hot",
+      "storePrice": 35,
+      "onlinePrice": 50,
+      "pickupPrice": 50,
+      "offlinePrice": 35,
+      "optionNames": [
+        "ความหวาน",
+        "ช็อตกาแฟ"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250312161332629000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDl47Ako8qcHdMynDLKOOdhB8ew5",
+      "siblingName": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
+      "siblingLmId": "0leDkaOg5qRX5k5YUc9Hx5Ej5RNvM8",
+      "siblingOptions": [
+        "ความหวาน",
+        "ช็อตกาแฟ"
+      ]
+    },
+    {
+      "posId": "fs_item_41574263",
+      "name": "กาแฟสด โอวัลตินเอสเปรสโซ่ร้อน",
+      "nameEn": "Fresh Coffee, Hot Ovaltine Espresso",
+      "category": "* กาแฟสด อื่นๆ ร้อน",
+      "mode": "hot",
+      "storePrice": 35,
+      "onlinePrice": 50,
+      "pickupPrice": 50,
+      "offlinePrice": 35,
+      "optionNames": [
+        "ความหวาน",
+        "ช็อตกาแฟ"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250312161125632000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDl46umYFn7RtZJ3HKnpBzxprqlA",
+      "siblingName": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
+      "siblingLmId": "0leDkaOg5qRX5k5YUc9Hx5Ej5RNvM8",
+      "siblingOptions": [
+        "ความหวาน",
+        "ช็อตกาแฟ"
+      ]
+    },
+    {
+      "posId": "fs_item_41574255",
+      "name": "กาแฟสด เฮเซลนัทมอคค่าร้อน 12 ออนซ์",
+      "nameEn": "Hot Hazelnut Mocha Coffee",
+      "category": "* กาแฟสด อื่นๆ ร้อน",
+      "mode": "hot",
+      "storePrice": 35,
+      "onlinePrice": 50,
+      "pickupPrice": 50,
+      "offlinePrice": 35,
+      "optionNames": [
+        "ความหวาน",
+        "ช็อตกาแฟ"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250312161035078000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDl46oXNVidJ1Do2a4xGjjkMwaU2",
+      "siblingName": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
+      "siblingLmId": "0leDkaOg5qRX5k5YUc9Hx5Ej5RNvM8",
+      "siblingOptions": [
+        "ความหวาน",
+        "ช็อตกาแฟ"
+      ]
+    },
+    {
+      "posId": "fs_item_41574246",
+      "name": "ช็อกโกแลตมิลค์ร้อน 12 ออนซ์",
+      "nameEn": "Hot Chocolate Milk",
+      "category": "* กาแฟสด อื่นๆ ร้อน",
+      "mode": "hot",
+      "storePrice": 25,
+      "onlinePrice": 36,
+      "pickupPrice": 36,
+      "offlinePrice": 25,
+      "optionNames": [
+        "ความหวาน",
+        "ช็อตกาแฟ"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250312160823289000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDl46XoAjHPuVyDDSQg1uhRPkEk4",
+      "siblingName": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
+      "siblingLmId": "0leDkaOg5qRX5k5YUc9Hx5Ej5RNvM8",
+      "siblingOptions": [
+        "ความหวาน",
+        "ช็อตกาแฟ"
+      ]
+    },
+    {
+      "posId": "fs_item_33559311",
+      "name": "ซอสบราวน์ชูการ์",
+      "nameEn": "Brown Sugar Sauce",
+      "category": "ทัอปปิ้ง",
+      "mode": "topping",
+      "storePrice": 15,
+      "onlinePrice": 21,
+      "pickupPrice": 21,
+      "offlinePrice": 15,
+      "optionNames": [
+        "แยกน้ำแข็ง",
+        "ท้อปปิ้ง",
+        "ความหวาน"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250417084106880000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDVTbMBa8dxcayIEcvvDGmIuJDac",
+      "siblingName": "ซอสบราวน์ชูการ์",
+      "siblingLmId": "0leDVTbMBa8dxcayIEcvvDGmIuJDac",
+      "siblingOptions": [
+        "แยกน้ำแข็ง",
+        "ท้อปปิ้ง",
+        "ความหวาน"
+      ]
+    },
+    {
+      "posId": "fs_item_43577310",
+      "name": "นมสดมันม่วง",
+      "nameEn": "",
+      "category": "นม (เย็น, ปั่น)",
+      "mode": "other",
+      "storePrice": 39,
+      "onlinePrice": 56,
+      "pickupPrice": 56,
+      "offlinePrice": 39,
+      "optionNames": [
+        "ท้อปปิ้ง",
+        "ความหวาน",
+        "แยกน้ำแข็ง"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20260308053646256000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDqbo3uFMpMjHF1eNukS5omMG5Nk",
+      "siblingName": "นมสดมันม่วง",
+      "siblingLmId": "0leDqbo3uFMpMjHF1eNukS5omMG5Nk",
+      "siblingOptions": [
+        "ท้อปปิ้ง",
+        "ความหวาน",
+        "แยกน้ำแข็ง"
+      ]
+    },
+    {
+      "posId": "fs_item_33559335",
+      "name": "แดงโซดา",
+      "nameEn": "Red Soda",
+      "category": "อิตาเลียน โซดา",
+      "mode": "other",
+      "storePrice": 19,
+      "onlinePrice": 27,
+      "pickupPrice": 27,
+      "offlinePrice": 19,
+      "optionNames": [
+        "ความหวาน",
+        "ท้อปปิ้ง",
+        "แยกน้ำแข็ง"
+      ],
+      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20260308092058709000S",
+      "recommended": false,
+      "hubNote": "สร้างเมนู ไลน์แมน",
+      "fromNote": true,
+      "lmId": "0leDVTdmgbwt9P2DYXGMz7TCf5zsfG",
+      "siblingName": "เขียวโซดา",
+      "siblingLmId": "0leDVTYBKP4C777yEB40elhWQITet3",
+      "siblingOptions": [
+        "ความหวาน",
+        "ท้อปปิ้ง",
+        "แยกน้ำแข็ง"
+      ]
+    }
+  ],
+  "rows": [],
+  "selected": 12
+}

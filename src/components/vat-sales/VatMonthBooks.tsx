@@ -28,16 +28,21 @@ import {
   parseVatMoneyInput,
 } from "@/lib/vat-number-format";
 import {
+  bookVatsForPp30,
+  buildPp30Filing,
   deriveMonthBooksView,
   draftToSaveInput,
   emptyMonthBooksDraft,
+  formatPp30CopyText,
   incomeBreakdownLabel,
   MONTH_CHANNEL_LABEL,
   MONTH_CHANNEL_SHORT,
   MONTH_CHANNELS,
+  outputVatFromSalesInclusive,
   patchGpFee,
   patchGpVat,
   patchSales,
+  purchaseBaseFromVat,
   patchSfSendIntoDraft,
   patchSfSendTendersIntoDraft,
   patchTransfer,
@@ -98,6 +103,11 @@ import {
 function fmt(n: number) {
   if (!Number.isFinite(n)) return "—";
   return formatVatMoney(n);
+}
+
+/** ภาษีขายที่สรรพากรเรียกเก็บ = ยอดขายรวม VAT × 7% */
+function vatFromInclusiveSales(gross: number, pct: number) {
+  return outputVatFromSalesInclusive(gross, pct);
 }
 
 function pickBookRow(rows: MonthCategoryRow[], month: string): MonthCategoryRow {
@@ -209,6 +219,9 @@ export function VatMonthBooks({ actor }: Props) {
   const [openBooksLines, setOpenBooksLines] = useState(false);
   const [booksVatBusy, setBooksVatBusy] = useState(false);
   const [detailLine, setDetailLine] = useState<BooksVatLine | null>(null);
+  const [pp30Copied, setPp30Copied] = useState(false);
+  const [monthNote, setMonthNote] = useState("");
+  const [noteBusy, setNoteBusy] = useState(false);
 
   const [allowanceStr, setAllowanceStr] = useState(
     String(DEFAULT_PERSONAL_ALLOWANCE),
@@ -276,6 +289,27 @@ export function VatMonthBooks({ actor }: Props) {
     [draft, booksCombo],
   );
 
+  const pp30 = useMemo(() => {
+    const claimed = booksLines
+      .filter((l) => l.vatClaim)
+      .map((l) => l.vatInput);
+    const gpVats = MONTH_CHANNELS.map((k) => view.gpVatByChannel[k]);
+    const bookVats = bookVatsForPp30(claimed, view.inputBooksVat);
+    const args = {
+      salesInclusive: view.salesTotal,
+      salesExVat: view.salesExVat,
+      outputVat: view.outputVat,
+      gpVats,
+      bookVats,
+      inputVat: view.inputVat,
+      pct: draft.outputPct,
+    };
+    return {
+      filing: buildPp30Filing({ ...args, includeInputVat: view.includeInputVat }),
+      shown: buildPp30Filing({ ...args, includeInputVat: true }),
+    };
+  }, [booksLines, view, draft.outputPct]);
+
   const period = useMemo(
     () => getVatPeriodBoundary(month, periodStartDay),
     [month, periodStartDay],
@@ -288,7 +322,9 @@ export function VatMonthBooks({ actor }: Props) {
   }, []);
 
   const hydrateFromReturn = useCallback((ret: VatMonthlyReturn) => {
-    setDraft(retToMonthBooksDraft(ret));
+    const next = retToMonthBooksDraft(ret);
+    setDraft(next);
+    setMonthNote(next.note || "");
     dirtyRef.current = false;
     setDirty(false);
   }, []);
@@ -608,10 +644,14 @@ export function VatMonthBooks({ actor }: Props) {
     ) => {
       if (locked) return;
       if (tenders) {
-        const scaled = scaleSfSendTenders(tenders, pct);
+        const scaled =
+          pct <= 0
+            ? { cash: 0, transfer: 0 }
+            : scaleSfSendTenders(tenders, pct);
         const sent = sfSendTendersGross(scaled);
-        if (!(sent > 0) && !(sfSendTendersGross(tenders) > 0)) return;
-        if (!(sent > 0)) return; // ห้ามเขียน 0 ทับยอดในตาราง
+        const sourceGross = sfSendTendersGross(tenders);
+        if (!(sourceGross > 0) && !(sent > 0)) return;
+        // 0% = เขียนศูนย์ทับตารางทันที (แถบเลื่อนตรงยอด D)
         setDraft((d) => {
           const same =
             Math.abs((d.transfer.storefront || 0) - sent) < 0.009 &&
@@ -625,8 +665,8 @@ export function VatMonthBooks({ actor }: Props) {
         flashSfCell();
         return;
       }
-      if (!(source > 0)) return; // ห้ามเขียน 0 ทับยอดในตารางเมื่อยังไม่มีต้นทาง
-      const sent = computeSfSendAmount(source, pct);
+      if (!(source > 0)) return; // ยังไม่มีต้นทาง — ไม่แตะยอดในตาราง
+      const sent = pct <= 0 ? 0 : computeSfSendAmount(source, pct);
       setDraft((d) => {
         const sameIncome =
           Math.abs((d.transfer.storefront || 0) - sent) < 0.009;
@@ -947,7 +987,10 @@ export function VatMonthBooks({ actor }: Props) {
     setBusy(true);
     setError("");
     try {
-      await saveVatMonthlyReturn(draftToSaveInput(draft, "saved"), actor);
+      await saveVatMonthlyReturn(
+        draftToSaveInput({ ...draft, note: monthNote.trim() }, "saved"),
+        actor,
+      );
       await saveMonthlyIncome(month, view.incomeTotal, actor);
       setMsg(
         `รายได้ทดลอง → P&L · ${formatVatMoney(view.incomeTotal)}`,
@@ -963,7 +1006,10 @@ export function VatMonthBooks({ actor }: Props) {
     setBusy(true);
     setError("");
     try {
-      await saveVatMonthlyReturn(draftToSaveInput(draft, "saved"), actor);
+      await saveVatMonthlyReturn(
+        draftToSaveInput({ ...draft, note: monthNote.trim() }, "saved"),
+        actor,
+      );
       const filed = await fileVatMonthlyReturn(month, actor, {
         forceIncome: view.incomeTotal,
       });
@@ -989,6 +1035,29 @@ export function VatMonthBooks({ actor }: Props) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
+    }
+  };
+
+  const saveMonthNote = async () => {
+    if (locked || noteBusy) return;
+    setNoteBusy(true);
+    setError("");
+    setMsg("");
+    try {
+      const text = monthNote.trim();
+      const snap = { ...draftRef.current, note: text };
+      draftRef.current = snap;
+      setDraft((d) => (d.monthKey === snap.monthKey ? { ...d, note: text } : d));
+      await saveVatMonthlyReturn(
+        draftToSaveInput(snap, snap.status === "filed" ? "filed" : "saved"),
+        actor,
+      );
+      setMonthNote(text);
+      setMsg(`บันทึกโน้ต ${formatThaiMonthKey(month)} แล้ว`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setNoteBusy(false);
     }
   };
 
@@ -1679,13 +1748,26 @@ export function VatMonthBooks({ actor }: Props) {
 
             <section className="vat-table-block">
               <h3 className="vat-table-subtitle">ยอดขาย → ภาษีขาย</h3>
+              <p className="muted vat-sales-hint">
+                ยอดขายรวม VAT = ยอดเต็ม · ภาษีขาย = ยอดนั้น × 7% (สูตรสรรพากร)
+              </p>
               <div className="sheet-wrap vat-month-slim-wrap">
                 <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
                   <thead>
                     <tr>
                       <th className="col-seg">รายการ</th>
-                      <th className="col-num">ยอดขาย</th>
-                      <th className="col-num">ภาษีขาย</th>
+                      <th
+                        className="col-num"
+                        title="ยอดแอพ/หน้าร้านเต็ม รวม VAT — ไม่หักแวท"
+                      >
+                        ยอดขายรวม VAT
+                      </th>
+                      <th
+                        className="col-num"
+                        title="ภาษีขายที่สรรพากรเรียกเก็บ = ยอดขายรวม VAT × 7%"
+                      >
+                        ภาษีขาย ×7%
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1723,7 +1805,14 @@ export function VatMonthBooks({ actor }: Props) {
                                 onChange={(v) => setSalesField(k, v)}
                               />
                             </td>
-                            <td className="col-num">—</td>
+                            <td className="col-num">
+                              {fmt(
+                                vatFromInclusiveSales(
+                                  draft.sales[k],
+                                  draft.outputPct,
+                                ),
+                              )}
+                            </td>
                           </tr>
                         ))
                       : null}
@@ -1768,7 +1857,14 @@ export function VatMonthBooks({ actor }: Props) {
                               }
                             />
                           </td>
-                          <td className="col-num">—</td>
+                          <td className="col-num">
+                            {fmt(
+                              vatFromInclusiveSales(
+                                draft.sales.storefrontTransfer,
+                                draft.outputPct,
+                              ),
+                            )}
+                          </td>
                         </tr>
                         <tr className="vat-row-child">
                           <td className="col-seg col-child">สด</td>
@@ -1784,12 +1880,19 @@ export function VatMonthBooks({ actor }: Props) {
                               }
                             />
                           </td>
-                          <td className="col-num">—</td>
+                          <td className="col-num">
+                            {fmt(
+                              vatFromInclusiveSales(
+                                draft.sales.storefrontCash,
+                                draft.outputPct,
+                              ),
+                            )}
+                          </td>
                         </tr>
                       </>
                     ) : null}
                     <tr className="vat-sales-totals-row">
-                      <td className="col-seg">รวมภาษีขาย</td>
+                      <td className="col-seg">รวม</td>
                       <td className="col-num">{fmt(view.salesTotal)}</td>
                       <td className="col-num col-net">{fmt(view.outputVat)}</td>
                     </tr>
@@ -1801,8 +1904,8 @@ export function VatMonthBooks({ actor }: Props) {
             <section className="vat-table-block">
               <h3 className="vat-table-subtitle">ภาษีซื้อ — GP + สองบช.</h3>
               <p className="muted vat-sales-hint vat-books-claim-hint">
-                ชั้นภาษีซื้อ: ติ๊กหัก = VAT ไปหักภาษีขาย + ต้นทุนใน B = บิล−VAT ·
-                ไม่ติ๊ก = ไม่นับภาษีซื้อ · ต้นทุนใน B = บิลรวม VAT ·{" "}
+                ยอดซื้อ ภ.พ.30 = ภาษีซื้อ × 100/7 รายใบ · ไม่ใช้ยอดบิล
+                (บิลปนของไม่มีแวทได้) · ติ๊กหัก = VAT ไปหักภาษีขาย ·{" "}
                 <strong>ภาษีขายด้านบนไม่เปลี่ยนจากติ๊กนี้</strong>
               </p>
               <div className="sheet-wrap vat-month-slim-wrap">
@@ -1810,6 +1913,7 @@ export function VatMonthBooks({ actor }: Props) {
                   <thead>
                     <tr>
                       <th className="col-seg">รายการ</th>
+                      <th className="col-num">ยอดซื้อ</th>
                       <th className="col-num">ภาษีซื้อ</th>
                     </tr>
                   </thead>
@@ -1821,12 +1925,23 @@ export function VatMonthBooks({ actor }: Props) {
                       >
                         ภาษีซื้อ GP (รวม)
                       </td>
+                      <td className="col-num col-net">
+                        {fmt(pp30.shown.purchaseBaseGp)}
+                      </td>
                       <td className="col-num col-net">{fmt(view.inputGpVat)}</td>
                     </tr>
                     {MONTH_CHANNELS.map((k) => (
                       <tr key={`gpvat-${k}`} className="vat-row-child">
                         <td className="col-seg col-child">
                           GP≠ {MONTH_CHANNEL_LABEL[k]}
+                        </td>
+                        <td className="col-num">
+                          {fmt(
+                            purchaseBaseFromVat(
+                              view.gpVatByChannel[k],
+                              draft.outputPct,
+                            ),
+                          )}
                         </td>
                         <td className="col-num col-input">
                           <MoneyCell
@@ -1855,6 +1970,9 @@ export function VatMonthBooks({ actor }: Props) {
                           </span>
                         </span>
                       </td>
+                      <td className="col-num col-net">
+                        {fmt(pp30.shown.purchaseBaseBooks)}
+                      </td>
                       <td className="col-num col-input">
                         <MoneyCell
                           value={moneyFieldValue(draft.ingredientVat)}
@@ -1878,13 +1996,16 @@ export function VatMonthBooks({ actor }: Props) {
                         → หักจากภาษีขาย
                       </td>
                       <td className="col-num col-net">
+                        {fmt(pp30.shown.purchaseBaseBooks)}
+                      </td>
+                      <td className="col-num col-net">
                         {fmt(view.inputBooksVat)}
                       </td>
                     </tr>
                     {openBooksLines && booksLines.length > 0 ? (
                       <>
                         <tr className="vat-row-child vat-books-breakdown">
-                          <td className="col-seg col-child" colSpan={2}>
+                          <td className="col-seg col-child" colSpan={3}>
                             <label className="vat-claim-all">
                               <input
                                 type="checkbox"
@@ -1942,6 +2063,19 @@ export function VatMonthBooks({ actor }: Props) {
                                 </span>
                               </label>
                             </td>
+                            <td
+                              className="col-num"
+                              title="ยอดซื้อ ภ.พ.30 = ภาษีซื้อ × 100/7 · ไม่ใช่ยอดบิล"
+                            >
+                              {line.vatClaim
+                                ? fmt(
+                                    purchaseBaseFromVat(
+                                      line.vatInput,
+                                      draft.outputPct,
+                                    ),
+                                  )
+                                : "—"}
+                            </td>
                             <td className="col-num">{fmt(line.vatInput)}</td>
                           </tr>
                         ))}
@@ -1959,6 +2093,9 @@ export function VatMonthBooks({ actor }: Props) {
                         {view.includeInputVat
                           ? "รวมภาษีซื้อ (หักจากภาษีขาย)"
                           : "รวมภาษีซื้อ (ยังไม่หัก)"}
+                      </td>
+                      <td className="col-num col-net">
+                        {fmt(pp30.shown.purchaseBase)}
                       </td>
                       <td className="col-num col-net">{fmt(view.inputVat)}</td>
                     </tr>
@@ -2005,7 +2142,94 @@ export function VatMonthBooks({ actor }: Props) {
               </span>{" "}
               = <strong>VAT สุทธิ {fmt(view.netVat)}</strong>
             </p>
+
+            <section className="vat-pp30-box" aria-label="คัดลอกไป ภ.พ.30">
+              <div className="vat-pp30-head">
+                <h3 className="vat-table-subtitle">คัดลอกไป ภ.พ.30</h3>
+                <button
+                  type="button"
+                  className="vat-mini-btn"
+                  onClick={() => {
+                    void navigator.clipboard
+                      .writeText(formatPp30CopyText(pp30.filing))
+                      .then(() => {
+                        setPp30Copied(true);
+                        window.setTimeout(() => setPp30Copied(false), 1600);
+                      });
+                  }}
+                >
+                  {pp30Copied ? "คัดลอกแล้ว" : "คัดลอก"}
+                </button>
+              </div>
+              <p className="muted vat-sales-hint">
+                ยอดขายรวม VAT ตรงตารางด้านบน · ภาษีขาย = ยอดนั้น × 7% ·
+                ยอดซื้อไม่ใช่ยอดบิล (คิดจากภาษีซื้อ ×100/7 รายใบ)
+              </p>
+              <div className="sheet-wrap vat-month-slim-wrap">
+                <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
+                  <thead>
+                    <tr>
+                      <th className="col-seg">รายการ</th>
+                      <th className="col-num">จำนวน</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="col-seg">ยอดขายรวม VAT</td>
+                      <td className="col-num col-net">
+                        {fmt(pp30.filing.salesInclusive)}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="col-seg">ภาษีขาย ×7%</td>
+                      <td className="col-num col-net">
+                        {fmt(pp30.filing.outputVat)}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="col-seg">ยอดซื้อไม่รวม VAT</td>
+                      <td className="col-num col-net">
+                        {fmt(pp30.filing.purchaseBase)}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="col-seg">ภาษีซื้อ</td>
+                      <td className="col-num col-net">
+                        {fmt(pp30.filing.inputVat)}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
           </div>
+
+          <section className="vat-month-note" aria-label="โน้ตเดือนนี้">
+            <div className="vat-month-note-head">
+              <h3 className="vat-table-subtitle">
+                โน้ต · {formatThaiMonthKey(month)}
+              </h3>
+              {!locked ? (
+                <button
+                  type="button"
+                  className="vat-mini-btn"
+                  disabled={noteBusy || loading}
+                  onClick={() => void saveMonthNote()}
+                >
+                  {noteBusy ? "กำลังบันทึก…" : "บันทึกโน้ต"}
+                </button>
+              ) : null}
+            </div>
+            <textarea
+              id="vat-month-note"
+              className="vat-month-note-input"
+              rows={3}
+              disabled={locked || noteBusy || loading}
+              value={monthNote}
+              placeholder="โน้ตเฉพาะเดือนนี้ · ใส่แล้วกดบันทึกโน้ต"
+              onChange={(e) => setMonthNote(e.target.value)}
+            />
+          </section>
 
           <div className="vat-month-actions">
             {!locked ? (

@@ -43,6 +43,7 @@
     "test:vat-p6": "npx --yes tsx scripts/test-vat-p6.ts",
     "test:vat-p7": "npx --yes tsx scripts/test-vat-sales-p7.ts",
     "test:vat-monthly": "npx --yes tsx scripts/test-vat-monthly.ts",
+    "test:vat-pp30": "npx --yes tsx scripts/test-vat-pp30.ts",
     "test:vat-month-sources": "npx --yes tsx scripts/test-vat-month-sources.ts",
     "test:vat-mail-study": "npx --yes tsx scripts/test-vat-mail-study-hints.ts",
     "test:vat-mail-channel": "npx --yes tsx scripts/test-vat-mail-channel.ts",

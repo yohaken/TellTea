@@ -1,0 +1,290 @@
+{
+  "at": "2026-09-04T00:47:47.074Z",
+  "rows": [
+    {
+      "name": "แดงโซดา",
+      "lmId": "0leDVTdmgbwt9P2DYXGMz7TCf5zsfG",
+      "sibling": "เขียวโซดา",
+      "posImg": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20260308092058709000S",
+      "lmImg": "https://lmwn-img.line-scdn.net/p/400x0/2026/07/17/850df35b6f5c48eb9d527420b5aee4cf.jpg",
+      "lmSameAsSibling": false,
+      "grabId": "THITE2024040717510158162",
+      "grabImg": "https://food-cms.grab.com/item/THITE2024040717510158162/photos/menueditor_item_6c369e0c19304307bab34dc868e3fc59_1772961674999037450.jpg",
+      "photoAttempt": null
+    },
+    {
+      "name": "นมสดมันม่วง",
+      "lmId": "0leDqbo3uFMpMjHF1eNukS5omMG5Nk",
+      "sibling": "นมสดมันม่วง",
+      "posImg": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20260308053646256000S",
+      "lmImg": "https://lmwn-img.line-scdn.net/p/400x0/2026/07/17/67f00a49fd2748f4bde1566206d306cc.jpg",
+      "lmSameAsSibling": true,
+      "grabId": "THITE2025071208321337950",
+      "grabImg": "https://food-cms.grab.com/item/THITE2025071208321337950/photos/menueditor_item_55c14e96755f4f938091b83900bce727_1772948154177223680.jpg",
+      "photoAttempt": null
+    },
+    {
+      "name": "ซอสบราวน์ชูการ์",
+      "lmId": "0leDVTbMBa8dxcayIEcvvDGmIuJDac",
+      "sibling": "ซอสบราวน์ชูการ์",
+      "posImg": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250417084106880000S",
+      "lmImg": "https://lmwn-img.line-scdn.net/p/400x0/2026/07/17/ba32de7506664881894f3599691b6177.jpg",
+      "lmSameAsSibling": true,
+      "grabId": "THITE2025041914201885296",
+      "grabImg": "https://food-cms.grab.com/item/THITE2025041914201885296/photos/menueditor_item_d4beb8845771478fa0c0e328e9126233_1745072351505514263.jpg",
+      "photoAttempt": null
+    },
+    {
+      "name": "ช็อกโกแลตมิลค์ร้อน 12 ออนซ์",
+      "lmId": "0leDl46XoAjHPuVyDDSQg1uhRPkEk4",
+      "sibling": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
+      "posImg": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250312160823289000S",
+      "lmImg": "https://lmwn-img.line-scdn.net/p/400x0/2026/07/17/2963e3920d5a4ddf8c32ce0ded2f4a47.jpg",
+      "lmSameAsSibling": false,
+      "grabId": "THITE2025031216180413409",
+      "grabImg": "https://food-cms.grab.com/item/THITE2025031216180413409/photos/menueditor_item_ba4ca462398846148ac9b49fa3279381_1741796256397589771.jpeg",
+      "photoAttempt": null
+    },
+    {
+      "name": "กาแฟสด เฮเซลนัทมอคค่าร้อน 12 ออนซ์",
+      "lmId": "0leDl46oXNVidJ1Do2a4xGjjkMwaU2",
+      "sibling": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
+      "posImg": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250312161035078000S",
+      "lmImg": "https://lmwn-img.line-scdn.net/p/400x0/2026/07/17/451ef78f0ad84a269872749a78b0cc5b.jpg",
+      "lmSameAsSibling": false,
+      "grabId": "THITE2025031216202713290",
+      "grabImg": "https://food-cms.grab.com/item/THITE2025031216202713290/photos/menueditor_item_d9d9a4c7bfd2431ca3436fd9528ef1df_1741796407615676759.jpeg",
+      "photoAttempt": null
+    },
+    {
+      "name": "กาแฟสด โอวัลตินเอสเปรสโซ่ร้อน",
+      "lmId": "0leDl46umYFn7RtZJ3HKnpBzxprqlA",
+      "sibling": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
+      "posImg": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250312161125632000S",
+      "lmImg": "https://lmwn-img.line-scdn.net/p/400x0/2026/07/17/bb9d608e92d64ebc81e2de20644a8e09.jpg",
+      "lmSameAsSibling": false,
+      "grabId": "THITE2025031216212849882",
+      "grabImg": "https://food-cms.grab.com/item/THITE2025031216212849882/photos/menueditor_item_cdfb30cd9e674f028cc45df4757ee50f_1741796462612862570.jpeg",
+      "photoAttempt": null
+    },
+    {
+      "name": "กาแฟสด มอคค่ามิ้นต์ร้อน",
+      "lmId": "0leDl47Ako8qcHdMynDLKOOdhB8ew5",
+      "sibling": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
+      "posImg": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250312161332629000S",
+      "lmImg": "https://lmwn-img.line-scdn.net/p/400x0/2026/07/17/4834b7c83be341eeb557551e5b49863d.jpg",
+      "lmSameAsSibling": false,
+      "grabId": "THITE2025031216373120216",
+      "grabImg": "https://food-cms.grab.com/item/THITE2025031216373120216/photos/menueditor_item_648388530bd04ed8b9f50bffc2ff1719_1741797411577266501.jpg",
+      "photoAttempt": null
+    },
+    {
+      "name": "กาแฟสด เผือกลาเต้ร้อน",
+      "lmId": "0leDl47ITNhj1hE9s3ERnCXrT2AfaW",
+      "sibling": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
+      "posImg": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250312161433575000S",
+      "lmImg": "https://lmwn-img.line-scdn.net/p/400x0/2026/07/17/088dd7b9dfcf4e1cbb4deb1e6378f9bf.jpg",
+      "lmSameAsSibling": false,
+      "grabId": "THITE2025031216260943721",
+      "grabImg": "https://food-cms.grab.com/item/THITE2025031216260943721/photos/menueditor_item_1b9c80e426744cd782de224907d06a6e_1741796723478261800.jpg",
+      "photoAttempt": null
+    },
+    {
+      "name": "กาแฟสด คาราเมลลาเต้ร้อน 12 ออนซ์",
+      "lmId": "0leDl46gUnDMTZClJSCQYLyn6ykyfP",
+      "sibling": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
+      "posImg": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250312160931810000S",
+      "lmImg": "https://lmwn-img.line-scdn.net/p/400x0/2026/07/17/32d89de6cd6348a9ae88a7df6cada4fc.jpg",
+      "lmSameAsSibling": false,
+      "grabId": "THITE2025031216192272991",
+      "grabImg": "https://food-cms.grab.com/item/THITE2025031216192272991/photos/menueditor_item_115827e870224b0c8d39b9c92feab51b_1741796340699319152.jpeg",
+      "photoAttempt": null
+    },
+    {
+      "name": "กาแฟสด โกโก้มอคค่าร้อน",
+      "lmId": "0leDl472vuUBVR2Ke1XVTS8NhKdeSP",
+      "sibling": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
+      "posImg": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250312161229150000S",
+      "lmImg": "https://lmwn-img.line-scdn.net/p/400x0/2026/07/17/47477919873a47cba30a7ecfc4710cbd.jpg",
+      "lmSameAsSibling": false,
+      "grabId": "THITE2025031216222687111",
+      "grabImg": "https://food-cms.grab.com/item/THITE2025031216222687111/photos/menueditor_item_11fff7e2b7c54d5e849fe1b5ddc4d575_1741796519857328944.jpeg",
+      "photoAttempt": null
+    },
+    {
+      "name": "กาแฟสดโซดา เอสเปรสโซ่มะม่วง เย็น 16 ออนซ์",
+      "lmId": "0leDkyJ6oxa8N2J44Dyrwsw6ynGxml",
+      "sibling": "กาแฟสด บลูฮาวายเอสเปรสโซ่ เย็น 16 ออนซ์",
+      "posImg": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250310145249705000S",
+      "lmImg": "https://lmwn-img.line-scdn.net/p/400x0/2026/07/17/6caea7a381aa451eba1dfcfd87502c9a.jpg",
+      "lmSameAsSibling": false,
+      "grabId": "THITE2025031015014747584",
+      "grabImg": "https://food-cms.grab.com/item/THITE2025031015014747584/photos/menueditor_item_097a476d68d7493798abdd72604b8bf4_1741618885681154530.jpg",
+      "photoAttempt": null
+    },
+    {
+      "name": "กาแฟสด เอสเปรสโซ่ไทยสไตล์ เย็น 16 ออนซ์",
+      "lmId": "0leDkkVreUaMa5JzU30GmqLnNKcThL",
+      "sibling": "กาแฟสด ลาเต้ เย็น 16 ออนซ์",
+      "posImg": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250305173931689000S",
+      "lmImg": "https://lmwn-img.line-scdn.net/p/400x0/2026/07/17/b546029996f0406db8a70cf4a7bae09d.jpg",
+      "lmSameAsSibling": false,
+      "grabId": "THITE2025030517414777580",
+      "grabImg": "https://food-cms.grab.com/item/THITE2025030517414777580/photos/menueditor_item_76b39877f6cf420a981a965e7c7bd8e3_1741196475693502859.jpg",
+      "photoAttempt": null
+    },
+    {
+      "name": "เขียวมะนาวโซดา",
+      "lmId": "0leDVTWceITg3fi71RwXExsGgTpRFH",
+      "sibling": "เขียวมะนาวโซดา",
+      "posImg": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20260308102714170000S",
+      "lmImg": "https://lmwn-img.line-scdn.net/p/400x0/2026/07/17/dda92d79f30e4f2da4f8d0b3f151b3ce.jpg",
+      "lmSameAsSibling": true,
+      "grabId": "THITE2024040717514916315",
+      "grabImg": "https://food-cms.grab.com/item/THITE2024040717514916315/photos/menueditor_item_4908fd4d06ec44bd8983c1307e19ce5d_1772965657434487793.jpg",
+      "photoAttempt": null
+    },
+    {
+      "name": "นมสดไข่มุกบราวน์ชูการ์ (เย็น/ปั่น)",
+      "lmId": "0leDVTZmAtaBoSFGY02QzQDJ8kWcOv",
+      "sibling": "นมสดเย็น (เย็น/ปั่น)",
+      "posImg": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20260308054158255000S",
+      "lmImg": "https://lmwn-img.line-scdn.net/p/400x0/2026/07/17/633afa6a45434f8985b9992a4e205e64.jpg",
+      "lmSameAsSibling": false,
+      "grabId": "THITE2024040707263973803",
+      "grabImg": "https://food-cms.grab.com/item/THITE2024040707263973803/photos/menueditor_item_a17dc320a41544f2a1e8727f958c275d_1772948441275958595.jpg",
+      "photoAttempt": null
+    },
+    {
+      "name": "วุ้นว่านหางจระเข้ หั่นลูกเต๋า",
+      "lmId": "0leDpElQyEYGHKwIWY7Tm0DuUGNilJ",
+      "sibling": "ครีมซีส",
+      "posImg": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250612055449622000S",
+      "lmImg": "https://lmwn-img.line-scdn.net/p/400x0/2026/07/17/19b841b87b194c64a44e602d1a2979f4.jpg",
+      "lmSameAsSibling": false,
+      "grabId": "THITE2025061205575822050",
+      "grabImg": "https://food-cms.grab.com/item/THITE2025061205575822050/photos/menueditor_item_ffd9dfecae984aa5a1d92c5c0e7ce911_1749707797233982030.jpg",
+      "photoAttempt": null
+    },
+    {
+      "name": "วุ้นกบไต้หวัน",
+      "lmId": "0leDpEjSlJawCBJr7fzbz99eejvXDs",
+      "sibling": "ครีมซีส",
+      "posImg": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250612053842000000S",
+      "lmImg": "https://lmwn-img.line-scdn.net/p/400x0/2026/07/17/bed60ffc2377480b9968c86df6781d77.jpg",
+      "lmSameAsSibling": false,
+      "grabId": "THITE2025061205483737785",
+      "grabImg": "https://food-cms.grab.com/item/THITE2025061205483737785/photos/menueditor_item_e7e44caacad045cb8d7e4c5e7195cd56_1749707262724394698.jpg",
+      "photoAttempt": null
+    },
+    {
+      "name": "บุกบราวน์ชูการ์",
+      "lmId": "0leDVTcoYyVkJnjjiCy6PQvkQnfU20",
+      "sibling": "บุกบราวน์ชูการ์",
+      "posImg": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250417081901071000S",
+      "lmImg": "https://lmwn-img.line-scdn.net/p/400x0/2026/07/17/adffb75a07104b9ea52cf248f32e80bc.jpg",
+      "lmSameAsSibling": true,
+      "grabId": "THITE2025041914141523907",
+      "grabImg": "https://food-cms.grab.com/item/THITE2025041914141523907/photos/menueditor_item_3b2d7769445045ff8302bd7150820942_1745072003021616899.jpg",
+      "photoAttempt": null
+    },
+    {
+      "name": "บุกน้ำผึ้ง",
+      "lmId": "0leDVTciaShgvDSIS7qN6PkW1S6CFU",
+      "sibling": "ครีมซีส",
+      "posImg": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250417081347195000S",
+      "lmImg": "https://lmwn-img.line-scdn.net/p/400x0/2026/07/17/87462bbbc2464f8480165066ecc3aab8.jpg",
+      "lmSameAsSibling": false,
+      "grabId": "THITE2025041914163553207",
+      "grabImg": "https://food-cms.grab.com/item/THITE2025041914163553207/photos/menueditor_item_0fc07e2139764821b80190de5b80a6e6_1745072153752568881.jpg",
+      "photoAttempt": null
+    },
+    {
+      "name": "บุกน้ำตาล",
+      "lmId": "0leDVTcsWQeHzDMQqaSj2gGX03bQZ0",
+      "sibling": "ครีมซีส",
+      "posImg": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250417082842826000S",
+      "lmImg": "https://lmwn-img.line-scdn.net/p/400x0/2026/07/17/7a3aecb08d7c40ef837c9df2c79f433d.jpg",
+      "lmSameAsSibling": false,
+      "grabId": "THITE2025041914183022301",
+      "grabImg": "https://food-cms.grab.com/item/THITE2025041914183022301/photos/menueditor_item_4188abb37667411383fe3b9c82539f3b_1745072265561054119.jpg",
+      "photoAttempt": null
+    },
+    {
+      "name": "เขียวโซดา",
+      "lmId": "0leDVTYBKP4C777yEB40elhWQITet3",
+      "sibling": "เขียวโซดา",
+      "posImg": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20260308092328792000S",
+      "lmImg": "https://lmwn-img.line-scdn.net/p/400x0/2026/07/17/79a2e156fb2f44259b6f5eb69983de70.jpg",
+      "lmSameAsSibling": true,
+      "grabId": "THITE2024040717501751626",
+      "grabImg": "https://food-cms.grab.com/item/THITE2024040717501751626/photos/menueditor_item_5a3d3f60b9b44474b74ebe9aefda731b_1772961824401127505.jpg",
+      "photoAttempt": null
+    },
+    {
+      "name": "เฉาก๊วยหนึบเนื้อแน่น",
+      "lmId": "0leDoELf1wWGXGgOeqtSdADXB9Qnd4",
+      "sibling": "",
+      "posImg": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250521033516288000S",
+      "lmImg": "https://lmwn-img.line-scdn.net/p/400x0/2026/07/17/3a6ed136730a4b7c855d408a91ae075e.jpg",
+      "lmSameAsSibling": false,
+      "grabId": "THITE2025052103271268930",
+      "grabImg": "https://food-cms.grab.com/item/THITE2025052103271268930/photos/menueditor_item_f023b65dd3624e7c89ce2bbc9998fbe8_1747797995867694431.jpeg",
+      "photoAttempt": null
+    },
+    {
+      "name": "เจลลี่ผลไม้",
+      "lmId": "0leDVTcw8k6F7BbhvaiLsmJJ8YZb3O",
+      "sibling": "บุกบราวน์ชูการ์",
+      "posImg": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250417083431248000S",
+      "lmImg": "https://lmwn-img.line-scdn.net/p/400x0/2026/07/17/0e2b021902c24b4d86dd0d0bb36ab8a5.jpg",
+      "lmSameAsSibling": false,
+      "grabId": "THITE2025041914072452405",
+      "grabImg": "https://food-cms.grab.com/item/THITE2025041914072452405/photos/menueditor_item_8270cde3fbbb4ae58a34ad8c3fce6ea7_1745071543063631939.jpg",
+      "photoAttempt": null
+    },
+    {
+      "name": "ครีมซีส",
+      "lmId": "0leDVTSAOst42K58yjkdQKsoWGhqbQ",
+      "sibling": "ครีมซีส",
+      "posImg": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250417084543495000S",
+      "lmImg": "https://lmwn-img.line-scdn.net/p/400x0/2026/07/17/f80a73d6fbcc4b64abb21181f67233a3.jpg",
+      "lmSameAsSibling": true,
+      "grabId": "THITE2025041914214231373",
+      "grabImg": "https://food-cms.grab.com/item/THITE2025041914214231373/photos/menueditor_item_de6e49603f5747e1a81c8472671d056d_1745072451475482556.jpg",
+      "photoAttempt": null
+    },
+    {
+      "name": "ไข่มุก",
+      "lmId": "0leDVTczcJTIchAfdKQLof5arbdKkE",
+      "sibling": "ครีมซีส",
+      "posImg": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250417083736061000S",
+      "lmImg": "https://lmwn-img.line-scdn.net/p/400x0/2026/07/17/415bc349a704496a8574bdbf4a880034.jpg",
+      "lmSameAsSibling": false,
+      "grabId": "THITE2025041914110920164",
+      "grabImg": "https://food-cms.grab.com/item/THITE2025041914110920164/photos/menueditor_item_f74b8a9d265248878b68749001092ca6_1745071720585041413.jpg",
+      "photoAttempt": null
+    },
+    {
+      "name": "ชาสตรอว์เบอร์รี",
+      "lmId": "0leDVTTfFPcjfQTaboyX9U8UsRCDEB",
+      "sibling": "ชาบลูเบอร์รี่",
+      "posImg": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20260307083858327000S",
+      "lmImg": "https://lmwn-img.line-scdn.net/p/400x0/2026/07/17/8f325eca38f043fda9a0490c93cb4e27.jpg",
+      "lmSameAsSibling": false,
+      "grabId": "THITE2024040707325415876",
+      "grabImg": "https://food-cms.grab.com/item/THITE2024040707325415876/photos/menueditor_item_c84e27e748e64aeaaf4e5656dfd518c9_1772872756616244881.jpg",
+      "photoAttempt": null
+    }
+  ],
+  "sampleImageKeys": {
+    "name": "แดงโซดา",
+    "image": {
+      "id": 187348339,
+      "smallUrl": "https://lmwn-img.line-scdn.net/p/400x0/2026/07/17/850df35b6f5c48eb9d527420b5aee4cf.jpg",
+      "thumbnailUrl": "https://lmwn-img.line-scdn.net/p/100x100/2026/07/17/850df35b6f5c48eb9d527420b5aee4cf.jpg",
+      "__typename": "Image"
+    },
+    "err": null
+  }
+}

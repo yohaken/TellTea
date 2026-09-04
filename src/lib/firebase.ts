@@ -25,19 +25,29 @@ import { getStorage, type FirebaseStorage } from "firebase/storage";
 export function resolveAuthDomain(): string {
   if (typeof window !== "undefined") {
     const host = window.location.hostname;
-    if (
-      host === "telltea-bo.web.app" ||
-      host === "telltea-pos.web.app" ||
-      host === "localhost" ||
-      host === "127.0.0.1"
-    ) {
-      return host === "127.0.0.1" ? "localhost" : host;
+    // Hosting ที่เสิร์ฟ /__/auth/handler จริง — ใช้โดเมนนั้นเป็น authDomain
+    if (host === "telltea-bo.web.app" || host === "telltea-pos.web.app") {
+      return host;
     }
+    // localhost/127.0.0.1: ห้ามตั้ง authDomain=localhost (Next ไม่มี auth handler)
+    // → ใช้โดเมนโปรเจกต์ + ใส่ localhost ใน Authorized domains แทน
   }
   return (
     process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ||
     "mypeer-501909.firebaseapp.com"
   );
+}
+
+/** Local BO bypass — ใช้ได้เฉพาะ localhost เมื่อเปิด NEXT_PUBLIC_DEV_OWNER_BYPASS=1 */
+export function isLocalDevHost(): boolean {
+  if (typeof window === "undefined") return false;
+  const host = window.location.hostname;
+  return host === "localhost" || host === "127.0.0.1";
+}
+
+export function isLocalDevOwnerBypassEnabled(): boolean {
+  if (process.env.NEXT_PUBLIC_DEV_OWNER_BYPASS !== "1") return false;
+  return isLocalDevHost();
 }
 
 function firebaseConfig() {

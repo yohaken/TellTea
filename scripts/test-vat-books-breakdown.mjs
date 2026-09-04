@@ -35,7 +35,18 @@ assert.match(ui, /ingredientVat:\s*nextVat/);
 assert.match(ui, /sumClaimedBooksVat/);
 assert.match(ui, /vat-books-line-btn/);
 assert.match(ui, /vat-claim-line-mode/);
-assert.match(ui, /applyClaimCostDelta/);
+assert.match(ui, /colSpan=\{3\}/);
+assert.match(ui, /ยอดซื้อ ภ\.พ\.30/);
+assert.match(ui, /purchaseBaseFromVat/);
+assert.match(ui, /buildPp30Filing/);
+assert.match(ui, /คัดลอกไป ภ\.พ\.30/);
+assert.match(ui, /ยอดซื้อไม่รวม VAT/);
+assert.match(ui, /ยอดขายรวม VAT/);
+assert.match(ui, /ภาษีขาย ×7%/);
+assert.match(ui, /vatFromInclusiveSales/);
+assert.match(ui, /salesInclusive/);
+assert.match(ui, /vat-month-note/);
+assert.match(ui, /บันทึกโน้ต/);
 
 const detail = readFileSync(
   join(root, "src/components/vat-sales/BooksVatEntryDetailModal.tsx"),

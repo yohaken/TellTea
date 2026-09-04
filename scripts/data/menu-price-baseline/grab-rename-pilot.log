@@ -1,0 +1,8 @@
+=== Grab rename ×1 APPLY (เป้า = ชื่อ POS หน้าร้าน) ===
+Queue: 2
+Chrome workers: 1 tabs @ window 1 → [2]
+[1/2] blocked_menu_ui: "กาแฟสด แฟลตไวท์ (Flat White) เย็" → "กาแฟสด แฟลตไวท์ เย็น 16 ออนซ์"
+[2/2] blocked_menu_ui: "กาแฟสด ลาเต้ (Latte) เย็น 16 ออน" → "กาแฟสด ลาเต้ เย็น 16 ออนซ์"
+
+Done in 42s · renamed 0 · skip/dry 0 · blocked 2 · fail 0
+→ /Users/peerapongyohaken/TellTea/scripts/data/menu-price-baseline/grab-rename-log.json

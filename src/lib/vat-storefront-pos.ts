@@ -81,6 +81,7 @@ export function scaleSfSendTenders(
   pct: number,
 ): SfSendTenders {
   const p = Number.isFinite(pct) ? Math.min(100, Math.max(0, Math.round(pct))) : 100;
+  if (p <= 0) return { cash: 0, transfer: 0 };
   const scale = (n: number) =>
     Math.round(((normalizeMoney(n) * p) / 100) * 100) / 100;
   return {

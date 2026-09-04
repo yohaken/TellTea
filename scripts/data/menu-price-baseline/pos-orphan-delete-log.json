@@ -1,0 +1,181 @@
+{
+  "at": "2026-09-01T07:32:08.144Z",
+  "deleted": [
+    {
+      "id": "fs_item_41638767",
+      "name": "0% แคล ชามะพร้าว",
+      "category": "อื่นๆ (ไม่มีหมวดจาก FoodStory)",
+      "active": false,
+      "liveName": "0% แคล ชามะพร้าว",
+      "liveCat": ""
+    },
+    {
+      "id": "fs_item_41667873",
+      "name": "กาแฟสด เผือกลาเต้ร้อน",
+      "category": "อื่นๆ (ไม่มีหมวดจาก FoodStory)",
+      "active": false,
+      "liveName": "กาแฟสด เผือกลาเต้ร้อน",
+      "liveCat": ""
+    },
+    {
+      "id": "fs_item_41465454",
+      "name": "กาแฟสด โอวัลตินช็อตกาแฟ เย็นม",
+      "category": "อื่นๆ (ไม่มีหมวดจาก FoodStory)",
+      "active": false,
+      "liveName": "กาแฟสด โอวัลตินช็อตกาแฟ เย็นม",
+      "liveCat": ""
+    },
+    {
+      "id": "fs_item_43368503",
+      "name": "(แก้วใหญ่) ไอศกรีมซอฟเสิร์ฟ",
+      "category": "อื่นๆ (ไม่มีหมวดจาก FoodStory)",
+      "active": false,
+      "liveName": "(แก้วใหญ่) ไอศกรีมซอฟเสิร์ฟ",
+      "liveCat": ""
+    },
+    {
+      "id": "fs_item_42269895",
+      "name": "เฉาก๊วยลูกหนึบเนื้อแน่น",
+      "category": "อื่นๆ (ไม่มีหมวดจาก FoodStory)",
+      "active": false,
+      "liveName": "เฉาก๊วยลูกหนึบเนื้อแน่น",
+      "liveCat": ""
+    },
+    {
+      "id": "fs_item_42753722",
+      "name": "เฉาก๊วยหนึบลูกนิมิต",
+      "category": "อื่นๆ (ไม่มีหมวดจาก FoodStory)",
+      "active": false,
+      "liveName": "เฉาก๊วยหนึบลูกนิมิต",
+      "liveCat": ""
+    },
+    {
+      "id": "fs_item_43162739",
+      "name": "ชาเขียวนมปั่น",
+      "category": "อื่นๆ (ไม่มีหมวดจาก FoodStory)",
+      "active": false,
+      "liveName": "ชาเขียวนมปั่น",
+      "liveCat": ""
+    },
+    {
+      "id": "fs_item_43265684",
+      "name": "ชาเขียวนมปั่น",
+      "category": "อื่นๆ (ไม่มีหมวดจาก FoodStory)",
+      "active": false,
+      "liveName": "ชาเขียวนมปั่น",
+      "liveCat": ""
+    },
+    {
+      "id": "fs_item_43162814",
+      "name": "ชาไทยปั่น",
+      "category": "อื่นๆ (ไม่มีหมวดจาก FoodStory)",
+      "active": false,
+      "liveName": "ชาไทยปั่น",
+      "liveCat": ""
+    },
+    {
+      "id": "fs_item_43163009",
+      "name": "ชานมไต้หวันปั่น",
+      "category": "อื่นๆ (ไม่มีหมวดจาก FoodStory)",
+      "active": false,
+      "liveName": "ชานมไต้หวันปั่น",
+      "liveCat": ""
+    },
+    {
+      "id": "fs_item_44971745",
+      "name": "ชิโอปัง ชาโคล โฮมเมด",
+      "category": "อื่นๆ (ไม่มีหมวดจาก FoodStory)",
+      "active": false,
+      "liveName": "ชิโอปัง ชาโคล โฮมเมด",
+      "liveCat": ""
+    },
+    {
+      "id": "fs_item_44633002",
+      "name": "ชิโอปังมัทฉะ โฮมเมด",
+      "category": "อื่นๆ (ไม่มีหมวดจาก FoodStory)",
+      "active": false,
+      "liveName": "ชิโอปังมัทฉะ โฮมเมด",
+      "liveCat": ""
+    },
+    {
+      "id": "fs_item_44633039",
+      "name": "ชิโอปังมันม่วง + ไส้มันม่วง โฮมเมด",
+      "category": "อื่นๆ (ไม่มีหมวดจาก FoodStory)",
+      "active": false,
+      "liveName": "ชิโอปังมันม่วง + ไส้มันม่วง โฮมเมด",
+      "liveCat": ""
+    },
+    {
+      "id": "fs_item_44519798",
+      "name": "ชิโอปัง (Shio Pan) โฮมเมด ใส้ (แฮม/ชีส)",
+      "category": "อื่นๆ (ไม่มีหมวดจาก FoodStory)",
+      "active": false,
+      "liveName": "ชิโอปัง (Shio Pan) โฮมเมด ใส้ (แฮม/ชีส)",
+      "liveCat": ""
+    },
+    {
+      "id": "fs_item_47139859",
+      "name": "ซอฟต์คุกกี้มัจฉะช็อกชิพ",
+      "category": "อื่นๆ (ไม่มีหมวดจาก FoodStory)",
+      "active": false,
+      "liveName": "ซอฟต์คุกกี้มัจฉะช็อกชิพ",
+      "liveCat": ""
+    },
+    {
+      "id": "fs_item_43038095",
+      "name": "สเลอร์ปี้ชาไทย",
+      "category": "อื่นๆ (ไม่มีหมวดจาก FoodStory)",
+      "active": false,
+      "liveName": "สเลอร์ปี้ชาไทย",
+      "liveCat": ""
+    },
+    {
+      "id": "fs_item_33559320",
+      "name": "หวานเย็นโบราณ",
+      "category": "อื่นๆ (ไม่มีหมวดจาก FoodStory)",
+      "active": false,
+      "liveName": "หวานเย็นโบราณ",
+      "liveCat": ""
+    },
+    {
+      "id": "fs_item_47068220",
+      "name": "Craft Osmanthus Oolong (คราฟต์อู่หลงหอมหมื่นลี้)",
+      "category": "อื่นๆ (ไม่มีหมวดจาก FoodStory)",
+      "active": false,
+      "liveName": "Craft Osmanthus Oolong (คราฟต์อู่หลงหอมหมื่นลี้)",
+      "liveCat": ""
+    },
+    {
+      "id": "yJe2YFpgZrqB9CXoQwAW",
+      "name": "[QA-TEST] เมนูทดสอบ A",
+      "category": "[QA-TEST] หมวดทดสอบ",
+      "active": false,
+      "liveName": "[QA-TEST] เมนูทดสอบ A",
+      "liveCat": ""
+    },
+    {
+      "id": "58VtdnBgH8bAJs7uM7ru",
+      "name": "[QA-TEST] เมนูทดสอบ B",
+      "category": "[QA-TEST] หมวดทดสอบ",
+      "active": false,
+      "liveName": "[QA-TEST] เมนูทดสอบ B",
+      "liveCat": ""
+    }
+  ],
+  "missing": [],
+  "categoriesDeleted": [
+    {
+      "id": "fs_cat__uncategorized",
+      "name": "อื่นๆ (ไม่มีหมวดจาก FoodStory)"
+    },
+    {
+      "id": "yIun0tXA1hbH4QwSlzJ6",
+      "name": "[QA-TEST] หมวดทดสอบ"
+    }
+  ],
+  "snapshot": {
+    "before": 193,
+    "after": 173,
+    "removed": 20
+  }
+}

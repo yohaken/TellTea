@@ -1,0 +1,61 @@
+{
+  "at": "2026-09-01T15:26:48.589Z",
+  "verify": [
+    {
+      "group": "ท็อปปิ้ง",
+      "name": "ชีส",
+      "expected": 29,
+      "before": 37,
+      "live": null,
+      "ok": false
+    },
+    {
+      "group": "ชิโอปัง เพิ่มไส้พิเศษ",
+      "name": "ชีส",
+      "expected": 29,
+      "before": 37,
+      "live": 29,
+      "ok": true
+    },
+    {
+      "group": "แยกน้ำแข็ง",
+      "name": "แยกน้ำแข็ง",
+      "expected": 4,
+      "before": 11,
+      "live": null,
+      "ok": false
+    },
+    {
+      "group": "ท็อปปิ้ง",
+      "name": "ช็อคขูด",
+      "expected": 21,
+      "before": 26,
+      "live": 21,
+      "ok": true
+    },
+    {
+      "group": "ท็อปปิ้ง",
+      "name": "เจลลี่ผลไม้",
+      "expected": 7,
+      "before": 8,
+      "live": 7,
+      "ok": true
+    },
+    {
+      "group": "ท็อปปิ้ง",
+      "name": "ไข่มุก",
+      "expected": 7,
+      "before": 8,
+      "live": 7,
+      "ok": true
+    },
+    {
+      "group": "ท็อปปิ้ง",
+      "name": "บุกน้ำตาล",
+      "expected": 14,
+      "before": 15,
+      "live": 14,
+      "ok": true
+    }
+  ]
+}

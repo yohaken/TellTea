@@ -1,0 +1,56 @@
+[
+  {
+    "probe": "avail=1",
+    "code": 100,
+    "msg": "params invalid"
+  },
+  {
+    "probe": "avail=2",
+    "code": 100,
+    "msg": "params invalid"
+  },
+  {
+    "probe": "avail=\"AVAILABLE\"",
+    "code": 100,
+    "msg": "params invalid"
+  },
+  {
+    "probe": "avail=\"Available\"",
+    "code": 2,
+    "msg": "groups.UpdateOptionGroupAndOptionsReq.Options: []*foody_item.Option: foody_item.Option.Available: unmarshalerDecoder: unrecognized enum Available value \"Available\", error found in "
+  },
+  {
+    "probe": "avail=0",
+    "code": 100,
+    "msg": "params invalid"
+  },
+  {
+    "flat": "avail=1",
+    "code": 0,
+    "msg": "success"
+  },
+  {
+    "flatOk": true,
+    "optionCount": 2,
+    "options": [
+      {
+        "option_id": "3242232716035584",
+        "option_name": "",
+        "rank": 1,
+        "price": "1800000",
+        "available": true,
+        "out_of_stock_time": null,
+        "sync_item_group_id": ""
+      },
+      {
+        "option_id": "3242232716035585",
+        "option_name": "",
+        "rank": 2,
+        "price": "2600000",
+        "available": true,
+        "out_of_stock_time": null,
+        "sync_item_group_id": ""
+      }
+    ]
+  }
+]

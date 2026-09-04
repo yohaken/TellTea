@@ -1,0 +1,670 @@
+{
+  "at": "2026-09-03T02:42:54.984Z",
+  "apply": true,
+  "counts": {
+    "saved": 20
+  },
+  "stillOpen": [],
+  "results": [
+    {
+      "id": "0leDsCeTf71tRimV8r5E16eNmTP9wv",
+      "name": "ชิโอปัง (Shio Pan) โฮมเมด ใหญ่ขึ้น",
+      "nameEn": "",
+      "status": "saved",
+      "listPrice": 27,
+      "pickupPrice": 27,
+      "offlinePrice": 25,
+      "deliveryAvailable": true,
+      "selfPickupAvailable": true,
+      "offlineAvailable": true,
+      "categoryIds": [
+        "0lfzREimAkRHqllpN4jWa4a1IWdqTu"
+      ],
+      "href": "https://merchant.wongnai.com/businesses/2688343/menu/0leDsCeTf71tRimV8r5E16eNmTP9wv/edit",
+      "channels": {
+        "online": {
+          "name": "onlineEnabled",
+          "ok": true,
+          "checked": true
+        },
+        "pickup": {
+          "name": "pickUpEnabled",
+          "ok": true,
+          "checked": false
+        },
+        "offline": {
+          "name": "offlineEnabled",
+          "ok": true,
+          "checked": false
+        }
+      }
+    },
+    {
+      "id": "0leDwOD6GVemff3xC8lmBy9EdTHGCI",
+      "name": "ซอฟต์คุกกี้ โฮมเมด (เลือกได้)",
+      "nameEn": "",
+      "status": "saved",
+      "listPrice": 21,
+      "pickupPrice": 26,
+      "offlinePrice": 17,
+      "deliveryAvailable": true,
+      "selfPickupAvailable": true,
+      "offlineAvailable": true,
+      "categoryIds": [
+        "0lfzREimAkRHqllpN4jWa4a1IWdqTu"
+      ],
+      "href": "https://merchant.wongnai.com/businesses/2688343/menu/0leDwOD6GVemff3xC8lmBy9EdTHGCI/edit",
+      "channels": {
+        "online": {
+          "name": "onlineEnabled",
+          "ok": true,
+          "checked": true
+        },
+        "pickup": {
+          "name": "pickUpEnabled",
+          "ok": true,
+          "checked": false
+        },
+        "offline": {
+          "name": "offlineEnabled",
+          "ok": true,
+          "checked": false
+        }
+      }
+    },
+    {
+      "id": "0leDrC1sTrTkYTCEk5INzXoQQ50lZN",
+      "name": "ปังเนยกรอบอบไอน้ำ",
+      "nameEn": "",
+      "status": "saved",
+      "listPrice": 27,
+      "pickupPrice": 37,
+      "offlinePrice": 25,
+      "deliveryAvailable": true,
+      "selfPickupAvailable": true,
+      "offlineAvailable": true,
+      "categoryIds": [
+        "0lfzREimAkRHqllpN4jWa4a1IWdqTu"
+      ],
+      "href": "https://merchant.wongnai.com/businesses/2688343/menu/0leDrC1sTrTkYTCEk5INzXoQQ50lZN/edit",
+      "channels": {
+        "online": {
+          "name": "onlineEnabled",
+          "ok": true,
+          "checked": true
+        },
+        "pickup": {
+          "name": "pickUpEnabled",
+          "ok": true,
+          "checked": false
+        },
+        "offline": {
+          "name": "offlineEnabled",
+          "ok": true,
+          "checked": false
+        }
+      }
+    },
+    {
+      "id": "0leDtfWkTRHl0rMHhKBdbqKO4LJTzB",
+      "name": "ชาอู่หลงน้ำผึ้ง",
+      "nameEn": "",
+      "status": "saved",
+      "listPrice": 34,
+      "pickupPrice": 43,
+      "offlinePrice": 29,
+      "deliveryAvailable": true,
+      "selfPickupAvailable": true,
+      "offlineAvailable": true,
+      "categoryIds": [
+        "0lfz5W7fMpCMElPB6PDwuuZhUTj226"
+      ],
+      "href": "https://merchant.wongnai.com/businesses/2688343/menu/0leDtfWkTRHl0rMHhKBdbqKO4LJTzB/edit",
+      "channels": {
+        "online": {
+          "name": "onlineEnabled",
+          "ok": true,
+          "checked": true
+        },
+        "pickup": {
+          "name": "pickUpEnabled",
+          "ok": true,
+          "checked": false
+        },
+        "offline": {
+          "name": "offlineEnabled",
+          "ok": true,
+          "checked": false
+        }
+      }
+    },
+    {
+      "id": "0leDVTTRZESYQtafFwCcSKiQ1jG34o",
+      "name": "ชาเขียวมะลิ",
+      "nameEn": "Jasmine Tea",
+      "status": "saved",
+      "listPrice": 27,
+      "pickupPrice": 37,
+      "offlinePrice": 25,
+      "deliveryAvailable": true,
+      "selfPickupAvailable": true,
+      "offlineAvailable": true,
+      "categoryIds": [
+        "0lfz5W7fMpCMElPB6PDwuuZhUTj226"
+      ],
+      "href": "https://merchant.wongnai.com/businesses/2688343/menu/0leDVTTRZESYQtafFwCcSKiQ1jG34o/edit",
+      "channels": {
+        "online": {
+          "name": "onlineEnabled",
+          "ok": true,
+          "checked": true
+        },
+        "pickup": {
+          "name": "pickUpEnabled",
+          "ok": true,
+          "checked": false
+        },
+        "offline": {
+          "name": "offlineEnabled",
+          "ok": true,
+          "checked": false
+        }
+      }
+    },
+    {
+      "id": "0leDVTTpIccpbfQF9x68nk5oaOjFpz",
+      "name": "ชาไทย (เย็น/ปั่น)",
+      "nameEn": "Thai Milk Tea",
+      "status": "saved",
+      "listPrice": 34,
+      "pickupPrice": 43,
+      "offlinePrice": 29,
+      "deliveryAvailable": true,
+      "selfPickupAvailable": true,
+      "offlineAvailable": true,
+      "categoryIds": [
+        "0lfz5W545Mw8G0iCg1nk17D2uW3jIe"
+      ],
+      "href": "https://merchant.wongnai.com/businesses/2688343/menu/0leDVTTpIccpbfQF9x68nk5oaOjFpz/edit",
+      "channels": {
+        "online": {
+          "name": "onlineEnabled",
+          "ok": true,
+          "checked": true
+        },
+        "pickup": {
+          "name": "pickUpEnabled",
+          "ok": true,
+          "checked": false
+        },
+        "offline": {
+          "name": "offlineEnabled",
+          "ok": true,
+          "checked": false
+        }
+      }
+    },
+    {
+      "id": "0leDqbnTWAYu4WFUI0NY2ISRyrBFoa",
+      "name": "ชานมมันม่วง",
+      "nameEn": "",
+      "status": "saved",
+      "listPrice": 56,
+      "pickupPrice": 67,
+      "offlinePrice": 45,
+      "deliveryAvailable": true,
+      "selfPickupAvailable": true,
+      "offlineAvailable": true,
+      "categoryIds": [
+        "0lfz5W545Mw8G0iCg1nk17D2uW3jIe"
+      ],
+      "href": "https://merchant.wongnai.com/businesses/2688343/menu/0leDqbnTWAYu4WFUI0NY2ISRyrBFoa/edit",
+      "channels": {
+        "online": {
+          "name": "onlineEnabled",
+          "ok": true,
+          "checked": true
+        },
+        "pickup": {
+          "name": "pickUpEnabled",
+          "ok": true,
+          "checked": false
+        },
+        "offline": {
+          "name": "offlineEnabled",
+          "ok": true,
+          "checked": false
+        }
+      }
+    },
+    {
+      "id": "0leDmmyJWaS9IY1ZGuZW4xm5UtX8D8",
+      "name": "มัทฉะบราวน์ชูการ์ไข่มุก (Matcha Brown Sugar Boba)",
+      "nameEn": "",
+      "status": "saved",
+      "listPrice": 64,
+      "pickupPrice": 73,
+      "offlinePrice": 49,
+      "deliveryAvailable": true,
+      "selfPickupAvailable": true,
+      "offlineAvailable": true,
+      "categoryIds": [
+        "0lfzMp4ncZNlnKxmCxW0mCLScGHovT"
+      ],
+      "href": "https://merchant.wongnai.com/businesses/2688343/menu/0leDmmyJWaS9IY1ZGuZW4xm5UtX8D8/edit",
+      "channels": {
+        "online": {
+          "name": "onlineEnabled",
+          "ok": true,
+          "checked": true
+        },
+        "pickup": {
+          "name": "pickUpEnabled",
+          "ok": true,
+          "checked": false
+        },
+        "offline": {
+          "name": "offlineEnabled",
+          "ok": true,
+          "checked": false
+        }
+      }
+    },
+    {
+      "id": "0leDqBVXpRTMcJIT6oZGdwr9QndmYc",
+      "name": "ส้มปั่น แก้วใหญ่ 22 ออนซ์",
+      "nameEn": "",
+      "status": "saved",
+      "listPrice": 49,
+      "pickupPrice": 58,
+      "offlinePrice": 39,
+      "deliveryAvailable": true,
+      "selfPickupAvailable": true,
+      "offlineAvailable": true,
+      "categoryIds": [
+        "0lfzPEnLFhuRqAS6xWgacNckPeDDRe"
+      ],
+      "href": "https://merchant.wongnai.com/businesses/2688343/menu/0leDqBVXpRTMcJIT6oZGdwr9QndmYc/edit",
+      "channels": {
+        "online": {
+          "name": "onlineEnabled",
+          "ok": true,
+          "checked": true
+        },
+        "pickup": {
+          "name": "pickUpEnabled",
+          "ok": true,
+          "checked": false
+        },
+        "offline": {
+          "name": "offlineEnabled",
+          "ok": true,
+          "checked": false
+        }
+      }
+    },
+    {
+      "id": "0leDW482Sv1Mf605Vij5S0rAPfSOHg",
+      "name": "ชาส้มยูสุ",
+      "nameEn": "Orange Tea",
+      "status": "saved",
+      "listPrice": 56,
+      "pickupPrice": 67,
+      "offlinePrice": 45,
+      "deliveryAvailable": true,
+      "selfPickupAvailable": true,
+      "offlineAvailable": true,
+      "categoryIds": [
+        "0lfz66lTJBb9jQYkA4a9vgfU2NXaCY"
+      ],
+      "href": "https://merchant.wongnai.com/businesses/2688343/menu/0leDW482Sv1Mf605Vij5S0rAPfSOHg/edit",
+      "channels": {
+        "online": {
+          "name": "onlineEnabled",
+          "ok": true,
+          "checked": true
+        },
+        "pickup": {
+          "name": "pickUpEnabled",
+          "ok": true,
+          "checked": false
+        },
+        "offline": {
+          "name": "offlineEnabled",
+          "ok": true,
+          "checked": false
+        }
+      }
+    },
+    {
+      "id": "0leDW4899iNp0PYzIvbZRFUVJjUYiq",
+      "name": "ชาพีชส้มยูสุ",
+      "nameEn": "Peach & Orange Tea",
+      "status": "saved",
+      "listPrice": 70,
+      "pickupPrice": 82,
+      "offlinePrice": 55,
+      "deliveryAvailable": true,
+      "selfPickupAvailable": true,
+      "offlineAvailable": true,
+      "categoryIds": [
+        "0lfz66lTJBb9jQYkA4a9vgfU2NXaCY"
+      ],
+      "href": "https://merchant.wongnai.com/businesses/2688343/menu/0leDW4899iNp0PYzIvbZRFUVJjUYiq/edit",
+      "channels": {
+        "online": {
+          "name": "onlineEnabled",
+          "ok": true,
+          "checked": true
+        },
+        "pickup": {
+          "name": "pickUpEnabled",
+          "ok": true,
+          "checked": false
+        },
+        "offline": {
+          "name": "offlineEnabled",
+          "ok": true,
+          "checked": false
+        }
+      }
+    },
+    {
+      "id": "0leDVTYuLOqwfVjI5foEbPC4lwrC8L",
+      "name": "นมสดเย็น (เย็น/ปั่น)",
+      "nameEn": "Fresh Milk",
+      "status": "saved",
+      "listPrice": 34,
+      "pickupPrice": 43,
+      "offlinePrice": 29,
+      "deliveryAvailable": true,
+      "selfPickupAvailable": true,
+      "offlineAvailable": true,
+      "categoryIds": [
+        "0lfz5WCK7bfTbAEHleAu3qsTOoMkoQ"
+      ],
+      "href": "https://merchant.wongnai.com/businesses/2688343/menu/0leDVTYuLOqwfVjI5foEbPC4lwrC8L/edit",
+      "channels": {
+        "online": {
+          "name": "onlineEnabled",
+          "ok": true,
+          "checked": true
+        },
+        "pickup": {
+          "name": "pickUpEnabled",
+          "ok": true,
+          "checked": false
+        },
+        "offline": {
+          "name": "offlineEnabled",
+          "ok": true,
+          "checked": false
+        }
+      }
+    },
+    {
+      "id": "0leDVTaQHClttNPzQlS6yibCywgEg4",
+      "name": "โอวัลติน (เย็น/ปั่น)",
+      "nameEn": "Ovaltine",
+      "status": "saved",
+      "listPrice": 34,
+      "pickupPrice": 43,
+      "offlinePrice": 29,
+      "deliveryAvailable": true,
+      "selfPickupAvailable": true,
+      "offlineAvailable": true,
+      "categoryIds": [
+        "0lfz5WCK7bfTbAEHleAu3qsTOoMkoQ"
+      ],
+      "href": "https://merchant.wongnai.com/businesses/2688343/menu/0leDVTaQHClttNPzQlS6yibCywgEg4/edit",
+      "channels": {
+        "online": {
+          "name": "onlineEnabled",
+          "ok": true,
+          "checked": true
+        },
+        "pickup": {
+          "name": "pickUpEnabled",
+          "ok": true,
+          "checked": false
+        },
+        "offline": {
+          "name": "offlineEnabled",
+          "ok": true,
+          "checked": false
+        }
+      }
+    },
+    {
+      "id": "0leDVTdmgbwt9P2DYXGMz7TCf5zsfG",
+      "name": "แดงโซดา",
+      "nameEn": "Red Soda",
+      "status": "saved",
+      "listPrice": 37,
+      "pickupPrice": 37,
+      "offlinePrice": 25,
+      "deliveryAvailable": true,
+      "selfPickupAvailable": true,
+      "offlineAvailable": true,
+      "categoryIds": [
+        "0lfz5WDr0MZb1NmQDx2hGWsveucNlr"
+      ],
+      "href": "https://merchant.wongnai.com/businesses/2688343/menu/0leDVTdmgbwt9P2DYXGMz7TCf5zsfG/edit",
+      "channels": {
+        "online": {
+          "name": "onlineEnabled",
+          "ok": true,
+          "checked": true
+        },
+        "pickup": {
+          "name": "pickUpEnabled",
+          "ok": true,
+          "checked": false
+        },
+        "offline": {
+          "name": "offlineEnabled",
+          "ok": true,
+          "checked": false
+        }
+      }
+    },
+    {
+      "id": "0leDlp8XPmgFlOHV7GuKhFsQOtAYKH",
+      "name": "0% โคล่าโซดามะนาว",
+      "nameEn": "0% Cola Lemon Soda",
+      "status": "saved",
+      "listPrice": 27,
+      "pickupPrice": 37,
+      "offlinePrice": 25,
+      "deliveryAvailable": true,
+      "selfPickupAvailable": true,
+      "offlineAvailable": true,
+      "categoryIds": [
+        "0lfzL99By1mPOTM0aeaZlSeAvz4Ywi"
+      ],
+      "href": "https://merchant.wongnai.com/businesses/2688343/menu/0leDlp8XPmgFlOHV7GuKhFsQOtAYKH/edit",
+      "channels": {
+        "online": {
+          "name": "onlineEnabled",
+          "ok": true,
+          "checked": true
+        },
+        "pickup": {
+          "name": "pickUpEnabled",
+          "ok": true,
+          "checked": false
+        },
+        "offline": {
+          "name": "offlineEnabled",
+          "ok": true,
+          "checked": false
+        }
+      }
+    },
+    {
+      "id": "0leDlp8fdpV6YnQg0lGLFQ9jVRzAR6",
+      "name": "0% โคล่าโซดา",
+      "nameEn": "0% Cola Soda",
+      "status": "saved",
+      "listPrice": 27,
+      "pickupPrice": 37,
+      "offlinePrice": 25,
+      "deliveryAvailable": true,
+      "selfPickupAvailable": true,
+      "offlineAvailable": true,
+      "categoryIds": [
+        "0lfzL99By1mPOTM0aeaZlSeAvz4Ywi"
+      ],
+      "href": "https://merchant.wongnai.com/businesses/2688343/menu/0leDlp8fdpV6YnQg0lGLFQ9jVRzAR6/edit",
+      "channels": {
+        "online": {
+          "name": "onlineEnabled",
+          "ok": true,
+          "checked": true
+        },
+        "pickup": {
+          "name": "pickUpEnabled",
+          "ok": true,
+          "checked": false
+        },
+        "offline": {
+          "name": "offlineEnabled",
+          "ok": true,
+          "checked": false
+        }
+      }
+    },
+    {
+      "id": "0leDkT5qFs5SYGCvZ10pfHEp2oMmuR",
+      "name": "กาแฟสด อเมริกาโน่ เย็น 16 ออนซ์",
+      "nameEn": "Caffè Americano with ice",
+      "status": "saved",
+      "listPrice": 41,
+      "pickupPrice": 52,
+      "offlinePrice": 35,
+      "deliveryAvailable": true,
+      "selfPickupAvailable": true,
+      "offlineAvailable": true,
+      "categoryIds": [
+        "0lfzKVmVIUMwtHRXzr9DHoF1TwwBrp"
+      ],
+      "href": "https://merchant.wongnai.com/businesses/2688343/menu/0leDkT5qFs5SYGCvZ10pfHEp2oMmuR/edit",
+      "channels": {
+        "online": {
+          "name": "onlineEnabled",
+          "ok": true,
+          "checked": true
+        },
+        "pickup": {
+          "name": "pickUpEnabled",
+          "ok": true,
+          "checked": false
+        },
+        "offline": {
+          "name": "offlineEnabled",
+          "ok": true,
+          "checked": false
+        }
+      }
+    },
+    {
+      "id": "0leDkTIrz9F2F25ZqHfhSklBFcUAcD",
+      "name": "กาแฟสด เอสเปรสโซ่ เย็น 16 ออนซ์",
+      "nameEn": "Iced Caffè Espresso",
+      "status": "saved",
+      "listPrice": 50,
+      "pickupPrice": 58,
+      "offlinePrice": 39,
+      "deliveryAvailable": true,
+      "selfPickupAvailable": true,
+      "offlineAvailable": true,
+      "categoryIds": [
+        "0lfzKVmVIUMwtHRXzr9DHoF1TwwBrp"
+      ],
+      "href": "https://merchant.wongnai.com/businesses/2688343/menu/0leDkTIrz9F2F25ZqHfhSklBFcUAcD/edit",
+      "channels": {
+        "online": {
+          "name": "onlineEnabled",
+          "ok": true,
+          "checked": true
+        },
+        "pickup": {
+          "name": "pickUpEnabled",
+          "ok": true,
+          "checked": false
+        },
+        "offline": {
+          "name": "offlineEnabled",
+          "ok": true,
+          "checked": false
+        }
+      }
+    },
+    {
+      "id": "0leDkaLoVnb7KfG7Pi1dW2Vo4iNLV3",
+      "name": "กาแฟสด แฟลตไวท์ เย็น 16 ออนซ์",
+      "nameEn": "Iced Flat White",
+      "status": "saved",
+      "listPrice": 50,
+      "pickupPrice": 58,
+      "offlinePrice": 39,
+      "deliveryAvailable": true,
+      "selfPickupAvailable": true,
+      "offlineAvailable": true,
+      "categoryIds": [
+        "0lfzKyHYpAEvOk5Jku0IxZYalL3yjJ"
+      ],
+      "href": "https://merchant.wongnai.com/businesses/2688343/menu/0leDkaLoVnb7KfG7Pi1dW2Vo4iNLV3/edit",
+      "channels": {
+        "online": {
+          "name": "onlineEnabled",
+          "ok": true,
+          "checked": true
+        },
+        "pickup": {
+          "name": "pickUpEnabled",
+          "ok": true,
+          "checked": false
+        },
+        "offline": {
+          "name": "offlineEnabled",
+          "ok": true,
+          "checked": false
+        }
+      }
+    },
+    {
+      "id": "0leDVTcw8k6F7BbhvaiLsmJJ8YZb3O",
+      "name": "เจลลี่ผลไม้",
+      "nameEn": "Fruit Jelly",
+      "status": "saved",
+      "listPrice": 7,
+      "pickupPrice": 7,
+      "offlinePrice": 5,
+      "deliveryAvailable": true,
+      "selfPickupAvailable": true,
+      "offlineAvailable": true,
+      "categoryIds": [
+        "0lfz5W9OvdPWFUNEiWenDzh4grDhj3"
+      ],
+      "href": "https://merchant.wongnai.com/businesses/2688343/menu/0leDVTcw8k6F7BbhvaiLsmJJ8YZb3O/edit",
+      "channels": {
+        "online": {
+          "name": "onlineEnabled",
+          "ok": true,
+          "checked": true
+        },
+        "pickup": {
+          "name": "pickUpEnabled",
+          "ok": true,
+          "checked": false
+        },
+        "offline": {
+          "name": "offlineEnabled",
+          "ok": true,
+          "checked": false
+        }
+      }
+    }
+  ]
+}

@@ -252,6 +252,8 @@ export type MenuOptionChoice = {
   sortOrder: number;
   active: boolean;
   externalId?: string;
+  /** โน้ตในศูนย์ราคา / สั่งงาน AI ต่อแถวตัวเลือก — ไม่เกี่ยวกับลูกค้า */
+  hubNote?: string;
 };
 
 export type MenuOptionSelectionType = "single" | "multi" | "unlimited";
@@ -292,6 +294,13 @@ export type MenuItem = {
   description?: string;
   /** ลำดับกลุ่มตัวเลือกตอนขาย */
   optionGroupIds?: string[];
+  /**
+   * true = ขายเฉพาะหน้าร้าน — ไม่ตั้งเดลิเวอรี่/ช่องทาง
+   * ไม่มีฟิลด์ = อนุมานจากชื่อ (เฉพาะหน้าร้าน) หรือขายเดลิเวอรี่ได้
+   */
+  storeOnly?: boolean;
+  /** โน้ตในศูนย์ราคา / สั่งงาน AI ต่อแถว — ไม่เกี่ยวกับลูกค้า */
+  hubNote?: string;
   createdAt: number;
   updatedAt: number;
   source?: string;

@@ -33,11 +33,12 @@ import { mapFirestoreError } from "./firestore-errors";
 import { getFirebaseFunctions } from "./firebase";
 import { httpsCallable } from "firebase/functions";
 import { fetchOtEntriesFromServer, mapOtEntryDoc, subscribeOtEntries, type OtEntry } from "./ot";
-import type { ProdEntry, ProdProduct } from "./production";
+import type { ProdEntry } from "./production";
 import {
   fetchProdEntriesFromServer,
   listProdProducts,
   mapProdEntryDoc,
+  mapProdProduct,
   subscribeProdEntries,
 } from "./production";
 import {
@@ -131,10 +132,7 @@ async function loadStaffProductionBundleViaCallable(
   return {
     linked: raw.linked,
     workers: raw.workers,
-    products: raw.products.map((row) => ({
-      id: row.id,
-      ...(row as unknown as Omit<ProdProduct, "id">),
-    })),
+    products: raw.products.map((row) => mapProdProduct(row.id, row)),
     rateSchedule: raw.rateSchedule,
     entries: raw.prodEntries.map((row) => mapProdEntryDoc(row.id, row)),
   };

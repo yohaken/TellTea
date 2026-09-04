@@ -4,6 +4,7 @@ import {
   deleteDoc,
   deleteField,
   doc,
+  getDoc,
   getDocs,
   onSnapshot,
   orderBy,
@@ -54,6 +55,7 @@ function mapChoice(raw: unknown): MenuOptionChoice | null {
     ...(typeof o.priceDeltaMax === "number" ? { priceDeltaMax: o.priceDeltaMax } : {}),
     sortOrder: typeof o.sortOrder === "number" ? o.sortOrder : 0,
     active: o.active !== false,
+    ...(typeof o.hubNote === "string" && o.hubNote.trim() ? { hubNote: o.hubNote.trim() } : {}),
   };
 }
 
@@ -168,6 +170,48 @@ export async function updateMenuOptionGroup(
   }
 }
 
+/** ใส่ hubNote ชุดเดียวกันหลายตัวเลือก — ไม่แตะราคา/ชื่อ · ว่าง = ลบฟิลด์ */
+export async function setMenuOptionChoiceHubNotes(
+  targets: { groupId: string; choiceId: string }[],
+  note: string,
+): Promise<number> {
+  const text = String(note || "").trim();
+  const byGroup = new Map<string, Set<string>>();
+  for (const t of targets) {
+    if (!t.groupId || !t.choiceId) continue;
+    if (!byGroup.has(t.groupId)) byGroup.set(t.groupId, new Set());
+    byGroup.get(t.groupId)!.add(t.choiceId);
+  }
+  if (!byGroup.size) return 0;
+  let n = 0;
+  try {
+    for (const [groupId, choiceIds] of byGroup) {
+      const snap = await getDoc(doc(getMenuDb(), MENU_OPTION_GROUPS_COL, groupId));
+      if (!snap.exists()) continue;
+      const group = mapGroup(groupId, snap.data() as Record<string, unknown>);
+      let changed = 0;
+      const options = group.options.map((c) => {
+        if (!choiceIds.has(c.id)) return c;
+        const prev = (c.hubNote || "").trim();
+        if (prev === text) return c;
+        changed += 1;
+        if (!text) {
+          const next = { ...c };
+          delete next.hubNote;
+          return next;
+        }
+        return { ...c, hubNote: text };
+      });
+      if (!changed) continue;
+      await updateMenuOptionGroup(groupId, { options });
+      n += changed;
+    }
+    return n;
+  } catch (err) {
+    throw new Error(mapFirestoreError(err, "ใส่โน้ตตัวเลือก", menuErrorHint()));
+  }
+}
+
 export async function deleteMenuOptionGroup(id: string): Promise<void> {
   try {
     await deleteDoc(doc(getMenuDb(), MENU_OPTION_GROUPS_COL, id));
@@ -215,6 +259,9 @@ export function serializeMenuOptionChoice(o: MenuOptionChoice): Record<string, u
     row.deliveryPriceDelta = Math.max(0, o.deliveryPriceDelta);
   }
   if (typeof o.priceDeltaMax === "number") row.priceDeltaMax = o.priceDeltaMax;
+  if (typeof o.hubNote === "string" && o.hubNote.trim()) {
+    row.hubNote = o.hubNote.trim();
+  }
   return row;
 }
 

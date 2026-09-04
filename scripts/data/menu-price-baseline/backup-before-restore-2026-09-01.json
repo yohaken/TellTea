@@ -1,0 +1,1717 @@
+{
+  "at": "2026-09-01T04:36:12.610Z",
+  "menuItems": [
+    {
+      "id": "fs_item_33559267",
+      "name": "โกปี๊ ยกล้อ (ใส่นม) (เย็น/ปั่น)",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_33559268",
+      "name": "ชานมเผือก (เย็น/ปั่น)",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_33559269",
+      "name": "ชานมเฮเซลนัท (เย็น/ปั่น)",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_33559270",
+      "name": "ชานมมิ้นต์ (เย็น/ปั่น)",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_33559271",
+      "name": "ชานมคาราเมล (เย็น/ปั่น)",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_33559272",
+      "name": "ชามะนาว",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_33559274",
+      "name": "ครีมซีส",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_33559276",
+      "name": "ชาบลูเบอร์รี่",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_33559277",
+      "name": "ชาเสาวรส",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_33559278",
+      "name": "ชาสตรอว์เบอร์รี",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_41276630",
+      "name": "กาแฟสด อเมริกาโน่ เย็น 16 ออนซ์",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_33559279",
+      "name": "ชาเขียวมะลิ",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_33559280",
+      "name": "ชาไทย (เย็น/ปั่น)",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_33559281",
+      "name": "ลาเต้ (เย็น/ปั่น)",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_33559282",
+      "name": "มอคค่า (เย็น/ปั่น)",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_33559283",
+      "name": "เนสกาแฟ (เย็น/ปั่น)",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_33559284",
+      "name": "โกปี๊ โบราณ (เย็น/ปั่น)",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_33559286",
+      "name": "โกโก้ (เย็น/ปั่น)",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_33559287",
+      "name": "โกปี๊อ้อ (โอเลี้ยง) (เย็น/ปั่น)",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_33559288",
+      "name": "เขียวมะนาวโซดา",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_33559289",
+      "name": "แดงมะนาวโซดา",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_41277766",
+      "name": "กาแฟสด เอสเปรสโซ่ เย็น 16 ออนซ์",
+      "price": 39,
+      "deliveryPrice": 58
+    },
+    {
+      "id": "fs_item_33559290",
+      "name": "เขียวโซดา",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_33559291",
+      "name": "แอปเปิ้ลโซดา",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_33559294",
+      "name": "นมสดเย็น (เย็น/ปั่น)",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_33559295",
+      "name": "นมสดเผือก (เย็น/ปั่น)",
+      "price": 39,
+      "deliveryPrice": 58
+    },
+    {
+      "id": "fs_item_33559296",
+      "name": "ลิ้นจี่โซดา",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_33559297",
+      "name": "บลูเบอร์รี่โซดา",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_33559298",
+      "name": "บ๊วยโซดา",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_33559299",
+      "name": "น้ำผึ้งมะนาวโซดา",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_33559300",
+      "name": "บลูฮาวายโซดา",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_33559301",
+      "name": "นมสดไข่มุกบราวน์ชูการ์ (เย็น/ปั่น)",
+      "price": 49,
+      "deliveryPrice": 73
+    },
+    {
+      "id": "fs_item_41321144",
+      "name": "กาแฟสด ลองแบล็ค เย็น 16 ออนซ์",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_33559303",
+      "name": "นมชมพู (เย็น/ปั่น)",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_33559304",
+      "name": "นมมรกต (เย็น/ปั่น)",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_33559305",
+      "name": "นมสดเฮเซลนัท (เย็น/ปั่น)",
+      "price": 39,
+      "deliveryPrice": 58
+    },
+    {
+      "id": "fs_item_33559306",
+      "name": "นมสดคาราเมล (เย็น/ปั่น)",
+      "price": 39,
+      "deliveryPrice": 58
+    },
+    {
+      "id": "fs_item_33559307",
+      "name": "โอวัลติน (เย็น/ปั่น)",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_33559308",
+      "name": "ไมโล (เย็น/ปั่น)",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_33559309",
+      "name": "โกโก้มิ้นต์ (เย็น/ปั่น)",
+      "price": 39,
+      "deliveryPrice": 58
+    },
+    {
+      "id": "fs_item_33559311",
+      "name": "ซอสบราวน์ชูการ์",
+      "price": 17,
+      "deliveryPrice": 26
+    },
+    {
+      "id": "fs_item_33559312",
+      "name": "ชาดำเย็น",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_33559314",
+      "name": "ชานมไข่มุก (เย็น/ปั่น)",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_41411727",
+      "name": "กาแฟสด โอเลี้ยง เย็น 16 ออนซ์",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_33559318",
+      "name": "ชานมชีส (เย็น/ปั่น)",
+      "price": 45,
+      "deliveryPrice": 67
+    },
+    {
+      "id": "fs_item_33559319",
+      "name": "โกโก้สตรอว์เบอร์รี (เย็น/ปั่น)",
+      "price": 39,
+      "deliveryPrice": 58
+    },
+    {
+      "id": "fs_item_33559320",
+      "name": "หวานเย็นโบราณ",
+      "price": 19,
+      "deliveryPrice": null
+    },
+    {
+      "id": "fs_item_33559321",
+      "name": "บุกน้ำผึ้ง",
+      "price": 12,
+      "deliveryPrice": 18
+    },
+    {
+      "id": "fs_item_33559322",
+      "name": "บุกบราวน์ชูการ์",
+      "price": 12,
+      "deliveryPrice": 18
+    },
+    {
+      "id": "fs_item_33559323",
+      "name": "บุกน้ำตาล",
+      "price": 12,
+      "deliveryPrice": 18
+    },
+    {
+      "id": "fs_item_33559324",
+      "name": "เจลลี่ผลไม้",
+      "price": 7,
+      "deliveryPrice": 11
+    },
+    {
+      "id": "fs_item_33559325",
+      "name": "ไข่มุก",
+      "price": 7,
+      "deliveryPrice": 11
+    },
+    {
+      "id": "fs_item_33559326",
+      "name": "ชานมไข่มุกบราวน์ชูการ์ (เย็น/ปั่น)",
+      "price": 45,
+      "deliveryPrice": 67
+    },
+    {
+      "id": "fs_item_33559327",
+      "name": "ชานมใต้หวัน (เย็น/ปั่น)",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_41411740",
+      "name": "กาแฟสด กาแฟโบราณ เย็น 16 ออนซ์",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_33559328",
+      "name": "ชาเขียวนม (เย็น/ปั่น)",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_33559329",
+      "name": "ชาลิ้นจี่",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_33559331",
+      "name": "ชาแอปเปิ้ล",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_33559332",
+      "name": "นมสดน้ำผึ้ง (เย็น/ปั่น)",
+      "price": 39,
+      "deliveryPrice": 58
+    },
+    {
+      "id": "fs_item_33559333",
+      "name": "เสาวรสโซดา",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_33559334",
+      "name": "สตรอว์เบอร์รีโซดา",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_33559335",
+      "name": "แดงโซดา",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_33559336",
+      "name": "นมสดมิ้นต์ (เย็น/ปั่น)",
+      "price": 39,
+      "deliveryPrice": 58
+    },
+    {
+      "id": "fs_item_33559337",
+      "name": "มะนาวโซดา",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_33559338",
+      "name": "ชานมกาแฟ (เย็น/ปั่น)",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_41456560",
+      "name": "กาแฟสด โอเลี้ยงเฮเซลนัท เย็น 16 ออนซ์",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_33752414",
+      "name": "ชามิกซ์เบอร์รี่",
+      "price": 45,
+      "deliveryPrice": 67
+    },
+    {
+      "id": "fs_item_33768547",
+      "name": "ชาผลไม้รวม",
+      "price": 45,
+      "deliveryPrice": 67
+    },
+    {
+      "id": "fs_item_33768707",
+      "name": "ชาพีช",
+      "price": 45,
+      "deliveryPrice": 67
+    },
+    {
+      "id": "fs_item_33768723",
+      "name": "ชาส้มยูสุ",
+      "price": 45,
+      "deliveryPrice": 67
+    },
+    {
+      "id": "fs_item_33768729",
+      "name": "ชาพีชส้มยูสุ",
+      "price": 55,
+      "deliveryPrice": 82
+    },
+    {
+      "id": "fs_item_33768737",
+      "name": "กาแฟโบราณ บราวน์ชูการ์ (เย็น/ปั่น)",
+      "price": 45,
+      "deliveryPrice": 67
+    },
+    {
+      "id": "fs_item_33768746",
+      "name": "ชาไทยชีส (เย็น/ปั่น)",
+      "price": 49,
+      "deliveryPrice": 73
+    },
+    {
+      "id": "fs_item_35165493",
+      "name": "(กลาง) ไอศกรีมซอฟต์เสิร์ฟ",
+      "price": 15,
+      "deliveryPrice": 23
+    },
+    {
+      "id": "fs_item_35165503",
+      "name": "(ใหญ่) ไอศกรีมซอฟต์เสิร์ฟ",
+      "price": 19,
+      "deliveryPrice": 28
+    },
+    {
+      "id": "fs_item_36373237",
+      "name": "(เล็ก) ไอศกรีมซอฟต์เสิร์ฟ",
+      "price": 12,
+      "deliveryPrice": 18
+    },
+    {
+      "id": "fs_item_41277718",
+      "name": "กาแฟสด ลาเต้ เย็น 16 ออนซ์",
+      "price": 39,
+      "deliveryPrice": 58
+    },
+    {
+      "id": "fs_item_41279794",
+      "name": "กาแฟสด คาปูชิโน่ เย็น 16 ออนซ์",
+      "price": 39,
+      "deliveryPrice": 58
+    },
+    {
+      "id": "fs_item_41321223",
+      "name": "กาแฟสด แฟลตไวท์ เย็น 16 ออนซ์",
+      "price": 39,
+      "deliveryPrice": 58
+    },
+    {
+      "id": "fs_item_41321830",
+      "name": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_41321907",
+      "name": "กาแฟสด Espresso (เอสเปรสโซ่) ร้อน 12 ออนซ์",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_41321986",
+      "name": "กาแฟสด ลาเต้ (Latte) ร้อน 12 ออนซ์",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_41322135",
+      "name": "กาแฟสด Cappuccino (คาปูชิโน่) ร้อน 12 ออนซ์",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_41322247",
+      "name": "กาแฟสด Long Black (ลองแบล็ค) ร้อน 12 ออนซ์",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_41322288",
+      "name": "กาแฟสด Flat White (แฟลตไวท์) ร้อน 12 ออนซ์",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_41331368",
+      "name": "กาแฟสด Caramel Macchiato (คาราเมลมัคคิอาโต้) ร้อน 12 ออนซ์",
+      "price": 39,
+      "deliveryPrice": 58
+    },
+    {
+      "id": "fs_item_41391572",
+      "name": "กาแฟสด มอคค่า เย็น 16 ออนซ์",
+      "price": 39,
+      "deliveryPrice": 58
+    },
+    {
+      "id": "fs_item_41391590",
+      "name": "กาแฟสด คาราเมลมัคคิอาโต้ เย็น 16 ออนซ์",
+      "price": 45,
+      "deliveryPrice": 67
+    },
+    {
+      "id": "fs_item_41391600",
+      "name": "กาแฟสด เอสเปรสโซ่ไทยสไตล์ เย็น 16 ออนซ์",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_41411718",
+      "name": "ช็อกโกแลตมิลค์ เย็น 16 ออนซ์",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_41444782",
+      "name": "กาแฟสด บลูฮาวายเอสเปรสโซ่ เย็น 16 ออนซ์",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_41444824",
+      "name": "กาแฟสด บ๊วยเอสเปรสโซ่ เย็น 16 ออนซ์",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_41444851",
+      "name": "กาแฟสด เสาวรสเอสเปรสโซ่ เย็น 16 ออนซ์",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_41456583",
+      "name": "กาแฟสด ช็อกโกแลตเอสเปรสโซ่ เย็น 16 ออนซ์",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_41456676",
+      "name": "กาแฟสด ไมโลกาแฟ เย็น 16 ออนซ์",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_41457162",
+      "name": "กาแฟสด โอวัลตินช็อตกาแฟ เย็น 16 ออนซ์",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_41460373",
+      "name": "กาแฟสด มอคค่า ร้อน 12 ออนซ์",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_41465454",
+      "name": "กาแฟสด โอวัลตินช็อตกาแฟ เย็นม",
+      "price": 35,
+      "deliveryPrice": null
+    },
+    {
+      "id": "fs_item_41466326",
+      "name": "กาแฟสด น้ำผึ้งมะนาว เย็น 16 ออนซ์",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_41467100",
+      "name": "กาแฟสด บุกบราวน์ชูการ์ เย็น 16 ออนซ์",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_41486377",
+      "name": "กาแฟสดโซดา เอสเปรสโซ่บลูฮาวาย เย็น 16 ออนซ์",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_41486422",
+      "name": "กาแฟสดโซดา เอสเปรสโซ่เสาวรส เย็น 16 ออนซ์",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_41486430",
+      "name": "กาแฟสดโซดา เอสเปรสโซ่ลิ้นจี่ เย็น 16 ออนซ์",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_41486436",
+      "name": "กาแฟสดโซดา เอสเปรสโซ่บ๊วย เย็น 16 ออนซ์",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_41486445",
+      "name": "กาแฟสดโซดา เอสเปรสโซ่มะม่วง เย็น 16 ออนซ์",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_41574233",
+      "name": "นมร้อน 12 ออนซ์",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_41574246",
+      "name": "ช็อกโกแลตมิลค์ร้อน 12 ออนซ์",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_41574254",
+      "name": "กาแฟสด คาราเมลลาเต้ร้อน 12 ออนซ์",
+      "price": 39,
+      "deliveryPrice": 58
+    },
+    {
+      "id": "fs_item_41574255",
+      "name": "กาแฟสด เฮเซลนัทมอคค่าร้อน 12 ออนซ์",
+      "price": 39,
+      "deliveryPrice": 58
+    },
+    {
+      "id": "fs_item_41574263",
+      "name": "กาแฟสด โอวัลตินเอสเปรสโซ่ร้อน",
+      "price": 39,
+      "deliveryPrice": 58
+    },
+    {
+      "id": "fs_item_41574391",
+      "name": "กาแฟสด โกโก้มอคค่าร้อน",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_41574397",
+      "name": "กาแฟสด มอคค่ามิ้นต์ร้อน",
+      "price": 39,
+      "deliveryPrice": 58
+    },
+    {
+      "id": "fs_item_41574401",
+      "name": "กาแฟสด เผือกลาเต้ร้อน",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_41589715",
+      "name": "0% แคล ชาลิ้นจี่",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_41589746",
+      "name": "0% แคล ชาสละ",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_41589757",
+      "name": "0% แคล ชาองุ่น",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_41608475",
+      "name": "0% แคล ชาพีช",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_41608489",
+      "name": "0% แคล ชาน้ำผึ้ง",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_41608527",
+      "name": "0% แคล ชาน้ำผึ้งมะนาว",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_41638745",
+      "name": "0% แคล ชาแคนตาลูป",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_41638755",
+      "name": "0% แคล ชาฟรุตพันช์",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_41638761",
+      "name": "0% แคล ชามะลิ",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_41638767",
+      "name": "0% แคล ชามะพร้าว",
+      "price": 19,
+      "deliveryPrice": null
+    },
+    {
+      "id": "fs_item_41638847",
+      "name": "0% แคล โซดาลิ้นจี่",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_41638870",
+      "name": "0% แคล โซดาน้ำผึ้ง",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_41638888",
+      "name": "0% แคล โซดาน้ำผึ้งมะนาว",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_41638902",
+      "name": "0% แคล โซดาองุ่น",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_41655205",
+      "name": "0% แคล โซดาแคนตาลูป",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_41655229",
+      "name": "0% แคล โซดาพีช",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_41655299",
+      "name": "0% แคล โซดาฟรุตพันช์",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_41667873",
+      "name": "กาแฟสด เผือกลาเต้ร้อน",
+      "price": 35,
+      "deliveryPrice": null
+    },
+    {
+      "id": "fs_item_41836317",
+      "name": "0% โคล่าโซดามะนาว",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_41836328",
+      "name": "0% โคล่าโซดา",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_42217588",
+      "name": "มัทฉะลาเต้ (Matcha Latte)",
+      "price": 45,
+      "deliveryPrice": 67
+    },
+    {
+      "id": "fs_item_42221555",
+      "name": "มัทฉะครีมชีส (Matcha Cheese Tea)",
+      "price": 55,
+      "deliveryPrice": 82
+    },
+    {
+      "id": "fs_item_42221669",
+      "name": "มัทฉะบราวน์ชูการ์ไข่มุก (Matcha Brown Sugar Boba)",
+      "price": 49,
+      "deliveryPrice": 73
+    },
+    {
+      "id": "fs_item_42221869",
+      "name": "เพียวมัทฉะ (Pure Matcha)",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_42269895",
+      "name": "เฉาก๊วยลูกหนึบเนื้อแน่น",
+      "price": 15,
+      "deliveryPrice": null
+    },
+    {
+      "id": "fs_item_42571021",
+      "name": "มัทฉะมะพร้าว",
+      "price": 49,
+      "deliveryPrice": 73
+    },
+    {
+      "id": "fs_item_42571194",
+      "name": "มัทฉะมะพร้าวนม",
+      "price": 49,
+      "deliveryPrice": 73
+    },
+    {
+      "id": "fs_item_42692654",
+      "name": "เฉาก๊วยหนึบเนื้อแน่น",
+      "price": 12,
+      "deliveryPrice": 18
+    },
+    {
+      "id": "fs_item_42753722",
+      "name": "เฉาก๊วยหนึบลูกนิมิต",
+      "price": 19,
+      "deliveryPrice": null
+    },
+    {
+      "id": "fs_item_42817721",
+      "name": "น้ำเต้าหู้สูตรดั้งเดิม (เย็น/ปั่น)",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_42818071",
+      "name": "น้ำเต้าหู้นมสด (เย็น/ปั่น)",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_42818345",
+      "name": "น้ำเต้าหู้โอวัลติน (เย็น/ปั่น)",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_42818404",
+      "name": "น้ำเต้าหู้เผือก (เย็น/ปั่น)",
+      "price": 39,
+      "deliveryPrice": 58
+    },
+    {
+      "id": "fs_item_42818456",
+      "name": "น้ำเต้าหู้โกโก้ (เย็น/ปั่น)",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_43038095",
+      "name": "สเลอร์ปี้ชาไทย",
+      "price": 29,
+      "deliveryPrice": null
+    },
+    {
+      "id": "fs_item_43051427",
+      "name": "วุ้นกบไต้หวัน",
+      "price": 7,
+      "deliveryPrice": 11
+    },
+    {
+      "id": "fs_item_43052296",
+      "name": "วุ้นว่านหางจระเข้ หั่นลูกเต๋า",
+      "price": 17,
+      "deliveryPrice": 26
+    },
+    {
+      "id": "fs_item_43162739",
+      "name": "ชาเขียวนมปั่น",
+      "price": 34,
+      "deliveryPrice": null
+    },
+    {
+      "id": "fs_item_43162814",
+      "name": "ชาไทยปั่น",
+      "price": 34,
+      "deliveryPrice": null
+    },
+    {
+      "id": "fs_item_43163009",
+      "name": "ชานมไต้หวันปั่น",
+      "price": 29,
+      "deliveryPrice": null
+    },
+    {
+      "id": "fs_item_43265684",
+      "name": "ชาเขียวนมปั่น",
+      "price": 34,
+      "deliveryPrice": null
+    },
+    {
+      "id": "fs_item_43337115",
+      "name": "สตรอเบอร์รี่ปั่น แก้วใหญ่ 22 ออนซ์",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_43337275",
+      "name": "(สมูทตี้) สตรอเบอร์รี่ แก้วใหญ่ 22 ออนซ์",
+      "price": 45,
+      "deliveryPrice": 67
+    },
+    {
+      "id": "fs_item_43368503",
+      "name": "(แก้วใหญ่) ไอศกรีมซอฟเสิร์ฟ",
+      "price": 25,
+      "deliveryPrice": null
+    },
+    {
+      "id": "fs_item_43406368",
+      "name": "มิกซ์เบอร์รี่ปั่น แก้วใหญ่ 22 ออนซ์",
+      "price": 49,
+      "deliveryPrice": 73
+    },
+    {
+      "id": "fs_item_43406465",
+      "name": "(สมูทตี้) มิกซ์เบอร์รี่ แก้วใหญ่ 22 ออนซ์",
+      "price": 59,
+      "deliveryPrice": 87
+    },
+    {
+      "id": "fs_item_43412772",
+      "name": "ส้มปั่น แก้วใหญ่ 22 ออนซ์",
+      "price": 39,
+      "deliveryPrice": 58
+    },
+    {
+      "id": "fs_item_43412845",
+      "name": "(สมูทตี้) ส้ม แก้วใหญ่ 22 ออนซ์",
+      "price": 55,
+      "deliveryPrice": 82
+    },
+    {
+      "id": "fs_item_43461233",
+      "name": "มะม่วงปั่น แก้วใหญ่ 22 ออนซ์",
+      "price": 39,
+      "deliveryPrice": 58
+    },
+    {
+      "id": "fs_item_43461330",
+      "name": "(สมูทตี้) มะม่วง แก้วใหญ่ 22 ออนซ์",
+      "price": 59,
+      "deliveryPrice": 87
+    },
+    {
+      "id": "fs_item_43577153",
+      "name": "ชาไทยมันม่วง",
+      "price": 45,
+      "deliveryPrice": 67
+    },
+    {
+      "id": "fs_item_43577260",
+      "name": "ชานมมันม่วง",
+      "price": 45,
+      "deliveryPrice": 67
+    },
+    {
+      "id": "fs_item_43577310",
+      "name": "นมสดมันม่วง",
+      "price": 45,
+      "deliveryPrice": 67
+    },
+    {
+      "id": "fs_item_43577356",
+      "name": "(สมูทตี้) มันม่วง แก้วใหญ่ 22 ออนซ์",
+      "price": 55,
+      "deliveryPrice": 82
+    },
+    {
+      "id": "fs_item_43772079",
+      "name": "ปังเนยกรอบอบไอน้ำ",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_43979100",
+      "name": "มัทฉะเลม่อนเย็น (Matcha Lemon)",
+      "price": 39,
+      "deliveryPrice": 58
+    },
+    {
+      "id": "fs_item_44187147",
+      "name": "ชิโอปัง (Shio Pan) โฮมเมด ใหญ่ขึ้น",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_44359362",
+      "name": "ปังมันม่วง อบสด โฮมเมด",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_44519798",
+      "name": "ชิโอปัง (Shio Pan) โฮมเมด ใส้ (แฮม/ชีส)",
+      "price": 29,
+      "deliveryPrice": null
+    },
+    {
+      "id": "fs_item_44595674",
+      "name": "Ice Cream To-Go แก้วใหญ่ 16oz (แถมถุงเย็น)",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_44633002",
+      "name": "ชิโอปังมัทฉะ โฮมเมด",
+      "price": 24,
+      "deliveryPrice": null
+    },
+    {
+      "id": "fs_item_44633039",
+      "name": "ชิโอปังมันม่วง + ไส้มันม่วง โฮมเมด",
+      "price": 27,
+      "deliveryPrice": null
+    },
+    {
+      "id": "fs_item_44722774",
+      "name": "ชาอู่หลงเย็น",
+      "price": 25,
+      "deliveryPrice": 37
+    },
+    {
+      "id": "fs_item_44722799",
+      "name": "ชาอู่หลงน้ำผึ้งมะนาว",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_44722825",
+      "name": "ชาอู่หลงน้ำผึ้ง",
+      "price": 29,
+      "deliveryPrice": 43
+    },
+    {
+      "id": "fs_item_44909012",
+      "name": "บราวนี่โฮมเมด",
+      "price": 15,
+      "deliveryPrice": 23
+    },
+    {
+      "id": "fs_item_44971745",
+      "name": "ชิโอปัง ชาโคล โฮมเมด",
+      "price": 24,
+      "deliveryPrice": null
+    },
+    {
+      "id": "fs_item_45717125",
+      "name": "ซอฟต์คุกกี้ โฮมเมด (เลือกได้)",
+      "price": 17,
+      "deliveryPrice": 26
+    },
+    {
+      "id": "fs_item_47068210",
+      "name": "ชาจัสมินฝูเจี้ยน (เย็น/ปั่น) 16 oz",
+      "price": 35,
+      "deliveryPrice": 52
+    },
+    {
+      "id": "fs_item_47068220",
+      "name": "Craft Osmanthus Oolong (คราฟต์อู่หลงหอมหมื่นลี้)",
+      "price": 29,
+      "deliveryPrice": null
+    },
+    {
+      "id": "fs_item_47139859",
+      "name": "ซอฟต์คุกกี้มัจฉะช็อกชิพ",
+      "price": 19,
+      "deliveryPrice": null
+    },
+    {
+      "id": "fs_item_47343036",
+      "name": "มันไทยอบ ดั้งเดิม",
+      "price": 15,
+      "deliveryPrice": 23
+    },
+    {
+      "id": "fs_item_47385144",
+      "name": "โกโก้ลาวาช็อกขูด (เย็น/ปั่น)",
+      "price": 49,
+      "deliveryPrice": 73
+    },
+    {
+      "id": "fs_item_47642235",
+      "name": "เค้กกล้วยหอม โฮมเมด",
+      "price": 15,
+      "deliveryPrice": 23
+    },
+    {
+      "id": "fs_item_49538393",
+      "name": "วาฟเฟิลเบลเยียม โฮมเมด",
+      "price": 15,
+      "deliveryPrice": 23
+    },
+    {
+      "id": "fs_item_49716853",
+      "name": "น้ำเปล่า",
+      "price": 12,
+      "deliveryPrice": 18
+    },
+    {
+      "id": "q7avHRH2XkagW00sf8KR",
+      "name": "เทส",
+      "price": 45,
+      "deliveryPrice": null
+    },
+    {
+      "id": "4GXJAZCxMnyZ1FdhRfrK",
+      "name": "เทส 2",
+      "price": 45,
+      "deliveryPrice": 55
+    },
+    {
+      "id": "yJe2YFpgZrqB9CXoQwAW",
+      "name": "[QA-TEST] เมนูทดสอบ A",
+      "price": 88,
+      "deliveryPrice": 128
+    },
+    {
+      "id": "58VtdnBgH8bAJs7uM7ru",
+      "name": "[QA-TEST] เมนูทดสอบ B",
+      "price": 15,
+      "deliveryPrice": null
+    }
+  ],
+  "optionGroups": [
+    {
+      "id": "fs_opt_44058440",
+      "name": "โปรโมชั่น วาฟเฟิลเบลเยียมโฮมเมด ดั้งเดิม",
+      "options": [
+        {
+          "id": "fs_c_45742031",
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+          "priceDelta": 12,
+          "deliveryPriceDelta": 18
+        },
+        {
+          "id": "fs_c_45742032",
+          "name": "ไม่เพิ่ม",
+          "priceDelta": 0,
+          "deliveryPriceDelta": 0
+        }
+      ]
+    },
+    {
+      "id": "fs_opt_43240306",
+      "name": "โปรโมชั่น เค้กกล้วยหอม",
+      "options": [
+        {
+          "id": "fs_c_44445505",
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้นแบบเดียวกัน",
+          "priceDelta": 12,
+          "deliveryPriceDelta": 18
+        },
+        {
+          "id": "fs_c_44445506",
+          "name": "ไม่เพิ่ม",
+          "priceDelta": 0,
+          "deliveryPriceDelta": 0
+        }
+      ]
+    },
+    {
+      "id": "fs_opt_43146917",
+      "name": "โปรโมชั่น มันไทยอบ ดั้งเดิม",
+      "options": [
+        {
+          "id": "fs_c_44306539",
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+          "priceDelta": 12,
+          "deliveryPriceDelta": 18
+        },
+        {
+          "id": "fs_c_44306540",
+          "name": "ไม่เพิ่ม",
+          "priceDelta": 0,
+          "deliveryPriceDelta": 0
+        }
+      ]
+    },
+    {
+      "id": "fs_opt_43044738",
+      "name": "ซอฟต์คุกกี้ เลือกรสชาติ",
+      "options": [
+        {
+          "id": "fs_c_44170324",
+          "name": "ซอฟต์คุกกี้ - ดั่งเดิม",
+          "priceDelta": 0,
+          "deliveryPriceDelta": 0
+        },
+        {
+          "id": "fs_c_44170325",
+          "name": "ซอฟต์คุกกี้ - โกโก้",
+          "priceDelta": 0,
+          "deliveryPriceDelta": 0
+        },
+        {
+          "id": "fs_c_44170326",
+          "name": "ซอฟต์คุกกี้ - มัจฉะ",
+          "priceDelta": 0,
+          "deliveryPriceDelta": 0
+        }
+      ]
+    },
+    {
+      "id": "fs_opt_42442642",
+      "name": "โปรโมชั่น Soft Cookie โฮมเมด",
+      "options": [
+        {
+          "id": "fs_c_43294499",
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้นแบบเดียวกัน",
+          "priceDelta": 12,
+          "deliveryPriceDelta": 18
+        },
+        {
+          "id": "fs_c_43294500",
+          "name": "ไม่เพิ่ม",
+          "priceDelta": 0,
+          "deliveryPriceDelta": 0
+        }
+      ]
+    },
+    {
+      "id": "fs_opt_42275931",
+      "name": "โปรโมชั่น บราวนี่",
+      "options": [
+        {
+          "id": "fs_c_43027562",
+          "name": "ไม่เพิ่ม",
+          "priceDelta": 0,
+          "deliveryPriceDelta": 0
+        },
+        {
+          "id": "fs_c_43027563",
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+          "priceDelta": 12,
+          "deliveryPriceDelta": 18
+        }
+      ]
+    },
+    {
+      "id": "fs_opt_42031501",
+      "name": "ชิโอปัง เพิ่มไส้พิเศษ",
+      "options": [
+        {
+          "id": "fs_c_42718720",
+          "name": "ไม่เพิ่ม",
+          "priceDelta": 0,
+          "deliveryPriceDelta": 0
+        },
+        {
+          "id": "fs_c_42718721",
+          "name": "ช็อคโกแลต",
+          "priceDelta": 7,
+          "deliveryPriceDelta": 11
+        },
+        {
+          "id": "fs_c_42718722",
+          "name": "วนิลา",
+          "priceDelta": 7,
+          "deliveryPriceDelta": 11
+        },
+        {
+          "id": "fs_c_42718724",
+          "name": "สตรอเบอรี่",
+          "priceDelta": 7,
+          "deliveryPriceDelta": 11
+        },
+        {
+          "id": "fs_c_42718725",
+          "name": "บลูเบอรี่",
+          "priceDelta": 7,
+          "deliveryPriceDelta": 11
+        },
+        {
+          "id": "fs_c_42718726",
+          "name": "ส้ม",
+          "priceDelta": 7,
+          "deliveryPriceDelta": 11
+        }
+      ]
+    },
+    {
+      "id": "fs_opt_41961017",
+      "name": "รสชาติ ไอศครีม",
+      "options": [
+        {
+          "id": "fs_c_42652249",
+          "name": "นม",
+          "priceDelta": 0,
+          "deliveryPriceDelta": 0
+        },
+        {
+          "id": "fs_c_42654319",
+          "name": ">รสอื่นๆ< (แรนด้อม)",
+          "priceDelta": 0,
+          "deliveryPriceDelta": 0
+        }
+      ]
+    },
+    {
+      "id": "fs_opt_41872596",
+      "name": "โปรโมชั่น ปังมันม่วง",
+      "options": [
+        {
+          "id": "fs_c_42534741",
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+          "priceDelta": 12,
+          "deliveryPriceDelta": 18
+        },
+        {
+          "id": "fs_c_42534740",
+          "name": "ไม่เพิ่ม",
+          "priceDelta": 0,
+          "deliveryPriceDelta": 0
+        }
+      ]
+    },
+    {
+      "id": "fs_opt_41868133",
+      "name": "โปรโมชั่น ชิโอปัง",
+      "options": [
+        {
+          "id": "fs_c_42528783",
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+          "priceDelta": 12,
+          "deliveryPriceDelta": 18
+        },
+        {
+          "id": "fs_c_42528782",
+          "name": "ไม่เพิ่ม",
+          "priceDelta": 0,
+          "deliveryPriceDelta": 0
+        }
+      ]
+    },
+    {
+      "id": "fs_opt_41721290",
+      "name": "ช็อตมะนาว",
+      "options": [
+        {
+          "id": "fs_c_42341776",
+          "name": "ไม่เพิ่ม",
+          "priceDelta": 0,
+          "deliveryPriceDelta": 0
+        },
+        {
+          "id": "fs_c_42341777",
+          "name": "เพิ่ม 1 ช็อต",
+          "priceDelta": 7,
+          "deliveryPriceDelta": 11
+        }
+      ]
+    },
+    {
+      "id": "fs_opt_41562159",
+      "name": "โปรโมชั่น ปังเนยกรอบอบไอน้ำ",
+      "options": [
+        {
+          "id": "fs_c_42141132",
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+          "priceDelta": 12,
+          "deliveryPriceDelta": 18
+        },
+        {
+          "id": "fs_c_42141131",
+          "name": "ไม่เพิ่ม",
+          "priceDelta": 0,
+          "deliveryPriceDelta": 0
+        }
+      ]
+    },
+    {
+      "id": "fs_opt_41544856",
+      "name": "ท็อปปิ้งขนมปัง",
+      "options": [
+        {
+          "id": "fs_c_42117579",
+          "name": "ไม่เพิ่ม (ต้นตำรับ)",
+          "priceDelta": 0,
+          "deliveryPriceDelta": 0
+        },
+        {
+          "id": "fs_c_42117580",
+          "name": "โรยน้ำตาล",
+          "priceDelta": 0,
+          "deliveryPriceDelta": 0
+        },
+        {
+          "id": "fs_c_42117581",
+          "name": "ราดนมฉ่ำ ๆ",
+          "priceDelta": 7,
+          "deliveryPriceDelta": 11
+        },
+        {
+          "id": "fs_c_42307782",
+          "name": "โรยผงโกโก้ + ซอสช็อกโกแลต",
+          "priceDelta": 7,
+          "deliveryPriceDelta": 11
+        },
+        {
+          "id": "fs_c_42117582",
+          "name": "ราดคาราเมล ฉ่ำๆ",
+          "priceDelta": 7,
+          "deliveryPriceDelta": 11
+        },
+        {
+          "id": "fs_c_42136056",
+          "name": "ราดน้ำผึ้ง",
+          "priceDelta": 7,
+          "deliveryPriceDelta": 11
+        },
+        {
+          "id": "fs_c_42327807",
+          "name": "แยมสตรอว์เบอร์รี่",
+          "priceDelta": 7,
+          "deliveryPriceDelta": 11
+        },
+        {
+          "id": "fs_c_42327808",
+          "name": "แยมส้ม",
+          "priceDelta": 7,
+          "deliveryPriceDelta": 11
+        },
+        {
+          "id": "fs_c_42327809",
+          "name": "แยมบลูเบอร์รี่",
+          "priceDelta": 7,
+          "deliveryPriceDelta": 11
+        }
+      ]
+    },
+    {
+      "id": "fs_opt_41341093",
+      "name": "ขนาด ปริมาณ แก้วกาแฟ",
+      "options": [
+        {
+          "id": "fs_c_41807695",
+          "name": "แก้วมาตรฐาน",
+          "priceDelta": 0,
+          "deliveryPriceDelta": 0
+        },
+        {
+          "id": "fs_c_41807696",
+          "name": "แก้วใหญ่ 22oz เข้ม +1 ช๊อต ซีลแน่น",
+          "priceDelta": 12,
+          "deliveryPriceDelta": 18
+        }
+      ]
+    },
+    {
+      "id": "fs_opt_41309539",
+      "name": "ช็อตมัทฉะ",
+      "options": [
+        {
+          "id": "fs_c_41756673",
+          "name": "ไม่เพิ่ม",
+          "priceDelta": 0,
+          "deliveryPriceDelta": 0
+        },
+        {
+          "id": "fs_c_41756674",
+          "name": "เพิ่มช็อตมัทฉะ 1 กรัม",
+          "priceDelta": 7,
+          "deliveryPriceDelta": 11
+        },
+        {
+          "id": "fs_c_41756675",
+          "name": "เพิ่มช็อตมัทฉะ 2 กรัม",
+          "priceDelta": 13,
+          "deliveryPriceDelta": 20
+        }
+      ]
+    },
+    {
+      "id": "fs_opt_41288493",
+      "name": "ประเภท",
+      "options": [
+        {
+          "id": "fs_c_41723635",
+          "name": "เย็น",
+          "priceDelta": 0,
+          "deliveryPriceDelta": 0
+        },
+        {
+          "id": "fs_c_41720069",
+          "name": "ปั่น (สูตรเข้ม)",
+          "priceDelta": 12,
+          "deliveryPriceDelta": 18
+        }
+      ]
+    },
+    {
+      "id": "fs_opt_40769276",
+      "name": "ช็อตกาแฟ",
+      "options": [
+        {
+          "id": "fs_c_41756678",
+          "name": "ไม่เพิ่ม",
+          "priceDelta": 0,
+          "deliveryPriceDelta": 0
+        },
+        {
+          "id": "fs_c_40936699",
+          "name": "เพิ่มช็อตกาแฟ 1 ช็อต",
+          "priceDelta": 12,
+          "deliveryPriceDelta": 18
+        },
+        {
+          "id": "fs_c_41756679",
+          "name": "เพิ่มช็อตกาแฟ 2 ช็อต",
+          "priceDelta": 17,
+          "deliveryPriceDelta": 26
+        }
+      ]
+    },
+    {
+      "id": "fs_opt_27772164",
+      "name": "แยกน้ำแข็ง",
+      "options": [
+        {
+          "id": "fs_c_24070680",
+          "name": "แยกน้ำแข็ง",
+          "priceDelta": 7,
+          "deliveryPriceDelta": 11
+        }
+      ]
+    },
+    {
+      "id": "fs_opt_27722807",
+      "name": "ความหวาน",
+      "options": [
+        {
+          "id": "fs_c_23981619",
+          "name": "ไม่หวาน 0%",
+          "priceDelta": 0,
+          "deliveryPriceDelta": 0
+        },
+        {
+          "id": "fs_c_23981618",
+          "name": "หวานน้อยมาก 25%",
+          "priceDelta": 0,
+          "deliveryPriceDelta": 0
+        },
+        {
+          "id": "fs_c_23981617",
+          "name": "หวานน้อย 50%",
+          "priceDelta": 0,
+          "deliveryPriceDelta": 0
+        },
+        {
+          "id": "fs_c_23981616",
+          "name": "หวานปกติ 100%",
+          "priceDelta": 0,
+          "deliveryPriceDelta": 0
+        },
+        {
+          "id": "fs_c_24070869",
+          "name": "หวานมาก 125%",
+          "priceDelta": 0,
+          "deliveryPriceDelta": 0
+        },
+        {
+          "id": "fs_c_24070870",
+          "name": "หวานมาก 150%",
+          "priceDelta": 0,
+          "deliveryPriceDelta": 0
+        },
+        {
+          "id": "fs_c_24070902",
+          "name": "หวานมาก 200%",
+          "priceDelta": 0,
+          "deliveryPriceDelta": 0
+        }
+      ]
+    },
+    {
+      "id": "fs_opt_27722806",
+      "name": "ท้อปปิ้ง",
+      "options": [
+        {
+          "id": "fs_c_41723627",
+          "name": "ไม่เพิ่ม",
+          "priceDelta": 0,
+          "deliveryPriceDelta": 0
+        },
+        {
+          "id": "fs_c_23981614",
+          "name": "เจลลี่ผลไม้",
+          "priceDelta": 7,
+          "deliveryPriceDelta": 11
+        },
+        {
+          "id": "fs_c_23981615",
+          "name": "ไข่มุก",
+          "priceDelta": 7,
+          "deliveryPriceDelta": 11
+        },
+        {
+          "id": "fs_c_41662758",
+          "name": "วุ้นกบไต้หวัน",
+          "priceDelta": 7,
+          "deliveryPriceDelta": 11
+        },
+        {
+          "id": "fs_c_41429429",
+          "name": "เฉาก๊วยหนึบเนื้อแน่น",
+          "priceDelta": 12,
+          "deliveryPriceDelta": 18
+        },
+        {
+          "id": "fs_c_23981613",
+          "name": "บุกน้ำตาล",
+          "priceDelta": 12,
+          "deliveryPriceDelta": 18
+        },
+        {
+          "id": "fs_c_23981612",
+          "name": "บุกน้ำผึ้ง",
+          "priceDelta": 12,
+          "deliveryPriceDelta": 18
+        },
+        {
+          "id": "fs_c_23981611",
+          "name": "บุกบราวน์",
+          "priceDelta": 12,
+          "deliveryPriceDelta": 18
+        },
+        {
+          "id": "fs_c_41662916",
+          "name": "วุ้นว่านหางจระเข้ หั่นลูกเต๋า",
+          "priceDelta": 17,
+          "deliveryPriceDelta": 26
+        },
+        {
+          "id": "fs_c_23981610",
+          "name": "ซอสบราวน์",
+          "priceDelta": 17,
+          "deliveryPriceDelta": 26
+        },
+        {
+          "id": "fs_c_44316537",
+          "name": "ช็อคขูด",
+          "priceDelta": 17,
+          "deliveryPriceDelta": 26
+        },
+        {
+          "id": "fs_c_23981609",
+          "name": "ชีส",
+          "priceDelta": 25,
+          "deliveryPriceDelta": 37
+        }
+      ]
+    },
+    {
+      "id": "HsuujizOpPDdqX0DGiaj",
+      "name": "[QA-TEST] กลุ่มตัวเลือก",
+      "options": [
+        {
+          "id": "opt_1784735412345_5gq45h",
+          "name": "ไม่เพิ่ม",
+          "priceDelta": 0,
+          "deliveryPriceDelta": 0
+        },
+        {
+          "id": "opt_1784735414158_tttwdb",
+          "name": "[QA-TEST] ท็อปถูก",
+          "priceDelta": 5,
+          "deliveryPriceDelta": 8
+        },
+        {
+          "id": "opt_1784735414726_8iitbz",
+          "name": "[QA-TEST] ท็อปแพง (แก้)",
+          "priceDelta": 25,
+          "deliveryPriceDelta": 37
+        }
+      ]
+    }
+  ]
+}

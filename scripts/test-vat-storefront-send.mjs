@@ -29,6 +29,8 @@ function computeSfSendAmount(source, pct) {
   return Math.round(((s * p) / 100) * 100) / 100;
 }
 assert.equal(computeSfSendAmount(150000, 70), 105000);
+assert.equal(computeSfSendAmount(128846, 0), 0);
+assert.equal(computeSfSendAmount(128846, 1), 1288.46);
 
 const ui = readFileSync(
   join(root, "src/components/vat-sales/VatMonthBooks.tsx"),
@@ -36,7 +38,7 @@ const ui = readFileSync(
 );
 assert.match(ui, /patchSfSendIntoDraft/);
 assert.match(ui, /onStorefrontTransferManual/);
-assert.match(ui, /จะไม่แตะยอดในตาราง/);
+assert.match(ui, /0% = เขียนศูนย์ทับตารางทันที/);
 // แถบส่งหน้าร้านเดิม → ลอยด้านล่าง
 assert.match(ui, /vat-sf-send--float/);
 assert.match(ui, /has-sf-send-float/);

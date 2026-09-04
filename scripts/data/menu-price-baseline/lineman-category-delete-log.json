@@ -1,0 +1,138 @@
+{
+  "at": "2026-09-01T09:01:49.465Z",
+  "results": [
+    {
+      "name": "ขนม",
+      "conf": {
+        "confirmed": true,
+        "hasDialog": true,
+        "btnCount": 2,
+        "cls": "MuiButtonBase-root MuiButton-root MuiButton-contained jss38 jss40 MuiButton-cont"
+      },
+      "after": {
+        "url": "https://merchant.wongnai.com/businesses/2688343/menu-group",
+        "stillEdit": false,
+        "hasDialog": false,
+        "err": [],
+        "sample": "หน้าหลัก\n\nเมนู/สินค้า\n\nโปรโมชั่น\n\nรายงาน Wongnai Merchant App\n\nตั้งค่า\n\nเมนู/สินค้า\n\nเมนู/สินค้า\n\nTELL TEA เมืองอุดรธานี กรมหลวงประจักษ์ศิลปาคม\n​\n\nสินค้า\n\nตัวเลือก\n\nประเภท\n\n​\nแก้ไขลำดับ\nสร้างประเภท\n\nSample Category\n\n(1 รายการ)\n\nเบเกอรี่ & ไอศครีม\n\n(9 รายการ)\n\nSignature Drinks (เย็น, ปั่น)\n\n(10 รายการ)\n\nชานมสดคราฟต์ (เย็น, ปั่น)\n\n(1 รายการ)\n\nชา\n\n(11 รายการ)\n\nชานม (เย็น, ปั่น)\n\n(9 รายการ)\n\nมัจฉะแท้\n\n(7 รายการ)\n\nผลไม้ปั่น & สมูทตี้\n\n(9 รายการ)\n\nชาผลไม้\n\n(5 รายการ)\n\nกาแฟ (เย็น, ปั่น)\n\n(6 รายการ)\n\nนม (เย็น, ปั่น)\n\n(12 รายการ)\n\nเบาเบากับน้ำเต้าหู้ (เย็น, ปั่น)\n\n(5 รายการ)\n\nอิตาเลียน โซดา\n\n(13 รายการ"
+      }
+    },
+    {
+      "name": "** ไอศครีม **",
+      "conf": {
+        "confirmed": true,
+        "hasDialog": true,
+        "btnCount": 2,
+        "cls": "MuiButtonBase-root MuiButton-root MuiButton-contained jss38 jss40 MuiButton-cont"
+      },
+      "after": {
+        "url": "https://merchant.wongnai.com/businesses/2688343/menu-group",
+        "stillEdit": false,
+        "hasDialog": false,
+        "err": [],
+        "sample": "หน้าหลัก\n\nเมนู/สินค้า\n\nโปรโมชั่น\n\nรายงาน Wongnai Merchant App\n\nตั้งค่า\n\nเมนู/สินค้า\n\nเมนู/สินค้า\n\nTELL TEA เมืองอุดรธานี กรมหลวงประจักษ์ศิลปาคม\n​\n\nสินค้า\n\nตัวเลือก\n\nประเภท\n\n​\nแก้ไขลำดับ\nสร้างประเภท\n\nSample Category\n\n(1 รายการ)\n\nเบเกอรี่ & ไอศครีม\n\n(9 รายการ)\n\nSignature Drinks (เย็น, ปั่น)\n\n(10 รายการ)\n\nชานมสดคราฟต์ (เย็น, ปั่น)\n\n(1 รายการ)\n\nชา\n\n(11 รายการ)\n\nชานม (เย็น, ปั่น)\n\n(9 รายการ)\n\nมัจฉะแท้\n\n(7 รายการ)\n\nผลไม้ปั่น & สมูทตี้\n\n(9 รายการ)\n\nชาผลไม้\n\n(5 รายการ)\n\nกาแฟ (เย็น, ปั่น)\n\n(6 รายการ)\n\nนม (เย็น, ปั่น)\n\n(12 รายการ)\n\nเบาเบากับน้ำเต้าหู้ (เย็น, ปั่น)\n\n(5 รายการ)\n\nอิตาเลียน โซดา\n\n(13 รายการ"
+      }
+    },
+    {
+      "name": "Sample Category",
+      "conf": {
+        "confirmed": true,
+        "hasDialog": true,
+        "btnCount": 2,
+        "cls": "MuiButtonBase-root MuiButton-root MuiButton-contained jss38 jss40 MuiButton-cont"
+      },
+      "after": {
+        "url": "https://merchant.wongnai.com/businesses/2688343/menu-group",
+        "stillEdit": false,
+        "hasDialog": false,
+        "err": [],
+        "sample": "หน้าหลัก\n\nเมนู/สินค้า\n\nโปรโมชั่น\n\nรายงาน Wongnai Merchant App\n\nตั้งค่า\n\nเมนู/สินค้า\n\nเมนู/สินค้า\n\nTELL TEA เมืองอุดรธานี กรมหลวงประจักษ์ศิลปาคม\n​\n\nสินค้า\n\nตัวเลือก\n\nประเภท\n\n​\nแก้ไขลำดับ\nสร้างประเภท\n\nเบเกอรี่ & ไอศครีม\n\n(9 รายการ)\n\nSignature Drinks (เย็น, ปั่น)\n\n(10 รายการ)\n\nชานมสดคราฟต์ (เย็น, ปั่น)\n\n(1 รายการ)\n\nชา\n\n(11 รายการ)\n\nชานม (เย็น, ปั่น)\n\n(9 รายการ)\n\nมัจฉะแท้\n\n(7 รายการ)\n\nผลไม้ปั่น & สมูทตี้\n\n(9 รายการ)\n\nชาผลไม้\n\n(5 รายการ)\n\nกาแฟ (เย็น, ปั่น)\n\n(6 รายการ)\n\nนม (เย็น, ปั่น)\n\n(12 รายการ)\n\nเบาเบากับน้ำเต้าหู้ (เย็น, ปั่น)\n\n(5 รายการ)\n\nอิตาเลียน โซดา\n\n(13 รายการ)\n\n0% แคล ชาเพื่อสุขภาพ\n\n(9 ร"
+      }
+    }
+  ],
+  "final": {
+    "remaining": {
+      "sample": false,
+      "kanom": false,
+      "ice": false
+    },
+    "pairs": [
+      {
+        "name": "เบเกอรี่ & ไอศครีม",
+        "count": "(9 รายการ)"
+      },
+      {
+        "name": "Signature Drinks (เย็น, ปั่น)",
+        "count": "(10 รายการ)"
+      },
+      {
+        "name": "ชานมสดคราฟต์ (เย็น, ปั่น)",
+        "count": "(1 รายการ)"
+      },
+      {
+        "name": "ชา",
+        "count": "(11 รายการ)"
+      },
+      {
+        "name": "ชานม (เย็น, ปั่น)",
+        "count": "(9 รายการ)"
+      },
+      {
+        "name": "มัจฉะแท้",
+        "count": "(7 รายการ)"
+      },
+      {
+        "name": "ผลไม้ปั่น & สมูทตี้",
+        "count": "(9 รายการ)"
+      },
+      {
+        "name": "ชาผลไม้",
+        "count": "(5 รายการ)"
+      },
+      {
+        "name": "กาแฟ (เย็น, ปั่น)",
+        "count": "(6 รายการ)"
+      },
+      {
+        "name": "นม (เย็น, ปั่น)",
+        "count": "(12 รายการ)"
+      },
+      {
+        "name": "เบาเบากับน้ำเต้าหู้ (เย็น, ปั่น)",
+        "count": "(5 รายการ)"
+      },
+      {
+        "name": "อิตาเลียน โซดา",
+        "count": "(13 รายการ)"
+      },
+      {
+        "name": "0% แคล ชาเพื่อสุขภาพ",
+        "count": "(9 รายการ)"
+      },
+      {
+        "name": "0% แคล โซดาซ่าเพื่อสุขภาพ",
+        "count": "(9 รายการ)"
+      },
+      {
+        "name": "* กาแฟสดเข้มข้น",
+        "count": "(6 รายการ)"
+      },
+      {
+        "name": "* กาแฟสดนมนุ่มละมุน",
+        "count": "(10 รายการ)"
+      },
+      {
+        "name": "* กาแฟสดฟิวชันสดชื่น",
+        "count": "(10 รายการ)"
+      },
+      {
+        "name": "* กาแฟสด อื่นๆ ร้อน",
+        "count": "(16 รายการ)"
+      },
+      {
+        "name": "ทัอปปิ้ง",
+        "count": "(10 รายการ)"
+      }
+    ]
+  }
+}

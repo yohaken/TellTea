@@ -1,0 +1,26 @@
+{
+  "at": "2026-09-03T12:04:02.094Z",
+  "dryRun": false,
+  "results": [
+    {
+      "group": "ช็อตมัทฉะ",
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoMOXeLjn3KnhhbtX5SLMPuLfGVL/edit",
+      "rows": [
+        {
+          "name": "เพิ่มช็อตมัทฉะ 1 กรัม",
+          "from": 9,
+          "to": 25,
+          "store": 6,
+          "draftSnippet": "เพิ่มช็อตมัทฉะ 1 กรัม\n\n+฿25\n\n+฿25\n\n+฿6\n\nมีจำหน่าย\nเพิ่มช้อยส์\nบันทึก",
+          "draftOk": true,
+          "liveSnippet": "เพิ่มช็อตมัทฉะ 1 กรัม\n\n+฿25\n\n+฿25\n\n+฿6\n\nมีจำหน่าย\nเพิ่มช้อยส์\nบันทึก",
+          "liveOk": true
+        }
+      ],
+      "ok": true,
+      "save": {
+        "ok": true
+      }
+    }
+  ]
+}

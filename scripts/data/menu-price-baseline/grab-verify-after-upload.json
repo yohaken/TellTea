@@ -1,0 +1,113 @@
+{
+  "at": "2026-09-02T08:47:03.642Z",
+  "exportSource": "2026-09-02T08:46:58.231Z",
+  "scannedAt": "2026-09-02T08:46:58.231Z",
+  "counts": {
+    "ok": 148,
+    "red": 1,
+    "miss": 18,
+    "total": 167
+  },
+  "red": [
+    {
+      "name": "0% แคล ชามะลิ",
+      "live": 9,
+      "target": 27,
+      "store": 19,
+      "hubLive": 9,
+      "beforeHint": null
+    }
+  ],
+  "miss": [
+    {
+      "name": "กาแฟสด เอสเปรสโซ่ (Espresso) เย็น 16 ออนซ์",
+      "live": 50,
+      "reason": "no POS exact"
+    },
+    {
+      "name": "กาแฟสด คาปูชิโน่ (Cappuccino) เย็น 16 ออนซ์",
+      "live": 50,
+      "reason": "no POS exact"
+    },
+    {
+      "name": "กาแฟสด คาราเมลลาเต้ร้อน",
+      "live": 50,
+      "reason": "no POS exact"
+    },
+    {
+      "name": "ช็อกโกแลตมิลค์ร้อน",
+      "live": 36,
+      "reason": "no POS exact"
+    },
+    {
+      "name": "กาแฟสด เอสเปรสโซ่ร้อน (Espresso) ร้อน",
+      "live": 41,
+      "reason": "no POS exact"
+    },
+    {
+      "name": "กาแฟสด คาราเมลมัคคิอาโต้ร้อน (Caramel Macchiato) ร้อน",
+      "live": 50,
+      "reason": "no POS exact"
+    },
+    {
+      "name": "กาแฟสด อเมริกาโน่ร้อน (Americano) ร้อน",
+      "live": 36,
+      "reason": "no POS exact"
+    },
+    {
+      "name": "กาแฟสด มอคค่า ร้อน",
+      "live": 41,
+      "reason": "no POS exact"
+    },
+    {
+      "name": "กาแฟสด แฟลตไวท์ร้อน (Flat White) ร้อน",
+      "live": 41,
+      "reason": "no POS exact"
+    },
+    {
+      "name": "กาแฟสด เฮเซลนัทมอคค่าร้อน",
+      "live": 50,
+      "reason": "no POS exact"
+    },
+    {
+      "name": "กาแฟสด Long Black (ลองแบล็ค) เย็น 16 ออนซ์",
+      "live": 41,
+      "reason": "no POS exact"
+    },
+    {
+      "name": "กาแฟสด ลองแบล็คร้อน (Long Black) ร้อน",
+      "live": 36,
+      "reason": "no POS exact"
+    },
+    {
+      "name": "นมร้อน",
+      "live": 27,
+      "reason": "no POS exact"
+    },
+    {
+      "name": "กาแฟสด ลาเต้ร้อน (Latte) ร้อน",
+      "live": 41,
+      "reason": "no POS exact"
+    },
+    {
+      "name": "กาแฟสด แฟลตไวท์ (Flat White) เย็น 16 ออนซ์",
+      "live": 50,
+      "reason": "no POS exact"
+    },
+    {
+      "name": "กาแฟสด ลาเต้ (Latte) เย็น 16 ออนซ์",
+      "live": 50,
+      "reason": "no POS exact"
+    },
+    {
+      "name": "กาแฟสด คาปูชิโน่ร้อน (Cappuccino) ร้อน",
+      "live": 41,
+      "reason": "no POS exact"
+    },
+    {
+      "name": "กาแฟสด อเมริกาโน่ (Americano) เย็น 16 ออนซ์",
+      "live": 41,
+      "reason": "no POS exact"
+    }
+  ]
+}

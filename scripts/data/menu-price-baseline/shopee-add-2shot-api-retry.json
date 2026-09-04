@@ -1,0 +1,45 @@
+[
+  {
+    "name": "snake-post-full",
+    "status": 200,
+    "code": 0,
+    "msg": "success",
+    "data": null
+  },
+  {
+    "name": "snake-post-full:after-get",
+    "optionCount": 1,
+    "options": [
+      {
+        "option_id": "2489613938707968",
+        "option_name": "เพิ่มช็อตกาแฟ 1 ช็อต",
+        "rank": 1,
+        "price": "1800000",
+        "available": true,
+        "out_of_stock_time": null,
+        "sync_item_group_id": ""
+      }
+    ]
+  },
+  {
+    "name": "camel-put-optionGroup",
+    "status": 400,
+    "code": 100,
+    "msg": "params invalid",
+    "data": null
+  },
+  {
+    "name": "camel-put-available-bool",
+    "status": 400,
+    "code": 2,
+    "msg": "groups.UpdateOptionGroupAndOptionsReq.Options: []*foody_item.Option: foody_item.Option.Available: unmarshalerDecoder: cannot unmarshal `true` into enum Available, error found in #10 byte of ...|able\":true},{\"name\":|..., bigger context ...|�็อต\",\"rank\":1,\"price\":\"18\",\"available\":true},{\"name\":\"เพิ่มช็อตกาแฟ|...",
+    "data": null
+  },
+  {
+    "name": "snake-put",
+    "status": 400,
+    "code": 2,
+    "msg": "groups.UpdateOptionGroupAndOptionsReq.Options: []*foody_item.Option: foody_item.Option.SyncItemGroupId: OutOfStockTime: Available: unmarshalerDecoder: cannot unmarshal `true` into enum Available, error found in #10 byte of ...|able\":true,\"out_of_s|..., bigger context ...|��ต\",\"rank\":1,\"price\":\"1800000\",\"available\":true,\"out_of_stock_time\":null,\"sync_item_group_id\":\"\"}|...",
+    "data": null
+  }
+]

@@ -55,7 +55,7 @@ assert.match(page, /onOpenPolicy=\{canSetPolicy/);
 assert.match(popup, /ProdPolicyPopupToggle/);
 const settings = read("src/app/settings/page.tsx");
 assert.match(settings, /ProdPolicyPopupToggle/);
-assert.match(version, /APP_BUILD = 862/);
+assert.match(version, /APP_BUILD = 863/);
 
 function round2(n) {
   return Math.round(n * 100) / 100;

@@ -1,0 +1,14 @@
+{
+  "at": "2026-09-01T06:43:45.593Z",
+  "source": "wongnai report menu-items 2026-08-01..2026-09-01",
+  "soldNamesChecked": 84,
+  "exactMatchPos": 83,
+  "needsConfirm": [
+    {
+      "from": "น้ำเปล่า",
+      "to": "น้ำเปล่า (เฉพาะหน้าร้าน)",
+      "reason": "POS renamed with (เฉพาะหน้าร้าน); LM still old name"
+    }
+  ],
+  "blocker": "Wongnai menu editor accordion empty — cannot apply renames until items load"
+}

@@ -1,0 +1,1598 @@
+{
+  "at": "2026-09-03T08:43:49.634Z",
+  "apply": true,
+  "noteFilter": "update price",
+  "sourceCsv": "/tmp/grab-fresh-now.csv",
+  "patched": 156,
+  "skipped": 0,
+  "meta": {
+    "grabRule": {
+      "mode": "gp",
+      "value": 30
+    },
+    "matched": 167,
+    "storeOnlySkip": 0,
+    "atTarget": 0,
+    "blockedSkip": 0,
+    "noteSkip": 0,
+    "noteFilter": "update price",
+    "remaining": 167,
+    "retryBlocked": true
+  },
+  "changes": [
+    {
+      "itemId": "THITE2024040706435529563",
+      "name": "โกปี๊อ้อ (โอเลี้ยง) (เย็น/ปั่น)",
+      "before": 27,
+      "target": 24,
+      "posId": "fs_item_33559287",
+      "posName": "โกปี๊อ้อ (โอเลี้ยง) (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 24
+    },
+    {
+      "itemId": "THITE2025070301214813758",
+      "name": "(สมูทตี้) ส้ม แก้วใหญ่ 22 ออนซ์",
+      "before": 70,
+      "target": 59,
+      "posId": "fs_item_43412845",
+      "posName": "(สมูทตี้) ส้ม แก้วใหญ่ 22 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 59
+    },
+    {
+      "itemId": "THITE2025031015005084849",
+      "name": "กาแฟสดโซดา เอสเปรสโซ่บ๊วย เย็น 16 ออนซ์",
+      "before": 36,
+      "target": 32,
+      "posId": "fs_item_41486436",
+      "posName": "กาแฟสดโซดา เอสเปรสโซ่บ๊วย เย็น 16 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 32
+    },
+    {
+      "itemId": "THITE2025030814395904894",
+      "name": "กาแฟสด บลูฮาวายเอสเปรสโซ่ เย็น 16 ออนซ์",
+      "before": 36,
+      "target": 32,
+      "posId": "fs_item_41444782",
+      "posName": "กาแฟสด บลูฮาวายเอสเปรสโซ่ เย็น 16 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 32
+    },
+    {
+      "itemId": "THITE2025070209011084247",
+      "name": "(สมูทตี้) มิกซ์เบอร์รี่ แก้วใหญ่ 22 ออนซ์",
+      "before": 77,
+      "target": 69,
+      "posId": "fs_item_43406465",
+      "posName": "(สมูทตี้) มิกซ์เบอร์รี่ แก้วใหญ่ 22 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 69
+    },
+    {
+      "itemId": "THITE2024040707304376427",
+      "name": "ชาลิ้นจี่",
+      "before": 27,
+      "target": 24,
+      "posId": "fs_item_33559329",
+      "posName": "ชาลิ้นจี่",
+      "hubNote": "update price",
+      "verifyLive": 24
+    },
+    {
+      "itemId": "THITE2025031615083861257",
+      "name": "0% แคล ชาแคนตาลูป",
+      "before": 27,
+      "target": 24,
+      "posId": "fs_item_41638745",
+      "posName": "0% แคล ชาแคนตาลูป",
+      "hubNote": "update price",
+      "verifyLive": 24
+    },
+    {
+      "itemId": "THITE2025031014540871357",
+      "name": "กาแฟสดโซดา เอสเปรสโซ่บลูฮาวาย เย็น 16 ออนซ์",
+      "before": 36,
+      "target": 32,
+      "posId": "fs_item_41486377",
+      "posName": "กาแฟสดโซดา เอสเปรสโซ่บลูฮาวาย เย็น 16 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 32
+    },
+    {
+      "itemId": "THITE2025031410215706264",
+      "name": "0% แคล ชาพีช",
+      "before": 27,
+      "target": 24,
+      "posId": "fs_item_41608475",
+      "posName": "0% แคล ชาพีช",
+      "hubNote": "update price",
+      "verifyLive": 24
+    },
+    {
+      "itemId": "THITE2025031014594009959",
+      "name": "กาแฟสดโซดา เอสเปรสโซ่ลิ้นจี่ เย็น 16 ออนซ์",
+      "before": 36,
+      "target": 32,
+      "posId": "fs_item_41486430",
+      "posName": "กาแฟสดโซดา เอสเปรสโซ่ลิ้นจี่ เย็น 16 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 32
+    },
+    {
+      "itemId": "THITE2025031615093192911",
+      "name": "0% แคล ชาฟรุตพันช์",
+      "before": 27,
+      "target": 24,
+      "posId": "fs_item_41638755",
+      "posName": "0% แคล ชาฟรุตพันช์",
+      "hubNote": "update price",
+      "verifyLive": 24
+    },
+    {
+      "itemId": "THITE2024042114222935612",
+      "name": "ชาไทยชีส (เย็น/ปั่น)",
+      "before": 63,
+      "target": 54,
+      "posId": "fs_item_33768746",
+      "posName": "ชาไทยชีส (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 54
+    },
+    {
+      "itemId": "THITE2025030204271845735",
+      "name": "กาแฟสด Flat White (แฟลตไวท์) ร้อน 12 ออนซ์",
+      "before": 41,
+      "target": 37,
+      "posId": "fs_item_41322288",
+      "posName": "กาแฟสด Flat White (แฟลตไวท์) ร้อน 12 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 37
+    },
+    {
+      "itemId": "THITE2025052103271268930",
+      "name": "เฉาก๊วยหนึบเนื้อแน่น",
+      "before": 13,
+      "target": 9,
+      "posId": "fs_item_42692654",
+      "posName": "เฉาก๊วยหนึบเนื้อแน่น",
+      "hubNote": "update price",
+      "verifyLive": 9
+    },
+    {
+      "itemId": "THITE2024040717405049396",
+      "name": "แดงมะนาวโซดา",
+      "before": 41,
+      "target": 24,
+      "posId": "fs_item_33559289",
+      "posName": "แดงมะนาวโซดา",
+      "hubNote": "update price",
+      "verifyLive": 24
+    },
+    {
+      "itemId": "THITE2025030701462873604",
+      "name": "กาแฟสด กาแฟโบราณ เย็น 16 ออนซ์",
+      "before": 41,
+      "target": 37,
+      "posId": "fs_item_41411740",
+      "posName": "กาแฟสด กาแฟโบราณ เย็น 16 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 37
+    },
+    {
+      "itemId": "THITE2024040706410295183",
+      "name": "โกปี๊ โบราณ (เย็น/ปั่น)",
+      "before": 34,
+      "target": 29,
+      "posId": "fs_item_33559284",
+      "posName": "โกปี๊ โบราณ (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 29
+    },
+    {
+      "itemId": "THITE2025041907163643607",
+      "name": "มัทฉะลาเต้ (Matcha Latte)",
+      "before": 56,
+      "target": 49,
+      "posId": "fs_item_42217588",
+      "posName": "มัทฉะลาเต้ (Matcha Latte)",
+      "hubNote": "update price",
+      "verifyLive": 49
+    },
+    {
+      "itemId": "THITE2024040710400760215",
+      "name": "ชานมเฮเซลนัท (เย็น/ปั่น)",
+      "before": 41,
+      "target": 37,
+      "posId": "fs_item_33559269",
+      "posName": "ชานมเฮเซลนัท (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 37
+    },
+    {
+      "itemId": "THITE2025032907504195386",
+      "name": "0% โคล่าโซดา",
+      "before": 27,
+      "target": 22,
+      "posId": "fs_item_41836328",
+      "posName": "0% โคล่าโซดา",
+      "hubNote": "update price",
+      "verifyLive": 22
+    },
+    {
+      "itemId": "THITE2024040706413750755",
+      "name": "มอคค่า (เย็น/ปั่น)",
+      "before": 41,
+      "target": 37,
+      "posId": "fs_item_33559282",
+      "posName": "มอคค่า (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 37
+    },
+    {
+      "itemId": "THITE2024040706445891803",
+      "name": "โกปี๊ ยกล้อ (ใส่นม) (เย็น/ปั่น)",
+      "before": 34,
+      "target": 29,
+      "posId": "fs_item_33559267",
+      "posName": "โกปี๊ ยกล้อ (ใส่นม) (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 29
+    },
+    {
+      "itemId": "THITE2025030204120972961",
+      "name": "กาแฟสด Cappuccino (คาปูชิโน่) ร้อน 12 ออนซ์",
+      "before": 41,
+      "target": 37,
+      "posId": "fs_item_41322135",
+      "posName": "กาแฟสด Cappuccino (คาปูชิโน่) ร้อน 12 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 37
+    },
+    {
+      "itemId": "THITE2025030916034890533",
+      "name": "กาแฟสด น้ำผึ้งมะนาว เย็น 16 ออนซ์",
+      "before": 41,
+      "target": 37,
+      "posId": "fs_item_41466326",
+      "posName": "กาแฟสด น้ำผึ้งมะนาว เย็น 16 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 37
+    },
+    {
+      "itemId": "THITE2025031216222687111",
+      "name": "กาแฟสด โกโก้มอคค่าร้อน",
+      "before": 41,
+      "target": 37,
+      "posId": "fs_item_41574391",
+      "posName": "กาแฟสด โกโก้มอคค่าร้อน",
+      "hubNote": "update price",
+      "verifyLive": 37
+    },
+    {
+      "itemId": "THITE2024040717412705402",
+      "name": "น้ำผึ้งมะนาวโซดา",
+      "before": 41,
+      "target": 24,
+      "posId": "fs_item_33559299",
+      "posName": "น้ำผึ้งมะนาวโซดา",
+      "hubNote": "update price",
+      "verifyLive": 24
+    },
+    {
+      "itemId": "THITE2025030517315435977",
+      "name": "กาแฟสด มอคค่า เย็น 16 ออนซ์",
+      "before": 50,
+      "target": 45,
+      "posId": "fs_item_41391572",
+      "posName": "กาแฟสด มอคค่า เย็น 16 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 45
+    },
+    {
+      "itemId": "THITE2025052911300384543",
+      "name": "น้ำเต้าหู้โกโก้ (เย็น/ปั่น)",
+      "before": 34,
+      "target": 29,
+      "posId": "fs_item_42818456",
+      "posName": "น้ำเต้าหู้โกโก้ (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 29
+    },
+    {
+      "itemId": "THITE2025041914072452405",
+      "name": "เจลลี่ผลไม้",
+      "before": 7,
+      "target": 6,
+      "posId": "fs_item_33559324",
+      "posName": "เจลลี่ผลไม้",
+      "hubNote": "update price",
+      "verifyLive": 6
+    },
+    {
+      "itemId": "THITE2025030814484113955",
+      "name": "กาแฟสด บ๊วยเอสเปรสโซ่ เย็น 16 ออนซ์",
+      "before": 36,
+      "target": 32,
+      "posId": "fs_item_41444824",
+      "posName": "กาแฟสด บ๊วยเอสเปรสโซ่ เย็น 16 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 32
+    },
+    {
+      "itemId": "THITE2025091712403938448",
+      "name": "ชาอู่หลงน้ำผึ้ง",
+      "before": 34,
+      "target": 29,
+      "posId": "fs_item_44722825",
+      "posName": "ชาอู่หลงน้ำผึ้ง",
+      "hubNote": "update price",
+      "verifyLive": 29
+    },
+    {
+      "itemId": "THITE2025071208361503136",
+      "name": "(สมูทตี้) มันม่วง แก้วใหญ่ 22 ออนซ์",
+      "before": 70,
+      "target": 59,
+      "posId": "fs_item_43577356",
+      "posName": "(สมูทตี้) มันม่วง แก้วใหญ่ 22 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 59
+    },
+    {
+      "itemId": "THITE2025030203221737606",
+      "name": "กาแฟสด แฟลตไวท์ เย็น 16 ออนซ์",
+      "before": 50,
+      "target": 45,
+      "posId": "fs_item_41321223",
+      "posName": "กาแฟสด แฟลตไวท์ เย็น 16 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 45
+    },
+    {
+      "itemId": "THITE2025080402183651028",
+      "name": "มัทฉะเลม่อนเย็น (Matcha Lemon)",
+      "before": 50,
+      "target": 45,
+      "posId": "fs_item_43979100",
+      "posName": "มัทฉะเลม่อนเย็น (Matcha Lemon)",
+      "hubNote": "update price",
+      "verifyLive": 45
+    },
+    {
+      "itemId": "THITE2024040707275712045",
+      "name": "ชาเขียวนม (เย็น/ปั่น)",
+      "before": 34,
+      "target": 29,
+      "posId": "fs_item_33559328",
+      "posName": "ชาเขียวนม (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 29
+    },
+    {
+      "itemId": "THITE2025030213003197830",
+      "name": "กาแฟสด Caramel Macchiato (คาราเมลมัคคิอาโต้) ร้อน 12 ออนซ์",
+      "before": 50,
+      "target": 45,
+      "posId": "fs_item_41331368",
+      "posName": "กาแฟสด Caramel Macchiato (คาราเมลมัคคิอาโต้) ร้อน 12 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 45
+    },
+    {
+      "itemId": "THITE2025041914183022301",
+      "name": "บุกน้ำตาล",
+      "before": 14,
+      "target": 13,
+      "posId": "fs_item_33559323",
+      "posName": "บุกน้ำตาล",
+      "hubNote": "update price",
+      "verifyLive": 13
+    },
+    {
+      "itemId": "THITE2024041801482224017",
+      "name": "ชาพีช",
+      "before": 56,
+      "target": 49,
+      "posId": "fs_item_33768707",
+      "posName": "ชาพีช",
+      "hubNote": "update price",
+      "verifyLive": 49
+    },
+    {
+      "itemId": "THITE2025030203520684151",
+      "name": "กาแฟสด Espresso (เอสเปรสโซ่) ร้อน 12 ออนซ์",
+      "before": 41,
+      "target": 37,
+      "posId": "fs_item_41321907",
+      "posName": "กาแฟสด Espresso (เอสเปรสโซ่) ร้อน 12 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 37
+    },
+    {
+      "itemId": "THITE2024041801493175997",
+      "name": "ชามิกซ์เบอร์รี่",
+      "before": 56,
+      "target": 49,
+      "posId": "fs_item_33752414",
+      "posName": "ชามิกซ์เบอร์รี่",
+      "hubNote": "update price",
+      "verifyLive": 49
+    },
+    {
+      "itemId": "THITE2025041914163553207",
+      "name": "บุกน้ำผึ้ง",
+      "before": 14,
+      "target": 13,
+      "posId": "fs_item_33559321",
+      "posName": "บุกน้ำผึ้ง",
+      "hubNote": "update price",
+      "verifyLive": 13
+    },
+    {
+      "itemId": "THITE2025030204230004357",
+      "name": "กาแฟสด Long Black (ลองแบล็ค) ร้อน 12 ออนซ์",
+      "before": 36,
+      "target": 32,
+      "posId": "fs_item_41322247",
+      "posName": "กาแฟสด Long Black (ลองแบล็ค) ร้อน 12 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 32
+    },
+    {
+      "itemId": "THITE2025052911092659849",
+      "name": "น้ำเต้าหู้นมสด (เย็น/ปั่น)",
+      "before": 34,
+      "target": 29,
+      "posId": "fs_item_42818071",
+      "posName": "น้ำเต้าหู้นมสด (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 29
+    },
+    {
+      "itemId": "THITE2024040717501751626",
+      "name": "เขียวโซดา",
+      "before": 27,
+      "target": 22,
+      "posId": "fs_item_33559290",
+      "posName": "เขียวโซดา",
+      "hubNote": "update price",
+      "verifyLive": 22
+    },
+    {
+      "itemId": "THITE2025030701423684359",
+      "name": "กาแฟสด โอเลี้ยง เย็น 16 ออนซ์",
+      "before": 41,
+      "target": 37,
+      "posId": "fs_item_41411727",
+      "posName": "กาแฟสด โอเลี้ยง เย็น 16 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 37
+    },
+    {
+      "itemId": "THITE2024040707263973803",
+      "name": "นมสดไข่มุกบราวน์ชูการ์ (เย็น/ปั่น)",
+      "before": 63,
+      "target": 29,
+      "posId": "fs_item_33559301",
+      "posName": "นมสดไข่มุกบราวน์ชูการ์ (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 29
+    },
+    {
+      "itemId": "THITE2024040707320902022",
+      "name": "ชาบลูเบอร์รี่",
+      "before": 27,
+      "target": 24,
+      "posId": "fs_item_33559276",
+      "posName": "ชาบลูเบอร์รี่",
+      "hubNote": "update price",
+      "verifyLive": 24
+    },
+    {
+      "itemId": "THITE2025071208321337950",
+      "name": "นมสดมันม่วง",
+      "before": 56,
+      "target": 49,
+      "posId": "fs_item_43577310",
+      "posName": "นมสดมันม่วง",
+      "hubNote": "update price",
+      "verifyLive": 49
+    },
+    {
+      "itemId": "THITE2025022802373259359",
+      "name": "กาแฟสด คาปูชิโน่ เย็น 16 ออนซ์",
+      "before": 50,
+      "target": 45,
+      "posId": "fs_item_41279794",
+      "posName": "กาแฟสด คาปูชิโน่ เย็น 16 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 45
+    },
+    {
+      "itemId": "THITE2024040707231404048",
+      "name": "ไมโล (เย็น/ปั่น)",
+      "before": 34,
+      "target": 29,
+      "posId": "fs_item_33559308",
+      "posName": "ไมโล (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 29
+    },
+    {
+      "itemId": "THITE2024040706364776567",
+      "name": "เนสกาแฟ (เย็น/ปั่น)",
+      "before": 34,
+      "target": 29,
+      "posId": "fs_item_33559283",
+      "posName": "เนสกาแฟ (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 29
+    },
+    {
+      "itemId": "THITE2024040707260098745",
+      "name": "โกโก้มิ้นต์ (เย็น/ปั่น)",
+      "before": 49,
+      "target": 44,
+      "posId": "fs_item_33559309",
+      "posName": "โกโก้มิ้นต์ (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 44
+    },
+    {
+      "itemId": "THITE2025031715441937496",
+      "name": "0% แคล โซดาฟรุตพันช์",
+      "before": 27,
+      "target": 22,
+      "posId": "fs_item_41655299",
+      "posName": "0% แคล โซดาฟรุตพันช์",
+      "hubNote": "update price",
+      "verifyLive": 22
+    },
+    {
+      "itemId": "THITE2025041914214231373",
+      "name": "ครีมซีส",
+      "before": 29,
+      "target": 25,
+      "posId": "fs_item_33559274",
+      "posName": "ครีมซีส",
+      "hubNote": "update price",
+      "verifyLive": 25
+    },
+    {
+      "itemId": "THITE2024040707295087456",
+      "name": "ชามะนาว",
+      "before": 34,
+      "target": 29,
+      "posId": "fs_item_33559272",
+      "posName": "ชามะนาว",
+      "hubNote": "update price",
+      "verifyLive": 29
+    },
+    {
+      "itemId": "THITE2025031615280773790",
+      "name": "0% แคล โซดาน้ำผึ้งมะนาว",
+      "before": 27,
+      "target": 22,
+      "posId": "fs_item_41638888",
+      "posName": "0% แคล โซดาน้ำผึ้งมะนาว",
+      "hubNote": "update price",
+      "verifyLive": 22
+    },
+    {
+      "itemId": "THITE2025031715392960627",
+      "name": "0% แคล โซดาแคนตาลูป",
+      "before": 27,
+      "target": 22,
+      "posId": "fs_item_41655205",
+      "posName": "0% แคล โซดาแคนตาลูป",
+      "hubNote": "update price",
+      "verifyLive": 22
+    },
+    {
+      "itemId": "THITE2024040710404575752",
+      "name": "ชานมกาแฟ (เย็น/ปั่น)",
+      "before": 34,
+      "target": 29,
+      "posId": "fs_item_33559338",
+      "posName": "ชานมกาแฟ (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 29
+    },
+    {
+      "itemId": "THITE2024040707312107590",
+      "name": "ชาแอปเปิ้ล",
+      "before": 27,
+      "target": 24,
+      "posId": "fs_item_33559331",
+      "posName": "ชาแอปเปิ้ล",
+      "hubNote": "update price",
+      "verifyLive": 24
+    },
+    {
+      "itemId": "THITE2025031216192272991",
+      "name": "กาแฟสด คาราเมลลาเต้ร้อน 12 ออนซ์",
+      "before": 50,
+      "target": 45,
+      "posId": "fs_item_41574254",
+      "posName": "กาแฟสด คาราเมลลาเต้ร้อน 12 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 45
+    },
+    {
+      "itemId": "THITE2025052911173620595",
+      "name": "น้ำเต้าหู้โอวัลติน (เย็น/ปั่น)",
+      "before": 34,
+      "target": 29,
+      "posId": "fs_item_42818345",
+      "posName": "น้ำเต้าหู้โอวัลติน (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 29
+    },
+    {
+      "itemId": "THITE2025030517370006186",
+      "name": "กาแฟสด คาราเมลมัคคิอาโต้ เย็น 16 ออนซ์",
+      "before": 56,
+      "target": 45,
+      "posId": "fs_item_41391590",
+      "posName": "กาแฟสด คาราเมลมัคคิอาโต้ เย็น 16 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 45
+    },
+    {
+      "itemId": "THITE2024040707225137437",
+      "name": "โกโก้ (เย็น/ปั่น)",
+      "before": 34,
+      "target": 29,
+      "posId": "fs_item_33559286",
+      "posName": "โกโก้ (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 29
+    },
+    {
+      "itemId": "THITE2024040707214483215",
+      "name": "นมมรกต (เย็น/ปั่น)",
+      "before": 41,
+      "target": 37,
+      "posId": "fs_item_33559304",
+      "posName": "นมมรกต (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 37
+    },
+    {
+      "itemId": "THITE2025031216373120216",
+      "name": "กาแฟสด มอคค่ามิ้นต์ร้อน",
+      "before": 50,
+      "target": 45,
+      "posId": "fs_item_41574397",
+      "posName": "กาแฟสด มอคค่ามิ้นต์ร้อน",
+      "hubNote": "update price",
+      "verifyLive": 45
+    },
+    {
+      "itemId": "THITE2025030914361370675",
+      "name": "กาแฟสด ช็อกโกแลตเอสเปรสโซ่ เย็น 16 ออนซ์",
+      "before": 41,
+      "target": 37,
+      "posId": "fs_item_41456583",
+      "posName": "กาแฟสด ช็อกโกแลตเอสเปรสโซ่ เย็น 16 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 37
+    },
+    {
+      "itemId": "THITE2025052911224715011",
+      "name": "น้ำเต้าหู้เผือก (เย็น/ปั่น)",
+      "before": 49,
+      "target": 39,
+      "posId": "fs_item_42818404",
+      "posName": "น้ำเต้าหู้เผือก (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 39
+    },
+    {
+      "itemId": "THITE2025061205575822050",
+      "name": "วุ้นว่านหางจระเข้ หั่นลูกเต๋า",
+      "before": 21,
+      "target": 19,
+      "posId": "fs_item_43052296",
+      "posName": "วุ้นว่านหางจระเข้ หั่นลูกเต๋า",
+      "hubNote": "update price",
+      "verifyLive": 19
+    },
+    {
+      "itemId": "THITE2024040707283813818",
+      "name": "ชาเขียวมะลิ",
+      "before": 27,
+      "target": 24,
+      "posId": "fs_item_33559279",
+      "posName": "ชาเขียวมะลิ",
+      "hubNote": "update price",
+      "verifyLive": 24
+    },
+    {
+      "itemId": "THITE2025031313362137067",
+      "name": "0% แคล ชาสละ",
+      "before": 27,
+      "target": 24,
+      "posId": "fs_item_41589746",
+      "posName": "0% แคล ชาสละ",
+      "hubNote": "update price",
+      "verifyLive": 24
+    },
+    {
+      "itemId": "THITE2024040707252340725",
+      "name": "โกโก้สตรอว์เบอร์รี (เย็น/ปั่น)",
+      "before": 49,
+      "target": 44,
+      "posId": "fs_item_33559319",
+      "posName": "โกโก้สตรอว์เบอร์รี (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 44
+    },
+    {
+      "itemId": "THITE2025030517414777580",
+      "name": "กาแฟสด เอสเปรสโซ่ไทยสไตล์ เย็น 16 ออนซ์",
+      "before": 41,
+      "target": 37,
+      "posId": "fs_item_41391600",
+      "posName": "กาแฟสด เอสเปรสโซ่ไทยสไตล์ เย็น 16 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 37
+    },
+    {
+      "itemId": "THITE2024040710392207291",
+      "name": "ชานมมิ้นต์ (เย็น/ปั่น)",
+      "before": 41,
+      "target": 37,
+      "posId": "fs_item_33559270",
+      "posName": "ชานมมิ้นต์ (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 37
+    },
+    {
+      "itemId": "THITE2025041914201885296",
+      "name": "ซอสบราวน์ชูการ์",
+      "before": 21,
+      "target": 19,
+      "posId": "fs_item_33559311",
+      "posName": "ซอสบราวน์ชูการ์",
+      "hubNote": "update price",
+      "verifyLive": 19
+    },
+    {
+      "itemId": "THITE2024041801473341445",
+      "name": "ชาผลไม้รวม",
+      "before": 56,
+      "target": 49,
+      "posId": "fs_item_33768547",
+      "posName": "ชาผลไม้รวม",
+      "hubNote": "update price",
+      "verifyLive": 49
+    },
+    {
+      "itemId": "THITE2025061205483737785",
+      "name": "วุ้นกบไต้หวัน",
+      "before": 9,
+      "target": 8,
+      "posId": "fs_item_43051427",
+      "posName": "วุ้นกบไต้หวัน",
+      "hubNote": "update price",
+      "verifyLive": 8
+    },
+    {
+      "itemId": "THITE2024040706423059338",
+      "name": "ลาเต้ (เย็น/ปั่น)",
+      "before": 41,
+      "target": 37,
+      "posId": "fs_item_33559281",
+      "posName": "ลาเต้ (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 37
+    },
+    {
+      "itemId": "THITE2024040717514916315",
+      "name": "เขียวมะนาวโซดา",
+      "before": 41,
+      "target": 24,
+      "posId": "fs_item_33559288",
+      "posName": "เขียวมะนาวโซดา",
+      "hubNote": "update price",
+      "verifyLive": 24
+    },
+    {
+      "itemId": "THITE2024040710340384853",
+      "name": "ชานมใต้หวัน (เย็น/ปั่น)",
+      "before": 27,
+      "target": 24,
+      "posId": "fs_item_33559327",
+      "posName": "ชานมใต้หวัน (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 24
+    },
+    {
+      "itemId": "THITE2025041914110920164",
+      "name": "ไข่มุก",
+      "before": 7,
+      "target": 6,
+      "posId": "fs_item_33559325",
+      "posName": "ไข่มุก",
+      "hubNote": "update price",
+      "verifyLive": 6
+    },
+    {
+      "itemId": "THITE2025070506164520452",
+      "name": "(สมูทตี้) มะม่วง แก้วใหญ่ 22 ออนซ์",
+      "before": 77,
+      "target": 69,
+      "posId": "fs_item_43461330",
+      "posName": "(สมูทตี้) มะม่วง แก้วใหญ่ 22 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 69
+    },
+    {
+      "itemId": "THITE2025031015014747584",
+      "name": "กาแฟสดโซดา เอสเปรสโซ่มะม่วง เย็น 16 ออนซ์",
+      "before": 36,
+      "target": 32,
+      "posId": "fs_item_41486445",
+      "posName": "กาแฟสดโซดา เอสเปรสโซ่มะม่วง เย็น 16 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 32
+    },
+    {
+      "itemId": "THITE2025031410234653483",
+      "name": "0% แคล ชาน้ำผึ้ง",
+      "before": 27,
+      "target": 24,
+      "posId": "fs_item_41608489",
+      "posName": "0% แคล ชาน้ำผึ้ง",
+      "hubNote": "update price",
+      "verifyLive": 24
+    },
+    {
+      "itemId": "THITE2024040706063632592",
+      "name": "ชาเสาวรส",
+      "before": 27,
+      "target": 24,
+      "posId": "fs_item_33559277",
+      "posName": "ชาเสาวรส",
+      "hubNote": "update price",
+      "verifyLive": 24
+    },
+    {
+      "itemId": "THITE2025051306313953891",
+      "name": "มัทฉะมะพร้าวนม",
+      "before": 64,
+      "target": 55,
+      "posId": "fs_item_42571194",
+      "posName": "มัทฉะมะพร้าวนม",
+      "hubNote": "update price",
+      "verifyLive": 55
+    },
+    {
+      "itemId": "THITE2025031615104196908",
+      "name": "0% แคล ชามะลิ",
+      "before": 27,
+      "target": 24,
+      "posId": "fs_item_41638761",
+      "posName": "0% แคล ชามะลิ",
+      "hubNote": "update price",
+      "verifyLive": 24
+    },
+    {
+      "itemId": "THITE2025030203453808475",
+      "name": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
+      "before": 36,
+      "target": 32,
+      "posId": "fs_item_41321830",
+      "posName": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 32
+    },
+    {
+      "itemId": "THITE2025031216202713290",
+      "name": "กาแฟสด เฮเซลนัทมอคค่าร้อน 12 ออนซ์",
+      "before": 50,
+      "target": 45,
+      "posId": "fs_item_41574255",
+      "posName": "กาแฟสด เฮเซลนัทมอคค่าร้อน 12 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 45
+    },
+    {
+      "itemId": "THITE2024040717425233219",
+      "name": "เสาวรสโซดา",
+      "before": 27,
+      "target": 22,
+      "posId": "fs_item_33559333",
+      "posName": "เสาวรสโซดา",
+      "hubNote": "update price",
+      "verifyLive": 22
+    },
+    {
+      "itemId": "THITE2025022802341811174",
+      "name": "กาแฟสด อเมริกาโน่ เย็น 16 ออนซ์",
+      "before": 41,
+      "target": 37,
+      "posId": "fs_item_41276630",
+      "posName": "กาแฟสด อเมริกาโน่ เย็น 16 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 37
+    },
+    {
+      "itemId": "THITE2024041805543052610",
+      "name": "กาแฟโบราณ บราวน์ชูการ์ (เย็น/ปั่น)",
+      "before": 56,
+      "target": 49,
+      "posId": "fs_item_33768737",
+      "posName": "กาแฟโบราณ บราวน์ชูการ์ (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 49
+    },
+    {
+      "itemId": "THITE2024040717440019808",
+      "name": "มะนาวโซดา",
+      "before": 34,
+      "target": 27,
+      "posId": "fs_item_33559337",
+      "posName": "มะนาวโซดา",
+      "hubNote": "update price",
+      "verifyLive": 27
+    },
+    {
+      "itemId": "THITE2025032907481742300",
+      "name": "0% โคล่าโซดามะนาว",
+      "before": 27,
+      "target": 22,
+      "posId": "fs_item_41836317",
+      "posName": "0% โคล่าโซดามะนาว",
+      "hubNote": "update price",
+      "verifyLive": 22
+    },
+    {
+      "itemId": "THITE2026020307474365114",
+      "name": "ชาจัสมินฝูเจี้ยน (เย็น/ปั่น) 16 oz",
+      "before": 41,
+      "target": 37,
+      "posId": "fs_item_47068210",
+      "posName": "ชาจัสมินฝูเจี้ยน (เย็น/ปั่น) 16 oz",
+      "hubNote": "update price",
+      "verifyLive": 37
+    },
+    {
+      "itemId": "THITE2025051306225277163",
+      "name": "มัทฉะมะพร้าว",
+      "before": 64,
+      "target": 55,
+      "posId": "fs_item_42571021",
+      "posName": "มัทฉะมะพร้าว",
+      "hubNote": "update price",
+      "verifyLive": 55
+    },
+    {
+      "itemId": "THITE2025091712364162544",
+      "name": "ชาอู่หลงเย็น",
+      "before": 27,
+      "target": 24,
+      "posId": "fs_item_44722774",
+      "posName": "ชาอู่หลงเย็น",
+      "hubNote": "update price",
+      "verifyLive": 24
+    },
+    {
+      "itemId": "THITE2024040710375695244",
+      "name": "ชานมเผือก (เย็น/ปั่น)",
+      "before": 41,
+      "target": 37,
+      "posId": "fs_item_33559268",
+      "posName": "ชานมเผือก (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 37
+    },
+    {
+      "itemId": "THITE2024040707292383933",
+      "name": "ชาดำเย็น",
+      "before": 27,
+      "target": 24,
+      "posId": "fs_item_33559312",
+      "posName": "ชาดำเย็น",
+      "hubNote": "update price",
+      "verifyLive": 24
+    },
+    {
+      "itemId": "THITE2025041914141523907",
+      "name": "บุกบราวน์ชูการ์",
+      "before": 14,
+      "target": 13,
+      "posId": "fs_item_33559322",
+      "posName": "บุกบราวน์ชูการ์",
+      "hubNote": "update price",
+      "verifyLive": 13
+    },
+    {
+      "itemId": "THITE2025030914322512524",
+      "name": "กาแฟสด โอเลี้ยงเฮเซลนัท เย็น 16 ออนซ์",
+      "before": 41,
+      "target": 37,
+      "posId": "fs_item_41456560",
+      "posName": "กาแฟสด โอเลี้ยงเฮเซลนัท เย็น 16 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 37
+    },
+    {
+      "itemId": "THITE2025052911074637852",
+      "name": "น้ำเต้าหู้สูตรดั้งเดิม (เย็น/ปั่น)",
+      "before": 34,
+      "target": 29,
+      "posId": "fs_item_42817721",
+      "posName": "น้ำเต้าหู้สูตรดั้งเดิม (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 29
+    },
+    {
+      "itemId": "THITE2025030914433436301",
+      "name": "กาแฟสด โอวัลตินช็อตกาแฟ เย็น 16 ออนซ์",
+      "before": 41,
+      "target": 37,
+      "posId": "fs_item_41457162",
+      "posName": "กาแฟสด โอวัลตินช็อตกาแฟ เย็น 16 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 37
+    },
+    {
+      "itemId": "THITE2025031216180413409",
+      "name": "ช็อกโกแลตมิลค์ร้อน 12 ออนซ์",
+      "before": 36,
+      "target": 32,
+      "posId": "fs_item_41574246",
+      "posName": "ช็อกโกแลตมิลค์ร้อน 12 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 32
+    },
+    {
+      "itemId": "THITE2025062904070710229",
+      "name": "สตรอเบอร์รี่ปั่น แก้วใหญ่ 22 ออนซ์",
+      "before": 41,
+      "target": 37,
+      "posId": "fs_item_43337115",
+      "posName": "สตรอเบอร์รี่ปั่น แก้วใหญ่ 22 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 37
+    },
+    {
+      "itemId": "THITE2025062904281409246",
+      "name": "(สมูทตี้) สตรอเบอร์รี่ แก้วใหญ่ 22 ออนซ์",
+      "before": 56,
+      "target": 49,
+      "posId": "fs_item_43337275",
+      "posName": "(สมูทตี้) สตรอเบอร์รี่ แก้วใหญ่ 22 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 49
+    },
+    {
+      "itemId": "THITE2024040707194946026",
+      "name": "นมชมพู (เย็น/ปั่น)",
+      "before": 41,
+      "target": 37,
+      "posId": "fs_item_33559303",
+      "posName": "นมชมพู (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 37
+    },
+    {
+      "itemId": "THITE2026021907084210490",
+      "name": "มันไทยอบ ดั้งเดิม",
+      "before": 19,
+      "target": 15,
+      "posId": "fs_item_47343036",
+      "posName": "มันไทยอบ ดั้งเดิม",
+      "hubNote": "update price",
+      "verifyLive": 15
+    },
+    {
+      "itemId": "THITE2025071208272094748",
+      "name": "ชานมมันม่วง",
+      "before": 56,
+      "target": 49,
+      "posId": "fs_item_43577260",
+      "posName": "ชานมมันม่วง",
+      "hubNote": "update price",
+      "verifyLive": 49
+    },
+    {
+      "itemId": "THITE2025091712415541662",
+      "name": "ชาอู่หลงน้ำผึ้งมะนาว",
+      "before": 34,
+      "target": 29,
+      "posId": "fs_item_44722799",
+      "posName": "ชาอู่หลงน้ำผึ้งมะนาว",
+      "hubNote": "update price",
+      "verifyLive": 29
+    },
+    {
+      "itemId": "THITE2025070506145483735",
+      "name": "มะม่วงปั่น แก้วใหญ่ 22 ออนซ์",
+      "before": 49,
+      "target": 44,
+      "posId": "fs_item_43461233",
+      "posName": "มะม่วงปั่น แก้วใหญ่ 22 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 44
+    },
+    {
+      "itemId": "THITE2025031313372896735",
+      "name": "0% แคล ชาองุ่น",
+      "before": 27,
+      "target": 24,
+      "posId": "fs_item_41589757",
+      "posName": "0% แคล ชาองุ่น",
+      "hubNote": "update price",
+      "verifyLive": 24
+    },
+    {
+      "itemId": "THITE2025031410255226364",
+      "name": "0% แคล ชาน้ำผึ้งมะนาว",
+      "before": 27,
+      "target": 24,
+      "posId": "fs_item_41608527",
+      "posName": "0% แคล ชาน้ำผึ้งมะนาว",
+      "hubNote": "update price",
+      "verifyLive": 24
+    },
+    {
+      "itemId": "THITE2025070208584110777",
+      "name": "มิกซ์เบอร์รี่ปั่น แก้วใหญ่ 22 ออนซ์",
+      "before": 63,
+      "target": 56,
+      "posId": "fs_item_43406368",
+      "posName": "มิกซ์เบอร์รี่ปั่น แก้วใหญ่ 22 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 56
+    },
+    {
+      "itemId": "THITE2026022110521721472",
+      "name": "โกโก้ลาวาช็อกขูด (เย็น/ปั่น)",
+      "before": 63,
+      "target": 54,
+      "posId": "fs_item_47385144",
+      "posName": "โกโก้ลาวาช็อกขูด (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 54
+    },
+    {
+      "itemId": "THITE2025030701390513267",
+      "name": "ช็อกโกแลตมิลค์ เย็น 16 ออนซ์",
+      "before": 41,
+      "target": 37,
+      "posId": "fs_item_41411718",
+      "posName": "ช็อกโกแลตมิลค์ เย็น 16 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 37
+    },
+    {
+      "itemId": "THITE2024040717465154956",
+      "name": "บ๊วยโซดา",
+      "before": 34,
+      "target": 27,
+      "posId": "fs_item_33559298",
+      "posName": "บ๊วยโซดา",
+      "hubNote": "update price",
+      "verifyLive": 27
+    },
+    {
+      "itemId": "THITE2024040707240308720",
+      "name": "โอวัลติน (เย็น/ปั่น)",
+      "before": 34,
+      "target": 29,
+      "posId": "fs_item_33559307",
+      "posName": "โอวัลติน (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 29
+    },
+    {
+      "itemId": "THITE2024040710315731824",
+      "name": "ชานมไข่มุก (เย็น/ปั่น)",
+      "before": 34,
+      "target": 29,
+      "posId": "fs_item_33559314",
+      "posName": "ชานมไข่มุก (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 29
+    },
+    {
+      "itemId": "THITE2025031615302567651",
+      "name": "0% แคล โซดาองุ่น",
+      "before": 27,
+      "target": 22,
+      "posId": "fs_item_41638902",
+      "posName": "0% แคล โซดาองุ่น",
+      "hubNote": "update price",
+      "verifyLive": 22
+    },
+    {
+      "itemId": "THITE2025030915204210292",
+      "name": "กาแฟสด มอคค่า ร้อน 12 ออนซ์",
+      "before": 41,
+      "target": 37,
+      "posId": "fs_item_41460373",
+      "posName": "กาแฟสด มอคค่า ร้อน 12 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 37
+    },
+    {
+      "itemId": "THITE2025022802352904031",
+      "name": "กาแฟสด ลาเต้ เย็น 16 ออนซ์",
+      "before": 50,
+      "target": 45,
+      "posId": "fs_item_41277718",
+      "posName": "กาแฟสด ลาเต้ เย็น 16 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 45
+    },
+    {
+      "itemId": "THITE2025041912131389395",
+      "name": "มัทฉะบราวน์ชูการ์ไข่มุก (Matcha Brown Sugar Boba)",
+      "before": 64,
+      "target": 55,
+      "posId": "fs_item_42221669",
+      "posName": "มัทฉะบราวน์ชูการ์ไข่มุก (Matcha Brown Sugar Boba)",
+      "hubNote": "update price",
+      "verifyLive": 55
+    },
+    {
+      "itemId": "THITE2025031216164357806",
+      "name": "นมร้อน 12 ออนซ์",
+      "before": 27,
+      "target": 24,
+      "posId": "fs_item_41574233",
+      "posName": "นมร้อน 12 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 24
+    },
+    {
+      "itemId": "THITE2025031615221452892",
+      "name": "0% แคล โซดาลิ้นจี่",
+      "before": 27,
+      "target": 22,
+      "posId": "fs_item_41638847",
+      "posName": "0% แคล โซดาลิ้นจี่",
+      "hubNote": "update price",
+      "verifyLive": 22
+    },
+    {
+      "itemId": "THITE2025022802363923759",
+      "name": "กาแฟสด เอสเปรสโซ่ เย็น 16 ออนซ์",
+      "before": 50,
+      "target": 45,
+      "posId": "fs_item_41277766",
+      "posName": "กาแฟสด เอสเปรสโซ่ เย็น 16 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 45
+    },
+    {
+      "itemId": "THITE2025041912314756634",
+      "name": "เพียวมัทฉะ (Pure Matcha)",
+      "before": 41,
+      "target": 37,
+      "posId": "fs_item_42221869",
+      "posName": "เพียวมัทฉะ (Pure Matcha)",
+      "hubNote": "update price",
+      "verifyLive": 37
+    },
+    {
+      "itemId": "THITE2025031216260943721",
+      "name": "กาแฟสด เผือกลาเต้ร้อน",
+      "before": 41,
+      "target": 37,
+      "posId": "fs_item_41574401",
+      "posName": "กาแฟสด เผือกลาเต้ร้อน",
+      "hubNote": "update price",
+      "verifyLive": 37
+    },
+    {
+      "itemId": "THITE2024040717493302365",
+      "name": "แอปเปิ้ลโซดา",
+      "before": 27,
+      "target": 22,
+      "posId": "fs_item_33559291",
+      "posName": "แอปเปิ้ลโซดา",
+      "hubNote": "update price",
+      "verifyLive": 22
+    },
+    {
+      "itemId": "THITE2025030814535696845",
+      "name": "กาแฟสด เสาวรสเอสเปรสโซ่ เย็น 16 ออนซ์",
+      "before": 36,
+      "target": 32,
+      "posId": "fs_item_41444851",
+      "posName": "กาแฟสด เสาวรสเอสเปรสโซ่ เย็น 16 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 32
+    },
+    {
+      "itemId": "THITE2024041801540777155",
+      "name": "ชาส้มยูสุ",
+      "before": 56,
+      "target": 49,
+      "posId": "fs_item_33768723",
+      "posName": "ชาส้มยูสุ",
+      "hubNote": "update price",
+      "verifyLive": 49
+    },
+    {
+      "itemId": "THITE2025031014552562150",
+      "name": "กาแฟสดโซดา เอสเปรสโซ่เสาวรส เย็น 16 ออนซ์",
+      "before": 36,
+      "target": 32,
+      "posId": "fs_item_41486422",
+      "posName": "กาแฟสดโซดา เอสเปรสโซ่เสาวรส เย็น 16 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 32
+    },
+    {
+      "itemId": "THITE2025041911581296670",
+      "name": "มัทฉะครีมชีส (Matcha Cheese Tea)",
+      "before": 70,
+      "target": 59,
+      "posId": "fs_item_42221555",
+      "posName": "มัทฉะครีมชีส (Matcha Cheese Tea)",
+      "hubNote": "update price",
+      "verifyLive": 59
+    },
+    {
+      "itemId": "THITE2024040717444560970",
+      "name": "ลิ้นจี่โซดา",
+      "before": 27,
+      "target": 22,
+      "posId": "fs_item_33559296",
+      "posName": "ลิ้นจี่โซดา",
+      "hubNote": "update price",
+      "verifyLive": 22
+    },
+    {
+      "itemId": "THITE2025030914395083402",
+      "name": "กาแฟสด ไมโลกาแฟ เย็น 16 ออนซ์",
+      "before": 41,
+      "target": 37,
+      "posId": "fs_item_41456676",
+      "posName": "กาแฟสด ไมโลกาแฟ เย็น 16 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 37
+    },
+    {
+      "itemId": "THITE2025071208195239463",
+      "name": "ชาไทยมันม่วง",
+      "before": 56,
+      "target": 49,
+      "posId": "fs_item_43577153",
+      "posName": "ชาไทยมันม่วง",
+      "hubNote": "update price",
+      "verifyLive": 49
+    },
+    {
+      "itemId": "THITE2025030203565749761",
+      "name": "กาแฟสด ลาเต้ (Latte) ร้อน 12 ออนซ์",
+      "before": 41,
+      "target": 37,
+      "posId": "fs_item_41321986",
+      "posName": "กาแฟสด ลาเต้ (Latte) ร้อน 12 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 37
+    },
+    {
+      "itemId": "THITE2025030203155620292",
+      "name": "กาแฟสด ลองแบล็ค เย็น 16 ออนซ์",
+      "before": 41,
+      "target": 37,
+      "posId": "fs_item_41321144",
+      "posName": "กาแฟสด ลองแบล็ค เย็น 16 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 37
+    },
+    {
+      "itemId": "THITE2024040707325415876",
+      "name": "ชาสตรอว์เบอร์รี",
+      "before": 27,
+      "target": 24,
+      "posId": "fs_item_33559278",
+      "posName": "ชาสตรอว์เบอร์รี",
+      "hubNote": "update price",
+      "verifyLive": 24
+    },
+    {
+      "itemId": "THITE2024040717452913889",
+      "name": "บลูเบอร์รี่โซดา",
+      "before": 27,
+      "target": 22,
+      "posId": "fs_item_33559297",
+      "posName": "บลูเบอร์รี่โซดา",
+      "hubNote": "update price",
+      "verifyLive": 22
+    },
+    {
+      "itemId": "THITE2025031615252960163",
+      "name": "0% แคล โซดาน้ำผึ้ง",
+      "before": 27,
+      "target": 22,
+      "posId": "fs_item_41638870",
+      "posName": "0% แคล โซดาน้ำผึ้ง",
+      "hubNote": "update price",
+      "verifyLive": 22
+    },
+    {
+      "itemId": "THITE2024040710371374638",
+      "name": "ชานมไข่มุกบราวน์ชูการ์ (เย็น/ปั่น)",
+      "before": 56,
+      "target": 49,
+      "posId": "fs_item_33559326",
+      "posName": "ชานมไข่มุกบราวน์ชูการ์ (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 49
+    },
+    {
+      "itemId": "THITE2024040707221309972",
+      "name": "นมสดเย็น (เย็น/ปั่น)",
+      "before": 34,
+      "target": 29,
+      "posId": "fs_item_33559294",
+      "posName": "นมสดเย็น (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 29
+    },
+    {
+      "itemId": "THITE2025031216212849882",
+      "name": "กาแฟสด โอวัลตินเอสเปรสโซ่ร้อน",
+      "before": 50,
+      "target": 45,
+      "posId": "fs_item_41574263",
+      "posName": "กาแฟสด โอวัลตินเอสเปรสโซ่ร้อน",
+      "hubNote": "update price",
+      "verifyLive": 45
+    },
+    {
+      "itemId": "THITE2026061907370104061",
+      "name": "วาฟเฟิลเบลเยียม โฮมเมด",
+      "before": 19,
+      "target": 15,
+      "posId": "fs_item_49538393",
+      "posName": "วาฟเฟิลเบลเยียม โฮมเมด",
+      "hubNote": "update price",
+      "verifyLive": 15
+    },
+    {
+      "itemId": "THITE2024040717510158162",
+      "name": "แดงโซดา",
+      "before": 27,
+      "target": 22,
+      "posId": "fs_item_33559335",
+      "posName": "แดงโซดา",
+      "hubNote": "update price",
+      "verifyLive": 22
+    },
+    {
+      "itemId": "THITE2025091016480045690",
+      "name": "Ice Cream To-Go แก้วใหญ่ 16oz (แถมถุงเย็น)",
+      "before": 36,
+      "target": 29,
+      "posId": "fs_item_44595674",
+      "posName": "Ice Cream To-Go แก้วใหญ่ 16oz (แถมถุงเย็น)",
+      "hubNote": "update price",
+      "verifyLive": 29
+    },
+    {
+      "itemId": "THITE2024040710383302455",
+      "name": "ชานมคาราเมล (เย็น/ปั่น)",
+      "before": 41,
+      "target": 37,
+      "posId": "fs_item_33559271",
+      "posName": "ชานมคาราเมล (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 37
+    },
+    {
+      "itemId": "THITE2025030916073825415",
+      "name": "กาแฟสด บุกบราวน์ชูการ์ เย็น 16 ออนซ์",
+      "before": 41,
+      "target": 37,
+      "posId": "fs_item_41467100",
+      "posName": "กาแฟสด บุกบราวน์ชูการ์ เย็น 16 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 37
+    },
+    {
+      "itemId": "THITE2024040710343875816",
+      "name": "ชานมชีส (เย็น/ปั่น)",
+      "before": 56,
+      "target": 49,
+      "posId": "fs_item_33559318",
+      "posName": "ชานมชีส (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 49
+    },
+    {
+      "itemId": "THITE2025031313345655541",
+      "name": "0% แคล ชาลิ้นจี่",
+      "before": 27,
+      "target": 24,
+      "posId": "fs_item_41589715",
+      "posName": "0% แคล ชาลิ้นจี่",
+      "hubNote": "update price",
+      "verifyLive": 24
+    },
+    {
+      "itemId": "THITE2025070301062095896",
+      "name": "ส้มปั่น แก้วใหญ่ 22 ออนซ์",
+      "before": 49,
+      "target": 44,
+      "posId": "fs_item_43412772",
+      "posName": "ส้มปั่น แก้วใหญ่ 22 ออนซ์",
+      "hubNote": "update price",
+      "verifyLive": 44
+    },
+    {
+      "itemId": "THITE2024040707271418803",
+      "name": "ชาไทย (เย็น/ปั่น)",
+      "before": 34,
+      "target": 29,
+      "posId": "fs_item_33559280",
+      "posName": "ชาไทย (เย็น/ปั่น)",
+      "hubNote": "update price",
+      "verifyLive": 29
+    },
+    {
+      "itemId": "THITE2024040717473631579",
+      "name": "บลูฮาวายโซดา",
+      "before": 27,
+      "target": 22,
+      "posId": "fs_item_33559300",
+      "posName": "บลูฮาวายโซดา",
+      "hubNote": "update price",
+      "verifyLive": 22
+    },
+    {
+      "itemId": "THITE2024040717420086096",
+      "name": "สตรอว์เบอร์รีโซดา",
+      "before": 27,
+      "target": 22,
+      "posId": "fs_item_33559334",
+      "posName": "สตรอว์เบอร์รีโซดา",
+      "hubNote": "update price",
+      "verifyLive": 22
+    },
+    {
+      "itemId": "THITE2025031715420228735",
+      "name": "0% แคล โซดาพีช",
+      "before": 27,
+      "target": 22,
+      "posId": "fs_item_41655229",
+      "posName": "0% แคล โซดาพีช",
+      "hubNote": "update price",
+      "verifyLive": 22
+    },
+    {
+      "itemId": "THITE2025082707425593276",
+      "name": "ปังมันม่วง อบสด โฮมเมด",
+      "before": 27,
+      "target": 20,
+      "posId": "fs_item_44359362",
+      "posName": "ปังมันม่วง อบสด โฮมเมด",
+      "hubNote": "update price",
+      "verifyLive": 20
+    }
+  ],
+  "upload": {
+    "inject": {
+      "ok": true,
+      "name": "grab-hub-price-update.zip",
+      "size": 4070
+    },
+    "submit": "clicked:ลงขาย",
+    "after": "sample:หน้าแรก\nข้อมูลเชิงลึก\nลิงก์อัจฉริยะ\nคำสั่งซื้อ\nฟีดแบก\nการเงิน\nการตลาด\nเมนู\nรายการสินค้า\nพนักงาน\nศูนย์ช่วยเหลือ\nดาวน์โหลดแอปฯ\nTELL TEA เทลที - กรมหลวงประจักษ์\nภาพรวมเมนู\nตัวเลือกเสริม\nอัปเดตทีละหลายรายการ\nอัปเดตทีละหลายรายการ\n\nการอัปเดตทีละหลายรายการช่วยให้คุณจัดการเมนูขนาดใหญ่ได้อย่างมีประสิทธิภาพ คุณสามารถเพิ่มหรือแก้ไขรายการได้มากถึง 20,000 รายการต่อครั้ง ศึกษาเพิ่มเติมเกี่ยวกับการอัปเดตทีละหลายรายการ\n\nเพิ่มหลายรายการ\nแก้ไขหลายรายการ\nดาวน์โหลดเมนูปัจจุบัน\nประวัติรายการ\nชื่อไฟล์\tจำนวนรายการ\tสถานะ\tวันที่\tUSER EMAIL\tDOWNLOAD\ngrab-hub-price-update.zip\t\n--\n\t\nกำลังดำเนินการ\n\t\n03 Sep 26 15:44\n\t\nyohaken@gmail.com\n\tดาวน์โหลด\ngrab-hub-price-update.zip\t\n167\n\t\nสำเร็จ\n\t\n03 Sep 26 10:47\n\t\nyohaken@gmail.com\n\tดาวน์โหลด\ngrab-hub-price-update.zip\t\n167\n\t\nสำเร็จ\n\t\n03 Sep 26 10:46\n\t\nyohaken@gmail.com\n\tดาวน์โหลด\ngrab-rename-all-to-pos.zip\t\n167\n\t\nสำเร็จ\n\t\n03 Sep 26 10:33\n\t\nyohaken@gmail.com\n\tดาวน์โหลด\ngrab-rename-remaining.zip\t\n167\n\t\nสำเร็จ\n\t\n03 Sep 26 10:30\n\t\nyohaken@gmail.com\n\tดาวน์โหลด\ngrab-hub-options-update.zip\t\n167\n\t\nสำเร็จ\n\t\n02 Sep 26 16:17\n\t\nyohaken@gmail.com\n\tดาวน์โหลด\ngrab-hub-options-update.zip\t\n167\n\t\nสำเร็จ\n\t\n02 Sep 26 16:07\n\t\nyohaken@gmail.com\n\tดาวน์โหลด\ngrab-hub-options-update.zip\t\n167\n\t\nสำเร็จ\n\t\n02 Sep 26 15:50\n\t\nyohaken@gmail.com\n\tดาวน์โหลด\ngrab-jasmine-step2.zip\t\n167\n\t\nสำเร็จ\n\t\n02 Sep 26 15:50\n\t\nyohaken@gmail.com\n\tดาวน์โหลด\ngrab-jasmine-step1.zip\t\n167\n\t\nสำเร็จ\n\t\n02 Sep 26 15:49\n\t\nyohaken@gmail.com\n\tดาวน์โหลด, url:https://merchant.grab.com/food/menu/3-C6J1BCNXTYKTLX/bulkUploadMenu"
+  },
+  "verify": {
+    "matched": 156,
+    "stillOff": 0,
+    "csv": "/var/folders/ts/5b4_c2pn3w9__87zmd7c87dc0000gn/T/grab-csv-1788425066715/3-C6J1BCNXTYKTLX_20260903_5b5f7878d8174ff78ae51ae544b81312.csv"
+  }
+}
