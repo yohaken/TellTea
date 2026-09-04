@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { computeWasteRate, formatPolicyRate } from "@/lib/prod-policy";
+import { computeWasteRate, formatDeductRate } from "@/lib/prod-policy";
 import {
   addProdProduct,
   updateProdProduct,
@@ -94,7 +94,8 @@ export function ProdCatalogSetup({
         </div>
         {wasteBonusPct > 0 ? (
           <p className="muted form-hint-inline">
-            เรทเสีย {formatPolicyRate(computeWasteRate(Number(prodRate) || 0, wasteBonusPct)) || "—"}{" "}
+            เรทเสีย {formatDeductRate(computeWasteRate(Number(prodRate) || 0, wasteBonusPct)) || "—"}
+            /ชิ้นทิ้ง · ไม่มีทิ้ง = ×0{" "}
             ({wasteBonusPct}% ของเรทผลิต)
           </p>
         ) : null}
@@ -117,7 +118,7 @@ export function ProdCatalogSetup({
               <div className="muted prod-catalog-row-meta">
                 ผลิต {formatPlainNumber(p.prodRate)}
                 {wasteBonusPct > 0
-                  ? ` · เสีย ${formatPolicyRate(computeWasteRate(p.prodRate, wasteBonusPct)) || "—"} (${wasteBonusPct}%)`
+                  ? ` · หัก ${formatDeductRate(computeWasteRate(p.prodRate, wasteBonusPct)) || "—"}/ชิ้นทิ้ง (${wasteBonusPct}%)`
                   : ""}
                 {!p.active ? " · ปิดใช้" : ""}
               </div>

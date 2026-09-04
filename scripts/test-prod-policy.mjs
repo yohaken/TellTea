@@ -29,8 +29,11 @@ assert.match(popup, /เรทเสีย/);
 assert.match(page, /prod-col-waste-rate/);
 assert.match(page, /หัก \{formatPlainNumber\(c\.wasteDeduction\)\}/);
 assert.match(prod, /wasteDeduction/);
-assert.match(popup, /หักโบนัส = เรทเสีย × จำนวนเสีย/);
-assert.match(catalog, /เสีย /);
+assert.match(popup, /ไม่มีเสีย = ×0/);
+assert.match(page, /หัก × ทิ้ง/);
+assert.match(page, /ไม่มีทิ้ง = ×0/);
+assert.match(catalog, /ชิ้นทิ้ง/);
+assert.match(lib, /formatDeductRate/);
 assert.match(lib, /DEFAULT_PROD_POLICY_LABELS/);
 assert.match(prod, /minQtyLow/);
 assert.match(prod, /minQtyHigh/);
@@ -58,7 +61,7 @@ assert.match(page, /onOpenPolicy=\{canSetPolicy/);
 assert.match(popup, /ProdPolicyPopupToggle/);
 const settings = read("src/app/settings/page.tsx");
 assert.match(settings, /ProdPolicyPopupToggle/);
-assert.match(version, /APP_BUILD = 869/);
+assert.match(version, /APP_BUILD = 871/);
 
 function round2(n) {
   return Math.round(n * 100) / 100;
@@ -147,6 +150,7 @@ assert.equal(brownie.wasteRate, 0.375);
 assert.equal(brownie.wasteDeduction, 3.75, "หัก = เรทเสีย × จำนวนเสีย");
 assert.equal(brownie.prodBonus, 58.75);
 assert.equal(computeProdBonus(50, 0, 1.25, 30, 1).prodBonus, 62.5);
+assert.equal(computeProdBonus(50, 0, 1.25, 30, 1).wasteDeduction, 0, "ไม่มีของเสีย = เรทเสีย × 0");
 assert.equal(computeProdBonus(50, 10, 1.25, 0, 1).wasteDeduction, 0);
 assert.equal(computeProdBonus(50, 10, 1.25, 0, 1).prodBonus, 62.5);
 

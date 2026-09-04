@@ -6,6 +6,7 @@ import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import {
   DEFAULT_PROD_POLICY_LABELS,
   filterProdEntriesOnBangkokDay,
+  formatDeductRate,
   formatPolicyMoney,
   formatPolicyQty,
   formatPolicyRate,
@@ -118,7 +119,7 @@ export function ProdPolicyPopup({
           ขั้นต่ำต่อวัน · ไม่บังคับ · เฉพาะสินค้าที่ตั้งเกณฑ์ · {monthLabel}
         </p>
         <p className="prod-policy-waste">
-          เรทเสีย = <strong>{policy.wasteBonusPct}%</strong> ของเรทผลิต · หักโบนัส = เรทเสีย × จำนวนเสีย
+          เรทเสียใช้หักอย่างเดียว · หัก = เรทเสีย × จำนวนเสีย · ไม่มีเสีย = ×0
         </p>
         {canSetPolicy ? (
           <ProdPolicyPopupToggle
@@ -203,7 +204,7 @@ export function ProdPolicyPopup({
                       <th>{L.minRange}</th>
                       <th className="prod-policy-rate-head">
                         เรทผลิต
-                        <span>เรทเสีย {policy.wasteBonusPct}%</span>
+                        <span>เรทเสีย หัก × ทิ้ง</span>
                       </th>
                       <th>{L.monthQty}</th>
                       <th>{L.wasteQty}</th>
@@ -218,7 +219,7 @@ export function ProdPolicyPopup({
                         <td>{row.minRange}</td>
                         <td className="prod-policy-rate-cell">
                           <span>{formatPolicyRate(row.prodRate)}</span>
-                          <span className="is-waste">{formatPolicyRate(row.wasteRate)}</span>
+                          <span className="is-waste">{formatDeductRate(row.wasteRate) || "—"}</span>
                         </td>
                         <td>{formatPolicyQty(row.monthQty)}</td>
                         <td>{formatPolicyQty(row.wasteQty)}</td>

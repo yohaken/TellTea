@@ -119,6 +119,12 @@ export function computeWasteBonusMoney(
   return round2(waste * computeWasteRate(prodRate, wasteBonusPct));
 }
 
+/** เรทเสียโชว์เป็นเรทหักต่อชิ้นทิ้ง — ไม่ใช่เรทบวกโบนัส */
+export function formatDeductRate(amount: number): string {
+  const s = formatPolicyRate(amount);
+  return s ? `−${s}` : "";
+}
+
 /** เรทเล็ก (0.375) — ไม่ปัดเป็น 0.38 แล้วคูณแล้วเพี้ยน */
 export function formatPolicyRate(amount: number): string {
   if (!(Number(amount) > 0)) return "";

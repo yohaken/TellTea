@@ -32,8 +32,8 @@ import { can } from "@/lib/permissions";
 import {
   DEFAULT_PROD_POLICY,
   computeWasteRate,
+  formatDeductRate,
   formatPolicyMoney,
-  formatPolicyRate,
   formatProdMinRange,
   productHasMinPolicy,
   subscribeProdPolicy,
@@ -678,7 +678,7 @@ function ProdEntryForm({
         <p className="prod-policy-chip">
           นโยบาย · ขั้นต่ำ {formatProdMinRange(policyProduct.minQtyLow, policyProduct.minQtyHigh)} ชิ้น/วัน · ไม่บังคับ
           {policy.wasteBonusPct > 0
-            ? ` · เรทเสีย ${formatPolicyRate(wasteRatePreview)} (${policy.wasteBonusPct}% ของเรท ${formatPlainNumber(rates.prodRate)})`
+            ? ` · เรทเสีย ${formatDeductRate(wasteRatePreview) || "—"}/ชิ้นทิ้ง · ไม่มีทิ้ง = ×0 ไม่หัก`
             : ""}
           {wasteMoneyPreview > 0 ? ` · หัก ${formatPolicyMoney(wasteMoneyPreview)}` : ""}
         </p>
@@ -770,14 +770,14 @@ function ProdEntryForm({
       {locked ? (
         <p className="muted form-hint-inline">
           เรทผลิต {formatPlainNumber(entry!.prodRate)} · เรทเสีย{" "}
-          {formatPolicyRate(preview.wasteRate) || "—"} · โบนัสผลิต/คน{" "}
+          {formatDeductRate(preview.wasteRate) || "—"}/ชิ้นทิ้ง · โบนัสผลิต/คน{" "}
           {formatPlainNumber(preview.bonusPerPerson)} บาท
         </p>
       ) : Number(qty) > 0 && selectedWorkers.length > 0 ? (
         <p className="muted form-hint-inline">
           โบนัสผลิต/คน ≈ {formatPlainNumber(preview.bonusPerPerson)} บาท
           {policy.wasteBonusPct > 0
-            ? ` · เรทเสีย ${formatPolicyRate(preview.wasteRate)}`
+            ? ` · หัก เรทเสีย×ทิ้ง · ไม่มีทิ้ง = ×0`
             : ""}
           {wasteMoneyPreview > 0 ? ` · หักทิ้ง ${formatPolicyMoney(wasteMoneyPreview)}` : ""}
           {entry ? ` · เรทผลิต ${formatPlainNumber(rates.prodRate)} (ติดกับแถวนี้)` : ""}
@@ -933,7 +933,7 @@ function ProdTable({
                     <th className="col-out">เรทผลิต</th>
                     <th className="col-out prod-col-waste-rate">
                       เรทเสีย
-                      <span className="prod-th-sub">{policy.wasteBonusPct}%</span>
+                      <span className="prod-th-sub">หัก × ทิ้ง</span>
                     </th>
                     <th className="col-out">โบนัสผลิต</th>
                     <th className="col-act">คน</th>
@@ -1009,7 +1009,7 @@ function ProdTable({
                       <>
                         <td className="col-out">{formatPlainNumber(row.prodRate)}</td>
                         <td className="col-out prod-col-waste-rate">
-                          {formatPolicyRate(c.wasteRate) || "—"}
+                          {formatDeductRate(c.wasteRate) || "—"}
                         </td>
                         <td className="col-out">{formatPlainNumber(c.prodBonus)}</td>
                         <td className="col-act">{c.workerCount}</td>
