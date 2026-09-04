@@ -103,6 +103,7 @@
     "test:members-points-columns": "node scripts/test-members-points-columns.mjs",
     "test:scoped-firestore-loads": "node scripts/test-scoped-firestore-loads.mjs",
     "test:prod-catalog-owner": "node scripts/test-prod-catalog-owner.mjs",
+    "test:prod-policy": "node scripts/test-prod-policy.mjs",
     "test:boh-menu-mgmt": "node scripts/test-boh-menu-mgmt.mjs",
     "test:boh-menu-p3-p5": "node scripts/test-boh-menu-p3-p5.mjs",
     "test:boh-menu-q1-q4": "node scripts/test-boh-menu-q1-q4.mjs",

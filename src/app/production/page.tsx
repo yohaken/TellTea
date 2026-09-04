@@ -8,10 +8,11 @@ import {
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
-import { ChefHat, Lock, Trash2, X } from "lucide-react";
+import { ChefHat, Lock, ScrollText, Trash2, X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { ProdCatalogSetup } from "@/components/ProdCatalogSetup";
+import { ProdPolicyPopup } from "@/components/ProdPolicyPopup";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { EntryTimestampsMeta } from "@/components/EntryTimestampsMeta";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
@@ -28,6 +29,17 @@ import {
   workEntryCreditsEmployee,
 } from "@/lib/work-entry-mine";
 import { can } from "@/lib/permissions";
+import {
+  DEFAULT_PROD_POLICY,
+  computeWasteBonusMoney,
+  computeWasteRate,
+  formatPolicyMoney,
+  formatPolicyRate,
+  formatProdMinRange,
+  productHasMinPolicy,
+  subscribeProdPolicy,
+  type ProdPolicySettings,
+} from "@/lib/prod-policy";
 import {
   entryHasPhotoFlag,
   type PhotoForensicsReport,
@@ -57,6 +69,7 @@ import {
 } from "@/lib/rate-schedule";
 import {
   bangkokMonthRangeMs,
+  bangkokDateKey,
   formatDateShortBe,
   formatPlainNumber,
   parseDateInput,
@@ -77,6 +90,7 @@ function ProductionView() {
   const { actorId, staff, isPermPreview, status: authStatus } = useAuth();
   const router = useRouter();
   const isOwner = staff?.role === "owner";
+  const canSetPolicy = isOwner && !isPermPreview;
   const shopProdView = isOwner || can(staff, "payrollPay");
   /** พรีวิว = มุมพนักงาน: ดู/เลือกเดือนได้ · กรอกไม่ได้ */
   const canWrite = !!actorId && !isPermPreview;
@@ -91,6 +105,11 @@ function ProductionView() {
   const [prodError, setProdError] = useState<string | null>(null);
   const [editing, setEditing] = useState<ProdEntry | null>(null);
   const [rateSchedule, setRateSchedule] = useState<RateScheduleEntry[]>([]);
+  const [policy, setPolicy] = useState<ProdPolicySettings>(DEFAULT_PROD_POLICY);
+  const [policyReady, setPolicyReady] = useState(false);
+  const [policyOpen, setPolicyOpen] = useState(false);
+  const [policyAutoShown, setPolicyAutoShown] = useState(false);
+  const [policyTodayEntries, setPolicyTodayEntries] = useState<ProdEntry[] | null>(null);
   const { year: logYear, month: logMonthIdx } = parseMonthInput(logMonth);
 
   const staffUseBundle = !shopProdView && !isPermPreview;
@@ -210,14 +229,60 @@ function ProductionView() {
     };
   }, [authStatus, staff, isOwner, shopProdView, logYear, logMonthIdx, staffUseBundle]);
 
+  useEffect(() => {
+    if (authStatus !== "ready" || !can(staff, "production")) return;
+    return subscribeProdPolicy((next) => {
+      setPolicy(next);
+      setPolicyReady(true);
+    });
+  }, [authStatus, staff]);
+
+  useEffect(() => {
+    if (policyAutoShown) return;
+    if (authStatus !== "ready" || !can(staff, "production")) return;
+    if (!policyReady) return;
+    if (pageLoading) return;
+    if (staffUseBundle && staffBundleStatus !== "ready") return;
+    if (!policy.popupEnabled) {
+      setPolicyAutoShown(true);
+      return;
+    }
+    setPolicyOpen(true);
+    setPolicyAutoShown(true);
+  }, [
+    policyAutoShown,
+    authStatus,
+    staff,
+    policyReady,
+    policy.popupEnabled,
+    pageLoading,
+    staffUseBundle,
+    staffBundleStatus,
+  ]);
+
+  useEffect(() => {
+    if (!policyOpen || !shopProdView) return;
+    if (authStatus !== "ready" || !can(staff, "production")) return;
+    const key = bangkokDateKey(Date.now());
+    if (!key) return;
+    const since = Date.parse(`${key}T00:00:00+07:00`);
+    if (!Number.isFinite(since)) return;
+    return subscribeProdEntries(
+      (rows) => setPolicyTodayEntries(rows),
+      (err) => setProdError(mapFirestoreError(err, "โหลดผลิตวันนี้")),
+      { since, until: since + 86_400_000 },
+    );
+  }, [policyOpen, shopProdView, authStatus, staff]);
+
   useBodyScrollLock(formOpen);
 
   if (!can(staff, "production")) return null;
 
   const activeProducts = effectiveProducts.filter((p) => p.active);
   const activeWorkers = effectiveWorkers.filter((w) => w.active);
-  const showCatalog = isOwner && ownerView === "catalog";
+  const showCatalog = canSetPolicy && ownerView === "catalog";
   const showLog = !showCatalog;
+  const policyDayLabel = formatDateShortBe(Date.now());
 
   function openAdd() {
     setEditing(null);
@@ -234,7 +299,7 @@ function ProductionView() {
     setEditing(null);
   }
 
-  const ownerTabs = isOwner ? (
+  const ownerTabs = canSetPolicy ? (
     <div className="stock-owner-tabs stock-owner-tabs--inline" role="tablist" aria-label="มุมมองผลิตเจ้าของ">
       <button
         type="button"
@@ -244,6 +309,7 @@ function ProductionView() {
         onClick={() => {
           setOwnerView("log");
           setFormOpen(false);
+          setPolicyOpen(false);
         }}
       >
         บันทึกผลิต
@@ -298,10 +364,21 @@ function ProductionView() {
       {!pageLoading && showCatalog ? (
         <>
           {ownerTabs ? (
-            <div className="ot-toolbar-slim module-toolbar-slim">{ownerTabs}</div>
+            <div className="ot-toolbar-slim module-toolbar-slim">
+              {ownerTabs}
+              <button
+                type="button"
+                className="ghost-btn prod-policy-toolbar-btn"
+                onClick={() => setPolicyOpen(true)}
+              >
+                <ScrollText size={14} aria-hidden />
+                นโยบาย
+              </button>
+            </div>
           ) : null}
           <ProdCatalogSetup
             products={products}
+            wasteBonusPct={policy.wasteBonusPct}
             shopSalesRate={
               resolveRateForDate(rateSchedule, "bakerySales", Date.now())?.rate ??
               undefined
@@ -324,6 +401,31 @@ function ProductionView() {
           onEdit={openEdit}
           onError={setError}
           toolbarLeading={ownerTabs}
+          policy={policy}
+          onOpenPolicy={canSetPolicy ? () => setPolicyOpen(true) : undefined}
+        />
+      ) : null}
+
+      {policyOpen ? (
+        <ProdPolicyPopup
+          open={policyOpen}
+          onClose={() => setPolicyOpen(false)}
+          products={effectiveProducts}
+          entries={policyTodayEntries ?? effectiveEntries}
+          policy={policy}
+          canSetPolicy={canSetPolicy}
+          actorId={actorId || ""}
+          monthLabel={policyDayLabel}
+          onOpenCatalog={
+            canSetPolicy
+              ? () => {
+                  setPolicyOpen(false);
+                  setOwnerView("catalog");
+                  setFormOpen(false);
+                }
+              : undefined
+          }
+          onError={setError}
         />
       ) : null}
 
@@ -340,6 +442,7 @@ function ProductionView() {
               isOwner={isOwner}
               staff={staff}
               mineOnly={!shopProdView}
+              policy={policy}
               onError={setError}
               onSaved={closeForm}
               onCancelEdit={closeForm}
@@ -391,6 +494,7 @@ function ProdEntryForm({
   isOwner,
   staff,
   mineOnly,
+  policy,
   onError,
   onSaved,
   onCancelEdit,
@@ -404,6 +508,7 @@ function ProdEntryForm({
   isOwner: boolean;
   staff: ReturnType<typeof useAuth>["staff"];
   mineOnly: boolean;
+  policy: ProdPolicySettings;
   onError: (msg: string) => void;
   onSaved: () => void;
   onCancelEdit: () => void;
@@ -439,8 +544,16 @@ function ProdEntryForm({
       salesRate: 0,
       prodRate: rates.prodRate,
       workerNames: names.length ? names : entry?.workerNames || [],
-    });
-  }, [qty, rates.prodRate, selectedWorkers, workers, entry]);
+      qtyWaste: Number(waste) || 0,
+    }, policy.wasteBonusPct);
+  }, [qty, waste, rates.prodRate, selectedWorkers, workers, entry, policy.wasteBonusPct]);
+
+  const policyProduct = product && productHasMinPolicy(product) ? product : null;
+  const wasteMoneyPreview = computeWasteBonusMoney(
+    Number(waste) || 0,
+    rates.prodRate,
+    policy.wasteBonusPct,
+  );
 
   function toggleWorker(id: string) {
     if (locked) return;
@@ -565,6 +678,16 @@ function ProdEntryForm({
         </div>
       </div>
 
+      {policyProduct ? (
+        <p className="prod-policy-chip">
+          นโยบาย · ขั้นต่ำ {formatProdMinRange(policyProduct.minQtyLow, policyProduct.minQtyHigh)} ชิ้น/วัน · ไม่บังคับ
+          {policy.wasteBonusPct > 0
+            ? ` · เรทเสีย ${formatPolicyRate(computeWasteRate(rates.prodRate, policy.wasteBonusPct))} (${policy.wasteBonusPct}% ของเรท ${formatPlainNumber(rates.prodRate)})`
+            : ""}
+          {wasteMoneyPreview > 0 ? ` · หัก ${formatPolicyMoney(wasteMoneyPreview)}` : ""}
+        </p>
+      ) : null}
+
       {entry && !locked && productId !== entry.productId ? (
         <p className="muted check-hint">เปลี่ยนสินค้า → ใช้เรทปัจจุบันของสินค้าใหม่</p>
       ) : null}
@@ -650,12 +773,17 @@ function ProdEntryForm({
 
       {locked ? (
         <p className="muted form-hint-inline">
-          เรทผลิต {formatPlainNumber(entry!.prodRate)} · โบนัสผลิต/คน{" "}
+          เรทผลิต {formatPlainNumber(entry!.prodRate)} · เรทเสีย{" "}
+          {formatPolicyRate(computeWasteRate(entry!.prodRate, policy.wasteBonusPct)) || "—"} · โบนัสผลิต/คน{" "}
           {formatPlainNumber(preview.bonusPerPerson)} บาท
         </p>
       ) : Number(qty) > 0 && selectedWorkers.length > 0 ? (
         <p className="muted form-hint-inline">
           โบนัสผลิต/คน ≈ {formatPlainNumber(preview.bonusPerPerson)} บาท
+          {policy.wasteBonusPct > 0
+            ? ` · เรทเสีย ${formatPolicyRate(computeWasteRate(rates.prodRate, policy.wasteBonusPct))}`
+            : ""}
+          {wasteMoneyPreview > 0 ? ` · หักทิ้ง ${formatPolicyMoney(wasteMoneyPreview)}` : ""}
           {entry ? ` · เรทผลิต ${formatPlainNumber(rates.prodRate)} (ติดกับแถวนี้)` : ""}
         </p>
       ) : null}
@@ -685,6 +813,8 @@ function ProdTable({
   onEdit,
   onError,
   toolbarLeading,
+  policy,
+  onOpenPolicy,
 }: {
   entries: ProdEntry[];
   workers: ProdWorker[];
@@ -698,6 +828,8 @@ function ProdTable({
   onEdit: (row: ProdEntry) => void;
   onError: (msg: string | null) => void;
   toolbarLeading?: ReactNode;
+  policy: ProdPolicySettings;
+  onOpenPolicy?: () => void;
 }) {
   const [preview, setPreview] = useState<{
     urls: string[];
@@ -753,6 +885,16 @@ function ProdTable({
           onChange={(e) => onMonthChange(e.target.value)}
           aria-label="เดือนอ้างอิง"
         />
+        {onOpenPolicy ? (
+          <button
+            type="button"
+            className="ghost-btn prod-policy-toolbar-btn"
+            onClick={onOpenPolicy}
+          >
+            <ScrollText size={14} aria-hidden />
+            นโยบาย
+          </button>
+        ) : null}
         <span
           className="ot-slim-hint muted module-slim-hint"
           title="สถานะล็อกเมื่อปิดเดือนโบนัสที่ จ่าย/โบนัส — ไม่เปลี่ยนสถานะเป็นกลุ่มที่นี่"
@@ -793,6 +935,10 @@ function ProdTable({
                 {isOwner ? (
                   <>
                     <th className="col-out">เรทผลิต</th>
+                    <th className="col-out prod-col-waste-rate">
+                      เรทเสีย
+                      <span className="prod-th-sub">{policy.wasteBonusPct}%</span>
+                    </th>
                     <th className="col-out">โบนัสผลิต</th>
                     <th className="col-act">คน</th>
                   </>
@@ -804,10 +950,13 @@ function ProdTable({
             </thead>
             <tbody>
               {filtered.map((row) => {
-                const c = computeProdBonus(row);
+                const c = computeProdBonus(row, policy.wasteBonusPct);
                 const locked = isProdEntryLocked(row);
                 const photoFlagged = isOwner && entryHasPhotoFlag(photoReport, row.id);
                 const flagHints = photoReport?.byEntryId[row.id]?.hints || [];
+                const wasteMoney = formatPolicyMoney(
+                  computeWasteBonusMoney(row.qtyWaste, row.prodRate, policy.wasteBonusPct),
+                );
                 return (
                   <tr
                     key={row.id}
@@ -856,11 +1005,19 @@ function ProdTable({
                       </div>
                     </td>
                     <td className="col-out">{formatPlainNumber(row.qtyProduced)}</td>
-                    <td className="col-out">{row.qtyWaste ? formatPlainNumber(row.qtyWaste) : "—"}</td>
+                    <td className="col-out">
+                      {row.qtyWaste ? formatPlainNumber(row.qtyWaste) : "—"}
+                      {wasteMoney ? <span className="prod-waste-money">{wasteMoney}</span> : null}
+                    </td>
                     <td className="col-note" title={row.note || ""}>{row.note || ""}</td>
                     {isOwner ? (
                       <>
                         <td className="col-out">{formatPlainNumber(row.prodRate)}</td>
+                        <td className="col-out prod-col-waste-rate">
+                          {formatPolicyRate(
+                            computeWasteRate(row.prodRate, policy.wasteBonusPct),
+                          ) || "—"}
+                        </td>
                         <td className="col-out">{formatPlainNumber(c.prodBonus)}</td>
                         <td className="col-act">{c.workerCount}</td>
                       </>

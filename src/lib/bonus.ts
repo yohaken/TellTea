@@ -131,6 +131,7 @@ export function computeMonthBonus(
   deductionRules: BonusDeductionRule[],
   monthCounts: BonusDeductionMonthCounts,
   bakerySalesSchedule: RateScheduleEntry[] = [],
+  wasteBonusPct = 0,
 ): MonthBonusReport {
   const active = employees.filter((e) => e.active);
 
@@ -238,7 +239,7 @@ export function computeMonthBonus(
   }
 
   for (const row of prodMonth) {
-    const c = computeProdBonus(row);
+    const c = computeProdBonus(row, wasteBonusPct);
     creditEntryWorkers(row, (slot) => {
       slot.prodBonus = round2(slot.prodBonus + c.bonusPerPerson);
       slot.workedThisMonth = true;
@@ -320,8 +321,10 @@ export function computePersonalBonusRow(input: {
   shopDeductPct: number;
   totalSalesPool: number;
   employeeCount: number;
+  wasteBonusPct?: number;
 }): WorkerMonthBonus {
   const { otEntries, prodEntries, employee, year, month } = input;
+  const wasteBonusPct = Number(input.wasteBonusPct) || 0;
   const otMonth = otEntries.filter((e) => isInMonth(e.date, year, month));
   const prodMonth = prodEntries.filter((e) => isInMonth(e.date, year, month));
 
@@ -339,7 +342,7 @@ export function computePersonalBonusRow(input: {
     worked = true;
   }
   for (const row of prodMonth) {
-    const c = computeProdBonus(row);
+    const c = computeProdBonus(row, wasteBonusPct);
     const onRow =
       row.workerIds?.includes(employee.id) ||
       row.workerNames.some((n) => employeeMatchesName(employee, n));

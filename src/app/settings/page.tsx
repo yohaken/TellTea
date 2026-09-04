@@ -9,8 +9,10 @@ import { AuthGate } from "@/components/AuthGate";
 import { NavMenuOrderSetup } from "@/components/NavMenuOrderSetup";
 import { OwnerNotifySetup } from "@/components/OwnerNotifySetup";
 import { OwnerQuickDockSetup } from "@/components/OwnerQuickDockSetup";
+import { ProdPolicyPopupToggle } from "@/components/ProdPolicyPopupToggle";
 import { StaffNewsSetup } from "@/components/StaffNewsSetup";
 import { useAuth } from "@/lib/auth";
+import { DEFAULT_PROD_POLICY, subscribeProdPolicy, type ProdPolicySettings } from "@/lib/prod-policy";
 
 export default function SettingsPage() {
   return (
@@ -21,11 +23,12 @@ export default function SettingsPage() {
 }
 
 function SettingsView() {
-  const { staff } = useAuth();
+  const { staff, actorId } = useAuth();
   const router = useRouter();
   const isOwner = staff?.role === "owner";
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [prodPolicy, setProdPolicy] = useState<ProdPolicySettings>(DEFAULT_PROD_POLICY);
 
   useEffect(() => {
     if (staff && !isOwner) {
@@ -36,6 +39,7 @@ function SettingsView() {
   useEffect(() => {
     if (!isOwner) return;
     setLoading(false);
+    return subscribeProdPolicy(setProdPolicy);
   }, [isOwner]);
 
   if (!isOwner) return null;
@@ -47,7 +51,7 @@ function SettingsView() {
         ตั้งค่าโมดูล
       </h1>
       <p className="muted" style={{ marginBottom: "1rem", textAlign: "left" }}>
-        โปรไฟล์กิจการ · แจ้งเตือน LINE (ทันทีตามเงื่อนไข + สรุปรายวัน) · แจ้งข่าวสาร/คลังโนต · เมนูหลัก · ไอคอนลอย · อัปเดตแอป — เฉพาะเจ้าของ · แตะหัวข้อเพื่อพับ/ขยาย
+        โปรไฟล์กิจการ · แจ้งเตือน LINE · ป๊อปอัปนโยบายผลิต · แจ้งข่าวสาร/คลังโนต · เมนูหลัก · ไอคอนลอย · อัปเดตแอป — เฉพาะเจ้าของ · แตะหัวข้อเพื่อพับ/ขยาย
         (SmartCheck อยู่หน้าเช็ค → รายการ SOP · คลังอยู่หน้า คลัง ·
         สินค้าผลิตอยู่หน้า ผลิต · เรทโบนัสอยู่หน้า สรุปโบนัส)
       </p>
@@ -58,6 +62,11 @@ function SettingsView() {
       {!loading ? (
         <div className="owner-settings-stack">
           <OwnerNotifySetup onError={setError} />
+          <ProdPolicyPopupToggle
+            policy={prodPolicy}
+            actorId={actorId || ""}
+            onError={setError}
+          />
           <BusinessProfileSetup onError={setError} />
           <StaffNewsSetup onError={setError} />
           <NavMenuOrderSetup onError={setError} />

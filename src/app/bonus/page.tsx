@@ -32,6 +32,11 @@ import {
   type WorkerMonthBonus,
 } from "@/lib/bonus";
 import {
+  DEFAULT_PROD_POLICY,
+  subscribeProdPolicy,
+  type ProdPolicySettings,
+} from "@/lib/prod-policy";
+import {
   saveBonusLivePool,
   subscribeBonusLivePool,
   type BonusLivePool,
@@ -121,6 +126,7 @@ function BonusView() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [otSettingsRate, setOtSettingsRate] = useState(0.6);
   const [rateSchedule, setRateSchedule] = useState<RateScheduleEntry[]>([]);
+  const [prodPolicy, setProdPolicy] = useState<ProdPolicySettings>(DEFAULT_PROD_POLICY);
   const [payrollSchedule, setPayrollSchedule] = useState<PayrollSchedule>(DEFAULT_PAYROLL_SCHEDULE);
   const [payrollItems, setPayrollItems] = useState<PayrollItem[]>([]);
   const [livePool, setLivePool] = useState<BonusLivePool | null>(null);
@@ -341,6 +347,11 @@ function BonusView() {
     };
   }, [authStatus, staff, canView, shopPayView, year, monthIdx, month, isPermPreview, staffUseBundle]);
 
+  useEffect(() => {
+    if (authStatus !== "ready" || !canView) return;
+    return subscribeProdPolicy((settings) => onSubData(setProdPolicy, settings));
+  }, [authStatus, canView]);
+
   // OT / ผลิต — เจ้าของ/พรีวิว; พนักงานจริงใช้ staff bundle
   useEffect(() => {
     if (!canView || !bootReady || staffUseBundle) return;
@@ -464,6 +475,7 @@ function BonusView() {
       effectiveDeductionSettings.rules,
       effectiveDeductionMonth.counts,
       effectiveRateSchedule,
+      prodPolicy.wasteBonusPct,
     );
   }, [
     shopPayView,
@@ -475,6 +487,7 @@ function BonusView() {
     year,
     monthIdx,
     effectiveRateSchedule,
+    prodPolicy.wasteBonusPct,
   ]);
 
   // เจ้าของ/คนจ่าย — เผยพูลให้พนักงานอ่านส่วนแบ่งขายได้โดยไม่เห็น OT ทั้งร้าน
@@ -532,6 +545,7 @@ function BonusView() {
       effectiveDeductionSettings.rules,
       effectiveDeductionMonth.counts,
       effectiveRateSchedule,
+      prodPolicy.wasteBonusPct,
     );
     const picked =
       monthReport.rows.find((r) => r.workerId === myEmployee.id) ||
@@ -569,6 +583,7 @@ function BonusView() {
     year,
     monthIdx,
     effectiveRateSchedule,
+    prodPolicy.wasteBonusPct,
   ]);
 
   const staffBonusReady =

@@ -17,6 +17,7 @@ import {
 import { getDb } from "./firebase";
 import { subscribeQueryWithRetry } from "./firestore-subscribe";
 import { daysAgoMs } from "./query-window";
+import { computeWasteBonusMoney } from "./prod-policy";
 
 /** หน้าผลิตพนักงาน — โหลดช่วงนี้แทนประวัติทั้งก้อน */
 export const PROD_HISTORY_LOOKBACK_DAYS = 60;
@@ -61,6 +62,10 @@ export type ProdProduct = {
   salesRate: number;
   /** เรทผลิต */
   prodRate: number;
+  /** ขั้นต่ำช่วงล่าง — 0 = ไม่มีนโยบายสินค้านี้ */
+  minQtyLow: number;
+  /** ขั้นต่ำช่วงบน — 0 = ไม่มีเพดาน */
+  minQtyHigh: number;
   active: boolean;
   createdAt: number;
   updatedAt: number;
@@ -125,15 +130,22 @@ export type ProdComputed = {
   bonusPerPerson: number;
 };
 
-export function computeProdBonus(entry: {
-  qtyProduced: number;
-  salesRate: number;
-  prodRate: number;
-  workerNames: string[];
-}): ProdComputed {
+export function computeProdBonus(
+  entry: {
+    qtyProduced: number;
+    salesRate: number;
+    prodRate: number;
+    workerNames: string[];
+    qtyWaste?: number;
+  },
+  wasteBonusPct = 0,
+): ProdComputed {
   const qty = Number(entry.qtyProduced) || 0;
+  const rate = Number(entry.prodRate) || 0;
   const salesBonus = qty * (Number(entry.salesRate) || 0);
-  const prodBonus = qty * (Number(entry.prodRate) || 0);
+  const gross = qty * rate;
+  const wasteMoney = computeWasteBonusMoney(entry.qtyWaste || 0, rate, wasteBonusPct);
+  const prodBonus = Math.max(0, Math.round((gross - wasteMoney) * 100) / 100);
   const workerCount = Math.max(1, (entry.workerNames || []).filter(Boolean).length);
   const bonusPerPerson = prodBonus / workerCount;
   return { salesBonus, prodBonus, workerCount, bonusPerPerson };
@@ -247,9 +259,23 @@ function entriesCol() {
   return collection(getDb(), "prodEntries");
 }
 
+export function mapProdProduct(id: string, data: Record<string, unknown>): ProdProduct {
+  return {
+    id,
+    name: String(data.name || ""),
+    salesRate: Number(data.salesRate) || 0,
+    prodRate: Number(data.prodRate) || 0,
+    minQtyLow: Math.max(0, Number(data.minQtyLow) || 0),
+    minQtyHigh: Math.max(0, Number(data.minQtyHigh) || 0),
+    active: data.active !== false,
+    createdAt: Number(data.createdAt) || 0,
+    updatedAt: Number(data.updatedAt) || 0,
+  };
+}
+
 export async function listProdProducts(): Promise<ProdProduct[]> {
   const snap = await getDocs(query(productsCol(), orderBy("name", "asc")));
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<ProdProduct, "id">) }));
+  return snap.docs.map((d) => mapProdProduct(d.id, d.data() as Record<string, unknown>));
 }
 
 /** Production workers come from the shared employee hub. */
@@ -371,12 +397,16 @@ export async function addProdProduct(input: {
 
 export async function updateProdProduct(
   id: string,
-  patch: Partial<Pick<ProdProduct, "name" | "salesRate" | "prodRate" | "active">>,
+  patch: Partial<
+    Pick<ProdProduct, "name" | "salesRate" | "prodRate" | "minQtyLow" | "minQtyHigh" | "active">
+  >,
 ): Promise<void> {
   const next: Record<string, string | number | boolean> = { updatedAt: Date.now() };
   if (patch.name != null) next.name = patch.name.trim();
   if (patch.salesRate != null) next.salesRate = Number(patch.salesRate) || 0;
   if (patch.prodRate != null) next.prodRate = Number(patch.prodRate) || 0;
+  if (patch.minQtyLow != null) next.minQtyLow = Math.max(0, Number(patch.minQtyLow) || 0);
+  if (patch.minQtyHigh != null) next.minQtyHigh = Math.max(0, Number(patch.minQtyHigh) || 0);
   if (patch.active != null) next.active = patch.active;
   await updateDoc(doc(getDb(), "prodProducts", id), next);
 }
