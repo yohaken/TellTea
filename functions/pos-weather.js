@@ -59,14 +59,11 @@ async function assertOwner(context) {
     throw new functions.https.HttpsError("unauthenticated", "ต้องเข้าสู่ระบบ");
   }
   const email = String(context.auth.token.email || "").trim().toLowerCase();
-  let ok = email && email === OWNER_EMAIL;
-  if (!ok && email) {
-    const staff = await getFirestore().collection("staff").doc(context.auth.uid).get();
-    ok = staff.exists && staff.get("role") === "owner";
-  }
-  if (!ok) {
-    throw new functions.https.HttpsError("permission-denied", "เจ้าของเท่านั้น");
-  }
+  if (email && email === OWNER_EMAIL) return;
+  // Phone / anonymous-linked staff: allow when staff doc is owner (email may be empty).
+  const staff = await getFirestore().collection("staff").doc(context.auth.uid).get();
+  if (staff.exists && staff.get("role") === "owner") return;
+  throw new functions.https.HttpsError("permission-denied", "เจ้าของเท่านั้น");
 }
 
 function conditionFromRainAndCode(rainfallMm, wmoCode) {

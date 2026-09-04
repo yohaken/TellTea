@@ -26,12 +26,21 @@ assert.match(lib, /monthQty: "วันนี้"/);
 assert.match(lib, /computeWasteRate/);
 assert.match(lib, /formatPolicyRate/);
 assert.match(popup, /เรทเสีย/);
-assert.match(page, /prod-col-waste-rate/);
+assert.match(page, /prod-col-waste/);
+assert.match(page, /prod-col-qty/);
+assert.match(page, /prod-qty-rate/);
+assert.doesNotMatch(page, /<th className="col-out">เรทผลิต<\/th>/);
 assert.match(page, /หัก \{formatPlainNumber\(c\.wasteDeduction\)\}/);
 assert.match(prod, /wasteDeduction/);
-assert.match(popup, /ไม่มีเสีย = ×0/);
-assert.match(page, /หัก × ทิ้ง/);
+assert.match(popup, /ไม่มีทิ้ง = ×0/);
+assert.match(popup, /รายได้ − หัก\(เรทเสีย × ทิ้ง\) = โบนัสผลิต/);
+assert.match(page, /prod-bonus-eq/);
+assert.match(page, /prod-bonus-sum/);
+assert.match(page, /c\.income/);
+assert.match(css, /prod-col-waste/);
+assert.doesNotMatch(page, /prod-col-waste-rate/);
 assert.match(page, /ไม่มีทิ้ง = ×0/);
+assert.match(prod, /income:/);
 assert.match(catalog, /ชิ้นทิ้ง/);
 assert.match(lib, /formatDeductRate/);
 assert.match(lib, /DEFAULT_PROD_POLICY_LABELS/);
@@ -42,7 +51,7 @@ assert.match(prod, /wasteBonusPct/);
 assert.match(prod, /computeWasteBonusMoney/);
 assert.match(page, /ProdPolicyPopup/);
 assert.match(page, /computeProdBonus\(row, policy\.wasteBonusPct\)/);
-assert.match(page, /หักทิ้ง/);
+assert.match(page, /หัก\(เรทเสีย×ทิ้ง\)/);
 const bonusLib = read("src/lib/bonus.ts");
 const bonusPage = read("src/app/bonus/page.tsx");
 assert.match(bonusLib, /computeProdBonus\(row, wasteBonusPct\)/);
@@ -61,7 +70,9 @@ assert.match(page, /onOpenPolicy=\{canSetPolicy/);
 assert.match(popup, /ProdPolicyPopupToggle/);
 const settings = read("src/app/settings/page.tsx");
 assert.match(settings, /ProdPolicyPopupToggle/);
-assert.match(version, /APP_BUILD = 871/);
+assert.match(version, /APP_BUILD = 877/);
+assert.match(page, /formatStockQty/);
+assert.match(page, /step="1"/);
 
 function round2(n) {
   return Math.round(n * 100) / 100;
@@ -140,15 +151,18 @@ assert.equal(
 );
 
 function computeProdBonus(qty, waste, rate, pct, workers) {
+  const income = round2(qty * rate);
   const wasteRate = computeWasteRate(rate, pct);
   const wasteDeduction = computeWasteBonusMoney(waste, rate, pct);
-  const prodBonus = Math.max(0, round2(qty * rate - wasteDeduction));
-  return { prodBonus, wasteRate, wasteDeduction, perPerson: prodBonus / Math.max(1, workers) };
+  const prodBonus = Math.max(0, round2(income - wasteDeduction));
+  return { income, prodBonus, wasteRate, wasteDeduction, perPerson: prodBonus / Math.max(1, workers) };
 }
 const brownie = computeProdBonus(50, 10, 1.25, 30, 1);
+assert.equal(brownie.income, 62.5, "รายได้ = ผลิต × เรทผลิต");
 assert.equal(brownie.wasteRate, 0.375);
-assert.equal(brownie.wasteDeduction, 3.75, "หัก = เรทเสีย × จำนวนเสีย");
-assert.equal(brownie.prodBonus, 58.75);
+assert.equal(brownie.wasteDeduction, 3.75, "หัก = เรทเสีย × ทิ้ง");
+assert.equal(brownie.prodBonus, 58.75, "โบนัสผลิต = รายได้ − หัก");
+assert.equal(computeProdBonus(50, 0, 1.25, 30, 1).income, 62.5);
 assert.equal(computeProdBonus(50, 0, 1.25, 30, 1).prodBonus, 62.5);
 assert.equal(computeProdBonus(50, 0, 1.25, 30, 1).wasteDeduction, 0, "ไม่มีของเสีย = เรทเสีย × 0");
 assert.equal(computeProdBonus(50, 10, 1.25, 0, 1).wasteDeduction, 0);

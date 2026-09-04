@@ -119,7 +119,7 @@ export function ProdPolicyPopup({
           ขั้นต่ำต่อวัน · ไม่บังคับ · เฉพาะสินค้าที่ตั้งเกณฑ์ · {monthLabel}
         </p>
         <p className="prod-policy-waste">
-          เรทเสียใช้หักอย่างเดียว · หัก = เรทเสีย × จำนวนเสีย · ไม่มีเสีย = ×0
+          เรทเสียใช้หักอย่างเดียว · รายได้ − หัก(เรทเสีย × ทิ้ง) = โบนัสผลิต · ไม่มีทิ้ง = ×0
         </p>
         {canSetPolicy ? (
           <ProdPolicyPopupToggle

@@ -33,12 +33,19 @@ service cloud.firestore {
       }
     }
 
+    // Weather cache — owner/staff read; writes only via Admin SDK (Cloud Functions)
+    match /weatherDays/{dateId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
     // Shop + POS (incl. anonymous Auth)
     match /{collection}/{document=**} {
       allow read, write: if signedIn()
         && collection != 'taxtag'
         && collection != 'userData'
-        && collection != 'loginTickets';
+        && collection != 'loginTickets'
+        && collection != 'weatherDays';
     }
   }
 }

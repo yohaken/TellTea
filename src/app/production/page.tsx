@@ -71,6 +71,7 @@ import {
   bangkokDateKey,
   formatDateShortBe,
   formatPlainNumber,
+  formatStockQty,
   parseDateInput,
   todayInputValue,
 } from "@/lib/utils";
@@ -523,8 +524,12 @@ function ProdEntryForm({
     return [];
   });
   const [productId, setProductId] = useState(entry?.productId || products[0]?.id || "");
-  const [qty, setQty] = useState(entry ? String(entry.qtyProduced) : "");
-  const [waste, setWaste] = useState(entry ? String(entry.qtyWaste || 0) : "");
+  const [qty, setQty] = useState(
+    entry ? String(Math.round(Number(entry.qtyProduced) || 0) || "") : "",
+  );
+  const [waste, setWaste] = useState(
+    entry ? String(Math.round(Number(entry.qtyWaste) || 0)) : "",
+  );
   const [note, setNote] = useState(entry?.note || "");
   const [imageUrls, setImageUrls] = useState<string[]>(() => getProdImageUrls(entry));
   const [busy, setBusy] = useState(false);
@@ -596,8 +601,8 @@ function ProdEntryForm({
         // โบนัสขายคิดที่หน้าสรุปโบนัสจากจำนวน × ตารางเรท — ไม่ติดเรทขายที่แถวผลิต
         salesRate: 0,
         prodRate: resolved.prodRate,
-        qtyProduced: Number(qty),
-        qtyWaste: Number(waste) || 0,
+        qtyProduced: Math.max(0, Math.round(Number(qty) || 0)),
+        qtyWaste: Math.max(0, Math.round(Number(waste) || 0)),
         note,
         imageUrls: urls,
         imageUrl: urls[0] || "",
@@ -678,7 +683,7 @@ function ProdEntryForm({
         <p className="prod-policy-chip">
           นโยบาย · ขั้นต่ำ {formatProdMinRange(policyProduct.minQtyLow, policyProduct.minQtyHigh)} ชิ้น/วัน · ไม่บังคับ
           {policy.wasteBonusPct > 0
-            ? ` · เรทเสีย ${formatDeductRate(wasteRatePreview) || "—"}/ชิ้นทิ้ง · ไม่มีทิ้ง = ×0 ไม่หัก`
+            ? ` · รายได้ − หัก(เรทเสีย×ทิ้ง) = โบนัส · ไม่มีทิ้ง = ×0`
             : ""}
           {wasteMoneyPreview > 0 ? ` · หัก ${formatPolicyMoney(wasteMoneyPreview)}` : ""}
         </p>
@@ -714,9 +719,9 @@ function ProdEntryForm({
           <input
             id="prod-qty"
             type="number"
-            min="0.01"
-            step="0.01"
-            inputMode="decimal"
+            min="1"
+            step="1"
+            inputMode="numeric"
             value={qty}
             onChange={(e) => setQty(e.target.value)}
             required
@@ -729,8 +734,8 @@ function ProdEntryForm({
             id="prod-waste"
             type="number"
             min="0"
-            step="0.01"
-            inputMode="decimal"
+            step="1"
+            inputMode="numeric"
             value={waste}
             onChange={(e) => setWaste(e.target.value)}
             placeholder="0"
@@ -769,17 +774,11 @@ function ProdEntryForm({
 
       {locked ? (
         <p className="muted form-hint-inline">
-          เรทผลิต {formatPlainNumber(entry!.prodRate)} · เรทเสีย{" "}
-          {formatDeductRate(preview.wasteRate) || "—"}/ชิ้นทิ้ง · โบนัสผลิต/คน{" "}
-          {formatPlainNumber(preview.bonusPerPerson)} บาท
+          รายได้ {formatPlainNumber(preview.income)} − หัก {formatPlainNumber(preview.wasteDeduction)} = โบนัส {formatPlainNumber(preview.prodBonus)} · /คน {formatPlainNumber(preview.bonusPerPerson)}
         </p>
       ) : Number(qty) > 0 && selectedWorkers.length > 0 ? (
         <p className="muted form-hint-inline">
-          โบนัสผลิต/คน ≈ {formatPlainNumber(preview.bonusPerPerson)} บาท
-          {policy.wasteBonusPct > 0
-            ? ` · หัก เรทเสีย×ทิ้ง · ไม่มีทิ้ง = ×0`
-            : ""}
-          {wasteMoneyPreview > 0 ? ` · หักทิ้ง ${formatPolicyMoney(wasteMoneyPreview)}` : ""}
+          รายได้ {formatPlainNumber(preview.income)} − หัก(เรทเสีย×ทิ้ง) {formatPlainNumber(preview.wasteDeduction)} = โบนัส {formatPlainNumber(preview.prodBonus)} · /คน {formatPlainNumber(preview.bonusPerPerson)}
           {entry ? ` · เรทผลิต ${formatPlainNumber(rates.prodRate)} (ติดกับแถวนี้)` : ""}
         </p>
       ) : null}
@@ -925,17 +924,21 @@ function ProdTable({
                   <th className="col-desc prod-col-worker">พนักงาน</th>
                 )}
                 <th className="col-desc prod-col-product col-sticky-left">สินค้า</th>
-                <th className="col-out">ผลิต</th>
-                <th className="col-out">ทิ้ง/เสีย</th>
+                <th className="col-out prod-col-qty">
+                  ผลิต
+                  {isOwner ? <span className="prod-th-sub">เรทผลิต</span> : null}
+                </th>
+                <th className="col-out prod-col-waste">
+                  ทิ้ง/เสีย
+                  {isOwner ? <span className="prod-th-sub">เรทเสีย</span> : null}
+                </th>
                 <th className="col-note">หมายเหตุ</th>
                 {isOwner ? (
                   <>
-                    <th className="col-out">เรทผลิต</th>
-                    <th className="col-out prod-col-waste-rate">
-                      เรทเสีย
-                      <span className="prod-th-sub">หัก × ทิ้ง</span>
+                    <th className="col-out prod-col-bonus">
+                      โบนัสผลิต
+                      <span className="prod-th-sub">รายได้−หัก</span>
                     </th>
-                    <th className="col-out">โบนัสผลิต</th>
                     <th className="col-act">คน</th>
                   </>
                 ) : null}
@@ -997,9 +1000,19 @@ function ProdTable({
                         />
                       </div>
                     </td>
-                    <td className="col-out">{formatPlainNumber(row.qtyProduced)}</td>
-                    <td className="col-out">
-                      {row.qtyWaste ? formatPlainNumber(row.qtyWaste) : "—"}
+                    <td className="col-out prod-col-qty">
+                      {formatStockQty(row.qtyProduced)}
+                      {isOwner ? (
+                        <span className="prod-qty-rate">{formatPlainNumber(row.prodRate)}</span>
+                      ) : null}
+                    </td>
+                    <td className="col-out prod-col-waste">
+                      {row.qtyWaste ? formatStockQty(row.qtyWaste) : "—"}
+                      {isOwner ? (
+                        <span className="prod-waste-rate">
+                          {formatDeductRate(c.wasteRate) || "—"}
+                        </span>
+                      ) : null}
                       {c.wasteDeduction > 0 ? (
                         <span className="prod-waste-money">หัก {formatPlainNumber(c.wasteDeduction)}</span>
                       ) : null}
@@ -1007,11 +1020,14 @@ function ProdTable({
                     <td className="col-note" title={row.note || ""}>{row.note || ""}</td>
                     {isOwner ? (
                       <>
-                        <td className="col-out">{formatPlainNumber(row.prodRate)}</td>
-                        <td className="col-out prod-col-waste-rate">
-                          {formatDeductRate(c.wasteRate) || "—"}
+                        <td className="col-out prod-col-bonus">
+                          <span className="prod-bonus-eq">
+                            {formatPlainNumber(c.income)} − {formatPlainNumber(c.wasteDeduction)}
+                          </span>
+                          <span className="prod-bonus-sum">
+                            = {formatPlainNumber(c.prodBonus)}
+                          </span>
                         </td>
-                        <td className="col-out">{formatPlainNumber(c.prodBonus)}</td>
                         <td className="col-act">{c.workerCount}</td>
                       </>
                     ) : null}

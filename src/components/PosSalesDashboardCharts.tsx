@@ -34,9 +34,11 @@ function formatAxisBaht(n: number): string {
 export function PosDashDailyTotalsTable({
   points,
   weatherByDay = {},
+  weatherLoading = false,
 }: {
   points: PosDashDayPoint[];
   weatherByDay?: Record<string, WeatherDayDoc>;
+  weatherLoading?: boolean;
 }) {
   const rows = useMemo(() => [...points].reverse(), [points]);
   return (
@@ -64,9 +66,9 @@ export function PosDashDailyTotalsTable({
                   <tr key={p.dateKey} className={p.total <= 0 ? "is-zero" : undefined}>
                     <td>{p.label}</td>
                     <td className="pos-dash-day-weather" title={weatherCellTitle(w)}>
-                      {w ? (
+                      {w && (w.labelTh || w.emoji) ? (
                         <>
-                          <span className="pos-dash-day-weather-main" aria-hidden={false}>
+                          <span className="pos-dash-day-weather-main">
                             <span className="pos-dash-day-weather-emoji">{w.emoji}</span>
                             <span className="pos-dash-day-weather-label">{w.labelTh}</span>
                             {Number.isFinite(Number(w.tempMin)) &&
@@ -99,7 +101,7 @@ export function PosDashDailyTotalsTable({
                           ) : null}
                         </>
                       ) : (
-                        <span className="muted">…</span>
+                        <span className="muted">{weatherLoading ? "…" : "—"}</span>
                       )}
                     </td>
                     <td className="is-num">
@@ -160,7 +162,13 @@ export function PosDashDailyAreaChart({ points }: { points: PosDashDayPoint[] })
     <div className="pos-dash-chart-card">
       <h3 className="pos-dash-card-title">กราฟรายวัน</h3>
       <div className="pos-dash-chart-svg-wrap">
-        <svg viewBox={`0 0 ${W} ${H}`} className="pos-dash-chart-svg" role="img" aria-label="กราฟยอดขายรายวัน">
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          preserveAspectRatio="xMidYMid meet"
+          className="pos-dash-chart-svg"
+          role="img"
+          aria-label="กราฟยอดขายรายวัน"
+        >
           {ticks.map((t) => {
             const y = pad.top + innerH - (t / max) * innerH;
             return (
@@ -229,7 +237,13 @@ function BarChart({
     <div className="pos-dash-chart-card">
       <h3 className="pos-dash-card-title">{title}</h3>
       <div className="pos-dash-chart-svg-wrap">
-        <svg viewBox={`0 0 ${W} ${H}`} className="pos-dash-chart-svg" role="img" aria-label={title}>
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          preserveAspectRatio="xMidYMid meet"
+          className="pos-dash-chart-svg"
+          role="img"
+          aria-label={title}
+        >
           {ticks.map((t) => {
             const y = pad.top + innerH - (t / max) * innerH;
             return (

@@ -125,12 +125,15 @@ export function getProdImageUrls(
 
 export type ProdComputed = {
   salesBonus: number;
+  /** รายได้ = ผลิต × เรทผลิต */
+  income: number;
+  /** โบนัสผลิต = รายได้ − หัก */
   prodBonus: number;
   workerCount: number;
   bonusPerPerson: number;
-  /** เรทเสียต่อชิ้น = เรทผลิต × %นโยบาย */
+  /** เรทเสียต่อชิ้นทิ้ง */
   wasteRate: number;
-  /** หักโบนัส = เรทเสีย × จำนวนเสีย */
+  /** หัก = เรทเสีย × ทิ้ง */
   wasteDeduction: number;
 };
 
@@ -148,12 +151,21 @@ export function computeProdBonus(
   const rate = Number(entry.prodRate) || 0;
   const wasteQty = Math.max(0, Number(entry.qtyWaste) || 0);
   const salesBonus = qty * (Number(entry.salesRate) || 0);
+  const income = Math.round(qty * rate * 100) / 100;
   const wasteRate = computeWasteRate(rate, wasteBonusPct);
   const wasteDeduction = computeWasteBonusMoney(wasteQty, rate, wasteBonusPct);
-  const prodBonus = Math.max(0, Math.round((qty * rate - wasteDeduction) * 100) / 100);
+  const prodBonus = Math.max(0, Math.round((income - wasteDeduction) * 100) / 100);
   const workerCount = Math.max(1, (entry.workerNames || []).filter(Boolean).length);
   const bonusPerPerson = prodBonus / workerCount;
-  return { salesBonus, prodBonus, workerCount, bonusPerPerson, wasteRate, wasteDeduction };
+  return {
+    salesBonus,
+    income,
+    prodBonus,
+    workerCount,
+    bonusPerPerson,
+    wasteRate,
+    wasteDeduction,
+  };
 }
 
 export function labelProdStatus(status: ProdStatus | "pending") {

@@ -35,22 +35,34 @@ assert.match(lib, /weatherDays/);
 assert.match(lib, /weatherCellTitle/);
 assert.match(lib, /WEATHER_TODAY_REFRESH_MS|45 \* 60/);
 assert.match(lib, /keysNeedingFetch/);
+assert.match(lib, /fetchOpenMeteoWeatherDays|open-meteo-client/);
 assert.match(fn, /TODAY_REFRESH_MS|usableDoc/);
 assert.match(fn, /Already saved once|never re-fetch|seal/);
+assert.match(fn, /staff\.get\("role"\) === "owner"/);
 
 const charts = read("src/components/PosSalesDashboardCharts.tsx");
 assert.match(charts, /weatherByDay/);
 assert.match(charts, /pos-dash-day-weather/);
 assert.match(charts, /กลางวัน|เย็น|ดึก|periods/);
+assert.match(charts, /weatherLoading/);
 
 const dash = read("src/components/PosSalesDashboard.tsx");
 assert.match(dash, /ensurePosWeatherDays/);
 assert.match(dash, /weatherByDay/);
 assert.match(dash, /weatherDateKeys/);
+assert.match(dash, /weatherLoading/);
 
 const rules = read("firestore.rules");
 assert.match(rules, /match \/weatherDays\/\{dateId\}/);
 assert.match(rules, /allow write: if false/);
+assert.match(rules, /collection != 'weatherDays'/);
+
+const css = read("src/app/globals.css");
+assert.match(css, /minmax\(20rem/);
+assert.match(css, /pos-dash-daily-block/);
+
+assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)[1]) >= 877);
+assert.ok(Number(read("src/lib/pos-version.ts").match(/POS_BUILD = (\d+)/)[1]) >= 219);
 
 const doc = read("docs/pos-dash-weather-checklist.md");
 assert.match(doc, /กรมอุตุ|TMD|อุดร/);

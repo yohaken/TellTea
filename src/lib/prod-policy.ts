@@ -148,8 +148,8 @@ export function formatPolicyQty(amount: number): string {
   if (!(Number(amount) > 0)) return "";
   return new Intl.NumberFormat("th-TH", {
     minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(amount);
+    maximumFractionDigits: 0,
+  }).format(Math.round(amount));
 }
 
 export function filterProdEntriesOnBangkokDay<T extends { date: number }>(

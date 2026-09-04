@@ -6081,6 +6081,67 @@ body.modal-open .main-panel {
   padding-left: 0.18rem;
   padding-right: 0.28rem;
   font-size: 0.66rem;
+  color: #1f8f4e;
+}
+
+.production-page .production-sheet .sheet-table th.col-out {
+  background: #b7e4c0;
+  color: #1b4332;
+}
+
+.production-page .production-sheet .sheet-table th.prod-col-qty {
+  background: #b7e4c0;
+  color: #1b4332;
+}
+
+.production-page .production-sheet .sheet-table td.prod-col-qty {
+  background: #e8f6ec;
+}
+
+.production-page .production-sheet .sheet-table tr.row-out:nth-child(even) td.prod-col-qty {
+  background: #dcefe2;
+}
+
+.production-page .production-sheet .sheet-table th.prod-col-qty .prod-th-sub,
+.production-page .production-sheet .sheet-table .prod-col-qty .prod-qty-rate {
+  color: rgba(27, 67, 50, 0.72);
+}
+
+.production-page .production-sheet .sheet-table th.prod-col-waste {
+  background: #f3c4c4;
+  color: #7a3030;
+}
+
+.production-page .production-sheet .sheet-table td.prod-col-waste {
+  background: #fbeaea;
+  color: #9a3b3b;
+}
+
+.production-page .production-sheet .sheet-table tr.row-out:nth-child(even) td.prod-col-waste {
+  background: #f6dede;
+}
+
+.production-page .production-sheet .sheet-table th.prod-col-waste .prod-th-sub,
+.production-page .production-sheet .sheet-table .prod-col-waste .prod-waste-rate,
+.production-page .production-sheet .sheet-table .prod-col-waste .prod-waste-money {
+  color: rgba(122, 48, 48, 0.78);
+}
+
+.production-page .production-sheet .sheet-table .prod-col-bonus {
+  min-width: 4.4rem;
+}
+
+.production-page .production-sheet .sheet-table .prod-bonus-eq {
+  display: block;
+  font-size: 0.55rem;
+  font-weight: 650;
+  line-height: 1.1;
+  color: rgba(27, 67, 50, 0.62);
+}
+
+.production-page .production-sheet .sheet-table .prod-bonus-sum {
+  display: block;
+  font-weight: 700;
 }
 
 .production-page .production-sheet .sheet-table .col-note {
@@ -7349,12 +7410,17 @@ body.modal-open .main-panel {
   line-height: 1.3;
 }
 
-.prod-waste-money {
+.prod-waste-money,
+.prod-waste-rate,
+.prod-qty-rate {
   display: block;
   font-size: 0.58rem;
   line-height: 1.1;
-  color: rgba(28, 42, 31, 0.55);
   font-variant-numeric: tabular-nums;
+}
+
+.prod-waste-money {
+  color: rgba(28, 42, 31, 0.55);
 }
 
 .prod-table .prod-th-sub {
@@ -7365,9 +7431,6 @@ body.modal-open .main-panel {
   color: rgba(28, 42, 31, 0.52);
 }
 
-.prod-table .prod-col-waste-rate {
-  color: rgba(140, 48, 48, 0.92);
-}
 
 .prod-policy-rate-head span {
   display: block;
@@ -30168,13 +30231,13 @@ a.ghost-btn {
 /* POS sales dashboard charts + products (phase 2–4) */
 .pos-dash-daily-block {
   display: grid;
-  grid-template-columns: minmax(10.5rem, 14rem) minmax(0, 1fr);
-  gap: 0.55rem;
+  grid-template-columns: minmax(20rem, 0.46fr) minmax(0, 1fr);
+  gap: 0.75rem;
   align-items: stretch;
   min-width: 0;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 900px) {
   .pos-dash-daily-block {
     grid-template-columns: 1fr;
   }
@@ -30184,7 +30247,7 @@ a.ghost-btn {
   background: #fff;
   border: 1px solid rgba(28, 42, 31, 0.1);
   border-radius: 0.75rem;
-  padding: 0.7rem 0.7rem 0.45rem;
+  padding: 0.7rem 0.75rem 0.5rem;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -30192,26 +30255,39 @@ a.ghost-btn {
 }
 
 .pos-dash-day-table-scroll {
-  max-height: 14.5rem;
+  flex: 1 1 auto;
+  max-height: 16.5rem;
   overflow: auto;
-  margin: 0 -0.15rem;
-  padding: 0 0.15rem;
+  margin: 0 -0.1rem;
+  padding: 0 0.1rem;
   -webkit-overflow-scrolling: touch;
 }
 
 .pos-dash-day-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-variant-numeric: tabular-nums;
 }
 
 .pos-dash-day-table th,
 .pos-dash-day-table td {
-  padding: 0.28rem 0.2rem;
+  padding: 0.28rem 0.28rem;
   border-bottom: 1px solid rgba(28, 42, 31, 0.08);
   text-align: left;
-  white-space: nowrap;
   line-height: 1.2;
+}
+
+.pos-dash-day-table th:nth-child(1),
+.pos-dash-day-table td:nth-child(1) {
+  width: 3.4rem;
+  white-space: nowrap;
+}
+
+.pos-dash-day-table th:nth-child(3),
+.pos-dash-day-table td:nth-child(3) {
+  width: 5.2rem;
+  white-space: nowrap;
 }
 
 .pos-dash-day-table th {
@@ -30254,8 +30330,9 @@ a.ghost-btn {
 }
 
 .pos-dash-day-weather {
-  max-width: 11.5rem;
-  font-size: 0.82rem;
+  max-width: none;
+  white-space: normal;
+  font-size: 0.78rem;
   line-height: 1.3;
   color: var(--ink-soft, #5b6b7a);
   vertical-align: top;
@@ -30302,18 +30379,23 @@ a.ghost-btn {
   border-radius: 0.75rem;
   padding: 0.85rem 0.95rem 0.55rem;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .pos-dash-chart-svg-wrap {
   width: 100%;
-  overflow-x: auto;
+  flex: 1 1 auto;
+  min-height: 11rem;
+  overflow: hidden;
 }
 
 .pos-dash-chart-svg {
   display: block;
   width: 100%;
-  min-width: 280px;
-  height: auto;
+  height: 100%;
+  min-height: 11rem;
+  max-height: 16.5rem;
 }
 
 .pos-dash-chart-grid {

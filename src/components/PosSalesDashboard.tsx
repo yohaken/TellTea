@@ -121,6 +121,7 @@ export function PosSalesDashboard({
   const [stockNote, setStockNote] = useState<string | null>(null);
   const [membersNote, setMembersNote] = useState<string | null>(null);
   const [weatherByDay, setWeatherByDay] = useState<Record<string, WeatherDayDoc>>({});
+  const [weatherLoading, setWeatherLoading] = useState(false);
 
   const clamped = useMemo(() => clampPosDateRange(range), [range]);
   const dayCount = useMemo(() => posDateRangeDayCount(clamped), [clamped]);
@@ -258,15 +259,20 @@ export function PosSalesDashboard({
     const keys = weatherDateKeys ? weatherDateKeys.split(",") : [];
     if (!keys.length) {
       setWeatherByDay({});
+      setWeatherLoading(false);
       return;
     }
     let cancelled = false;
+    setWeatherLoading(true);
     ensurePosWeatherDays(keys)
       .then((map) => {
         if (!cancelled) setWeatherByDay(map);
       })
       .catch(() => {
         // Weather is optional — keep sales table usable.
+      })
+      .finally(() => {
+        if (!cancelled) setWeatherLoading(false);
       });
     return () => {
       cancelled = true;
@@ -609,7 +615,11 @@ export function PosSalesDashboard({
           </div>
 
           <div className="pos-dash-daily-block">
-            <PosDashDailyTotalsTable points={byDay} weatherByDay={weatherByDay} />
+            <PosDashDailyTotalsTable
+              points={byDay}
+              weatherByDay={weatherByDay}
+              weatherLoading={weatherLoading}
+            />
             <PosDashDailyAreaChart points={byDay} />
           </div>
 
