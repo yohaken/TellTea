@@ -31,7 +31,6 @@ import {
 import { can } from "@/lib/permissions";
 import {
   DEFAULT_PROD_POLICY,
-  computeWasteBonusMoney,
   computeWasteRate,
   formatPolicyMoney,
   formatPolicyRate,
@@ -549,11 +548,8 @@ function ProdEntryForm({
   }, [qty, waste, rates.prodRate, selectedWorkers, workers, entry, policy.wasteBonusPct]);
 
   const policyProduct = product && productHasMinPolicy(product) ? product : null;
-  const wasteMoneyPreview = computeWasteBonusMoney(
-    Number(waste) || 0,
-    rates.prodRate,
-    policy.wasteBonusPct,
-  );
+  const wasteRatePreview = computeWasteRate(rates.prodRate, policy.wasteBonusPct);
+  const wasteMoneyPreview = preview.wasteDeduction;
 
   function toggleWorker(id: string) {
     if (locked) return;
@@ -682,7 +678,7 @@ function ProdEntryForm({
         <p className="prod-policy-chip">
           นโยบาย · ขั้นต่ำ {formatProdMinRange(policyProduct.minQtyLow, policyProduct.minQtyHigh)} ชิ้น/วัน · ไม่บังคับ
           {policy.wasteBonusPct > 0
-            ? ` · เรทเสีย ${formatPolicyRate(computeWasteRate(rates.prodRate, policy.wasteBonusPct))} (${policy.wasteBonusPct}% ของเรท ${formatPlainNumber(rates.prodRate)})`
+            ? ` · เรทเสีย ${formatPolicyRate(wasteRatePreview)} (${policy.wasteBonusPct}% ของเรท ${formatPlainNumber(rates.prodRate)}) · หัก = เรทเสีย × ทิ้ง`
             : ""}
           {wasteMoneyPreview > 0 ? ` · หัก ${formatPolicyMoney(wasteMoneyPreview)}` : ""}
         </p>
@@ -774,16 +770,17 @@ function ProdEntryForm({
       {locked ? (
         <p className="muted form-hint-inline">
           เรทผลิต {formatPlainNumber(entry!.prodRate)} · เรทเสีย{" "}
-          {formatPolicyRate(computeWasteRate(entry!.prodRate, policy.wasteBonusPct)) || "—"} · โบนัสผลิต/คน{" "}
+          {formatPolicyRate(preview.wasteRate) || "—"} · หัก{" "}
+          {formatPolicyMoney(preview.wasteDeduction) || "—"} (เรทเสีย × ทิ้ง) · โบนัสผลิต/คน{" "}
           {formatPlainNumber(preview.bonusPerPerson)} บาท
         </p>
       ) : Number(qty) > 0 && selectedWorkers.length > 0 ? (
         <p className="muted form-hint-inline">
           โบนัสผลิต/คน ≈ {formatPlainNumber(preview.bonusPerPerson)} บาท
           {policy.wasteBonusPct > 0
-            ? ` · เรทเสีย ${formatPolicyRate(computeWasteRate(rates.prodRate, policy.wasteBonusPct))}`
+            ? ` · เรทเสีย ${formatPolicyRate(preview.wasteRate)} · หัก = เรทเสีย × ทิ้ง`
             : ""}
-          {wasteMoneyPreview > 0 ? ` · หักทิ้ง ${formatPolicyMoney(wasteMoneyPreview)}` : ""}
+          {wasteMoneyPreview > 0 ? ` · หัก ${formatPolicyMoney(wasteMoneyPreview)}` : ""}
           {entry ? ` · เรทผลิต ${formatPlainNumber(rates.prodRate)} (ติดกับแถวนี้)` : ""}
         </p>
       ) : null}
@@ -939,6 +936,10 @@ function ProdTable({
                       เรทเสีย
                       <span className="prod-th-sub">{policy.wasteBonusPct}%</span>
                     </th>
+                    <th className="col-out prod-col-waste-rate">
+                      หัก
+                      <span className="prod-th-sub">เรทเสีย × ทิ้ง</span>
+                    </th>
                     <th className="col-out">โบนัสผลิต</th>
                     <th className="col-act">คน</th>
                   </>
@@ -954,9 +955,6 @@ function ProdTable({
                 const locked = isProdEntryLocked(row);
                 const photoFlagged = isOwner && entryHasPhotoFlag(photoReport, row.id);
                 const flagHints = photoReport?.byEntryId[row.id]?.hints || [];
-                const wasteMoney = formatPolicyMoney(
-                  computeWasteBonusMoney(row.qtyWaste, row.prodRate, policy.wasteBonusPct),
-                );
                 return (
                   <tr
                     key={row.id}
@@ -1007,16 +1005,16 @@ function ProdTable({
                     <td className="col-out">{formatPlainNumber(row.qtyProduced)}</td>
                     <td className="col-out">
                       {row.qtyWaste ? formatPlainNumber(row.qtyWaste) : "—"}
-                      {wasteMoney ? <span className="prod-waste-money">{wasteMoney}</span> : null}
                     </td>
                     <td className="col-note" title={row.note || ""}>{row.note || ""}</td>
                     {isOwner ? (
                       <>
                         <td className="col-out">{formatPlainNumber(row.prodRate)}</td>
                         <td className="col-out prod-col-waste-rate">
-                          {formatPolicyRate(
-                            computeWasteRate(row.prodRate, policy.wasteBonusPct),
-                          ) || "—"}
+                          {formatPolicyRate(c.wasteRate) || "—"}
+                        </td>
+                        <td className="col-out prod-col-waste-rate">
+                          {c.wasteDeduction > 0 ? formatPlainNumber(c.wasteDeduction) : "—"}
                         </td>
                         <td className="col-out">{formatPlainNumber(c.prodBonus)}</td>
                         <td className="col-act">{c.workerCount}</td>

@@ -27,6 +27,9 @@ assert.match(lib, /computeWasteRate/);
 assert.match(lib, /formatPolicyRate/);
 assert.match(popup, /เรทเสีย/);
 assert.match(page, /prod-col-waste-rate/);
+assert.match(page, /เรทเสีย × ทิ้ง/);
+assert.match(prod, /wasteDeduction/);
+assert.match(popup, /หักโบนัส = เรทเสีย × จำนวนเสีย/);
 assert.match(catalog, /เสีย /);
 assert.match(lib, /DEFAULT_PROD_POLICY_LABELS/);
 assert.match(prod, /minQtyLow/);
@@ -36,7 +39,7 @@ assert.match(prod, /wasteBonusPct/);
 assert.match(prod, /computeWasteBonusMoney/);
 assert.match(page, /ProdPolicyPopup/);
 assert.match(page, /computeProdBonus\(row, policy\.wasteBonusPct\)/);
-assert.match(page, /หักทิ้ง/);
+assert.match(page, /หัก = เรทเสีย × ทิ้ง/);
 const bonusLib = read("src/lib/bonus.ts");
 const bonusPage = read("src/app/bonus/page.tsx");
 assert.match(bonusLib, /computeProdBonus\(row, wasteBonusPct\)/);
@@ -55,7 +58,7 @@ assert.match(page, /onOpenPolicy=\{canSetPolicy/);
 assert.match(popup, /ProdPolicyPopupToggle/);
 const settings = read("src/app/settings/page.tsx");
 assert.match(settings, /ProdPolicyPopupToggle/);
-assert.match(version, /APP_BUILD = 863/);
+assert.match(version, /APP_BUILD = 867/);
 
 function round2(n) {
   return Math.round(n * 100) / 100;
@@ -133,14 +136,18 @@ assert.equal(
   1,
 );
 
-function netProdBonus(qty, waste, rate, pct, workers) {
-  const gross = qty * rate;
-  const cut = computeWasteBonusMoney(waste, rate, pct);
-  const prodBonus = Math.max(0, round2(gross - cut));
-  return { prodBonus, perPerson: prodBonus / Math.max(1, workers) };
+function computeProdBonus(qty, waste, rate, pct, workers) {
+  const wasteRate = computeWasteRate(rate, pct);
+  const wasteDeduction = computeWasteBonusMoney(waste, rate, pct);
+  const prodBonus = Math.max(0, round2(qty * rate - wasteDeduction));
+  return { prodBonus, wasteRate, wasteDeduction, perPerson: prodBonus / Math.max(1, workers) };
 }
-assert.equal(netProdBonus(50, 0, 1.25, 30, 1).prodBonus, 62.5);
-assert.equal(netProdBonus(50, 10, 1.25, 30, 1).prodBonus, 58.75);
-assert.equal(netProdBonus(50, 10, 1.25, 0, 1).prodBonus, 62.5);
+const brownie = computeProdBonus(50, 10, 1.25, 30, 1);
+assert.equal(brownie.wasteRate, 0.375);
+assert.equal(brownie.wasteDeduction, 3.75, "หัก = เรทเสีย × จำนวนเสีย");
+assert.equal(brownie.prodBonus, 58.75);
+assert.equal(computeProdBonus(50, 0, 1.25, 30, 1).prodBonus, 62.5);
+assert.equal(computeProdBonus(50, 10, 1.25, 0, 1).wasteDeduction, 0);
+assert.equal(computeProdBonus(50, 10, 1.25, 0, 1).prodBonus, 62.5);
 
 console.log("OK test-prod-policy");

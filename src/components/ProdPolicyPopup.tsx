@@ -118,7 +118,7 @@ export function ProdPolicyPopup({
           ขั้นต่ำต่อวัน · ไม่บังคับ · เฉพาะสินค้าที่ตั้งเกณฑ์ · {monthLabel}
         </p>
         <p className="prod-policy-waste">
-          เรทเสีย = <strong>{policy.wasteBonusPct}%</strong> ของเรทผลิต · ทิ้ง × เรทเสีย = หักโบนัส
+          เรทเสีย = <strong>{policy.wasteBonusPct}%</strong> ของเรทผลิต · หักโบนัส = เรทเสีย × จำนวนเสีย
         </p>
         {canSetPolicy ? (
           <ProdPolicyPopupToggle

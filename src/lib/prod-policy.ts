@@ -109,6 +109,7 @@ export function computeWasteRate(prodRate: number, wasteBonusPct: number): numbe
   return rate * (pct / 100);
 }
 
+/** หักโบนัส = จำนวนเสีย × เรทเสีย · เรทเสีย = เรทผลิต × %ทิ้ง */
 export function computeWasteBonusMoney(
   qtyWaste: number,
   prodRate: number,

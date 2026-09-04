@@ -17,7 +17,7 @@ import {
 import { getDb } from "./firebase";
 import { subscribeQueryWithRetry } from "./firestore-subscribe";
 import { daysAgoMs } from "./query-window";
-import { computeWasteBonusMoney } from "./prod-policy";
+import { computeWasteBonusMoney, computeWasteRate } from "./prod-policy";
 
 /** หน้าผลิตพนักงาน — โหลดช่วงนี้แทนประวัติทั้งก้อน */
 export const PROD_HISTORY_LOOKBACK_DAYS = 60;
@@ -128,6 +128,10 @@ export type ProdComputed = {
   prodBonus: number;
   workerCount: number;
   bonusPerPerson: number;
+  /** เรทเสียต่อชิ้น = เรทผลิต × %นโยบาย */
+  wasteRate: number;
+  /** หักโบนัส = เรทเสีย × จำนวนเสีย */
+  wasteDeduction: number;
 };
 
 export function computeProdBonus(
@@ -142,13 +146,14 @@ export function computeProdBonus(
 ): ProdComputed {
   const qty = Number(entry.qtyProduced) || 0;
   const rate = Number(entry.prodRate) || 0;
+  const wasteQty = Math.max(0, Number(entry.qtyWaste) || 0);
   const salesBonus = qty * (Number(entry.salesRate) || 0);
-  const gross = qty * rate;
-  const wasteMoney = computeWasteBonusMoney(entry.qtyWaste || 0, rate, wasteBonusPct);
-  const prodBonus = Math.max(0, Math.round((gross - wasteMoney) * 100) / 100);
+  const wasteRate = computeWasteRate(rate, wasteBonusPct);
+  const wasteDeduction = computeWasteBonusMoney(wasteQty, rate, wasteBonusPct);
+  const prodBonus = Math.max(0, Math.round((qty * rate - wasteDeduction) * 100) / 100);
   const workerCount = Math.max(1, (entry.workerNames || []).filter(Boolean).length);
   const bonusPerPerson = prodBonus / workerCount;
-  return { salesBonus, prodBonus, workerCount, bonusPerPerson };
+  return { salesBonus, prodBonus, workerCount, bonusPerPerson, wasteRate, wasteDeduction };
 }
 
 export function labelProdStatus(status: ProdStatus | "pending") {
