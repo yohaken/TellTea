@@ -1048,10 +1048,7 @@ export function VatMonthBooks({ actor }: Props) {
       const snap = { ...draftRef.current, note: text };
       draftRef.current = snap;
       setDraft((d) => (d.monthKey === snap.monthKey ? { ...d, note: text } : d));
-      await saveVatMonthlyReturn(
-        draftToSaveInput(snap, snap.status === "filed" ? "filed" : "saved"),
-        actor,
-      );
+      await saveVatMonthlyReturn(draftToSaveInput(snap, "saved"), actor);
       setMonthNote(text);
       setMsg(`บันทึกโน้ต ${formatThaiMonthKey(month)} แล้ว`);
     } catch (e) {
