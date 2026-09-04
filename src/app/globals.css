@@ -30827,3 +30827,143 @@ a.ghost-btn {
   margin: 0;
   font-size: 0.75rem;
 }
+
+/* ==========================================================================
+   Menu Price Hub — Sales Volume Columns & Toggles
+   ========================================================================== */
+.mph-sales-toggles {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0 0.2rem;
+  border-left: 1px solid #cbd5e1;
+  margin-left: 0.2rem;
+}
+
+.mph-chip-sales {
+  font-weight: 600;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+}
+
+.mph-chip-sales.is-on {
+  background: #0284c7;
+  border-color: #0284c7;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.mph-chip-period {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.35rem;
+  background: #f8fafc;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.mph-chip-period.is-on {
+  background: #0369a1;
+  border-color: #0369a1;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.mph-th.is-sales {
+  background: #e2e8f0;
+  color: #1e293b;
+  text-align: right;
+  padding: 0.2rem 0.3rem;
+}
+
+.mph-th.is-sales.is-sales-store {
+  background: #fef3c7;
+  color: #78350f;
+}
+
+.mph-th.is-sales.is-sales-grab {
+  background: #dcfce7;
+  color: #14532d;
+}
+
+.mph-th.is-sales.is-sales-lineman {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.mph-th.is-sales.is-sales-shopee {
+  background: #ffedd5;
+  color: #7c2d12;
+}
+
+.mph-th.is-sales.is-sales-total {
+  background: #dbeafe;
+  color: #1e40af;
+  font-weight: 800;
+}
+
+.mph-th-sales-badge {
+  display: block;
+  font-size: 0.54rem;
+  font-weight: 600;
+  opacity: 0.8;
+  line-height: 1;
+  margin-top: 0.1rem;
+}
+
+.mph-td.is-sales {
+  padding: 0.12rem 0.25rem;
+  vertical-align: middle;
+}
+
+.mph-td.is-sales.is-sales-total {
+  background: rgba(219, 234, 254, 0.28);
+}
+
+.mph-sales-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  line-height: 1.1;
+  width: 100%;
+}
+
+.mph-sales-qty {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #475569;
+  font-variant-numeric: tabular-nums;
+}
+
+.mph-sales-qty.has-qty {
+  color: #0f172a;
+}
+
+.mph-sales-qty.is-zero {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.mph-sales-baht {
+  font-size: 0.56rem;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+  margin-top: 0.05rem;
+}
+
+.mph-sales-empty {
+  color: #94a3b8;
+  font-size: 0.68rem;
+  text-align: center;
+  display: block;
+  width: 100%;
+}
+
+.mph-sales-mini {
+  font-size: 0.64rem;
+  text-align: center;
+  display: block;
+  width: 100%;
+}
+

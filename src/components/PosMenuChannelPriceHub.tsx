@@ -63,6 +63,16 @@ import { HUB_TABLE_NOTE_GUIDE } from "@/lib/menu-price-hub-guide";
 import { clearMenuItemHubNotes, setMenuItemHubNotes, updateMenuItem } from "@/lib/pos-menu";
 import { saveMenuOptionGroupFull, setMenuOptionChoiceHubNotes } from "@/lib/pos-menu-options";
 import { menuTextIncludes, normalizeMenuSearchText } from "@/lib/pos-menu-text";
+import {
+  emptyPeriodSalesSummary,
+  emptySalesVolumeStore,
+  loadSalesVolumeStoreFromServer,
+  subscribeSalesVolumeStore,
+  type SalesPeriod,
+  type SalesVolumeStore,
+  SALES_PERIOD_LABELS,
+  SALES_PERIODS,
+} from "@/lib/menu-sales-volume";
 import type { MenuCategory, MenuItem, MenuOptionChoice, MenuOptionGroup } from "@/lib/types";
 
 type PriceDraft = { store: string };
@@ -376,7 +386,39 @@ function rowSelId(row: RowSel): string {
   return `${row.scope}\t${row.id}`;
 }
 
-type ColKey = "name" | "mode" | "note" | "cat" | "store" | DeliveryChannel;
+export type SalesColKey =
+  | "sales_store"
+  | "sales_grab"
+  | "sales_lineman"
+  | "sales_shopee"
+  | "sales_total";
+
+export const SALES_COL_KEYS: SalesColKey[] = [
+  "sales_store",
+  "sales_grab",
+  "sales_lineman",
+  "sales_shopee",
+  "sales_total",
+];
+
+export function isSalesCol(key: ColKey): key is SalesColKey {
+  return (
+    key === "sales_store" ||
+    key === "sales_grab" ||
+    key === "sales_lineman" ||
+    key === "sales_shopee" ||
+    key === "sales_total"
+  );
+}
+
+type ColKey =
+  | "name"
+  | "mode"
+  | "note"
+  | "cat"
+  | "store"
+  | DeliveryChannel
+  | SalesColKey;
 
 const COL_ORDER: ColKey[] = [
   "name",
@@ -386,6 +428,11 @@ const COL_ORDER: ColKey[] = [
   "shopee",
   "grab",
   "lineman",
+  "sales_store",
+  "sales_grab",
+  "sales_lineman",
+  "sales_shopee",
+  "sales_total",
   "note",
 ];
 
@@ -398,6 +445,11 @@ const DEFAULT_COL_W: Record<ColKey, number> = {
   shopee: 100,
   grab: 100,
   lineman: 100,
+  sales_store: 76,
+  sales_grab: 76,
+  sales_lineman: 76,
+  sales_shopee: 65,
+  sales_total: 84,
 };
 
 const COLLAPSED_W = 22;
@@ -783,6 +835,11 @@ function colTitle(key: ColKey): string {
   if (key === "note") return "note";
   if (key === "cat") return "หมวด";
   if (key === "store") return "หน้าร้าน";
+  if (key === "sales_store") return "ขายหน้าร้าน";
+  if (key === "sales_grab") return "ขาย Grab";
+  if (key === "sales_lineman") return "ขาย LM";
+  if (key === "sales_shopee") return "ขาย Shopee";
+  if (key === "sales_total") return "รวมขาย (ชิ้น)";
   return channelLabel(key);
 }
 
@@ -925,6 +982,17 @@ export function PosMenuChannelPriceHub({
   const colsFittedRef = useRef(false);
   const savedColsRef = useRef<Partial<Record<ColKey, number>> | null>(null);
   const [showOptions, setShowOptions] = useState(true);
+  const [salesVolumeStore, setSalesVolumeStore] = useState<SalesVolumeStore>(emptySalesVolumeStore);
+  const [selectedPeriod, setSelectedPeriod] = useState<SalesPeriod>("1m");
+  const [showSales, setShowSales] = useState<boolean>(() => {
+    try {
+      const v = window.localStorage.getItem("telltea_mph_show_sales");
+      return v === null ? true : v === "true";
+    } catch {
+      return true;
+    }
+  });
+  const [showSalesSyncModal, setShowSalesSyncModal] = useState(false);
   const [hiddenOptGroups, setHiddenOptGroups] = useState<Set<string>>(() => new Set());
   const [optDraft, setOptDraft] = useState<Record<string, PriceDraft>>({});
   const [cellSel, setCellSel] = useState<Set<string>>(() => new Set());
@@ -965,6 +1033,19 @@ export function PosMenuChannelPriceHub({
     return m;
   }, [activeOptionGroups]);
   useEffect(() => {
+    return subscribeSalesVolumeStore(
+      (store) => {
+        setSalesVolumeStore(store);
+      },
+      (err) => console.warn("Failed to subscribe to salesVolume:", err),
+    );
+  }, []);
+
+  const activePeriodSales = useMemo(() => {
+    return salesVolumeStore.periods[selectedPeriod] ?? emptyPeriodSalesSummary(selectedPeriod);
+  }, [salesVolumeStore, selectedPeriod]);
+
+  useEffect(() => {
     try {
       const raw = window.localStorage.getItem(COL_STORAGE_KEY);
       if (!raw) return;
@@ -980,7 +1061,9 @@ export function PosMenuChannelPriceHub({
                 ? 52
                 : key === "shopee" || key === "grab" || key === "lineman"
                   ? 72
-                  : COLLAPSED_W;
+                  : isSalesCol(key)
+                    ? 56
+                    : COLLAPSED_W;
             next[key] = Math.max(n, key === "name" || key === "cat" ? n : floor);
             if (key === "store") next[key] = Math.max(n, 52);
             if (key === "shopee" || key === "grab" || key === "lineman") {
@@ -1108,8 +1191,13 @@ export function PosMenuChannelPriceHub({
   );
 
   const visibleColOrder = useMemo(
-    () => COL_ORDER.filter((key) => !isChannelCol(key) || !hiddenChannels.has(key)),
-    [hiddenChannels],
+    () =>
+      COL_ORDER.filter((key) => {
+        if (isChannelCol(key) && hiddenChannels.has(key)) return false;
+        if (isSalesCol(key) && !showSales) return false;
+        return true;
+      }),
+    [hiddenChannels, showSales],
   );
 
   function toggleHiddenChannel(ch: DeliveryChannel) {
@@ -1587,9 +1675,11 @@ export function PosMenuChannelPriceHub({
     const list = [...filtered];
     const dir = sortDir === "asc" ? 1 : -1;
     list.sort((a, b) => {
-      const catCmp =
-        (catRank.get(a.item.categoryId) ?? 1e9) - (catRank.get(b.item.categoryId) ?? 1e9);
-      if (catCmp !== 0) return catCmp;
+      if (!isSalesCol(sortKey)) {
+        const catCmp =
+          (catRank.get(a.item.categoryId) ?? 1e9) - (catRank.get(b.item.categoryId) ?? 1e9);
+        if (catCmp !== 0) return catCmp;
+      }
       let cmp = 0;
       if (sortKey === "name" || sortKey === "cat") {
         cmp =
@@ -1604,6 +1694,26 @@ export function PosMenuChannelPriceHub({
         );
       } else if (sortKey === "store") {
         cmp = (a.item.price ?? 0) - (b.item.price ?? 0);
+      } else if (sortKey === "sales_store") {
+        const qa = activePeriodSales.byItemId[a.item.id]?.pos?.qty ?? 0;
+        const qb = activePeriodSales.byItemId[b.item.id]?.pos?.qty ?? 0;
+        cmp = qa - qb;
+      } else if (sortKey === "sales_grab") {
+        const qa = activePeriodSales.byItemId[a.item.id]?.grab?.qty ?? 0;
+        const qb = activePeriodSales.byItemId[b.item.id]?.grab?.qty ?? 0;
+        cmp = qa - qb;
+      } else if (sortKey === "sales_lineman") {
+        const qa = activePeriodSales.byItemId[a.item.id]?.lineman?.qty ?? 0;
+        const qb = activePeriodSales.byItemId[b.item.id]?.lineman?.qty ?? 0;
+        cmp = qa - qb;
+      } else if (sortKey === "sales_shopee") {
+        const qa = activePeriodSales.byItemId[a.item.id]?.shopee?.qty ?? 0;
+        const qb = activePeriodSales.byItemId[b.item.id]?.shopee?.qty ?? 0;
+        cmp = qa - qb;
+      } else if (sortKey === "sales_total") {
+        const qa = activePeriodSales.byItemId[a.item.id]?.totalQty ?? 0;
+        const qb = activePeriodSales.byItemId[b.item.id]?.totalQty ?? 0;
+        cmp = qa - qb;
       } else {
         cmp = a.channels[sortKey].target - b.channels[sortKey].target;
       }
@@ -1615,7 +1725,7 @@ export function PosMenuChannelPriceHub({
       return sortKey === "cat" ? cmp : cmp * dir;
     });
     return list;
-  }, [filtered, sortKey, sortDir, catRank, liveSettings, noteDraft, channelLive]);
+  }, [filtered, sortKey, sortDir, catRank, liveSettings, noteDraft, channelLive, activePeriodSales]);
 
   function toggleSort(key: ColKey) {
     if (key === "cat") {
@@ -1627,7 +1737,7 @@ export function PosMenuChannelPriceHub({
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
       setSortKey(key);
-      setSortDir("asc");
+      setSortDir(isSalesCol(key) ? "desc" : "asc");
     }
   }
 
@@ -2486,6 +2596,8 @@ export function PosMenuChannelPriceHub({
       w = Math.min(160, Math.max(64, Math.round(maxChars * 7 + 10)));
     } else if (key === "store") {
       w = 56;
+    } else if (isSalesCol(key)) {
+      w = key === "sales_total" ? 84 : 76;
     } else {
       // ช่องทาง: เป้า + สถานะ
       w = 92;
@@ -3020,9 +3132,145 @@ export function PosMenuChannelPriceHub({
     }
   }
 
+  function renderSalesCell(item: MenuItem, key: SalesColKey) {
+    const itemSales = activePeriodSales.byItemId[item.id];
+    const collapsed = isColCollapsed(colW[key]);
+    const widthStyle = { width: colW[key], minWidth: colW[key], maxWidth: colW[key] };
+
+    if (key === "sales_store") {
+      const qty = itemSales?.pos?.qty ?? 0;
+      const baht = itemSales?.pos?.salesBaht ?? 0;
+      return (
+        <td
+          key={key}
+          className="mph-td is-num is-sales is-sales-store"
+          style={widthStyle}
+          title={`ขายหน้าร้าน ${qty.toLocaleString()} ชิ้น${baht > 0 ? ` (฿${baht.toLocaleString()})` : ""}`}
+        >
+          {collapsed ? (
+            <span className="mph-sales-mini">{qty || "—"}</span>
+          ) : (
+            <div className="mph-sales-cell">
+              <span className={`mph-sales-qty${qty > 0 ? " has-qty" : " is-zero"}`}>
+                {qty.toLocaleString()}
+              </span>
+              {baht > 0 ? (
+                <span className="mph-sales-baht">฿{baht.toLocaleString()}</span>
+              ) : null}
+            </div>
+          )}
+        </td>
+      );
+    }
+
+    if (key === "sales_grab") {
+      const qty = itemSales?.grab?.qty ?? 0;
+      const baht = itemSales?.grab?.salesBaht ?? 0;
+      const rawName = itemSales?.grab?.rawName;
+      return (
+        <td
+          key={key}
+          className="mph-td is-num is-sales is-sales-grab"
+          style={widthStyle}
+          title={`Grab: ${qty.toLocaleString()} ชิ้น${baht > 0 ? ` (฿${baht.toLocaleString()})` : ""}${rawName ? ` · ${rawName}` : ""}`}
+        >
+          {collapsed ? (
+            <span className="mph-sales-mini">{qty || "—"}</span>
+          ) : (
+            <div className="mph-sales-cell">
+              <span className={`mph-sales-qty${qty > 0 ? " has-qty" : " is-zero"}`}>
+                {qty.toLocaleString()}
+              </span>
+              {baht > 0 ? (
+                <span className="mph-sales-baht">฿{baht.toLocaleString()}</span>
+              ) : null}
+            </div>
+          )}
+        </td>
+      );
+    }
+
+    if (key === "sales_lineman") {
+      const qty = itemSales?.lineman?.qty ?? 0;
+      const baht = itemSales?.lineman?.salesBaht ?? 0;
+      const rank = itemSales?.lineman?.rank;
+      return (
+        <td
+          key={key}
+          className="mph-td is-num is-sales is-sales-lineman"
+          style={widthStyle}
+          title={`LINE MAN: ${qty.toLocaleString()} ชิ้น${baht > 0 ? ` (฿${baht.toLocaleString()})` : ""}${rank ? ` · อันดับ ${rank}` : ""}`}
+        >
+          {collapsed ? (
+            <span className="mph-sales-mini">{qty || "—"}</span>
+          ) : (
+            <div className="mph-sales-cell">
+              <span className={`mph-sales-qty${qty > 0 ? " has-qty" : " is-zero"}`}>
+                {qty.toLocaleString()}
+              </span>
+              {baht > 0 ? (
+                <span className="mph-sales-baht">฿{baht.toLocaleString()}</span>
+              ) : null}
+            </div>
+          )}
+        </td>
+      );
+    }
+
+    if (key === "sales_shopee") {
+      return (
+        <td
+          key={key}
+          className="mph-td is-num is-sales is-sales-shopee"
+          style={widthStyle}
+          title="Shopee Partner ไม่มีรายงานยอดขายแยกรายเมนูในพอร์ทัล"
+        >
+          <div className="mph-sales-cell">
+            <span className="mph-sales-empty">—</span>
+          </div>
+        </td>
+      );
+    }
+
+    // sales_total
+    const totalQty = itemSales?.totalQty ?? 0;
+    const totalBaht = itemSales?.totalSalesBaht ?? 0;
+    return (
+      <td
+        key={key}
+        className="mph-td is-num is-sales is-sales-total"
+        style={widthStyle}
+        title={`รวมทุกช่องทาง: ${totalQty.toLocaleString()} ชิ้น (฿${totalBaht.toLocaleString()})`}
+      >
+        {collapsed ? (
+          <span className="mph-sales-mini font-bold">{totalQty || "—"}</span>
+        ) : (
+          <div className="mph-sales-cell is-total">
+            <span className={`mph-sales-qty font-bold${totalQty > 0 ? " has-qty" : " is-zero"}`}>
+              {totalQty.toLocaleString()}
+            </span>
+            {totalBaht > 0 ? (
+              <span className="mph-sales-baht">฿{totalBaht.toLocaleString()}</span>
+            ) : null}
+          </div>
+        )}
+      </td>
+    );
+  }
+
+  function renderOptSalesCell(key: SalesColKey) {
+    const widthStyle = { width: colW[key], minWidth: colW[key], maxWidth: colW[key] };
+    return (
+      <td key={key} className="mph-td is-num is-sales is-opt" style={widthStyle}>
+        <span className="mph-sales-empty">—</span>
+      </td>
+    );
+  }
+
   function renderColHead(key: ColKey) {
     const collapsed = isColCollapsed(colW[key]);
     const isChannel = key === "shopee" || key === "grab" || key === "lineman";
+    const isSales = isSalesCol(key);
     const active = sortKey === key;
     const waiting = isChannel && clearedLive.has(key);
     const filterable = key === "name" || key === "cat" || key === "store" || key === "note";
@@ -3041,11 +3289,13 @@ export function PosMenuChannelPriceHub({
       ? key === "note"
         ? "คลิกชื่อคอลัมน์ = เรียง note · พิมพ์กรอง · กดหรือพิมพ์ «ว่าง» = เฉพาะแถวไม่มี note"
         : `คลิกชื่อคอลัมน์ = เรียง${colTitle(key)} · พิมพ์ด้านล่าง = กรองทันที`
-      : `คลิกเรียง${colTitle(key)} · คลิกซ้ำสลับ ↑↓ · ลากขอบ = ความกว้าง · ดับเบิลคลิกเส้น = พอดี`;
+      : isSales
+        ? `คลิกเรียง${colTitle(key)} (${SALES_PERIOD_LABELS[selectedPeriod]}) · คลิกซ้ำสลับ ↑↓ · ลากขอบ = ปรับความกว้าง`
+        : `คลิกเรียง${colTitle(key)} · คลิกซ้ำสลับ ↑↓ · ลากขอบ = ความกว้าง · ดับเบิลคลิกเส้น = พอดี`;
     return (
       <th
         key={key}
-        className={`mph-th${key === "name" ? " is-sticky" : ""}${key === "cat" ? " is-cat" : ""}${isChannel ? " is-ch" : ""}${active ? " is-sorted" : ""}${waiting ? " is-waiting" : ""}${filterable ? " has-filter" : ""}${filtering ? " is-filtering" : ""}`}
+        className={`mph-th${key === "name" ? " is-sticky" : ""}${key === "cat" ? " is-cat" : ""}${isChannel ? " is-ch" : ""}${isSales ? ` is-sales is-${key.replace("_", "-")}` : ""}${active ? " is-sorted" : ""}${waiting ? " is-waiting" : ""}${filterable ? " has-filter" : ""}${filtering ? " is-filtering" : ""}`}
         style={{ width: colW[key], minWidth: colW[key], maxWidth: colW[key] }}
         title={sortTitle}
         aria-sort={active ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
@@ -3056,8 +3306,30 @@ export function PosMenuChannelPriceHub({
             className="mph-th-sort mph-th-collapsed"
             onClick={() => toggleSort(key)}
           >
-            {colTitle(key).slice(0, 1)}
+            {isSales
+              ? key === "sales_total"
+                ? "รวม"
+                : key === "sales_store"
+                  ? "หน"
+                  : key === "sales_grab"
+                    ? "G"
+                    : key === "sales_lineman"
+                      ? "L"
+                      : "S"
+              : colTitle(key).slice(0, 1)}
             {sortMark(key)}
+          </button>
+        ) : isSales ? (
+          <button
+            type="button"
+            className={`mph-th-sort${active ? " is-on" : ""}`}
+            onClick={() => toggleSort(key)}
+          >
+            <span className="mph-th-label">{colTitle(key)}</span>
+            <span className="mph-th-sales-badge">
+              {key === "sales_total" ? "ชิ้นรวม" : "ชิ้น"}
+              {sortMark(key)}
+            </span>
           </button>
         ) : isChannel && ruleDraft ? (
           <div className="mph-th-ch">
@@ -3386,6 +3658,56 @@ export function PosMenuChannelPriceHub({
             >
               เฉพาะตัวเลือก
             </button>
+          </span>
+          <span className="mph-sales-toggles" role="group" aria-label="แสดงคอลัมน์จำนวนขาย">
+            <button
+              type="button"
+              className={`mph-chip mph-chip-sales${showSales ? " is-on" : ""}`}
+              aria-pressed={showSales}
+              title={
+                showSales
+                  ? "ซ่อนคอลัมน์จำนวนขายชั่วคราว — คลิกเปิด/ปิดได้ตลอดเวลา"
+                  : "แสดงคอลัมน์จำนวนขายรายเมนู (หน้าร้าน POS + Grab + LINE MAN)"
+              }
+              onClick={() => {
+                const next = !showSales;
+                setShowSales(next);
+                try {
+                  window.localStorage.setItem("telltea_mph_show_sales", String(next));
+                } catch {
+                  /* ignore */
+                }
+              }}
+            >
+              📊 จำนวนขาย {showSales ? "เปิด" : "ปิด"}
+            </button>
+            {showSales ? (
+              <>
+                {(["1m", "3m", "6m"] as const).map((p) => {
+                  const on = selectedPeriod === p;
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      className={`mph-chip mph-chip-sm mph-chip-period${on ? " is-on" : ""}`}
+                      aria-pressed={on}
+                      title={`ดูยอดขายย้อนหลัง ${SALES_PERIOD_LABELS[p]}`}
+                      onClick={() => setSelectedPeriod(p)}
+                    >
+                      {SALES_PERIOD_LABELS[p]}
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  className="mph-chip mph-chip-sm"
+                  title="ดูสถานะการดึงยอดขายจาก Chrome และยอดขายหน้าร้าน POS"
+                  onClick={() => setShowSalesSyncModal(true)}
+                >
+                  ℹ️ สถานะยอดขาย
+                </button>
+              </>
+            ) : null}
           </span>
           <button
             type="button"
@@ -3961,6 +4283,15 @@ export function PosMenuChannelPriceHub({
                       </td>
                     );
                   })}
+                  {showSales ? (
+                    <>
+                      {renderSalesCell(item, "sales_store")}
+                      {renderSalesCell(item, "sales_grab")}
+                      {renderSalesCell(item, "sales_lineman")}
+                      {renderSalesCell(item, "sales_shopee")}
+                      {renderSalesCell(item, "sales_total")}
+                    </>
+                  ) : null}
                   <td
                     className="mph-td is-note"
                     style={{ width: colW.note, minWidth: colW.note, maxWidth: colW.note }}
@@ -4248,6 +4579,15 @@ export function PosMenuChannelPriceHub({
                       </td>
                     );
                   })}
+                  {showSales ? (
+                    <>
+                      {renderOptSalesCell("sales_store")}
+                      {renderOptSalesCell("sales_grab")}
+                      {renderOptSalesCell("sales_lineman")}
+                      {renderOptSalesCell("sales_shopee")}
+                      {renderOptSalesCell("sales_total")}
+                    </>
+                  ) : null}
                   <td
                     className="mph-td is-note"
                     style={{ width: colW.note, minWidth: colW.note, maxWidth: colW.note }}
@@ -4290,11 +4630,123 @@ export function PosMenuChannelPriceHub({
         {hideStoreOnly ? ` · ซ่อนเฉพาะหน้าร้าน ${storeOnlyCount}` : ""}
         {hideStoreOnlyOptions ? ` · ซ่อนตัวเลือกเฉพาะหน้าร้าน ${storeOnlyOptionCount}` : ""}
         {showOptions ? ` · ${optionRows.length} ตัวเลือก` : " · ซ่อนตัวเลือก"} · เรียงหมวดตามลำดับ POS เสมอ
-        {sortKey !== "cat" ? ` · ในหมวดเรียง${colTitle(sortKey)}${sortMark(sortKey)}` : ""} ·
+        {sortKey !== "cat" ? ` · ในหมวดเรียง${colTitle(sortKey)}${sortMark(sortKey)}` : ""}
+        {showSales
+          ? ` · ยอดขาย ${SALES_PERIOD_LABELS[selectedPeriod]} (หน้าร้าน ${activePeriodSales.channels.pos.totalQty.toLocaleString()} + Grab ${activePeriodSales.channels.grab.totalQty.toLocaleString()} + LM ${activePeriodSales.channels.lineman.totalQty.toLocaleString()} = ${(activePeriodSales.channels.pos.totalQty + activePeriodSales.channels.grab.totalQty + activePeriodSales.channels.lineman.totalQty).toLocaleString()} ชิ้น)`
+          : ""} ·
         พิมพ์หัวคอลัมน์เมนู/หมวด/หน้าร้าน/Note = กรองทันที · Note กด «ว่าง» = เฉพาะแถวไม่มี note · คลิกชื่อคอลัมน์ = เรียง ·
         ติ๊กแถว = เลือกเป้าทุกช่องทาง หรือใส่ note รวม · คลิกเป้า = เลือกเซลล์ · Shift คลิก = ช่วง ·
         ดับเบิลคลิกเป้า = แก้แถวเดียว · คลิกชื่อเมนู = แก้ (ยืนยันก่อนบันทึก)
       </p>
+
+      {showSalesSyncModal ? (
+        <div
+          className="mph-mask"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="mph-sales-modal-title"
+        >
+          <div className="mph-dialog" style={{ maxWidth: "34rem" }}>
+            <h3 id="mph-sales-modal-title" style={{ margin: "0 0 0.5rem" }}>
+              📊 ยอดขายรายเมนู (หน้าร้าน vs แพลตฟอร์ม)
+            </h3>
+            <p className="muted" style={{ margin: "0 0 1rem", fontSize: "0.8rem", lineHeight: 1.4 }}>
+              ข้อมูลจำนวนขายของแต่ละเมนูนำมาวิเคราะห์เปรียบเทียบระหว่างขายหน้าร้าน (POS) กับช่องทางเดลิเวอรี่ (Grab, LINE MAN, Shopee) เลือกระยะเวลา 1, 3, 6 เดือนได้
+            </p>
+
+            <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "6px", padding: "0.75rem", marginBottom: "1rem" }}>
+              <div style={{ fontWeight: 700, fontSize: "0.85rem", marginBottom: "0.5rem", display: "flex", justifyContent: "space-between" }}>
+                <span>ช่วงที่เลือก: {SALES_PERIOD_LABELS[selectedPeriod]}</span>
+                <span className="muted" style={{ fontWeight: 400, fontSize: "0.75rem" }}>
+                  {activePeriodSales.dateRangeText || "—"}
+                </span>
+              </div>
+              <table style={{ width: "100%", fontSize: "0.78rem", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid #cbd5e1", textAlign: "left", color: "#64748b" }}>
+                    <th style={{ padding: "0.25rem 0" }}>ช่องทาง</th>
+                    <th style={{ padding: "0.25rem 0", textAlign: "right" }}>สถานะ</th>
+                    <th style={{ padding: "0.25rem 0", textAlign: "right" }}>รายการ</th>
+                    <th style={{ padding: "0.25rem 0", textAlign: "right" }}>จำนวน (ชิ้น)</th>
+                    <th style={{ padding: "0.25rem 0", textAlign: "right" }}>ยอดขาย (฿)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <td style={{ padding: "0.35rem 0", fontWeight: 600 }}>หน้าร้าน (POS)</td>
+                    <td style={{ padding: "0.35rem 0", textAlign: "right", color: "#16a34a" }}>มีข้อมูลบิล</td>
+                    <td style={{ padding: "0.35rem 0", textAlign: "right" }}>{activePeriodSales.channels.pos.itemCount}</td>
+                    <td style={{ padding: "0.35rem 0", textAlign: "right", fontWeight: 700 }}>{activePeriodSales.channels.pos.totalQty.toLocaleString()}</td>
+                    <td style={{ padding: "0.35rem 0", textAlign: "right" }}>฿{activePeriodSales.channels.pos.totalSalesBaht.toLocaleString()}</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <td style={{ padding: "0.35rem 0", fontWeight: 600 }}>Grab</td>
+                    <td style={{ padding: "0.35rem 0", textAlign: "right", color: activePeriodSales.channels.grab.available ? "#16a34a" : "#dc2626" }}>
+                      {activePeriodSales.channels.grab.available ? "สแกนแล้ว" : "ยังไม่สแกน"}
+                    </td>
+                    <td style={{ padding: "0.35rem 0", textAlign: "right" }}>{activePeriodSales.channels.grab.itemCount}</td>
+                    <td style={{ padding: "0.35rem 0", textAlign: "right", fontWeight: 700 }}>{activePeriodSales.channels.grab.totalQty.toLocaleString()}</td>
+                    <td style={{ padding: "0.35rem 0", textAlign: "right" }}>฿{activePeriodSales.channels.grab.totalSalesBaht.toLocaleString()}</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <td style={{ padding: "0.35rem 0", fontWeight: 600 }}>LINE MAN</td>
+                    <td style={{ padding: "0.35rem 0", textAlign: "right", color: activePeriodSales.channels.lineman.available ? "#16a34a" : "#dc2626" }}>
+                      {activePeriodSales.channels.lineman.available ? "สแกนแล้ว" : "ยังไม่สแกน"}
+                    </td>
+                    <td style={{ padding: "0.35rem 0", textAlign: "right" }}>{activePeriodSales.channels.lineman.itemCount}</td>
+                    <td style={{ padding: "0.35rem 0", textAlign: "right", fontWeight: 700 }}>{activePeriodSales.channels.lineman.totalQty.toLocaleString()}</td>
+                    <td style={{ padding: "0.35rem 0", textAlign: "right" }}>฿{activePeriodSales.channels.lineman.totalSalesBaht.toLocaleString()}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: "0.35rem 0", fontWeight: 600 }}>Shopee</td>
+                    <td style={{ padding: "0.35rem 0", textAlign: "right", color: "#64748b" }}>ไม่มีรายงานรายเมนู</td>
+                    <td style={{ padding: "0.35rem 0", textAlign: "right" }}>—</td>
+                    <td style={{ padding: "0.35rem 0", textAlign: "right" }}>—</td>
+                    <td style={{ padding: "0.35rem 0", textAlign: "right" }}>—</td>
+                  </tr>
+                </tbody>
+              </table>
+              {activePeriodSales.channels.grab.note ? (
+                <p className="muted" style={{ margin: "0.5rem 0 0", fontSize: "0.72rem" }}>
+                  * {activePeriodSales.channels.grab.note}
+                </p>
+              ) : null}
+            </div>
+
+            <div style={{ fontSize: "0.78rem", lineHeight: 1.5, marginBottom: "1rem" }}>
+              <div style={{ fontWeight: 600, marginBottom: "0.25rem" }}>
+                วิธีสแกน/ดึงยอดขายล่าสุดจาก Chrome ที่เปิดไว้:
+              </div>
+              <p className="muted" style={{ margin: "0 0 0.5rem" }}>
+                เปิดหน้าเว็บ GrabMerchant, Wongnai Merchant และ Shopee ใน Chrome แล้วรันคำสั่งใน Terminal:
+              </p>
+              <div style={{ background: "#1e293b", color: "#f8fafc", padding: "0.5rem 0.75rem", borderRadius: "4px", fontFamily: "monospace", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "0.73rem" }}>node scripts/pull-platform-sales-quantities.mjs --period=all</span>
+                <button
+                  type="button"
+                  style={{ background: "#334155", color: "#fff", border: "0", borderRadius: "3px", padding: "0.2rem 0.5rem", fontSize: "0.72rem", cursor: "pointer" }}
+                  onClick={() => {
+                    navigator.clipboard?.writeText("node scripts/pull-platform-sales-quantities.mjs --period=all");
+                    alert("คัดลอกคำสั่งแล้ว นำไปวางใน Terminal ได้เลย");
+                  }}
+                >
+                  คัดลอก
+                </button>
+              </div>
+            </div>
+
+            <div className="mph-dialog-actions">
+              <button
+                type="button"
+                className="mph-btn mph-btn-primary"
+                onClick={() => setShowSalesSyncModal(false)}
+              >
+                ปิด
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {nameConfirm ? (
         <div className="mph-mask" role="dialog" aria-modal="true" aria-labelledby="mph-name-confirm-title">
