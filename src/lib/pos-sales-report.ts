@@ -770,8 +770,8 @@ export function subscribePosSalesRecent(
   );
 }
 
-/** Max inclusive calendar days for BO dashboard range query. */
-export const POS_DASHBOARD_MAX_RANGE_DAYS = 92;
+/** Max inclusive calendar days for BO dashboard range query (up to 1 year). */
+export const POS_DASHBOARD_MAX_RANGE_DAYS = 366;
 
 export type PosDateRange = {
   /** Bangkok midnight ms (inclusive) */

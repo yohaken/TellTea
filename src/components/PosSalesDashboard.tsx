@@ -48,7 +48,9 @@ import {
   formatStockQty,
   parseDateInput,
   startOfLocalDay,
+  addLocalDays,
 } from "@/lib/utils";
+import { PosOpsCorrelationChart } from "@/components/PosOpsCorrelationChart";
 import {
   PosDashDailyAreaChart,
   PosDashDailyTotalsTable,
@@ -64,6 +66,10 @@ import {
   ensurePosWeatherDays,
   type WeatherDayDoc,
 } from "@/lib/pos-weather";
+import { subscribeOtEntries, type OtEntry } from "@/lib/ot";
+import { subscribeProdEntries, type ProdEntry } from "@/lib/production";
+import { subscribeProdPolicy, DEFAULT_PROD_POLICY } from "@/lib/prod-policy";
+import { summarizeOpsCorrelationByDay } from "@/lib/pos-ops-correlation";
 
 function pct(part: number, whole: number): number {
   if (!(whole > 0) || !(part > 0)) return 0;
@@ -122,6 +128,10 @@ export function PosSalesDashboard({
   const [membersNote, setMembersNote] = useState<string | null>(null);
   const [weatherByDay, setWeatherByDay] = useState<Record<string, WeatherDayDoc>>({});
   const [weatherLoading, setWeatherLoading] = useState(false);
+  const [otEntries, setOtEntries] = useState<OtEntry[]>([]);
+  const [prodEntries, setProdEntries] = useState<ProdEntry[]>([]);
+  const [wasteBonusPct, setWasteBonusPct] = useState(DEFAULT_PROD_POLICY.wasteBonusPct);
+  const [opsNote, setOpsNote] = useState<string | null>(null);
 
   const clamped = useMemo(() => clampPosDateRange(range), [range]);
   const dayCount = useMemo(() => posDateRangeDayCount(clamped), [clamped]);
@@ -243,7 +253,61 @@ export function PosSalesDashboard({
 
   const summary = useMemo(() => summarizePosSalesDetailed(sales), [sales]);
   const tenders = useMemo(() => tenderSegments(summary), [summary]);
+  useEffect(() => {
+    return subscribeProdPolicy((p) => setWasteBonusPct(p.wasteBonusPct));
+  }, []);
+
+  useEffect(() => {
+    if (rangeTooLong) {
+      setOtEntries([]);
+      setProdEntries([]);
+      return;
+    }
+    setOpsNote(null);
+    const until = posRangeUntilExclusiveMs(clamped);
+    const unsubOt = subscribeOtEntries(
+      setOtEntries,
+      (err) => {
+        setOtEntries([]);
+        setOpsNote(
+          /permission|insufficient/i.test(err.message || "")
+            ? "ไม่มีสิทธิ์อ่านชง — กราฟความสัมพันธ์ใช้เฉพาะยอดขาย"
+            : "โหลดชงไม่สำเร็จ",
+        );
+      },
+      { since: clamped.startMs, until },
+    );
+    const unsubProd = subscribeProdEntries(
+      setProdEntries,
+      (err) => {
+        setProdEntries([]);
+        setOpsNote((prev) =>
+          prev ||
+          (/permission|insufficient/i.test(err.message || "")
+            ? "ไม่มีสิทธิ์อ่านผลิต — กราฟความสัมพันธ์ใช้เฉพาะยอดขาย/ชง"
+            : "โหลดผลิตไม่สำเร็จ"),
+        );
+      },
+      { since: clamped.startMs, until },
+    );
+    return () => {
+      unsubOt();
+      unsubProd();
+    };
+  }, [clamped, rangeTooLong]);
+
   const byDay = useMemo(() => summarizePosSalesByDay(sales, clamped), [sales, clamped]);
+  const opsPoints = useMemo(
+    () =>
+      summarizeOpsCorrelationByDay({
+        range: clamped,
+        salesByDay: byDay,
+        otEntries,
+        prodEntries,
+        wasteBonusPct,
+      }),
+    [clamped, byDay, otEntries, prodEntries, wasteBonusPct],
+  );
   const memberGrowth = useMemo(
     () => summarizeMemberGrowth(members, clamped),
     [members, clamped],
@@ -314,20 +378,23 @@ export function PosSalesDashboard({
     }
   }
 
-  function setPreset(kind: "today" | "month" | "last7") {
+  function setPreset(
+    kind: "today" | "last7" | "month" | "last3m" | "last6m" | "last1y",
+  ) {
     onError?.(null);
     const today = startOfLocalDay();
     if (kind === "today") {
       setRange({ startMs: today, endMs: today });
     } else if (kind === "last7") {
-      setRange(
-        clampPosDateRange({
-          startMs: today - 6 * 24 * 60 * 60 * 1000,
-          endMs: today,
-        }),
-      );
-    } else {
+      setRange(clampPosDateRange({ startMs: addLocalDays(today, -6), endMs: today }));
+    } else if (kind === "month") {
       setRange(defaultPosDashboardRange());
+    } else if (kind === "last3m") {
+      setRange(clampPosDateRange({ startMs: addLocalDays(today, -89), endMs: today }));
+    } else if (kind === "last6m") {
+      setRange(clampPosDateRange({ startMs: addLocalDays(today, -182), endMs: today }));
+    } else {
+      setRange(clampPosDateRange({ startMs: addLocalDays(today, -364), endMs: today }));
     }
     setPickerOpen(false);
   }
@@ -428,6 +495,15 @@ export function PosSalesDashboard({
           <button type="button" className="npos-slim-text-btn" onClick={() => setPreset("month")}>
             เดือนนี้
           </button>
+          <button type="button" className="npos-slim-text-btn" onClick={() => setPreset("last3m")}>
+            3 เดือน
+          </button>
+          <button type="button" className="npos-slim-text-btn" onClick={() => setPreset("last6m")}>
+            6 เดือน
+          </button>
+          <button type="button" className="npos-slim-text-btn" onClick={() => setPreset("last1y")}>
+            1 ปี
+          </button>
         </div>
       </div>
 
@@ -454,11 +530,14 @@ export function PosSalesDashboard({
 
       {stockNote ? <p className="muted pos-dash-stock-note">{stockNote}</p> : null}
       {membersNote ? <p className="muted pos-dash-stock-note">{membersNote}</p> : null}
+      {opsNote ? <p className="muted pos-dash-stock-note">{opsNote}</p> : null}
 
       {rangeTooLong ? (
         <p className="error-text">ช่วงวันที่ยาวเกิน {POS_DASHBOARD_MAX_RANGE_DAYS} วัน — ย่อช่วงก่อน</p>
       ) : null}
       {loading ? <p className="empty">กำลังโหลดแดชบอร์ด...</p> : null}
+
+      {!rangeTooLong ? <PosOpsCorrelationChart points={opsPoints} /> : null}
 
       {!loading && !rangeTooLong ? (
         <>

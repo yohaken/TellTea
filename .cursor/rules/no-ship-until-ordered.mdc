@@ -1,0 +1,28 @@
+---
+description: Never commit, push, or deploy TellTea until the user explicitly orders it
+alwaysApply: true
+---
+
+# Ship gate — ไม่ commit / deploy จนกว่าจะสั่ง
+
+TellTea (repo นี้): **ห้าม** `git commit`, `git push`, merge ไป `main`, หรือสั่ง deploy (Firebase Hosting / GitHub Actions) **จนกว่าผู้ใช้จะสั่งชัดเจน** ในข้อความรอบนั้น
+
+## ทำได้โดยไม่ต้องรอ
+
+- แก้โค้ด / รันเทส / รัน `npm run dev` local
+- bump `APP_BUILD` / `POS_BUILD` ตอนแก้ UI (เตรียมไว้ก่อน ship)
+- รายงานว่าพร้อม ship และขอคำสั่ง
+
+## ห้ามทำเอง
+
+- commit (แม้ข้อความจะบอกว่า “เสร็จแล้ว”)
+- push / force-push / merge `main`
+- `firebase deploy` / เปิดหรือรอ CI deploy โดยไม่ได้รับคำสั่ง
+- อย่าอ้างกฎ P-Note / โปรเจกต์อื่นว่าต้อง auto-ship
+
+## เมื่อได้รับคำสั่ง
+
+คำสั่งที่ถือว่าชัด เช่น “commit”, “push”, “deploy”, “ขึ้น production”, “ship”  
+ทำตาม `docs/deploy-version.md` checklist
+
+รายละเอียดเพิ่ม: `docs/deploy-version.md` § Agent ship gate

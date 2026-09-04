@@ -1,5 +1,18 @@
 # Deploy version — ให้บิวด์ขึ้นเว็บจริง
 
+## Agent ship gate (บังคับ)
+
+**ห้าม commit / push / deploy จนกว่าผู้ใช้จะสั่งชัดในแชท**
+
+| ได้โดยไม่ต้องรอ | ห้ามทำเอง |
+|-----------------|-----------|
+| แก้โค้ด · เทส · `npm run dev` local | `git commit` / `git push` / merge `main` |
+| bump `APP_BUILD` / `POS_BUILD` เตรียมไว้ | `firebase deploy` หรือสั่งรัน CI deploy |
+| บอกว่าพร้อม ship แล้วถามคำสั่ง | อ้างกฎ P-Note / โปรเจกต์อื่นว่าต้อง auto-ship |
+
+คำสั่งที่ถือว่าชัด: เช่น “commit”, “push”, “deploy”, “ขึ้น production”, “ship”  
+กฎ Cursor: `.cursor/rules/no-ship-until-ordered.mdc`
+
 ## ปัญหาที่เจอบ่อย
 
 CDN ของ Firebase ตั้ง `no-cache` สำหรับ HTML / `version.json` แล้ว — **ไม่ใช่แคชโฮสติ้ง** เป็นตัวการหลัก  

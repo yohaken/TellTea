@@ -29901,6 +29901,278 @@ a.ghost-btn {
   gap: 0.2rem 0.45rem;
 }
 
+.pos-ops-corr-card {
+  background: #fff;
+  border: 1px solid rgba(28, 42, 31, 0.1);
+  border-radius: 0.75rem;
+  padding: 0.85rem 0.95rem 0.95rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.pos-ops-corr-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.pos-ops-corr-note {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.pos-ops-corr-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.72rem;
+  color: rgba(28, 42, 31, 0.78);
+}
+
+.pos-ops-corr-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.pos-ops-legend-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0.18rem 0.4rem;
+  border-radius: 0.35rem;
+  border: 1px solid rgba(28, 42, 31, 0.12);
+  background: rgba(28, 42, 31, 0.03);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.pos-ops-legend-btn:hover {
+  border-color: rgba(28, 42, 31, 0.28);
+}
+
+.pos-ops-legend-btn.is-off {
+  opacity: 0.42;
+  text-decoration: line-through;
+  background: transparent;
+}
+
+.pos-ops-legend-btn.is-off .pos-ops-swatch {
+  opacity: 0.35;
+}
+
+.pos-ops-swatch {
+  width: 0.7rem;
+  height: 0.18rem;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
+.pos-ops-swatch--sales {
+  background: #1c6b4a;
+  height: 0.28rem;
+}
+
+.pos-ops-swatch--brew-bonus {
+  background: #2f6fed;
+}
+
+.pos-ops-swatch--morning {
+  background: #e6a817;
+}
+
+.pos-ops-swatch--evening {
+  background: #c45c26;
+}
+
+.pos-ops-swatch--late {
+  background: #6b4f9a;
+}
+
+.pos-ops-swatch--brew-qty {
+  background: #1a9bb0;
+  border-top: 1px dashed #1a9bb0;
+}
+
+.pos-ops-swatch--prod-qty {
+  background: #7a8f3d;
+  border-top: 1px dashed #7a8f3d;
+}
+
+.pos-ops-swatch--prod-bonus {
+  background: #b03d6e;
+}
+
+.pos-ops-corr-totals {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.pos-ops-corr-svg-wrap {
+  position: relative;
+  width: 100%;
+  overflow: visible;
+  padding: 0.15rem 0 0.25rem;
+}
+
+.pos-ops-corr-svg {
+  display: block;
+  width: 100%;
+  min-width: 560px;
+  height: auto;
+  overflow: visible;
+}
+
+.pos-ops-corr-axis-y,
+.pos-ops-corr-axis-x {
+  fill: rgba(28, 42, 31, 0.72);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pos-ops-corr-hit {
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.pos-ops-corr-crosshair-line {
+  stroke: rgba(28, 42, 31, 0.35);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.pos-ops-corr-dot {
+  fill: #fff;
+  stroke-width: 2;
+}
+
+.pos-ops-corr-dot.pos-ops-line--sales {
+  stroke: #1c6b4a;
+}
+.pos-ops-corr-dot.pos-ops-line--brew-bonus {
+  stroke: #2f6fed;
+}
+.pos-ops-corr-dot.pos-ops-line--morning {
+  stroke: #e6a817;
+}
+.pos-ops-corr-dot.pos-ops-line--evening {
+  stroke: #c45c26;
+}
+.pos-ops-corr-dot.pos-ops-line--late {
+  stroke: #6b4f9a;
+}
+.pos-ops-corr-dot.pos-ops-line--brew-qty {
+  stroke: #1a9bb0;
+}
+.pos-ops-corr-dot.pos-ops-line--prod-qty {
+  stroke: #7a8f3d;
+}
+.pos-ops-corr-dot.pos-ops-line--prod-bonus {
+  stroke: #b03d6e;
+}
+
+.pos-ops-corr-tooltip {
+  position: absolute;
+  top: 0.35rem;
+  z-index: 2;
+  transform: translateX(-50%);
+  min-width: 11rem;
+  max-width: min(18rem, 92%);
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.45rem;
+  border: 1px solid rgba(28, 42, 31, 0.14);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 6px 18px rgba(28, 42, 31, 0.12);
+  pointer-events: none;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: rgba(28, 42, 31, 0.88);
+}
+
+.pos-ops-corr-tooltip-date {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.pos-ops-corr-tooltip ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.18rem;
+}
+
+.pos-ops-corr-tooltip li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.pos-ops-corr-tooltip strong {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.pos-ops-line {
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.pos-ops-line--sales {
+  stroke: #1c6b4a;
+  stroke-width: 2.4;
+}
+
+.pos-ops-line--brew-bonus {
+  stroke: #2f6fed;
+}
+
+.pos-ops-line--morning {
+  stroke: #e6a817;
+  stroke-width: 1.35;
+  stroke-dasharray: 4 3;
+}
+
+.pos-ops-line--evening {
+  stroke: #c45c26;
+  stroke-width: 1.35;
+  stroke-dasharray: 4 3;
+}
+
+.pos-ops-line--late {
+  stroke: #6b4f9a;
+  stroke-width: 1.35;
+  stroke-dasharray: 4 3;
+}
+
+.pos-ops-line--brew-qty {
+  stroke: #1a9bb0;
+  stroke-width: 1.5;
+  stroke-dasharray: 2 3;
+}
+
+.pos-ops-line--prod-qty {
+  stroke: #7a8f3d;
+  stroke-width: 1.5;
+  stroke-dasharray: 2 3;
+}
+
+.pos-ops-line--prod-bonus {
+  stroke: #b03d6e;
+}
+
 .pos-dash-range-panel {
   display: flex;
   flex-wrap: wrap;
