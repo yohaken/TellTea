@@ -1337,7 +1337,7 @@ export function PosMenuChannelPriceHub({
   }, [applyHubSettings]);
 
   useEffect(() => {
-    function onMove(e: MouseEvent) {
+    function onMove(e: globalThis.MouseEvent) {
       const drag = dragRef.current;
       if (!drag) return;
       const dx = e.clientX - drag.startX;
