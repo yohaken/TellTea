@@ -27,7 +27,7 @@ assert.match(lib, /computeWasteRate/);
 assert.match(lib, /formatPolicyRate/);
 assert.match(popup, /เรทเสีย/);
 assert.match(page, /prod-col-waste-rate/);
-assert.match(page, /เรทเสีย × ทิ้ง/);
+assert.match(page, /หัก \{formatPlainNumber\(c\.wasteDeduction\)\}/);
 assert.match(prod, /wasteDeduction/);
 assert.match(popup, /หักโบนัส = เรทเสีย × จำนวนเสีย/);
 assert.match(catalog, /เสีย /);
@@ -39,7 +39,7 @@ assert.match(prod, /wasteBonusPct/);
 assert.match(prod, /computeWasteBonusMoney/);
 assert.match(page, /ProdPolicyPopup/);
 assert.match(page, /computeProdBonus\(row, policy\.wasteBonusPct\)/);
-assert.match(page, /หัก = เรทเสีย × ทิ้ง/);
+assert.match(page, /หักทิ้ง/);
 const bonusLib = read("src/lib/bonus.ts");
 const bonusPage = read("src/app/bonus/page.tsx");
 assert.match(bonusLib, /computeProdBonus\(row, wasteBonusPct\)/);
@@ -58,7 +58,7 @@ assert.match(page, /onOpenPolicy=\{canSetPolicy/);
 assert.match(popup, /ProdPolicyPopupToggle/);
 const settings = read("src/app/settings/page.tsx");
 assert.match(settings, /ProdPolicyPopupToggle/);
-assert.match(version, /APP_BUILD = 867/);
+assert.match(version, /APP_BUILD = 869/);
 
 function round2(n) {
   return Math.round(n * 100) / 100;
