@@ -1,8 +1,8 @@
 import type { MenuCategory } from "./types";
 
 /**
- * ลำดับหมวดเมนูคงที่ชั่วคราว (ช่วงที่ Firebase sortOrder ยังไม่นิ่ง)
- * ตามหน้า เมนูหลังร้าน — น้ำเปล่าอยู่ท้ายสุดเสมอ
+ * ลำดับหมวดอ้างอิง (seed / สคริปต์ช่องทาง) — ไม่ทับหน้า เมนูหลังร้าน
+ * ลำดับจริงยึด Firestore sortOrder ที่กด ↑↓ ได้
  */
 export const POS_FIXED_CATEGORY_ORDER: readonly string[] = [
   "เบเกอรี่ & ไอศครีม",
@@ -47,7 +47,7 @@ function isWaterCategory(name: string): boolean {
 }
 
 /**
- * ทับ sortOrder ตามลำดับคงที่
+ * จัดตามลิสต์อ้างอิง (ไม่ใช้กับหน้าหลังร้าน / preload)
  * - หมวดที่ไม่ได้อยู่ในลิสต์ → ต่อท้ายก่อนน้ำเปล่า
  * - น้ำเปล่า → ท้ายสุดเสมอ
  */

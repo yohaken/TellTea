@@ -84,7 +84,7 @@ export function PosMenuPhotoBackups({
         {backups.map((url, index) => (
           <li key={`backup-${index}`} className="pos-menu-photo-backup-tile">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={url} alt="" className="pos-menu-photo-backup-img" />
+            <img src={url} alt="" className="pos-menu-photo-backup-img" decoding="async" loading="lazy" />
             <div className="pos-menu-photo-backup-actions">
               <button
                 type="button"

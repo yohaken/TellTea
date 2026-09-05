@@ -17870,15 +17870,20 @@ body.modal-open .main-panel {
   align-items: start;
 }
 
+.pos-menu-editor-media {
+  position: sticky;
+  top: 0.25rem;
+}
+
 @media (max-width: 640px) {
   .pos-menu-editor-grid {
     grid-template-columns: 1fr;
   }
-}
 
-.pos-menu-editor-media {
-  position: sticky;
-  top: 0.25rem;
+  .pos-menu-editor-media {
+    position: static;
+    top: auto;
+  }
 }
 
 .pos-menu-editor-fields {
@@ -18539,6 +18544,7 @@ body.modal-open .main-panel {
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
+  contain: layout paint;
 }
 
 .pos-menu-photo-label-row {

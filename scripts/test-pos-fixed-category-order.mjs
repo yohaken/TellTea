@@ -1,5 +1,5 @@
 /**
- * POS 52 — fixed category order (water last), applied local-first then synced.
+ * Fixed-order helper stays for scripts — BOH / preload follow Firestore sortOrder.
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -10,7 +10,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
 const ver = read("src/lib/pos-version.ts");
-assert.match(ver, /POS_BUILD\s*=\s*52\b/);
+assert.match(ver, /POS_BUILD\s*=\s*223\b/);
 
 const fixedSrc = read("src/lib/pos-fixed-category-order.ts");
 assert.match(fixedSrc, /เบเกอรี่ & ไอศครีม/);
@@ -19,13 +19,18 @@ assert.match(fixedSrc, /น้ำเปล่า/);
 assert.match(fixedSrc, /applyFixedCategorySortOrder/);
 
 const preload = read("src/lib/pos-menu-preload.ts");
-assert.match(preload, /applyFixedCategorySortOrder/);
-assert.match(preload, /maybeSyncFixedOrderToFirebase/);
+assert.doesNotMatch(preload, /applyFixedCategorySortOrder/);
+assert.doesNotMatch(preload, /maybeSyncFixedOrderToFirebase/);
+assert.match(preload, /a\.sortOrder - b\.sortOrder/);
 
 const admin = read("src/components/PosMenuAdmin.tsx");
-assert.match(admin, /applyFixedCategorySortOrder/);
+assert.doesNotMatch(admin, /applyFixedCategorySortOrder/);
+assert.match(admin, /กด ↑↓ เลื่อนลำดับหมวด/);
 
-// Runtime order check via dynamic import of compiled-free logic — reimplement tiny check
+const channel = read("scripts/channel-reorder-categories-to-pos.mjs");
+assert.doesNotMatch(channel, /applyFixedCategoryOrder\(/);
+assert.match(channel, /Firestore sortOrder/);
+
 function normalizeCategoryName(name) {
   const ALIASES = {
     "* กาแฟสดนุ่มละมุน": "* กาแฟสดนมนุ่มละมุน",
@@ -69,7 +74,6 @@ const cats = [
   { id: "x", name: "* กาแฟสด อื่นๆ ร้อน", sortOrder: 2 },
 ].map((c) => ({ ...c, active: true, createdAt: 0, updatedAt: 0 }));
 
-// Inline apply copy for assertion without TS compile
 function apply(categories) {
   const byName = new Map();
   for (const cat of categories) {

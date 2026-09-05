@@ -1,15 +1,16 @@
 import { loadPosMenuCache, savePosMenuCache } from "./pos-menu-cache";
 import { loadPosMenuImages, mergeMenuItemImages, savePosMenuImages } from "./pos-menu-image-cache";
-import { applyFixedCategorySortOrder } from "./pos-fixed-category-order";
-import { reorderMenuCategories, seedPosMenuIfEmpty, subscribePosMenuBundle } from "./pos-menu";
+import { seedPosMenuIfEmpty, subscribePosMenuBundle } from "./pos-menu";
 import { getLocalPosShopSettings } from "./pos-settings";
 import type { MenuCategory, MenuItem, MenuOptionGroup } from "./types";
 
-/** fix mode → fixed name order; bestsellers → keep incoming (rank applied at sell view / snapshot). */
+/** bestsellers → keep incoming rank; otherwise Firestore / BOH sortOrder. */
 function arrangeCategoriesForMode(categories: MenuCategory[]): MenuCategory[] {
   const mode = getLocalPosShopSettings().menuArrangeMode;
   if (mode === "bestsellers") return categories;
-  return applyFixedCategorySortOrder(categories);
+  return [...categories].sort(
+    (a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "th"),
+  );
 }
 
 export type PosMenuSnapshot = {
@@ -48,9 +49,6 @@ let pendingOrderUntil = 0;
 let pendingCategories: MenuCategory[] | null = null;
 let pendingItems: MenuItem[] | null = null;
 let pendingGroups: MenuOptionGroup[] | null = null;
-/** เขียน sortOrder คงที่ขึ้น Firebase ครั้งเดียวต่อเซสชัน */
-let fixedOrderSyncStarted = false;
-
 function emit() {
   for (const fn of listeners) fn(snapshot);
 }
@@ -223,7 +221,7 @@ export function subscribePosMenuPreload(listener: (snap: PosMenuSnapshot) => voi
 
 /**
  * Local-first: จัดเรียงในเครื่องทันทีให้หน้าขายเห็นก่อน
- * จากนั้นบังคับลำดับหมวดคงที่ (ช่วงนี้) — น้ำเปล่าท้ายสุด
+ * ลำดับหมวดตามที่หลังร้านจัด (Firestore sortOrder)
  */
 export function publishLocalMenuOrder(input: {
   categories: MenuCategory[];
@@ -253,18 +251,6 @@ export function publishLocalMenuOrder(input: {
     error: null,
   };
   emit();
-}
-
-function maybeSyncFixedOrderToFirebase(categories: MenuCategory[]): void {
-  if (getLocalPosShopSettings().menuArrangeMode === "bestsellers") return;
-  if (fixedOrderSyncStarted || typeof window === "undefined") return;
-  if (!categories.length) return;
-  const desired = applyFixedCategorySortOrder(categories);
-  if (categoryOrderKey(categories) === categoryOrderKey(desired)) return;
-  fixedOrderSyncStarted = true;
-  void reorderMenuCategories(desired.map((c) => c.id)).catch(() => {
-    fixedOrderSyncStarted = false;
-  });
 }
 
 export function startPosMenuPreload(): void {
@@ -307,7 +293,6 @@ export function startPosMenuPreload(): void {
       releasePendingIfRemoteCaughtUp(categories, items, optionGroups);
 
       // มี pending ที่ยังไม่ทัน → จัดเรียงชั่วคราวบนข้อมูลสด
-      // จากนั้นบังคับลำดับหมวดคงที่เสมอ (local-first แล้วจัดอัตโนมัติ)
       const pendingApplied = applyPendingOrder(categories, items, optionGroups);
       const nextCategories = arrangeCategoriesForMode(pendingApplied.categories);
       const next = {
@@ -317,10 +302,6 @@ export function startPosMenuPreload(): void {
       };
 
       savePosMenuCache(next.categories, next.items, next.optionGroups);
-
-      if (!fromCache) {
-        maybeSyncFixedOrderToFirebase(categories);
-      }
 
       snapshot = {
         categories: next.categories,
@@ -360,7 +341,6 @@ export function retryPosMenuPreload(): void {
   }
   seedStarted = false;
   clearPendingOrder();
-  fixedOrderSyncStarted = false;
   authResubscribed = false;
   snapshot = { ...EMPTY };
   if (!applyCache()) {

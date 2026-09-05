@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Reorder Shopee / Grab / LINE MAN categories to match POS หลังร้าน
- * (applyFixedCategorySortOrder — เบเกอรี่เป็นหมวด 1 ไม่ใช่แค่ Firestore sortOrder).
+ * (Firestore sortOrder ที่จัดจากหน้า เมนูหลังร้าน — ไม่ทับด้วยลิสต์คงที่).
  * Does not create missing POS categories. Platform-only leftover cats stay at the end.
  *
  *   node scripts/channel-reorder-categories-to-pos.mjs --dry-run
@@ -39,61 +39,6 @@ const bakeryLastFlag = args.includes("--bakery-last");
 const channelArg = (args.find((a) => a.startsWith("--channel=")) || "--channel=all").slice(10);
 const channels =
   channelArg === "all" ? ["shopee", "grab", "lineman"] : channelArg.split(",").map((s) => s.trim());
-
-/** Same list as src/lib/pos-fixed-category-order.ts — hub / เมนูหลังร้าน. */
-const POS_FIXED_CATEGORY_ORDER = [
-  "เบเกอรี่ & ไอศครีม",
-  "Signature Drinks (เย็น, ปั่น)",
-  "ชานมสดคราฟต์ (เย็น, ปั่น)",
-  "ชา",
-  "ชานม (เย็น, ปั่น)",
-  "มัจฉะแท้",
-  "ผลไม้ปั่น & สมูทตี้",
-  "ชาผลไม้",
-  "กาแฟ (เย็น, ปั่น)",
-  "นม (เย็น, ปั่น)",
-  "เบาเบากับน้ำเต้าหู้ (เย็น, ปั่น)",
-  "อิตาเลียน โซดา",
-  "0% แคล ชาเพื่อสุขภาพ",
-  "0% แคล โซดาซ่าเพื่อสุขภาพ",
-  "* กาแฟสดเข้มข้น",
-  "* กาแฟสดนมนุ่มละมุน",
-  "* กาแฟสดฟิวชันสดชื่น",
-  "น้ำเปล่า",
-];
-
-function applyFixedCategoryOrder(cats) {
-  const byName = new Map();
-  for (const c of cats) {
-    const k = normName(c.name);
-    if (k && !byName.has(k)) byName.set(k, c);
-  }
-  const used = new Set();
-  const ordered = [];
-  for (const label of POS_FIXED_CATEGORY_ORDER) {
-    if (normName(label) === normName("น้ำเปล่า")) continue;
-    const hit = byName.get(normName(label));
-    if (!hit || used.has(hit.id)) continue;
-    ordered.push(hit);
-    used.add(hit.id);
-  }
-  const extras = cats
-    .filter((c) => !used.has(c.id) && normName(c.name) !== normName("น้ำเปล่า"))
-    .sort(
-      (a, b) =>
-        (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || String(a.name || "").localeCompare(b.name || "", "th"),
-    );
-  for (const c of extras) {
-    ordered.push(c);
-    used.add(c.id);
-  }
-  for (const c of cats) {
-    if (used.has(c.id)) continue;
-    ordered.push(c);
-    used.add(c.id);
-  }
-  return ordered;
-}
 
 function liveNames(list) {
   return list.map((c) => c.name);
@@ -147,7 +92,11 @@ async function loadPosCats() {
     .map((d) => ({ id: d.id, ...(d.data() || {}) }))
     .filter((c) => c.active !== false)
     .map((c) => ({ id: c.id, name: c.name || "", sortOrder: c.sortOrder ?? 0 }));
-  return applyFixedCategoryOrder(cats);
+  return cats.sort(
+    (a, b) =>
+      (a.sortOrder ?? 0) - (b.sortOrder ?? 0) ||
+      String(a.name || "").localeCompare(b.name || "", "th"),
+  );
 }
 
 function fetchShopeeCatalogs() {

@@ -12,7 +12,6 @@ import { ensurePosDeviceAuth } from "@/lib/pos-auth";
 import { setMenuDbMode, type MenuDbMode } from "@/lib/pos-menu-db";
 import { loadPosMenuCache } from "@/lib/pos-menu-cache";
 import { publishLocalMenuOrder } from "@/lib/pos-menu-preload";
-import { applyFixedCategorySortOrder } from "@/lib/pos-fixed-category-order";
 import {
   addMenuCategory,
   addMenuItem,
@@ -85,7 +84,7 @@ function countMenusUsingGroup(items: MenuItem[], groupId: string): number {
 function initialMenuFromCache() {
   const cached = loadPosMenuCache({ withImages: true });
   return {
-    categories: applyFixedCategorySortOrder(cached?.categories ?? []),
+    categories: cached?.categories ?? [],
     items: cached?.items ?? [],
     optionGroups: cached?.optionGroups ?? [],
   };
@@ -203,7 +202,7 @@ export function PosMenuAdmin({
   useEffect(() => {
     if (!authReady) return;
     const u1 = subscribeMenuCategories(
-      (list) => setCategories(applyFixedCategorySortOrder(list)),
+      setCategories,
       (e) => setError(e.message),
     );
     const u2 = subscribeMenuItems(
@@ -636,7 +635,7 @@ export function PosMenuAdmin({
           {authReady && tab === "categories" ? (
             <>
               <p className="muted pos-menu-sort-hint">
-                ลำดับหมวดตอนนี้ถูกล็อกตามที่กำหนด (น้ำเปล่าท้ายสุด) · ซิงก์ขึ้น Firebase อัตโนมัติ
+                กด ↑↓ เลื่อนลำดับหมวด — บันทึกลงหลังร้านทันที ไม่ถูกล็อกทับ
               </p>
               {categories.length ? (
                 <PosSortableList

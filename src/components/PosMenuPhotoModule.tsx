@@ -146,7 +146,7 @@ export function PosMenuPhotoModule({
       >
         {imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={imageUrl} alt="" className="pos-menu-photo-preview" />
+          <img src={imageUrl} alt="" className="pos-menu-photo-preview" decoding="async" />
         ) : (
           <div className="pos-menu-photo-placeholder">
             {uploading ? (

@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 365/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 893/);
 
 const editor = read("src/components/PosMenuItemEditor.tsx");
 const photo = read("src/components/PosMenuPhotoModule.tsx");
@@ -63,5 +63,10 @@ assert.match(css, /\.pos-menu-photo-badge\.is-on/);
 assert.match(css, /\.pos-menu-channel-table/);
 assert.match(css, /\.pos-menu-switch-row/);
 assert.match(css, /min\(44rem/);
+assert.match(css, /@media \(max-width: 640px\)/);
+assert.match(
+  css,
+  /@media \(max-width: 640px\)[\s\S]*?\.pos-menu-editor-media\s*\{[\s\S]*?position:\s*static/,
+);
 
 console.log("ok: boh-menu-editor-frame");
