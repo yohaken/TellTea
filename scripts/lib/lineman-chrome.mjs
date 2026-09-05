@@ -163,6 +163,9 @@ export function sleep(ms) {
 export const WONGNAI_GQL = {
   menuItems: "26d2378baa24724cbaa5a9acd5171dd8d69e21a6219336e9eaa75145d78d5b90",
   menuItem: "838c7884e9234fcc79635072e5cc56372f572db0fba0010cc2145a234218c965",
+  menuGroups: "ff7ef868c7cfef64385853803821b442f16093ee4d3e2484e9b799aa79ccf54a",
+  sortMenuGroup: "79f91d87973996a032af03f553d9c4a3ebfeab9ecd7de3046f8718a5face5683",
+  menuItemSeqInMenuGroupUpdate: "136b3e1a3e8a1102060aaa4276c5af15b044bfa81c8943d9e11518428fb5ae4a",
 };
 
 /**
@@ -376,8 +379,26 @@ export function setPriceOnTab(tabIndex, price, apply, windowIndex) {
         setVal(online, target);
         if (pickup) setVal(pickup, target);
 
+        const pinStatus = (() => {
+          const labels = [...document.querySelectorAll('button, [role="radio"], label')];
+          const susp = labels.find((el) => /งดขาย/.test((el.innerText || "").trim()));
+          const suspOn = !!(
+            susp &&
+            (susp.getAttribute("aria-checked") === "true" ||
+              /Mui-checked|Mui-selected/.test(String(susp.className || "")) ||
+              susp.querySelector?.("input:checked"))
+          );
+          if (suspOn) return "keep-suspended";
+          const avail = labels.find((el) => (el.innerText || "").trim() === "มีจำหน่าย");
+          if (avail) {
+            avail.click();
+            return "pinned-available";
+          }
+          return "none";
+        })();
+
         if (!${apply ? "true" : "false"}) {
-          return JSON.stringify({ dryRun: true, before, after: parse(online), nameFixed });
+          return JSON.stringify({ dryRun: true, before, after: parse(online), nameFixed, pinStatus });
         }
 
         const buttons = [...document.querySelectorAll('button')]
@@ -391,6 +412,7 @@ export function setPriceOnTab(tabIndex, price, apply, windowIndex) {
           before,
           after: parse(online),
           nameFixed,
+          pinStatus,
           saveLabel: (btn.innerText || '').trim(),
         });
       } catch (e) {
@@ -399,6 +421,111 @@ export function setPriceOnTab(tabIndex, price, apply, windowIndex) {
     })()`,
     { windowIndex },
   );
+}
+
+export function setNameOnTab(tabIndex, newName, apply, windowIndex) {
+  const esc = JSON.stringify(String(newName || ""));
+  return chromeJsJsonOnTab(
+    tabIndex,
+    `(() => {
+      try {
+        const want = ${esc};
+        const setVal = (el, v) => {
+          if (!el || el.disabled || el.readOnly) return false;
+          const proto = el instanceof HTMLTextAreaElement
+            ? HTMLTextAreaElement.prototype
+            : HTMLInputElement.prototype;
+          const setter = Object.getOwnPropertyDescriptor(proto, 'value').set;
+          el.focus();
+          setter.call(el, v);
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+          el.blur();
+          return true;
+        };
+        const nameEl = document.querySelector('input[name="nameTh"], #nameTh, input[name="name"], #name');
+        if (!nameEl) return JSON.stringify({ error: 'no name input' });
+        const before = String(nameEl.value || '');
+        if (before === want) return JSON.stringify({ skip: true, before, after: before });
+        setVal(nameEl, want);
+        const pinStatus = (() => {
+          const labels = [...document.querySelectorAll('button, [role="radio"], label')];
+          const susp = labels.find((el) => /งดขาย/.test((el.innerText || "").trim()));
+          const suspOn = !!(
+            susp &&
+            (susp.getAttribute("aria-checked") === "true" ||
+              /Mui-checked|Mui-selected/.test(String(susp.className || "")) ||
+              susp.querySelector?.("input:checked"))
+          );
+          if (suspOn) return "keep-suspended";
+          const avail = labels.find((el) => (el.innerText || "").trim() === "มีจำหน่าย");
+          if (avail) {
+            avail.click();
+            return "pinned-available";
+          }
+          return "none";
+        })();
+        if (!${apply ? "true" : "false"}) return JSON.stringify({ dryRun: true, before, after: nameEl.value, pinStatus });
+        const buttons = [...document.querySelectorAll('button')].filter((b) => (b.innerText || '').trim() === 'บันทึก');
+        const prefer = buttons.find((b) => b.type === 'submit');
+        const btn = prefer || buttons[buttons.length - 1] || buttons[0];
+        if (!btn) return JSON.stringify({ error: 'no save btn', before, after: nameEl.value, pinStatus });
+        btn.click();
+        return JSON.stringify({ saved: true, before, after: nameEl.value, pinStatus });
+      } catch (e) {
+        return JSON.stringify({ error: String(e && e.message || e) });
+      }
+    })()`,
+    { windowIndex },
+  );
+}
+
+export async function saveNameAndRead(tabIndex, newName, apply, windowIndex) {
+  const attempt = setNameOnTab(tabIndex, newName, apply, windowIndex);
+  if (!apply || attempt?.error || attempt?.dryRun || attempt?.skip) return attempt;
+  await sleep(2500);
+  for (let i = 0; i < 3; i++) {
+    const clicked = chromeJsJsonOnTab(
+      tabIndex,
+      `(() => {
+        for (const btn of document.querySelectorAll('button')) {
+          const t = (btn.innerText || '').trim();
+          if (t === 'บันทึกการเปลี่ยนแปลง' || t === 'ยืนยัน' || t === 'ตกลง' || t === 'OK') {
+            btn.click();
+            return t;
+          }
+        }
+        return 'none';
+      })()`,
+      { windowIndex },
+    );
+    if (clicked === "none") break;
+    await sleep(1200);
+  }
+  await sleep(1800);
+  const after = chromeJsJsonOnTab(
+    tabIndex,
+    `(() => {
+      const nameEl = document.querySelector('input[name="nameTh"], input[name="name"], #nameTh, #name');
+      const body = document.body.innerText || '';
+      const popupBits = [];
+      for (const el of document.querySelectorAll('[role="dialog"], [class*="modal"], [class*="Modal"], [class*="toast"]')) {
+        const t = (el.innerText || '').trim();
+        if (t && t.length < 800) popupBits.push(t);
+      }
+      const popupText = popupBits.join(' | ').slice(0, 500);
+      const specialNameBlock = /ไม่สามารถใช้อักษรพิเศษได้/.test(body + popupText);
+      return JSON.stringify({
+        afterName: nameEl ? nameEl.value : null,
+        onEdit: location.href.includes('/edit'),
+        popupText,
+        blocked: specialNameBlock || /ไม่สามารถบันทึก|บันทึกไม่สำเร็จ/.test(popupText),
+        specialNameBlock,
+      });
+    })()`,
+    { windowIndex },
+  );
+  return { ...attempt, ...after, afterName: after?.afterName ?? attempt?.after };
 }
 
 export async function savePriceAndRead(tabIndex, price, apply, windowIndex) {

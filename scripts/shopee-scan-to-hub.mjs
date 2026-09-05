@@ -11,7 +11,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { collection, doc, getDoc, getDocs, setDoc } from "firebase/firestore";
 import { getSeedDb } from "./lib/pos-firebase-seed.mjs";
-import { bestPosForGrab, isStoreOnlyName } from "./lib/name-sync-match.mjs";
+import { isStoreOnlyName } from "./lib/name-sync-match.mjs";
 import { normName } from "./lib/shopee-chrome.mjs";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
@@ -29,26 +29,11 @@ function scoreOpt(a, b) {
   const na = normName(a);
   const nb = normName(b);
   if (!na || !nb) return 0;
-  if (na === nb) return 1;
-  if (na.includes(nb) || nb.includes(na)) return 0.85;
-  return 0;
+  return na === nb ? 1 : 0;
 }
 
 function bestOptMatch(liveGroup, liveName, posChoices) {
-  let best = null;
-  for (const c of posChoices) {
-    const nameScore = scoreOpt(liveName, c.name);
-    if (nameScore < 0.85) continue;
-    const groupScore = scoreOpt(liveGroup, c.groupName);
-    const score = nameScore * 0.7 + groupScore * 0.3;
-    if (!best || score > best.score) best = { ...c, score };
-  }
-  // fallback: exact choice name only if unique
-  if (!best) {
-    const exact = posChoices.filter((c) => scoreOpt(liveName, c.name) >= 1);
-    if (exact.length === 1) best = { ...exact[0], score: 0.9 };
-  }
-  return best;
+  return posChoices.find((c) => scoreOpt(liveName, c.name) >= 1 && scoreOpt(liveGroup, c.groupName) >= 1) || null;
 }
 
 async function main() {
@@ -98,9 +83,7 @@ async function main() {
       unmatchedMenus += 1;
       continue;
     }
-    const hit =
-      deliveryPos.find((p) => normName(p.name) === normName(it.name)) ||
-      bestPosForGrab(it.name, deliveryPos, { minScore: 0.55 });
+    const hit = deliveryPos.find((p) => !usedPos.has(p.id) && normName(p.name) === normName(it.name));
     if (!hit || usedPos.has(hit.id)) {
       unmatchedMenus += 1;
       continue;
@@ -145,6 +128,7 @@ async function main() {
   const next = {
     items,
     options,
+    unmatched: Array.isArray(current.unmatched) ? current.unmatched : [],
     updatedAt: Date.now(),
   };
 

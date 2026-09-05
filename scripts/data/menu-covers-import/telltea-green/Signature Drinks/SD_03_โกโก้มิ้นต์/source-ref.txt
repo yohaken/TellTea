@@ -1,0 +1,3 @@
+source=เมนูแยก/Signature Drinks/SD_03_โกโก้มิ้นต์.jpg
+sourceDriveId=1M73Aa35K8gS470fmYoGMtBGONBLoZ5hW
+posName=โกโก้มิ้นต์ (เย็น/ปั่น)

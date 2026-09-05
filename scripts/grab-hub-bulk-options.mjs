@@ -33,7 +33,7 @@ import {
   applyChannelRule,
   loadHubChannelContext,
 } from "./lib/hub-channel-targets.mjs";
-import { loadGrabExportCsv, normName, parseOptionGroup } from "./lib/grab-csv.mjs";
+import { loadGrabExportCsv, namesEqual, normName, parseOptionGroup } from "./lib/grab-csv.mjs";
 import {
   findGrabTab,
   chromeJsOnTab,
@@ -115,26 +115,8 @@ function extractCsvFromZip(zipPath) {
   return join(dest, csv);
 }
 
-function scoreOpt(grabName, grabGroup, pos) {
-  const n = normName(grabName);
-  const pn = normName(pos.name);
-  if (!n || !pn) return 0;
-  let s = 0;
-  if (n === pn) s = 0.9;
-  else if (pn.includes(n) || n.includes(pn)) s = 0.7;
-  else return 0;
-  const gg = normName(grabGroup);
-  const pg = normName(pos.groupName);
-  if (gg && pg && (gg === pg || gg.includes(pg) || pg.includes(gg))) s += 0.15;
-  return s;
-}
-
 function bestPosChoice(grabName, grabGroup, posChoices) {
-  const ranked = posChoices
-    .map((p) => ({ p, score: scoreOpt(grabName, grabGroup, p) }))
-    .filter((x) => x.score >= 0.7)
-    .sort((a, b) => b.score - a.score);
-  return ranked[0]?.p || null;
+  return posChoices.find((p) => namesEqual(grabName, p.name) && namesEqual(grabGroup, p.groupName)) || null;
 }
 
 /** Key for option target map — group+name (same choice name can differ by promo group). */
@@ -226,7 +208,7 @@ function buildPlan(rows, posChoices) {
         if (pos.priceDelta === 0 && o.price > 0) {
           const gg = normName(g.groupName);
           const pg = normName(pos.groupName);
-          const groupOk = gg && pg && (gg === pg || gg.includes(pg) || pg.includes(gg));
+          const groupOk = gg && pg && gg === pg;
           if (!groupOk || pos.target !== 0) continue;
         }
         if (o.price === pos.target) continue;

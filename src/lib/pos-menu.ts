@@ -78,6 +78,9 @@ function mapItem(id: string, data: Record<string, unknown>): MenuItem {
       ? { hubNote: data.hubNote.trim() }
       : {}),
     imageUrl: typeof data.imageUrl === "string" && data.imageUrl ? data.imageUrl : undefined,
+    imageBackups: Array.isArray(data.imageBackups)
+      ? data.imageBackups.filter((x): x is string => typeof x === "string" && Boolean(x.trim()))
+      : undefined,
     description: typeof data.description === "string" ? data.description : undefined,
     optionGroupIds: optionGroupIds?.length ? optionGroupIds : undefined,
     ...(typeof data.code === "string" && data.code.trim() ? { code: data.code.trim() } : {}),
@@ -341,7 +344,12 @@ export type MenuItemPatch = Partial<
   storeOnly?: boolean | null;
   /** null / ว่าง = ลบโน้ต hub */
   hubNote?: string | null;
+  /** null / [] = ลบฟิลด์รูปสำรอง */
+  imageBackups?: string[] | null;
 };
+
+/** จำนวนรูปสำรองสูงสุดต่อเมนู (data URL ใน Firestore) */
+export const MENU_IMAGE_BACKUP_MAX = 4;
 
 export async function updateMenuItem(id: string, patch: MenuItemPatch): Promise<void> {
   const next: Record<string, unknown> = { updatedAt: Date.now() };
@@ -359,6 +367,16 @@ export async function updateMenuItem(id: string, patch: MenuItemPatch): Promise<
   if (patch.visibleOnPos != null) next.visibleOnPos = patch.visibleOnPos;
   if (patch.recommended != null) next.recommended = patch.recommended;
   if (patch.imageUrl != null) next.imageUrl = patch.imageUrl.trim();
+  if (patch.imageBackups !== undefined) {
+    if (patch.imageBackups == null || !patch.imageBackups.length) {
+      next.imageBackups = deleteField();
+    } else {
+      next.imageBackups = patch.imageBackups
+        .map((u) => String(u || "").trim())
+        .filter(Boolean)
+        .slice(0, MENU_IMAGE_BACKUP_MAX);
+    }
+  }
   if (patch.description != null) next.description = patch.description.trim();
   if (patch.optionGroupIds != null) next.optionGroupIds = patch.optionGroupIds;
   if (patch.sortOrder != null) next.sortOrder = patch.sortOrder;
@@ -451,6 +469,7 @@ export async function duplicateMenuItem(item: MenuItem): Promise<string> {
     nameEn: item.nameEn,
     description: item.description,
     imageUrl: item.imageUrl || "",
+    imageBackups: item.imageBackups?.length ? item.imageBackups : null,
     recommended: item.recommended === true,
     visibleOnPos: item.visibleOnPos !== false,
     active: item.active !== false,

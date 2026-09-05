@@ -1,10 +1,17 @@
 import { doc, getDoc, getDocFromServer, onSnapshot, setDoc, type Unsubscribe } from "firebase/firestore";
 import {
   DELIVERY_CHANNELS,
+  emptyChannelLiveStore,
+  keepLiveOrderFields,
+  UNMATCHED_CLEAN_ACTIONS,
   type ChannelLiveByItem,
   type ChannelLiveObservation,
   type ChannelLiveStore,
   type DeliveryChannel,
+  type UnmatchedCleanAction,
+  type UnmatchedLiveEntry,
+  type UnmatchedLiveKind,
+  type UnmatchedLiveReason,
 } from "@/lib/menu-channel-price";
 import { getMenuDb } from "@/lib/pos-menu-db";
 
@@ -27,6 +34,14 @@ function parseObservation(raw: unknown): ChannelLiveObservation | null {
   const applyStatus = typeof o.applyStatus === "string" ? o.applyStatus : null;
   const applyNote = typeof o.applyNote === "string" ? o.applyNote : null;
   const cooldownUntil = typeof o.cooldownUntil === "string" ? o.cooldownUntil : null;
+  const category = typeof o.category === "string" && o.category.trim() ? o.category : null;
+  const sortIndex =
+    typeof o.sortIndex === "number" && Number.isFinite(o.sortIndex) ? o.sortIndex : null;
+  const choiceIndex =
+    typeof o.choiceIndex === "number" && Number.isFinite(o.choiceIndex) ? o.choiceIndex : null;
+  const groupNames = Array.isArray(o.groupNames)
+    ? o.groupNames.filter((n): n is string => typeof n === "string" && n.trim().length > 0)
+    : null;
   return {
     name,
     price,
@@ -40,6 +55,10 @@ function parseObservation(raw: unknown): ChannelLiveObservation | null {
     ...(applyStatus ? { applyStatus } : {}),
     ...(applyNote ? { applyNote } : {}),
     ...(cooldownUntil ? { cooldownUntil } : {}),
+    ...(category ? { category } : {}),
+    ...(sortIndex != null ? { sortIndex } : {}),
+    ...(choiceIndex != null ? { choiceIndex } : {}),
+    ...(groupNames?.length ? { groupNames } : {}),
   };
 }
 
@@ -58,19 +77,93 @@ function parseByKeyMap(raw: unknown): ChannelLiveByItem {
   return out;
 }
 
+const UNMATCHED_KINDS = new Set<UnmatchedLiveKind>(["item", "option", "category"]);
+const UNMATCHED_REASONS = new Set<UnmatchedLiveReason>([
+  "unmatched_name",
+  "duplicate",
+  "extra",
+  "hidden",
+]);
+
+function parseUnmatchedEntry(raw: unknown): UnmatchedLiveEntry | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const channel = o.channel;
+  const kind = o.kind;
+  const reason = o.reason;
+  if (typeof channel !== "string" || !DELIVERY_CHANNELS.includes(channel as DeliveryChannel)) {
+    return null;
+  }
+  if (typeof kind !== "string" || !UNMATCHED_KINDS.has(kind as UnmatchedLiveKind)) return null;
+  if (typeof reason !== "string" || !UNMATCHED_REASONS.has(reason as UnmatchedLiveReason)) {
+    return null;
+  }
+  const name = typeof o.name === "string" ? o.name : "";
+  const price =
+    typeof o.price === "number" && Number.isFinite(o.price) ? o.price : null;
+  if (!name.trim() && price == null) return null;
+  const id = typeof o.id === "string" && o.id.trim() ? o.id : "";
+  const group = typeof o.group === "string" && o.group.trim() ? o.group : null;
+  const externalId = typeof o.externalId === "string" && o.externalId.trim() ? o.externalId : null;
+  const related =
+    typeof o.related === "number" && Number.isFinite(o.related) ? o.related : undefined;
+  const rawAction = o.cleanAction;
+  const cleanAction: UnmatchedCleanAction | undefined =
+    typeof rawAction === "string" && UNMATCHED_CLEAN_ACTIONS.includes(rawAction as UnmatchedCleanAction)
+      ? (rawAction as UnmatchedCleanAction)
+      : reason === "hidden"
+        ? "blocked"
+        : kind === "category"
+          ? "delete_empty_cat"
+          : related != null && related > 0
+            ? "review"
+            : kind === "option" && reason === "duplicate"
+              ? "delete_orphan"
+              : "review";
+  return {
+    id:
+      id ||
+      `${channel}:${kind}:${externalId || ""}:${name}:${group || ""}`,
+    kind: kind as UnmatchedLiveKind,
+    channel: channel as DeliveryChannel,
+    name: name || "(ไม่มีชื่อ)",
+    group,
+    price,
+    externalId,
+    ...(related != null ? { related } : {}),
+    reason: reason as UnmatchedLiveReason,
+    cleanAction,
+    scannedAt: typeof o.scannedAt === "string" ? o.scannedAt : null,
+  };
+}
+
+function parseUnmatchedList(raw: unknown): UnmatchedLiveEntry[] {
+  if (!Array.isArray(raw)) return [];
+  const out: UnmatchedLiveEntry[] = [];
+  const seen = new Set<string>();
+  for (const row of raw) {
+    const e = parseUnmatchedEntry(row);
+    if (!e || seen.has(e.id)) continue;
+    seen.add(e.id);
+    out.push(e);
+  }
+  return out;
+}
+
 export function normalizeChannelLiveStore(data: unknown): ChannelLiveStore {
-  if (!data || typeof data !== "object") return { items: {}, options: {} };
+  if (!data || typeof data !== "object") return emptyChannelLiveStore();
   const o = data as Record<string, unknown>;
   return {
     items: parseByKeyMap(o.items),
     options: parseByKeyMap(o.options),
+    unmatched: parseUnmatchedList(o.unmatched),
     updatedAt: typeof o.updatedAt === "number" ? o.updatedAt : undefined,
   };
 }
 
 export async function loadChannelLiveStore(): Promise<ChannelLiveStore> {
   const snap = await getDoc(doc(getMenuDb(), COL, DOC_ID));
-  if (!snap.exists()) return { items: {}, options: {} };
+  if (!snap.exists()) return emptyChannelLiveStore();
   return normalizeChannelLiveStore(snap.data());
 }
 
@@ -78,7 +171,7 @@ export async function loadChannelLiveStore(): Promise<ChannelLiveStore> {
 export async function loadChannelLiveStoreFromServer(): Promise<ChannelLiveStore> {
   try {
     const snap = await getDocFromServer(doc(getMenuDb(), COL, DOC_ID));
-    if (!snap.exists()) return { items: {}, options: {} };
+    if (!snap.exists()) return emptyChannelLiveStore();
     return normalizeChannelLiveStore(snap.data());
   } catch {
     return loadChannelLiveStore();
@@ -93,7 +186,7 @@ export function subscribeChannelLiveStore(
   return onSnapshot(
     doc(getMenuDb(), COL, DOC_ID),
     (snap) => {
-      onNext(snap.exists() ? normalizeChannelLiveStore(snap.data()) : { items: {}, options: {} });
+      onNext(snap.exists() ? normalizeChannelLiveStore(snap.data()) : emptyChannelLiveStore());
     },
     (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
   );
@@ -122,7 +215,7 @@ function withoutApplyNote(
   if (obs.targetPrice != null) next.targetPrice = obs.targetPrice;
   if (obs.applyStatus) next.applyStatus = obs.applyStatus;
   if (obs.cooldownUntil) next.cooldownUntil = obs.cooldownUntil;
-  return next;
+  return keepLiveOrderFields(obs, next);
 }
 
 function stripApplyNotesMap(map: ChannelLiveByItem): ChannelLiveByItem {
@@ -177,7 +270,15 @@ function writeObservation(
     if (observation.applyStatus) next.applyStatus = observation.applyStatus;
     if (observation.applyNote) next.applyNote = observation.applyNote;
     if (observation.cooldownUntil) next.cooldownUntil = observation.cooldownUntil;
-    row[channel] = next;
+    if (observation.category) next.category = observation.category;
+    if (observation.sortIndex != null && Number.isFinite(Number(observation.sortIndex))) {
+      next.sortIndex = Number(observation.sortIndex);
+    }
+    if (observation.choiceIndex != null && Number.isFinite(Number(observation.choiceIndex))) {
+      next.choiceIndex = Number(observation.choiceIndex);
+    }
+    if (observation.groupNames?.length) next.groupNames = observation.groupNames;
+    row[channel] = keepLiveOrderFields(row[channel], next);
   }
   if (!Object.keys(row).length) delete nextMap[id];
   else nextMap[id] = row;
@@ -228,5 +329,6 @@ export async function clearChannelLiveForChannels(
   return saveChannelLiveStore({
     items: clearMapChannels(current.items, channels),
     options: clearMapChannels(current.options, channels),
+    unmatched: (current.unmatched || []).filter((e) => !channels.includes(e.channel)),
   });
 }

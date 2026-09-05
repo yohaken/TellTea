@@ -341,4 +341,65 @@ assert.equal(isOptionStoreOnlyRow("2 shot", "ช็อต", "milk", storeOnlyGid
 assert.equal(isOptionStoreOnlyRow("น้ำเชื่อม เฉพาะหน้าร้าน", "หวาน", "milk", storeOnlyGids), true);
 assert.equal(isOptionStoreOnlyRow("2 shot", "ท็อปปิ้งเฉพาะหน้าร้าน", "milk", storeOnlyGids), true);
 
+const nameMatch = read("src/lib/menu-name-match.ts");
+assert.match(nameMatch, /export function namesEqual/);
+assert.match(nameMatch, /namesEqual\(queryName, c\.name\)/);
+assert.doesNotMatch(
+  nameMatch.slice(nameMatch.indexOf("export function bestMatchByName")),
+  /scoreNames/,
+);
+
+assert.match(lib, /namesEqual\(item\.name, liveName\)/);
+assert.match(lib, /namesEqual\(posName, liveName\)/);
+assert.doesNotMatch(lib, /foldMenuName/);
+assert.doesNotMatch(lib, /scoreNames/);
+
+assert.match(lib, /export type UnmatchedLiveEntry/);
+assert.match(lib, /filter === "extras"/);
+assert.match(lib, /extras: number/);
+assert.match(lib, /classifyUnmatchedItemReason/);
+assert.match(hub, /\["extras"/);
+assert.match(hub, /mph-orphan-row/);
+assert.match(hub, /คิวจัดบนแพลตฟอร์ม · ไม่มีในหลังร้าน/);
+assert.match(hub, /unmatchedCleanActionHead/);
+assert.match(hub, /statusFilter !== "extras"/);
+assert.doesNotMatch(hub, /statusFilter !== "all" && statusFilter !== "extras"/);
+assert.match(lib, /UnmatchedCleanAction/);
+assert.match(lib, /delete_orphan/);
+assert.match(lib, /order_issue/);
+assert.match(lib, /sequenceWrongIds/);
+assert.match(hub, /HubChMark/);
+assert.match(hub, /categoryOrderStatus/);
+assert.match(hub, /liveSortRank/);
+assert.match(hub, /mph-cat-rank/);
+assert.match(hub, /\["order_issue"/);
+assert.match(css, /mph-orphan-section/);
+assert.match(css, /mph-orphan-kind/);
+assert.match(css, /mph-orphan-action-head/);
+
+const ingest = read("scripts/channel-scan-to-hub.mjs");
+assert.match(ingest, /unmatchedEntries/);
+assert.match(ingest, /classifyItemReason/);
+assert.match(ingest, /leftoverOpts/);
+assert.match(ingest, /cleanAction/);
+assert.match(ingest, /e\.channel !== channel/);
+
+const lmPlan = read("scripts/lib/hub-channel-targets.mjs");
+assert.match(lmPlan, /overrideN/);
+assert.match(lmPlan, /fromOverride: !!override/);
+const lmApply = read("scripts/lineman-chrome-batch-update.mjs");
+assert.match(lmApply, /ระบุราคา/);
+assert.match(lmApply, /overrideN/);
+const lmOpt = read("scripts/lineman-chrome-batch-update-options.mjs");
+assert.match(lmOpt, /เป้าผสม/);
+assert.match(lmOpt, /fromOverride: !!ov/);
+
+const liveWrite = read("scripts/lib/hub-live-write.mjs");
+assert.match(liveWrite, /unmatched/);
+assert.match(liveWrite, /Array\.isArray\(data\.unmatched\)/);
+
+const liveStore = read("src/lib/menu-price-hub-live.ts");
+assert.match(liveStore, /parseUnmatchedList/);
+assert.match(liveStore, /unmatched: \(current\.unmatched \|\| \[\]\)\.filter/);
+
 console.log("ok menu hub price modes");

@@ -290,7 +290,13 @@ export type MenuItem = {
   active: boolean;
   visibleOnPos?: boolean;
   recommended?: boolean;
+  /** รูปหลักที่แสดงขาย / หน้าร้าน */
   imageUrl?: string;
+  /**
+   * รูปสำรองสำหรับเทียบ/ออกแบบใหม่ — ไม่แสดงขายจนกว่าจะสลับขึ้นเป็น imageUrl
+   * เก็บเป็น data URL JPEG 480 เหมือนรูปหลัก · จำกัดจำนวนใน UI
+   */
+  imageBackups?: string[];
   description?: string;
   /** ลำดับกลุ่มตัวเลือกตอนขาย */
   optionGroupIds?: string[];

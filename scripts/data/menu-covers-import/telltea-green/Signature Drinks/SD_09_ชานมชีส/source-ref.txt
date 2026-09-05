@@ -1,0 +1,5 @@
+source=เมนูแยก/ชานม/MT_01_ชานมชีส.jpg
+sourceDriveId=1en865uCqellM0X07cO9HudSdhmIwv-NF
+posName=ชานมชีส (เย็น/ปั่น)
+logo=cup-center
+bg=branch+disk

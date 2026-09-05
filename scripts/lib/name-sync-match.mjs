@@ -2,7 +2,8 @@
  * Match Grab menu names → POS (storefront) for rename planning.
  * Excludes POS "เฉพาะหน้าร้าน" from delivery-channel sync focus.
  */
-import { normName } from "./grab-csv.mjs";
+import { namesEqual, normName } from "./grab-csv.mjs";
+export { namesEqual };
 
 export const STORE_ONLY_RE = /เฉพาะหน้าร้าน/;
 
@@ -57,18 +58,9 @@ export function scoreGrabToPos(grabName, posName) {
   return s;
 }
 
-export function bestPosForGrab(grabName, posItems, { minScore = 0.5 } = {}) {
-  const ranked = posItems
-    .map((p) => ({ ...p, score: scoreGrabToPos(grabName, p.name) }))
-    .filter((p) => p.score >= minScore)
-    .sort((a, b) => {
-      const aSame =
-        (isHotName(grabName) && isHotName(a.name)) || (isColdName(grabName) && isColdName(a.name)) ? 1 : 0;
-      const bSame =
-        (isHotName(grabName) && isHotName(b.name)) || (isColdName(grabName) && isColdName(b.name)) ? 1 : 0;
-      return bSame - aSame || b.score - a.score;
-    });
-  return ranked[0] || null;
+export function bestPosForGrab(grabName, posItems) {
+  const hit = posItems.find((p) => namesEqual(grabName, p.name));
+  return hit ? { ...hit, score: 1 } : null;
 }
 
 /** Grab items whose name ≠ any POS name; pair to best POS for rename Grab → POS. */

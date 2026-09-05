@@ -11,6 +11,19 @@ export function normName(s: string): string {
     .trim();
 }
 
+/** Exact name compare (NBSP / extra spaces only). No fold, no similarity score. */
+export function namesEqual(a: string, b: string): boolean {
+  return normName(a) === normName(b);
+}
+
+/** Ignore parentheses so "ชานมไข่มุก (เย็น/ปั่น)" ≡ "ชานมไข่มุก เย็น/ปั่น". */
+export function foldMenuName(s: string): string {
+  return normName(s)
+    .replace(/[()（）]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function isStoreOnlyName(name: string): boolean {
   return STORE_ONLY_RE.test(String(name || ""));
 }
@@ -70,30 +83,12 @@ export function scoreNames(a: string, b: string): number {
 
 export type NamedItem = { name: string; id?: string };
 
+/** Exact name match only (after normName). minScore is ignored. */
 export function bestMatchByName<T extends NamedItem>(
   queryName: string,
   candidates: T[],
-  { minScore = 0.5 }: { minScore?: number } = {},
+  _opts?: { minScore?: number },
 ): (T & { score: number }) | null {
-  const exactNorm = normName(queryName);
-  const exact = candidates.find((c) => normName(c.name) === exactNorm);
-  if (exact) return { ...exact, score: 1 };
-
-  const ranked = candidates
-    .map((p) => ({ ...p, score: scoreNames(queryName, p.name) }))
-    .filter((p) => p.score >= minScore)
-    .sort((a, b) => {
-      const aSame =
-        (isHotName(queryName) && isHotName(a.name)) ||
-        (isColdName(queryName) && isColdName(a.name))
-          ? 1
-          : 0;
-      const bSame =
-        (isHotName(queryName) && isHotName(b.name)) ||
-        (isColdName(queryName) && isColdName(b.name))
-          ? 1
-          : 0;
-      return bSame - aSame || b.score - a.score;
-    });
-  return ranked[0] || null;
+  const exact = candidates.find((c) => namesEqual(queryName, c.name));
+  return exact ? { ...exact, score: 1 } : null;
 }

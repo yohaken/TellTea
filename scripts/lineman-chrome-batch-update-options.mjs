@@ -124,13 +124,21 @@ async function buildDiffs() {
   }
 
   const diffs = [];
+  let overrideN = 0;
+  let columnN = 0;
+  let atTarget = 0;
   for (const o of live.options || []) {
     const pos = bestPos(o.group, o.name);
     if (!pos) continue;
     const ov = overrides[pos.key]?.lineman;
+    if (ov) overrideN += 1;
+    else columnN += 1;
     const target = applyChannelRule(pos.store, ov || rule);
     const current = Number(o.price);
-    if (current === target) continue;
+    if (current === target) {
+      atTarget += 1;
+      continue;
+    }
     if (current > 0 && Math.abs(target - current) / current > 1 && !allowBigJump) {
       console.log(`skip >100% ${o.group} | ${o.name}: ${current}→${target}`);
       continue;
@@ -144,6 +152,8 @@ async function buildDiffs() {
       url: o.url,
       id: o.id,
       posKey: pos.key,
+      fromOverride: !!ov,
+      rule: ov || rule,
     });
   }
 
@@ -157,7 +167,15 @@ async function buildDiffs() {
     group: rows[0].group,
     rows,
   }));
-  const payload = { at: new Date().toISOString(), rule, diffs, byUrl: groups };
+  const payload = {
+    at: new Date().toISOString(),
+    rule,
+    overrideN,
+    columnN,
+    atTarget,
+    diffs,
+    byUrl: groups,
+  };
   writeFileSync(DIFF, JSON.stringify(payload, null, 2) + "\n");
   return payload;
 }
@@ -443,6 +461,9 @@ async function main() {
   if (limit > 0) groups = groups.slice(0, limit);
 
   // Skip ชีส-only already done? Still include full topping group remaining.
+  console.log(
+    `เป้าผสม · ระบุราคา ${payload.overrideN ?? 0} · คอลัมน์ ${payload.rule?.mode || "gp"} ${payload.rule?.value ?? "?"} ${payload.columnN ?? 0} · at-target ${payload.atTarget ?? 0}`,
+  );
   console.log(
     `Groups to apply: ${groups.length}, choices: ${groups.reduce((n, g) => n + g.rows.length, 0)} dryRun=${dryRun}`,
   );

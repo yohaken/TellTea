@@ -4,7 +4,7 @@
  */
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { getSeedDb } from "./pos-firebase-seed.mjs";
-import { bestPosForGrab, isStoreOnlyName } from "./name-sync-match.mjs";
+import { isStoreOnlyName } from "./name-sync-match.mjs";
 import { normName } from "./grab-csv.mjs";
 
 export function applyChannelRule(base, rule) {
@@ -79,7 +79,7 @@ export async function buildGrabHubPlan(
   let noteSkip = 0;
 
   for (const it of scanItems || []) {
-    const pos = bestPosForGrab(it.name, items) || posByName.get(normName(it.name));
+    const pos = posByName.get(normName(it.name));
     if (!pos) continue;
     matched++;
     if (noteNeedle && !(pos.hubNote || "").toLowerCase().includes(noteNeedle)) {
@@ -158,7 +158,7 @@ export async function mapShopeeScanToPos(scanItems) {
   }
   const out = new Map();
   for (const it of scanItems || []) {
-    const pos = bestPosForGrab(it.name, items) || posByName.get(normName(it.name));
+    const pos = posByName.get(normName(it.name));
     if (!pos || pos.storeOnly) continue;
     const override = itemOverrides[pos.id]?.shopee;
     const rule = override || shopeeRule;
@@ -191,7 +191,8 @@ export async function buildShopeeHubPlan(scanItems, { tracker = { items: {} } } 
   let blockedSkip = 0;
 
   for (const it of scanItems || []) {
-    const pos = bestPosForGrab(it.name, items) || posByName.get(normName(it.name));
+    if (/^ลบไม่ได้\s/.test(String(it.name || ""))) continue;
+    const pos = posByName.get(normName(it.name));
     if (!pos) continue;
     matched++;
     if (pos.storeOnly) {
@@ -261,9 +262,11 @@ export async function buildLinemanHubPlan(scanItems, { tracker = { items: {} }, 
   let storeOnlySkip = 0;
   let atTarget = 0;
   let blockedSkip = 0;
+  let overrideN = 0;
+  let columnN = 0;
 
   for (const it of scanItems || []) {
-    const pos = bestPosForGrab(it.name, items) || posByName.get(normName(it.name));
+    const pos = posByName.get(normName(it.name));
     if (!pos) continue;
     matched++;
     if (pos.storeOnly) {
@@ -272,6 +275,8 @@ export async function buildLinemanHubPlan(scanItems, { tracker = { items: {} }, 
     }
     const override = itemOverrides[pos.id]?.lineman;
     const rule = override || linemanRule;
+    if (override) overrideN += 1;
+    else columnN += 1;
     const base = Math.max(0, Number(pos.price) || 0);
     const target = applyChannelRule(base, rule);
     const entry = tracker.items?.[it.id] || tracker.items?.[String(it.id)] || tracker.items?.[it.name];
@@ -303,6 +308,7 @@ export async function buildLinemanHubPlan(scanItems, { tracker = { items: {} }, 
       posName: pos.name,
       storePrice: base,
       rule,
+      fromOverride: !!override,
       source: "hub",
     });
   }
@@ -317,6 +323,8 @@ export async function buildLinemanHubPlan(scanItems, { tracker = { items: {} }, 
       blockedSkip,
       remaining: todo.length,
       retryBlocked,
+      overrideN,
+      columnN,
     },
   };
 }

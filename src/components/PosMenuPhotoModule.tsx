@@ -104,6 +104,10 @@ export function PosMenuPhotoModule({
 
   return (
     <div className="pos-menu-photo-module">
+      <div className="pos-menu-photo-label-row">
+        <h3 className="pos-menu-photo-label">รูปหลัก</h3>
+        <span className="muted pos-menu-photo-label-sub">แสดงขาย</span>
+      </div>
       <div
         className={[
           "pos-menu-photo-drop",
@@ -115,7 +119,7 @@ export function PosMenuPhotoModule({
           .join(" ")}
         role="button"
         tabIndex={0}
-        aria-label={imageUrl ? "เปลี่ยนรูปเมนู" : "เพิ่มรูปเมนู"}
+        aria-label={imageUrl ? "เปลี่ยนรูปหลัก" : "เพิ่มรูปหลัก"}
         onClick={() => {
           if (!uploading) fileRef.current?.click();
         }}

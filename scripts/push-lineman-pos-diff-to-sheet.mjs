@@ -98,7 +98,7 @@ function loadData(scanPath, posPath) {
         check: "ตรง",
       });
     } else {
-      // fuzzy: leave as LM-only / needs rename
+      // exact name only — leave unmatched as LM-only / needs rename
       lmOnly.push({ ...it, note: "ยังไม่จับคู่ POS (หรือชื่อคนละแบบ)" });
     }
   }

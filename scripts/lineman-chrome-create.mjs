@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { getSeedDb } from "./lib/pos-firebase-seed.mjs";
 import { isStoreOnlyName } from "./lib/name-sync-match.mjs";
-import { normName } from "./lib/grab-csv.mjs";
+import { namesEqual, normName } from "./lib/grab-csv.mjs";
 import { applyChannelRule } from "./lib/hub-channel-targets.mjs";
 import { writeHubChannelLiveRow, writeMenuItemHubNote } from "./lib/hub-live-write.mjs";
 import {
@@ -166,8 +166,8 @@ function pickSibling(pos, siblingsByKey) {
   const siblings = siblingsByKey.get(key) || [];
   return (
     siblings.find((s) => {
-      const a = [...s.pos.optionNames].map(fold).sort().join("|");
-      const b = [...pos.optionNames].map(fold).sort().join("|");
+      const a = [...s.pos.optionNames].map(normName).sort().join("|");
+      const b = [...pos.optionNames].map(normName).sort().join("|");
       return a === b;
     }) ||
     siblings[0] ||
@@ -362,10 +362,10 @@ function appendScanItem(item) {
 function compareLive(row, live) {
   const optWant = new Set(row.optionNames.map(fold));
   const checked = (live.checked || live.optionNames || []).map(fold);
-  const optGot = checked.filter((t) => optWant.has(t) || t === fold(row.category));
+  const optGot = checked.filter((t) => optWant.has(t) || t === normName(row.category));
   const missingOpts = [...optWant].filter((t) => !checked.includes(t));
   const catOk = live.checked
-    ? checked.includes(fold(row.category))
+    ? (live.checked || []).some((t) => namesEqual(t, row.category))
     : true;
   const nameOk = normName(live.name) === normName(row.name);
   const priceOk = Number(live.online) === Number(row.onlinePrice);

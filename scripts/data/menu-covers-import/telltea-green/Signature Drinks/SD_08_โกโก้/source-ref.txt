@@ -1,0 +1,5 @@
+source=เมนูแยก/นมสด/M_01_โกโก้.jpg
+sourceDriveId=1VhgMIgVa43hoPwQ0-U1YFcfNy54ci8OH
+posName=โกโก้ (เย็น/ปั่น)
+logo=cup-center
+bg=branch+disk

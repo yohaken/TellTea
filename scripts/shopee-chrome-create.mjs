@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { getSeedDb } from "./lib/pos-firebase-seed.mjs";
 import { isStoreOnlyName } from "./lib/name-sync-match.mjs";
-import { normName } from "./lib/grab-csv.mjs";
+import { namesEqual, normName } from "./lib/grab-csv.mjs";
 import { applyChannelRule } from "./lib/hub-channel-targets.mjs";
 import { writeHubChannelLiveRow, writeMenuItemHubNote } from "./lib/hub-live-write.mjs";
 import {
@@ -199,7 +199,7 @@ async function loadContext() {
 }
 
 function pickSibling(pos, onShopee) {
-  const sameCat = onShopee.filter((s) => fold(s.pos.categoryName) === fold(pos.categoryName));
+  const sameCat = onShopee.filter((s) => namesEqual(s.pos.categoryName, pos.categoryName));
   const sameMode = sameCat.filter((s) => modeKey(s.pos) === modeKey(pos));
   const pool = sameMode.length ? sameMode : sameCat;
   const want = [...pos.optionNames].map(fold).sort().join("|");
@@ -213,7 +213,7 @@ function pickSibling(pos, onShopee) {
 function mapOptionGroupIds(optionNames, shopeeGroups) {
   const out = [];
   for (const name of optionNames) {
-    const hit = shopeeGroups.find((g) => fold(g.name) === fold(name));
+    const hit = shopeeGroups.find((g) => namesEqual(g.name, name));
     if (hit) out.push({ name, id: hit.id });
     else out.push({ name, id: null });
   }
@@ -232,10 +232,9 @@ function buildPlan(ctx) {
     if (hit) onShopee.push({ pos: it, shopee: hit });
     else missing.push(it);
   }
-  const catalogByName = new Map(catalogs.map((c) => [fold(c.name), c]));
   const rows = missing.map((pos) => {
     const sibling = pickSibling(pos, onShopee);
-    const cat = catalogByName.get(fold(pos.categoryName)) || null;
+    const cat = catalogs.find((c) => namesEqual(c.name, pos.categoryName)) || null;
     const mapped = mapOptionGroupIds(pos.optionNames, optionGroups);
     return {
       posId: pos.id,

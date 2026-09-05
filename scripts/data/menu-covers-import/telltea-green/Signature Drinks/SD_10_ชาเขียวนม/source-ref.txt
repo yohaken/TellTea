@@ -1,0 +1,5 @@
+source=เมนูแยก/ชานม/MT_02_ชาเขียวนม.jpg
+sourceDriveId=1NMqLc5sFpJ3dsFxGkLqhKEKrMaV3f-1E
+posName=ชาเขียวนม (เย็น/ปั่น)
+logo=cup-center
+bg=branch+disk

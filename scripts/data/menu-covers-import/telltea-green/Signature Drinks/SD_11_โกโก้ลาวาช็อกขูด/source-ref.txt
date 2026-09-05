@@ -1,0 +1,5 @@
+source=layout=M_01 + drink=POS lava
+sourceDriveId=
+posName=โกโก้ลาวาช็อกขูด (เย็น/ปั่น)
+logo=cup-center
+bg=branch+disk

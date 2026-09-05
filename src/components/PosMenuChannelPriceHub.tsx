@@ -8,10 +8,18 @@ import {
   channelCellForOption,
   channelLabel,
   emptyHubTotals,
+  emptyChannelLiveStore,
   formatRuleShort,
   formatRuleCellBadge,
   ruleModeLabelTh,
   nameStatusLabel,
+  orderStatusLabel,
+  channelOrderStatusOf,
+  categoryNameStatusFor,
+  liveIndexMap,
+  liveOrdinalMap,
+  namedListOrderStatus,
+  sequenceStatus,
   priceInputCh,
   resolveStoreBase,
   resolveOptionStoreBase,
@@ -22,6 +30,9 @@ import {
   netToShopTitle,
   resolveNetRule,
   rowHasNameIssue,
+  rowHasItemOrderIssue,
+  rowHasCategoryOrderIssue,
+  rowHasOrderIssue,
   rowMatchesFilter,
   statusLabel,
   summarizeRowChannels,
@@ -37,6 +48,12 @@ import {
   type HubStatusFilter,
   type LiveChannelItem,
   type MenuPriceHubSettings,
+  type UnmatchedLiveEntry,
+  unmatchedKindLabel,
+  unmatchedReasonLabel,
+  unmatchedCleanActionLabel,
+  unmatchedCleanActionHead,
+  unmatchedCleanActionRank,
 } from "@/lib/menu-channel-price";
 import { isMenuStoreOnly } from "@/lib/menu-name-match";
 import {
@@ -96,6 +113,10 @@ function observationFromDraftOrStored(
     source: "manual",
     scannedAt: stored?.scannedAt ?? null,
     externalId: stored?.externalId ?? null,
+    category: stored?.category ?? null,
+    sortIndex: stored?.sortIndex ?? null,
+    groupNames: stored?.groupNames ?? null,
+    choiceIndex: stored?.choiceIndex ?? null,
   };
 }
 
@@ -110,6 +131,7 @@ type OptRow = {
   channels: Record<DeliveryChannel, ChannelPriceCell>;
   worst: ChannelMatchStatus;
   storeOnly: boolean;
+  posChoiceRank: number;
 };
 
 type OverrideDraft = {
@@ -440,7 +462,7 @@ const DEFAULT_COL_W: Record<ColKey, number> = {
   name: 200,
   mode: 36,
   note: 120,
-  cat: 110,
+  cat: 138,
   store: 64,
   shopee: 100,
   grab: 100,
@@ -456,7 +478,7 @@ const COLLAPSED_W = 22;
 /** คอลัมน์ติ๊กแถว — แยกจากคอลัมน์ชื่อ เพื่อให้คลิกตรงทั้งความสูงแถว ไม่ทับหัวตาราง */
 const SEL_COL_W = 28;
 /** v7: ไม่มีคอลัมน์ต้นแบบส่ง — เป้าแพลตฟอร์มอิงหน้าร้าน */
-const COL_STORAGE_KEY = "telltea_mph_col_widths_v7";
+const COL_STORAGE_KEY = "telltea_mph_col_widths_v8";
 const SHOW_OPTS_KEY = "telltea_mph_show_options";
 const HIDDEN_OPTS_KEY = "telltea_mph_hidden_opt_groups";
 const CLEARED_LIVE_KEY = "telltea_mph_cleared_live";
@@ -468,6 +490,8 @@ const HIDE_STORE_ONLY_KEY = "telltea_mph_hide_store_only";
 const HIDE_STORE_ONLY_OPTS_KEY = "telltea_mph_hide_store_only_opts";
 /** ซ่อนแถวเมนูชั่วคราว — เหลือเฉพาะกลุ่มตัวเลือก */
 const HIDE_MENUS_KEY = "telltea_mph_hide_menus";
+/** จำนวนขายปิดเป็นค่าเริ่ม — เปิดแล้วจำไว้จนกว่าจะปิด */
+const SHOW_SALES_KEY = "telltea_mph_show_sales";
 
 /** สีแถวฮับ — หมวดเมนูกับกลุ่มตัวเลือกใช้ชุดเดียวกัน แต่ผูกคนละคีย์ ไม่วนซ้ำจนกว่าจะเกินจำนวนนี้ */
 type OptGroupTone = {
@@ -525,6 +549,193 @@ function channelChipLetter(ch: DeliveryChannel): string {
   return "L";
 }
 
+function nameMarkGlyph(status: ChannelPriceCell["nameStatus"]): string {
+  if (status === "exact") return "✓";
+  if (status === "near") return "~";
+  if (status === "missing") return "∅";
+  return "·";
+}
+
+function HubChMark({
+  ch,
+  glyph,
+  tone,
+  title,
+  onClick,
+}: {
+  ch: DeliveryChannel;
+  glyph: string;
+  tone: "ok" | "near" | "missing" | "wrong" | "unknown";
+  title: string;
+  onClick?: () => void;
+}) {
+  const inner = (
+    <>
+      <span className="mph-ch-mark-ch">{channelChipLetter(ch)}</span>
+      <span className="mph-ch-mark-g">{glyph}</span>
+    </>
+  );
+  if (onClick) {
+    return (
+      <button type="button" className={`mph-ch-mark is-${tone}`} title={title} onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}>
+        {inner}
+      </button>
+    );
+  }
+  return (
+    <span className={`mph-ch-mark is-${tone}`} title={title}>
+      {inner}
+    </span>
+  );
+}
+
+function nameMarkTone(status: ChannelPriceCell["nameStatus"]): "ok" | "near" | "missing" | "unknown" {
+  if (status === "exact") return "ok";
+  if (status === "near") return "near";
+  if (status === "missing") return "missing";
+  return "unknown";
+}
+
+function HubNameMarks({
+  channels,
+  visible,
+  collapsed,
+  onPick,
+}: {
+  channels: Record<DeliveryChannel, ChannelPriceCell>;
+  visible: DeliveryChannel[];
+  collapsed?: boolean;
+  onPick: (ch: DeliveryChannel) => void;
+}) {
+  if (collapsed) return null;
+  if (visible.every((ch) => channels[ch].nameStatus === "skip")) return null;
+  return (
+    <span className="mph-ch-marks is-name" aria-label="ชื่อบนแพลตฟอร์ม">
+      {visible.map((ch) => {
+        const st = channels[ch].nameStatus;
+        return (
+          <HubChMark
+            key={ch}
+            ch={ch}
+            glyph={nameMarkGlyph(st)}
+            tone={nameMarkTone(st)}
+            title={
+              channels[ch].liveName
+                ? `${channelLabel(ch)} · ชื่อ${nameStatusLabel(st)} · ${channels[ch].liveName}`
+                : st === "missing"
+                  ? `${channelLabel(ch)} · ไม่มีบนแพลตฟอร์ม · แก้ชื่อไม่ได้ ต้องสร้าง`
+                  : `${channelLabel(ch)} · ชื่อ${nameStatusLabel(st)} · แตะใส่ชื่อ`
+            }
+            onClick={() => onPick(ch)}
+          />
+        );
+      })}
+    </span>
+  );
+}
+
+function HubItemOrderMarks({
+  channels,
+  visible,
+  collapsed,
+  posRank,
+}: {
+  channels: Record<DeliveryChannel, ChannelPriceCell>;
+  visible: DeliveryChannel[];
+  collapsed?: boolean;
+  posRank?: number;
+}) {
+  if (collapsed) return null;
+  if (visible.every((ch) => channels[ch].nameStatus === "skip")) return null;
+  const posLabel = posRank && posRank > 0 ? String(posRank) : "·";
+  return (
+    <span className="mph-ch-marks is-item-order" aria-label="ลำดับเมนูในหมวดบนแพลตฟอร์ม">
+      {visible.map((ch) => {
+        const cell = channels[ch];
+        const itemOrder = cell.orderStatus || "unknown";
+        const liveRank = cell.liveItemRank;
+        const rankText = liveRank != null ? String(liveRank) : "?";
+        const glyph = itemOrder === "wrong" ? `${rankText}⇅` : rankText;
+        const tone =
+          itemOrder === "wrong" ? "wrong" : liveRank == null ? "unknown" : "ok";
+        const bits = [
+          `${channelLabel(ch)}`,
+          `ลำดับในหมวด POS ${posLabel}`,
+          `ลำดับบนแพลตฟอร์ม ${rankText}`,
+          `ลำดับเมนูในหมวด ${orderStatusLabel(itemOrder)}`,
+        ];
+        return (
+          <HubChMark
+            key={ch}
+            ch={ch}
+            glyph={glyph}
+            tone={tone}
+            title={bits.join(" · ")}
+          />
+        );
+      })}
+    </span>
+  );
+}
+
+function HubCatMarks({
+  channels,
+  visible,
+  collapsed,
+  posRank,
+}: {
+  channels: Record<DeliveryChannel, ChannelPriceCell>;
+  visible: DeliveryChannel[];
+  collapsed?: boolean;
+  posRank?: number;
+}) {
+  if (collapsed) return null;
+  const posLabel = posRank && posRank > 0 ? String(posRank) : "·";
+  return (
+    <span className="mph-ch-marks is-cat" aria-label="ลำดับหมวดบนแพลตฟอร์ม">
+      {visible.map((ch) => {
+        const cell = channels[ch];
+        const cat = cell.categoryNameStatus || "missing";
+        const catOrder = cell.categoryOrderStatus || "unknown";
+        const itemOrder = cell.orderStatus || "unknown";
+        const catOrderWrong = catOrder === "wrong";
+        const itemOrderFallback = catOrder === "unknown" && itemOrder === "wrong";
+        const rankWrong = catOrderWrong || itemOrderFallback;
+        const liveRank = cell.liveSortRank;
+        const rankText = liveRank != null ? String(liveRank) : "?";
+        const glyph = rankWrong ? `${rankText}⇅` : rankText;
+        const tone = rankWrong
+          ? "wrong"
+          : liveRank == null
+            ? cat === "near"
+              ? "near"
+              : "unknown"
+            : nameMarkTone(cat);
+        const bits = [
+          `${channelLabel(ch)}`,
+          `ลำดับ POS ${posLabel}`,
+          `ลำดับบนแพลตฟอร์ม ${rankText}`,
+          `ชื่อหมวด${nameStatusLabel(cat)}`,
+          `ลำดับหมวด ${orderStatusLabel(catOrder)}`,
+          `ลำดับเมนูในหมวด ${orderStatusLabel(itemOrder)}`,
+        ];
+        return (
+          <HubChMark
+            key={ch}
+            ch={ch}
+            glyph={glyph}
+            tone={tone}
+            title={bits.join(" · ")}
+          />
+        );
+      })}
+    </span>
+  );
+}
+
 function optionGroupIdsUsedOnlyByStoreOnly(
   items: { optionGroupIds?: string[]; storeOnly?: boolean; name?: string }[],
 ): Set<string> {
@@ -578,6 +789,18 @@ function storePriceMatches(price: number, needle: string): boolean {
   const parsed = Number(q.replace(/,/g, ""));
   return Number.isFinite(parsed) && n === Math.round(parsed);
 }
+
+function channelLetter(ch: DeliveryChannel): string {
+  if (ch === "shopee") return "S";
+  if (ch === "grab") return "G";
+  return "L";
+}
+
+const UNMATCHED_KIND_ORDER: Record<UnmatchedLiveEntry["kind"], number> = {
+  item: 0,
+  option: 1,
+  category: 2,
+};
 
 function itemHubNoteText(
   item: MenuItem,
@@ -822,13 +1045,6 @@ function liveStatusText(
   return statusLabel(status);
 }
 
-function shortNameStatus(status: ChannelPriceCell["nameStatus"]): string {
-  if (status === "exact") return "ชื่อ✓";
-  if (status === "near") return "ชื่อ~";
-  if (status === "missing") return "ชื่อ∅";
-  return "ข้าม";
-}
-
 function colTitle(key: ColKey): string {
   if (key === "name") return "เมนู";
   if (key === "mode") return "ช่อง";
@@ -907,7 +1123,7 @@ export function PosMenuChannelPriceHub({
   );
 
   const [settings, setSettings] = useState<MenuPriceHubSettings | null>(null);
-  const [channelLive, setChannelLive] = useState<ChannelLiveStore>({ items: {}, options: {} });
+  const [channelLive, setChannelLive] = useState<ChannelLiveStore>(emptyChannelLiveStore);
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [colFilterName, setColFilterName] = useState("");
@@ -986,10 +1202,9 @@ export function PosMenuChannelPriceHub({
   const [selectedPeriod, setSelectedPeriod] = useState<SalesPeriod>("1m");
   const [showSales, setShowSales] = useState<boolean>(() => {
     try {
-      const v = window.localStorage.getItem("telltea_mph_show_sales");
-      return v === null ? true : v === "true";
+      return window.localStorage.getItem(SHOW_SALES_KEY) === "1";
     } catch {
-      return true;
+      return false;
     }
   });
   const [showSalesSyncModal, setShowSalesSyncModal] = useState(false);
@@ -1167,6 +1382,16 @@ export function PosMenuChannelPriceHub({
       return next;
     });
   }, [hideMenus]);
+
+  const persistShowSales = useCallback((next: boolean) => {
+    setShowSales(next);
+    try {
+      if (next) window.localStorage.setItem(SHOW_SALES_KEY, "1");
+      else window.localStorage.removeItem(SHOW_SALES_KEY);
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const persistHideMenus = useCallback((next: boolean) => {
     if (next) {
@@ -1497,6 +1722,49 @@ export function PosMenuChannelPriceHub({
 
   const rows = useMemo(() => {
     if (!liveSettings) return [];
+    const byCat = new Map<string, string[]>();
+    for (const it of activeItems) {
+      if (isMenuStoreOnly(it)) continue;
+      const cat = it.categoryId || "";
+      if (!byCat.has(cat)) byCat.set(cat, []);
+      byCat.get(cat)!.push(it.id);
+    }
+    const sortIndexByCh = Object.fromEntries(
+      DELIVERY_CHANNELS.map((ch) => [ch, liveIndexMap(channelLive.items, ch, "sortIndex")]),
+    ) as Record<DeliveryChannel, Map<string, number>>;
+    const posCatIds = [...catRank.entries()]
+      .sort((a, b) => a[1] - b[1])
+      .map(([id]) => id)
+      .filter((id) => byCat.has(id));
+    const liveCatRankByCh = Object.fromEntries(
+      DELIVERY_CHANNELS.map((ch) => {
+        const liveRank = new Map<string, number>();
+        for (const [catId, ids] of byCat) {
+          let min = Infinity;
+          for (const id of ids) {
+            const idx = sortIndexByCh[ch].get(id);
+            if (idx != null && idx < min) min = idx;
+          }
+          if (Number.isFinite(min)) liveRank.set(catId, min);
+        }
+        return [ch, liveRank];
+      }),
+    ) as Record<DeliveryChannel, Map<string, number>>;
+    const liveCatOrdinalByCh = Object.fromEntries(
+      DELIVERY_CHANNELS.map((ch) => [ch, liveOrdinalMap(posCatIds, liveCatRankByCh[ch])]),
+    ) as Record<DeliveryChannel, Map<string, number>>;
+    const liveItemOrdinalByCh = Object.fromEntries(
+      DELIVERY_CHANNELS.map((ch) => {
+        const ranks = new Map<string, number>();
+        for (const ids of byCat.values()) {
+          for (const [id, rank] of liveOrdinalMap(ids, sortIndexByCh[ch])) {
+            ranks.set(id, rank);
+          }
+        }
+        return [ch, ranks];
+      }),
+    ) as Record<DeliveryChannel, Map<string, number>>;
+    const groupById = new Map(optionGroups.map((g) => [g.id, g.name]));
     return activeItems.map((item) => {
       const priced = withPriceDraft(item, draft[item.id]);
       const patched: MenuItem = {
@@ -1507,6 +1775,10 @@ export function PosMenuChannelPriceHub({
             ? storeOnlyPatch[item.id]
             : item.storeOnly,
       };
+      const posGroupNames = (patched.optionGroupIds || [])
+        .map((id) => groupById.get(id) || "")
+        .filter(Boolean);
+      const catIds = byCat.get(patched.categoryId || "") || [];
       const channels = Object.fromEntries(
         DELIVERY_CHANNELS.map((ch) => {
           const waiting = clearedLive.has(ch);
@@ -1514,20 +1786,40 @@ export function PosMenuChannelPriceHub({
           const draftKey = liveDraftKey(item.id, ch);
           const ld = liveDraft[draftKey];
           const observation = observationFromDraftOrStored(waiting, stored, ld);
-          return [
+          const cell = channelCellForItem(
+            patched,
             ch,
-            channelCellForItem(
-              patched,
-              ch,
-              liveSettings,
-              emptyLiveItems(),
-              observation,
-            ),
-          ];
+            liveSettings,
+            emptyLiveItems(),
+            observation,
+          );
+          const orderStatus = isMenuStoreOnly(patched)
+            ? "unknown"
+            : sequenceStatus(catIds, sortIndexByCh[ch], item.id);
+          const groupOrderStatus = isMenuStoreOnly(patched)
+            ? "unknown"
+            : namedListOrderStatus(posGroupNames, stored?.groupNames);
+          const categoryNameStatus = categoryNameStatusFor(
+            catName.get(patched.categoryId) || "",
+            stored?.category,
+            isMenuStoreOnly(patched),
+          );
+          const categoryOrderStatus = isMenuStoreOnly(patched)
+            ? "unknown"
+            : sequenceStatus(posCatIds, liveCatRankByCh[ch], patched.categoryId || "");
+          const liveSortRank = isMenuStoreOnly(patched)
+            ? null
+            : liveCatOrdinalByCh[ch].get(patched.categoryId || "") ?? null;
+          const liveItemRank = isMenuStoreOnly(patched)
+            ? null
+            : liveItemOrdinalByCh[ch].get(item.id) ?? null;
+          return [ch, { ...cell, orderStatus, groupOrderStatus, categoryNameStatus, categoryOrderStatus, liveSortRank, liveItemRank }];
         }),
       ) as Record<DeliveryChannel, ChannelPriceCell>;
       const worst = summarizeRowChannels(channels);
-      return { item: patched, channels, worst, storeOnly: isMenuStoreOnly(patched) };
+      const posCatRank = posCatIds.indexOf(patched.categoryId || "") + 1;
+      const posItemRank = catIds.indexOf(item.id) + 1;
+      return { item: patched, channels, worst, storeOnly: isMenuStoreOnly(patched), posCatRank, posItemRank };
     });
   }, [
     activeItems,
@@ -1538,6 +1830,9 @@ export function PosMenuChannelPriceHub({
     clearedLive,
     channelLive,
     liveDraft,
+    optionGroups,
+    catName,
+    catRank,
   ]);
 
   const storeOnlyGroupIds = useMemo(
@@ -1749,9 +2044,26 @@ export function PosMenuChannelPriceHub({
 
   const optionRowsAll = useMemo((): OptRow[] => {
     if (!showOptions || !liveSettings) return [];
+    const choiceIndexByCh = Object.fromEntries(
+      DELIVERY_CHANNELS.map((ch) => [ch, liveIndexMap(channelLive.options, ch, "choiceIndex")]),
+    ) as Record<DeliveryChannel, Map<string, number>>;
+    const posIdsByGroup = new Map<string, string[]>();
+    for (const g of activeOptionGroups) {
+      posIdsByGroup.set(
+        g.id,
+        [...g.options]
+          .filter((c) => c.active !== false)
+          .sort(
+            (a, b) =>
+              (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.name.localeCompare(b.name, "th"),
+          )
+          .map((c) => optRowKey(g.id, c.id)),
+      );
+    }
     const out: OptRow[] = [];
     for (const g of activeOptionGroups) {
       if (hiddenOptGroups.has(g.id)) continue;
+      const posIds = posIdsByGroup.get(g.id) || [];
       for (const c of g.options) {
         if (c.active === false) continue;
         const key = optRowKey(g.id, c.id);
@@ -1765,17 +2077,24 @@ export function PosMenuChannelPriceHub({
             const draftKey = liveDraftKey(key, ch);
             const ld = liveDraft[draftKey];
             const observation = observationFromDraftOrStored(waiting, stored, ld);
+            const cell = channelCellForOption(
+              c.name || "",
+              base,
+              ch,
+              liveSettings,
+              emptyLiveItems(),
+              observation,
+              key,
+            );
+            const liveChoiceOrdinal = liveOrdinalMap(posIds, choiceIndexByCh[ch]);
             return [
               ch,
-              channelCellForOption(
-                c.name || "",
-                base,
-                ch,
-                liveSettings,
-                emptyLiveItems(),
-                observation,
-                key,
-              ),
+              {
+                ...cell,
+                orderStatus: sequenceStatus(posIds, choiceIndexByCh[ch], key),
+                categoryNameStatus: categoryNameStatusFor(g.name, stored?.category, false),
+                liveSortRank: liveChoiceOrdinal.get(key) ?? null,
+              },
             ];
           }),
         ) as Record<DeliveryChannel, ChannelPriceCell>;
@@ -1786,6 +2105,7 @@ export function PosMenuChannelPriceHub({
           channels,
           worst: summarizeRowChannels(channels),
           storeOnly: isOptionStoreOnlyRow(c.name || "", g.name, g.id, storeOnlyGroupIds),
+          posChoiceRank: posIds.indexOf(key) + 1,
         });
       }
     }
@@ -1870,6 +2190,64 @@ export function PosMenuChannelPriceHub({
     });
   }, [optionRowsAll, statusFilter, query, colFilterName, colFilterCat, colFilterStore, colFilterNote, optDraft, noteDraft, channelLive, sortKey, sortDir, liveSettings, visibleChannels, optGroupRank, hideStoreOnlyOptions]);
 
+  const unmatchedRows = useMemo((): UnmatchedLiveEntry[] => {
+    if (statusFilter !== "extras") return [];
+    const q = query.trim();
+    const nameQ = colFilterName.trim();
+    const catQ = colFilterCat.trim();
+    const storeQ = colFilterStore.trim();
+    const noteQ = colFilterNote.trim();
+    const list = (channelLive.unmatched || []).filter((e) => {
+      if (!visibleChannels.includes(e.channel)) return false;
+      const reason = unmatchedReasonLabel(e.reason);
+      const action = unmatchedCleanActionLabel(e.cleanAction);
+      const kind = unmatchedKindLabel(e.kind);
+      if (nameQ && !menuTextIncludes(e.name, nameQ) && !menuTextIncludes(kind, nameQ)) return false;
+      if (catQ && !menuTextIncludes(e.group || "", catQ) && !menuTextIncludes(channelLabel(e.channel), catQ)) {
+        return false;
+      }
+      if (storeQ && !storePriceMatches(e.price ?? 0, storeQ)) return false;
+      if (
+        noteQ &&
+        !noteFilterMatches(reason, noteQ) &&
+        !noteFilterMatches(action, noteQ) &&
+        !menuTextIncludes(kind, noteQ)
+      ) {
+        return false;
+      }
+      if (!q) return true;
+      return (
+        menuTextIncludes(e.name, q) ||
+        menuTextIncludes(e.group || "", q) ||
+        menuTextIncludes(reason, q) ||
+        menuTextIncludes(action, q) ||
+        menuTextIncludes(kind, q) ||
+        menuTextIncludes(channelLabel(e.channel), q)
+      );
+    });
+    return [...list].sort((a, b) => {
+      const act = unmatchedCleanActionRank(a.cleanAction) - unmatchedCleanActionRank(b.cleanAction);
+      if (act !== 0) return act;
+      const ch =
+        DELIVERY_CHANNELS.indexOf(a.channel) - DELIVERY_CHANNELS.indexOf(b.channel);
+      if (ch !== 0) return ch;
+      const kind = UNMATCHED_KIND_ORDER[a.kind] - UNMATCHED_KIND_ORDER[b.kind];
+      if (kind !== 0) return kind;
+      const g = (a.group || "").localeCompare(b.group || "", "th");
+      if (g !== 0) return g;
+      return (a.name || "").localeCompare(b.name || "", "th");
+    });
+  }, [
+    channelLive.unmatched,
+    statusFilter,
+    query,
+    colFilterName,
+    colFilterCat,
+    colFilterStore,
+    colFilterNote,
+    visibleChannels,
+  ]);
+
   const visibleOptGroupCount = activeOptionGroups.filter(
     (g) => !hiddenOptGroups.has(g.id),
   ).length;
@@ -1911,14 +2289,17 @@ export function PosMenuChannelPriceHub({
       if (hideStoreOnly && row.storeOnly) continue;
       t[summarizeRowChannels(row.channels, visibleChannels)] += 1;
       if (rowHasNameIssue(row.channels, visibleChannels)) t.name_issue += 1;
+      if (rowHasOrderIssue(row.channels, visibleChannels)) t.order_issue += 1;
     }
     for (const row of optionRowsAll) {
       if (hideStoreOnlyOptions && row.storeOnly) continue;
       t[summarizeRowChannels(row.channels, visibleChannels)] += 1;
       if (rowHasNameIssue(row.channels, visibleChannels)) t.name_issue += 1;
+      if (rowHasOrderIssue(row.channels, visibleChannels)) t.order_issue += 1;
     }
+    t.extras = (channelLive.unmatched || []).filter((e) => visibleChannels.includes(e.channel)).length;
     return t;
-  }, [rows, optionRowsAll, visibleChannels, hideStoreOnly, hideStoreOnlyOptions]);
+  }, [rows, optionRowsAll, visibleChannels, hideStoreOnly, hideStoreOnlyOptions, channelLive.unmatched]);
 
   const tableWidth = useMemo(
     () => SEL_COL_W + visibleColOrder.reduce((sum, key) => sum + colW[key], 0),
@@ -3288,7 +3669,11 @@ export function PosMenuChannelPriceHub({
     const sortTitle = filterable
       ? key === "note"
         ? "คลิกชื่อคอลัมน์ = เรียง note · พิมพ์กรอง · กดหรือพิมพ์ «ว่าง» = เฉพาะแถวไม่มี note"
-        : `คลิกชื่อคอลัมน์ = เรียง${colTitle(key)} · พิมพ์ด้านล่าง = กรองทันที`
+        : key === "cat"
+          ? "ป้าย S/G/L ในคอลัมน์นี้ = เลขลำดับหมวดบนแพลตฟอร์ม · เขียว = ลำดับหมวดตรง POS · ส้ม⇅ = ลำดับหมวดเพี้ยน"
+          : key === "name"
+            ? "ป้ายแถวบน = ชื่อ S✓/~ /∅ · ป้ายแถวล่าง = ลำดับเมนูในหมวด S3 G5 L3 · เขียวตรง POS · ส้ม⇅เพี้ยน"
+            : `คลิกชื่อคอลัมน์ = เรียง${colTitle(key)} · พิมพ์ด้านล่าง = กรองทันที`
       : isSales
         ? `คลิกเรียง${colTitle(key)} (${SALES_PERIOD_LABELS[selectedPeriod]}) · คลิกซ้ำสลับ ↑↓ · ลากขอบ = ปรับความกว้าง`
         : `คลิกเรียง${colTitle(key)} · คลิกซ้ำสลับ ↑↓ · ลากขอบ = ความกว้าง · ดับเบิลคลิกเส้น = พอดี`;
@@ -3467,8 +3852,24 @@ export function PosMenuChannelPriceHub({
                 className={`mph-th-sort${active ? " is-on" : ""}`}
                 onClick={() => toggleSort(key)}
               >
-                {colTitle(key)}
-                {sortMark(key)}
+                {key === "cat" ? (
+                  <>
+                    หมวด
+                    {sortMark(key)}
+                    <span className="mph-th-sub">ลำดับ S/G/L</span>
+                  </>
+                ) : key === "name" ? (
+                  <>
+                    เมนู
+                    {sortMark(key)}
+                    <span className="mph-th-sub">ชื่อ · ลำดับในหมวด</span>
+                  </>
+                ) : (
+                  <>
+                    {colTitle(key)}
+                    {sortMark(key)}
+                  </>
+                )}
               </button>
               {key === "note" ? (
                 <button
@@ -3561,14 +3962,27 @@ export function PosMenuChannelPriceHub({
               ["all", `ทั้งหมด ${visibleMenuCount}`],
               ["mismatch", `ไม่ตรง ${totals.mismatch}`],
               ["name_issue", `ชื่อ ${totals.name_issue}`],
+              ["order_issue", `ลำดับ ${totals.order_issue}`],
               ["no_live", `${clearedLive.size ? "รอสแกน" : "ไม่มีจริง"} ${totals.no_live}`],
               ["unmatched", `ไม่จับคู่ ${totals.unmatched}`],
+              ["extras", `เกิน ${totals.extras}`],
             ] as const
           ).map(([id, label]) => (
             <button
               key={id}
               type="button"
               className={`mph-chip${statusFilter === id ? " is-on" : ""}`}
+              title={
+                id === "extras"
+                  ? "ของบนแพลตฟอร์มที่ไม่มีในหลังร้าน — คิวจัดบนแพลตฟอร์ม ไม่ใช่แถวเมนูร้าน"
+                  : id === "unmatched"
+                    ? "เมนูหลังร้านที่ยังไม่มีของจริงบนแพลตฟอร์ม"
+                    : id === "name_issue"
+                      ? "ชื่อเมนู/ตัวเลือกไม่ตรง POS — ดูคอลัมน์เมนู"
+                    : id === "order_issue"
+                      ? "ชื่อหรือลำดับหมวดไม่ตรงดูคอลัมน์หมวด · ลำดับเมนูในหมวดดูป้ายแถวล่างคอลัมน์เมนู"
+                    : undefined
+              }
               onClick={() => setStatusFilter(id)}
             >
               {label}
@@ -3666,18 +4080,10 @@ export function PosMenuChannelPriceHub({
               aria-pressed={showSales}
               title={
                 showSales
-                  ? "ซ่อนคอลัมน์จำนวนขายชั่วคราว — คลิกเปิด/ปิดได้ตลอดเวลา"
+                  ? "ซ่อนคอลัมน์จำนวนขาย — ปิดแล้วจะปิดค้างจนกว่าจะเปิดอีก"
                   : "แสดงคอลัมน์จำนวนขายรายเมนู (หน้าร้าน POS + Grab + LINE MAN)"
               }
-              onClick={() => {
-                const next = !showSales;
-                setShowSales(next);
-                try {
-                  window.localStorage.setItem("telltea_mph_show_sales", String(next));
-                } catch {
-                  /* ignore */
-                }
-              }}
+              onClick={() => persistShowSales(!showSales)}
             >
               📊 จำนวนขาย {showSales ? "เปิด" : "ปิด"}
             </button>
@@ -3995,7 +4401,7 @@ export function PosMenuChannelPriceHub({
             </tr>
           </thead>
           <tbody>
-            {(hideMenus ? [] : displayed).map(({ item, channels, storeOnly }) => {
+            {(hideMenus ? [] : displayed).map(({ item, channels, storeOnly, posCatRank, posItemRank }) => {
               const d = getDraft(item);
               const catTone = item.categoryId ? catToneById.get(item.categoryId) : undefined;
               const collapsed = {
@@ -4016,13 +4422,20 @@ export function PosMenuChannelPriceHub({
                 >
                   {renderSelCell(rowRef, item.name)}
                   <td
-                    className="mph-td is-sticky"
+                    className={`mph-td is-sticky${rowHasNameIssue(channels, visibleChannels) ? " is-name-warn" : ""}${rowHasItemOrderIssue(channels, visibleChannels) ? " is-order-warn" : ""}`}
                     style={{ width: colW.name, minWidth: colW.name, maxWidth: colW.name }}
                   >
                     <span className="mph-name-cell">
                       {collapsed.name ? (
                         "…"
-                      ) : editingNameId === item.id ? (
+                      ) : (
+                        <span className="mph-name-label">
+                          {posItemRank > 0 ? (
+                            <span className="mph-cat-rank" title={`ลำดับในหมวด POS ${posItemRank}`}>
+                              {posItemRank}
+                            </span>
+                          ) : null}
+                          {editingNameId === item.id ? (
                       <input
                         ref={nameInputRef}
                         className="mph-name-input"
@@ -4051,6 +4464,36 @@ export function PosMenuChannelPriceHub({
                         {item.name || "—"}
                       </button>
                     )}
+                        </span>
+                      )}
+                    {!storeOnly ? (
+                      <HubNameMarks
+                        channels={channels}
+                        visible={visibleChannels}
+                        collapsed={collapsed.name}
+                        onPick={(ch) => {
+                          const cell = channels[ch];
+                          const ld = getLiveDraft(item.id, ch, cell);
+                          setNameDetail({
+                            scope: "item",
+                            id: item.id,
+                            posName: item.name,
+                            channel: ch,
+                            cell,
+                            scannedAt: channelLive.items[item.id]?.[ch]?.scannedAt ?? null,
+                            nameDraft: ld.name || cell.liveName || "",
+                          });
+                        }}
+                      />
+                    ) : null}
+                    {!storeOnly ? (
+                      <HubItemOrderMarks
+                        channels={channels}
+                        visible={visibleChannels}
+                        collapsed={collapsed.name}
+                        posRank={posItemRank}
+                      />
+                    ) : null}
                     </span>
                   </td>
                   <td
@@ -4080,11 +4523,31 @@ export function PosMenuChannelPriceHub({
                     )}
                   </td>
                   <td
-                    className="mph-td is-cat"
+                    className={`mph-td is-cat${rowHasCategoryOrderIssue(channels, visibleChannels) ? " is-order-warn" : ""}`}
                     style={{ width: colW.cat, minWidth: colW.cat, maxWidth: colW.cat }}
                     title={catName.get(item.categoryId) || ""}
                   >
-                    {collapsed.cat ? "" : catName.get(item.categoryId) || "—"}
+                    {collapsed.cat ? (
+                      ""
+                    ) : (
+                      <span className="mph-cat-cell">
+                        <span className="mph-cat-label">
+                          {posCatRank > 0 ? (
+                            <span className="mph-cat-rank" title={`ลำดับหมวด POS ${posCatRank}`}>
+                              {posCatRank}
+                            </span>
+                          ) : null}
+                          {catName.get(item.categoryId) || "—"}
+                        </span>
+                        {!storeOnly ? (
+                          <HubCatMarks
+                            channels={channels}
+                            visible={visibleChannels}
+                            posRank={posCatRank}
+                          />
+                        ) : null}
+                      </span>
+                    )}
                   </td>
                   <td
                     className="mph-td is-num"
@@ -4139,12 +4602,7 @@ export function PosMenuChannelPriceHub({
                     return (
                       <td
                         key={ch}
-                        className={`mph-td is-num is-ch is-st-${waiting ? "no_live" : cell.status}${
-                          !waiting &&
-                          (cell.nameStatus === "near" || cell.nameStatus === "missing")
-                            ? " is-name-warn"
-                            : ""
-                        }${waiting ? " is-waiting-scan" : ""}${selOn ? " is-cell-sel" : ""}`}
+                        className={`mph-td is-num is-ch is-st-${waiting ? "no_live" : cell.status}${waiting ? " is-waiting-scan" : ""}${selOn ? " is-cell-sel" : ""}`}
                         style={{ width: colW[ch], minWidth: colW[ch], maxWidth: colW[ch] }}
                         title={
                           hasHubLive
@@ -4233,31 +4691,6 @@ export function PosMenuChannelPriceHub({
                                   }}
                                 />
                               </span>
-                              <button
-                                type="button"
-                                className={`mph-name is-${cell.nameStatus}`}
-                                title={
-                                  ld.name || cell.liveName
-                                    ? `ชื่อ: ${ld.name || cell.liveName} · แตะแก้`
-                                    : "แตะใส่ชื่อบนแพลตฟอร์ม"
-                                }
-                                onClick={() => {
-                                  setNameDetail({
-                                    scope: "item",
-                                    id: item.id,
-                                    posName: item.name,
-                                    channel: ch,
-                                    cell,
-                                    scannedAt:
-                                      channelLive.items[item.id]?.[ch]?.scannedAt ?? null,
-                                    nameDraft: ld.name || cell.liveName || "",
-                                  });
-                                }}
-                              >
-                                {waiting
-                                  ? "…"
-                                  : shortNameStatus(cell.nameStatus).replace("ชื่อ", "")}
-                              </button>
                             </div>
                             <RuleKindBadge
                               rule={rule}
@@ -4315,10 +4748,17 @@ export function PosMenuChannelPriceHub({
                 </tr>
               );
             })}
-            {!hideMenus && !displayed.length && !optionRows.length ? (
+            {!hideMenus && !displayed.length && !optionRows.length && !unmatchedRows.length && statusFilter !== "extras" ? (
               <tr>
                 <td className="mph-td muted" colSpan={tableColCount}>
                   ไม่พบเมนู
+                </td>
+              </tr>
+            ) : null}
+            {statusFilter === "extras" && !unmatchedRows.length ? (
+              <tr>
+                <td className="mph-td muted" colSpan={tableColCount}>
+                  ไม่มีของเกินบนแพลตฟอร์มในคอลัมน์ที่แสดง
                 </td>
               </tr>
             ) : null}
@@ -4364,11 +4804,33 @@ export function PosMenuChannelPriceHub({
                   >
                   {renderSelCell(rowRef, r.choice.name)}
                   <td
-                    className="mph-td is-sticky"
+                    className={`mph-td is-sticky${rowHasNameIssue(r.channels, visibleChannels) ? " is-name-warn" : ""}`}
                     style={{ width: colW.name, minWidth: colW.name, maxWidth: colW.name }}
                   >
                     <span className="mph-name-cell">
-                      {collapsed.name ? "…" : r.choice.name || "—"}
+                      {collapsed.name ? (
+                        "…"
+                      ) : (
+                        <span className="mph-name-text">{r.choice.name || "—"}</span>
+                      )}
+                      <HubNameMarks
+                        channels={r.channels}
+                        visible={visibleChannels}
+                        collapsed={collapsed.name}
+                        onPick={(ch) => {
+                          const cell = r.channels[ch];
+                          const ld = getLiveDraft(key, ch, cell, "option");
+                          setNameDetail({
+                            scope: "option",
+                            id: key,
+                            posName: r.choice.name,
+                            channel: ch,
+                            cell,
+                            scannedAt: channelLive.options[key]?.[ch]?.scannedAt ?? null,
+                            nameDraft: ld.name || cell.liveName || "",
+                          });
+                        }}
+                      />
                     </span>
                   </td>
                   <td
@@ -4376,11 +4838,29 @@ export function PosMenuChannelPriceHub({
                     style={{ width: colW.mode, minWidth: colW.mode, maxWidth: colW.mode }}
                   />
                   <td
-                    className="mph-td is-cat"
+                    className={`mph-td is-cat${rowHasOrderIssue(r.channels, visibleChannels) ? " is-order-warn" : ""}`}
                     style={{ width: colW.cat, minWidth: colW.cat, maxWidth: colW.cat }}
                     title={r.groupName}
                   >
-                    {collapsed.cat ? "" : r.groupName}
+                    {collapsed.cat ? (
+                      ""
+                    ) : (
+                      <span className="mph-cat-cell">
+                        <span className="mph-cat-label">
+                          {r.posChoiceRank > 0 ? (
+                            <span className="mph-cat-rank" title={`ลำดับตัวเลือก POS ${r.posChoiceRank}`}>
+                              {r.posChoiceRank}
+                            </span>
+                          ) : null}
+                          {r.groupName}
+                        </span>
+                        <HubCatMarks
+                          channels={r.channels}
+                          visible={visibleChannels}
+                          posRank={r.posChoiceRank}
+                        />
+                      </span>
+                    )}
                   </td>
                   <td
                     className="mph-td is-num"
@@ -4417,12 +4897,7 @@ export function PosMenuChannelPriceHub({
                     return (
                       <td
                         key={ch}
-                        className={`mph-td is-num is-ch is-st-${waiting ? "no_live" : cell.status}${
-                          !waiting &&
-                          (cell.nameStatus === "near" || cell.nameStatus === "missing")
-                            ? " is-name-warn"
-                            : ""
-                        }${waiting ? " is-waiting-scan" : ""}${selOn ? " is-cell-sel" : ""}`}
+                        className={`mph-td is-num is-ch is-st-${waiting ? "no_live" : cell.status}${waiting ? " is-waiting-scan" : ""}${selOn ? " is-cell-sel" : ""}`}
                         style={{ width: colW[ch], minWidth: colW[ch], maxWidth: colW[ch] }}
                         title={
                           hasHubLive
@@ -4529,31 +5004,6 @@ export function PosMenuChannelPriceHub({
                                   }}
                                 />
                               </span>
-                              <button
-                                type="button"
-                                className={`mph-name is-${cell.nameStatus}`}
-                                title={
-                                  ld.name || cell.liveName
-                                    ? `ชื่อ: ${ld.name || cell.liveName} · แตะแก้`
-                                    : "แตะใส่ชื่อบนแพลตฟอร์ม"
-                                }
-                                onClick={() => {
-                                  setNameDetail({
-                                    scope: "option",
-                                    id: key,
-                                    posName: r.choice.name,
-                                    channel: ch,
-                                    cell,
-                                    scannedAt:
-                                      channelLive.options[key]?.[ch]?.scannedAt ?? null,
-                                    nameDraft: ld.name || cell.liveName || "",
-                                  });
-                                }}
-                              >
-                                {waiting
-                                  ? "…"
-                                  : shortNameStatus(cell.nameStatus).replace("ชื่อ", "")}
-                              </button>
                             </div>
                             {rule ? (
                               <RuleKindBadge
@@ -4614,13 +5064,149 @@ export function PosMenuChannelPriceHub({
                 </Fragment>
               );
             })}
-            {showOptions && !optionRows.length && activeOptionGroups.length ? (
+            {showOptions && !optionRows.length && activeOptionGroups.length && statusFilter !== "extras" ? (
               <tr>
                 <td className="mph-td muted" colSpan={tableColCount}>
                   ไม่มีตัวเลือกที่แสดง — กดชื่อกลุ่มด้านบนเพื่อเปิด
                 </td>
               </tr>
             ) : null}
+            {unmatchedRows.length ? (
+              <tr className="mph-orphan-section">
+                <td className="mph-td mph-orphan-section-label" colSpan={tableColCount}>
+                  คิวจัดบนแพลตฟอร์ม · ไม่มีในหลังร้าน ({unmatchedRows.length}) — ถังเดียวกันทั้ง S/G/L
+                  ลบได้ / ต้องดู / ลบไม่ได้ · อย่าสร้างใน POS
+                </td>
+              </tr>
+            ) : null}
+            {unmatchedRows.map((entry, i) => {
+              const prev = i > 0 ? unmatchedRows[i - 1] : null;
+              const showActionHead =
+                i === 0 || prev!.cleanAction !== entry.cleanAction;
+              const showChHead =
+                showActionHead || prev!.channel !== entry.channel;
+              const collapsed = {
+                name: isColCollapsed(colW.name),
+                mode: isColCollapsed(colW.mode),
+                cat: isColCollapsed(colW.cat),
+                store: isColCollapsed(colW.store),
+              };
+              const reason = unmatchedCleanActionLabel(entry.cleanAction);
+              return (
+                <Fragment key={entry.id}>
+                  {showActionHead ? (
+                    <tr className="mph-orphan-action-head">
+                      <td className="mph-td mph-orphan-action-label" colSpan={tableColCount}>
+                        {unmatchedCleanActionHead(entry.cleanAction)}
+                      </td>
+                    </tr>
+                  ) : null}
+                  {showChHead ? (
+                    <tr className="mph-orphan-channel-head">
+                      <td className="mph-td mph-orphan-channel-label" colSpan={tableColCount}>
+                        {channelLabel(entry.channel)}
+                      </td>
+                    </tr>
+                  ) : null}
+                  <tr className="mph-orphan-row">
+                    {renderSelCell(null, entry.name)}
+                    <td
+                      className="mph-td is-sticky"
+                      style={{ width: colW.name, minWidth: colW.name, maxWidth: colW.name }}
+                    >
+                      <span className="mph-name-cell">
+                        {collapsed.name ? (
+                          "…"
+                        ) : (
+                          <>
+                            <span className="mph-orphan-kind">{unmatchedKindLabel(entry.kind)}</span>
+                            {entry.name || "—"}
+                          </>
+                        )}
+                      </span>
+                    </td>
+                    <td
+                      className="mph-td is-mode"
+                      style={{ width: colW.mode, minWidth: colW.mode, maxWidth: colW.mode }}
+                    >
+                      {collapsed.mode ? null : (
+                        <span
+                          className={`mph-mode-btn is-orphan is-${entry.channel}`}
+                          title={`${channelLabel(entry.channel)} · ไม่มีในหลังร้าน`}
+                        >
+                          {channelLetter(entry.channel)}
+                        </span>
+                      )}
+                    </td>
+                    <td
+                      className="mph-td is-cat"
+                      style={{ width: colW.cat, minWidth: colW.cat, maxWidth: colW.cat }}
+                      title={entry.group || ""}
+                    >
+                      {collapsed.cat ? "" : entry.group || "—"}
+                    </td>
+                    <td
+                      className="mph-td is-num is-orphan-store"
+                      style={{ width: colW.store, minWidth: colW.store, maxWidth: colW.store }}
+                      title="ไม่มีในหลังร้าน"
+                    >
+                      {collapsed.store ? null : <span className="mph-na">—</span>}
+                    </td>
+                    {visibleChannels.map((ch) => {
+                      const mine = ch === entry.channel;
+                      const narrow = isColCollapsed(colW[ch]);
+                      return (
+                        <td
+                          key={ch}
+                          className={`mph-td is-num is-ch ${mine ? "is-st-unmatched is-orphan-live" : "is-st-na"}`}
+                          style={{ width: colW[ch], minWidth: colW[ch], maxWidth: colW[ch] }}
+                          title={
+                            mine
+                              ? `${entry.name}${entry.externalId ? ` · ${entry.externalId}` : ""}`
+                              : "ไม่มีในช่องนี้"
+                          }
+                        >
+                          {narrow ? (
+                            mine ? (
+                              <span className="mph-mini is-unmatched">เกิน</span>
+                            ) : (
+                              "—"
+                            )
+                          ) : mine ? (
+                            <div className="mph-cell mph-cell-compact">
+                              <span className="mph-orphan-price">
+                                {entry.price == null ? "—" : entry.price}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="mph-na">—</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                    {showSales ? (
+                      <>
+                        {renderOptSalesCell("sales_store")}
+                        {renderOptSalesCell("sales_grab")}
+                        {renderOptSalesCell("sales_lineman")}
+                        {renderOptSalesCell("sales_shopee")}
+                        {renderOptSalesCell("sales_total")}
+                      </>
+                    ) : null}
+                    <td
+                      className="mph-td is-note"
+                      style={{ width: colW.note, minWidth: colW.note, maxWidth: colW.note }}
+                    >
+                      {isColCollapsed(colW.note) ? null : (
+                        <span className="mph-orphan-reason" title={reason}>
+                          {reason}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                </Fragment>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -4629,7 +5215,13 @@ export function PosMenuChannelPriceHub({
         {hideMenus ? " · ซ่อนเมนู — เฉพาะตัวเลือก" : ""}
         {hideStoreOnly ? ` · ซ่อนเฉพาะหน้าร้าน ${storeOnlyCount}` : ""}
         {hideStoreOnlyOptions ? ` · ซ่อนตัวเลือกเฉพาะหน้าร้าน ${storeOnlyOptionCount}` : ""}
-        {showOptions ? ` · ${optionRows.length} ตัวเลือก` : " · ซ่อนตัวเลือก"} · เรียงหมวดตามลำดับ POS เสมอ
+        {showOptions ? ` · ${optionRows.length} ตัวเลือก` : " · ซ่อนตัวเลือก"}
+        {statusFilter === "extras"
+          ? ` · คิวจัดบนแพลตฟอร์ม ${unmatchedRows.length}`
+          : totals.extras
+            ? ` · เกินแพลตฟอร์ม ${totals.extras} ดูที่ชิปเกิน`
+            : ""}
+        · เรียงหมวดตามลำดับ POS เสมอ
         {sortKey !== "cat" ? ` · ในหมวดเรียง${colTitle(sortKey)}${sortMark(sortKey)}` : ""}
         {showSales
           ? ` · ยอดขาย ${SALES_PERIOD_LABELS[selectedPeriod]} (หน้าร้าน ${activePeriodSales.channels.pos.totalQty.toLocaleString()} + Grab ${activePeriodSales.channels.grab.totalQty.toLocaleString()} + LM ${activePeriodSales.channels.lineman.totalQty.toLocaleString()} = ${(activePeriodSales.channels.pos.totalQty + activePeriodSales.channels.grab.totalQty + activePeriodSales.channels.lineman.totalQty).toLocaleString()} ชิ้น)`
@@ -5181,8 +5773,9 @@ export function PosMenuChannelPriceHub({
               />
             </label>
             <p className="muted mph-mini-hint">
-              สถานะตอนนี้: {nameStatusLabel(nameDetail.cell.nameStatus)}
-              {nameDetail.cell.live != null ? ` · ราคาจริง ${nameDetail.cell.live}` : ""}
+              {nameDetail.cell.nameStatus === "missing"
+                ? "ไม่มีเมนูนี้บนแพลตฟอร์ม — บันทึกชื่อในตารางอย่างเดียว ไม่ได้สร้างบน Shopee/Grab/LINE MAN"
+                : `สถานะตอนนี้: ${nameStatusLabel(nameDetail.cell.nameStatus)}${` · ${orderStatusLabel(channelOrderStatusOf(nameDetail.cell))}`}${nameDetail.cell.live != null ? ` · ราคาจริง ${nameDetail.cell.live}` : ""}`}
             </p>
             <div className="mph-dialog-actions">
               <button

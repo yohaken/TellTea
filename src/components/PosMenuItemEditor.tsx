@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { ArrowLeft, Trash2 } from "lucide-react";
-import { updateMenuItem } from "@/lib/pos-menu";
+import { MENU_IMAGE_BACKUP_MAX, updateMenuItem } from "@/lib/pos-menu";
 import type { MenuImageCropSource } from "@/lib/pos-menu-image";
 import { PosMenuImageCropModal } from "@/components/PosMenuImageCropModal";
 import { PosMenuPhotoModule } from "@/components/PosMenuPhotoModule";
+import { PosMenuPhotoBackups } from "@/components/PosMenuPhotoBackups";
 import { PosSortableList } from "@/components/PosSortableList";
 import type { MenuCategory, MenuItem, MenuOptionGroup } from "@/lib/types";
 import { formatPlainNumber } from "@/lib/utils";
@@ -21,6 +22,7 @@ function hydrateEditorState(item: MenuItem) {
     deliveryPrice: typeof item.deliveryPrice === "number" ? String(item.deliveryPrice) : "",
     description: item.description || "",
     imageUrl: item.imageUrl || "",
+    imageBackups: Array.isArray(item.imageBackups) ? item.imageBackups.filter(Boolean) : [],
     recommended: item.recommended === true,
     visibleOnPos: item.visibleOnPos !== false,
     /** Treat missing active as on — never coerce undefined → off (shows as หมด). */
@@ -60,6 +62,7 @@ export function PosMenuItemEditor({
   const [deliveryPrice, setDeliveryPrice] = useState(initial.deliveryPrice);
   const [description, setDescription] = useState(initial.description);
   const [imageUrl, setImageUrl] = useState(initial.imageUrl);
+  const [imageBackups, setImageBackups] = useState<string[]>(initial.imageBackups);
   const [recommended, setRecommended] = useState(initial.recommended);
   const [visibleOnPos, setVisibleOnPos] = useState(initial.visibleOnPos);
   const [active, setActive] = useState(initial.active);
@@ -67,6 +70,7 @@ export function PosMenuItemEditor({
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [cropSource, setCropSource] = useState<MenuImageCropSource | null>(null);
+  const [cropTarget, setCropTarget] = useState<"main" | "backup">("main");
   const [error, setError] = useState<string | null>(null);
 
   // Only re-hydrate when switching to another menu — snapshot churn must not wipe local edits
@@ -81,6 +85,7 @@ export function PosMenuItemEditor({
     setDeliveryPrice(next.deliveryPrice);
     setDescription(next.description);
     setImageUrl(next.imageUrl);
+    setImageBackups(next.imageBackups);
     setRecommended(next.recommended);
     setVisibleOnPos(next.visibleOnPos);
     setActive(next.active);
@@ -118,6 +123,39 @@ export function PosMenuItemEditor({
     await updateMenuItem(item.id, { imageUrl: "" });
   }
 
+  async function persistBackups(next: string[]) {
+    const clipped = next.filter(Boolean).slice(0, MENU_IMAGE_BACKUP_MAX);
+    setImageBackups(clipped);
+    await updateMenuItem(item.id, { imageBackups: clipped.length ? clipped : null });
+  }
+
+  async function addBackup(url: string) {
+    if (imageBackups.length >= MENU_IMAGE_BACKUP_MAX) {
+      throw new Error(`แนบสำรองได้สูงสุด ${MENU_IMAGE_BACKUP_MAX} ใบ`);
+    }
+    await persistBackups([...imageBackups, url]);
+  }
+
+  async function removeBackup(index: number) {
+    await persistBackups(imageBackups.filter((_, i) => i !== index));
+  }
+
+  /** สลับสำรองขึ้นหลัก — รูปหลักเดิม (ถ้ามี) เลื่อนลงเป็นสำรอง */
+  async function promoteBackup(index: number) {
+    const chosen = imageBackups[index];
+    if (!chosen) return;
+    const rest = imageBackups.filter((_, i) => i !== index);
+    const nextBackups = imageUrl.trim()
+      ? [imageUrl, ...rest].slice(0, MENU_IMAGE_BACKUP_MAX)
+      : rest;
+    setImageUrl(chosen);
+    setImageBackups(nextBackups);
+    await updateMenuItem(item.id, {
+      imageUrl: chosen,
+      imageBackups: nextBackups.length ? nextBackups : null,
+    });
+  }
+
   async function onSave(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -133,6 +171,7 @@ export function PosMenuItemEditor({
           deliveryPrice.trim() === "" ? null : Math.max(0, Number(deliveryPrice) || 0),
         description: description.trim() || undefined,
         imageUrl: imageUrl.trim() || undefined,
+        imageBackups: imageBackups.length ? imageBackups : null,
         recommended,
         visibleOnPos,
         active,
@@ -176,8 +215,24 @@ export function PosMenuItemEditor({
               uploading={uploading}
               setUploading={setUploading}
               onImageReady={applyImageUrl}
-              onRequestCrop={setCropSource}
+              onRequestCrop={(source) => {
+                setCropTarget("main");
+                setCropSource(source);
+              }}
               onRemove={removeImage}
+              onError={(msg) => setError(msg || null)}
+            />
+            <PosMenuPhotoBackups
+              backups={imageBackups}
+              uploading={uploading}
+              setUploading={setUploading}
+              onBackupReady={addBackup}
+              onPromote={promoteBackup}
+              onRemove={removeBackup}
+              onRequestCrop={(source) => {
+                setCropTarget("backup");
+                setCropSource(source);
+              }}
               onError={(msg) => setError(msg || null)}
             />
           </aside>
@@ -489,7 +544,8 @@ export function PosMenuItemEditor({
           onCancel={() => setCropSource(null)}
           onConfirm={(dataUrl) => {
             setCropSource(null);
-            void applyImageUrl(dataUrl).catch((err) => setError((err as Error).message));
+            const apply = cropTarget === "backup" ? addBackup(dataUrl) : applyImageUrl(dataUrl);
+            void apply.catch((err) => setError((err as Error).message));
           }}
         />
       ) : null}

@@ -69,18 +69,31 @@ export function writeHubChannelLiveRow(row) {
 
   const job = chain.then(async () => {
     const db = await getDb();
-    await setDoc(
-      doc(db, "menuPriceHub", "channelLive"),
-      {
-        [bucket]: {
-          [posId]: {
-            [channel]: observation,
-          },
-        },
-        updatedAt: Date.now(),
-      },
-      { merge: true },
-    );
+    const ref = doc(db, "menuPriceHub", "channelLive");
+    const snap = await getDoc(ref);
+    const data = snap.exists() ? snap.data() : { items: {}, options: {}, unmatched: [] };
+    const items = { ...(data.items || {}) };
+    const options = { ...(data.options || {}) };
+    const unmatched = Array.isArray(data.unmatched) ? data.unmatched : [];
+    const bucketMap = bucket === "options" ? options : items;
+    const row = { ...(bucketMap[posId] || {}) };
+    const prev = row[channel] || {};
+    const merged = { ...observation };
+    if (merged.sortIndex == null && prev.sortIndex != null) merged.sortIndex = prev.sortIndex;
+    if (!(merged.category || "").trim() && prev.category) merged.category = prev.category;
+    if ((!merged.groupNames || !merged.groupNames.length) && prev.groupNames?.length) {
+      merged.groupNames = prev.groupNames;
+    }
+    if (merged.choiceIndex == null && prev.choiceIndex != null) merged.choiceIndex = prev.choiceIndex;
+    row[channel] = merged;
+    bucketMap[posId] = row;
+    // Full-doc write so sibling channels (Grab / LINE MAN) are never replaced.
+    await setDoc(ref, {
+      items,
+      options,
+      unmatched,
+      updatedAt: Date.now(),
+    });
     return true;
   });
   chain = job.then(

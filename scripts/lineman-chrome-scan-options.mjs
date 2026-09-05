@@ -145,7 +145,7 @@ function readOptionEdit(tabIndex, windowIndex) {
         const lines = tx.split('\\n').map((s) => s.trim()).filter(Boolean);
         if (lines.length < 1) continue;
         const name = lines[0];
-        if (!name || name === group || name.includes('เพิ่มช้อยส์') || name === 'มีจำหน่าย') continue;
+        if (!name || name.includes('เพิ่มช้อยส์') || name === 'มีจำหน่าย') continue;
         if (name === 'ช้อยส์' || name === 'แก้ไขลำดับ') continue;
         const prices = lines
           .filter((l) => /^[+\\-]?฿\\d+/.test(l) || /^\\+฿\\d+/.test(l))

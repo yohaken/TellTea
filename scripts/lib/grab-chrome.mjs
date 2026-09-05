@@ -115,13 +115,31 @@ export async function downloadCurrentGrabMenuZip({ timeoutMs = 180_000, fields =
     })()`,
     { windowIndex },
   );
-  await sleep(2000);
+  {
+    const drawerDeadline = Date.now() + 10_000;
+    while (Date.now() < drawerDeadline) {
+      await sleep(800);
+      const open = chromeJsJsonOnTab(
+        tabIndex,
+        `(() => {
+          const drawer = [...document.querySelectorAll('.dui-drawer-open')].find((el) =>
+            (el.innerText || "").includes("ดาวน์โหลดแค็ตตาล็อก"),
+          );
+          return JSON.stringify({ ok: !!drawer });
+        })()`,
+        { windowIndex },
+      );
+      if (open?.ok) break;
+    }
+  }
 
   const fieldKeepList =
     fields === "all"
       ? ["ข้อมูลทั้งหมด"]
       : fields === "options"
         ? ["ตัวเลือกเสริม"]
+        : fields === "categories" || fields === "หมวดหมู่"
+          ? ["หมวดหมู่"]
         : fields === "price+options" || fields === "options+price"
           ? ["ราคาและบริการ", "ตัวเลือกเสริม"]
           : ["ราคาและบริการ"];

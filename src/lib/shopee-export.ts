@@ -2,8 +2,16 @@
  * Parse Shopee Partner "ดาวน์โหลดเมนู" CSV (เมนูหลัก / กลุ่มตัวเลือกเสริม).
  * Hub file-load path — ZIP แตกเป็น CSV ก่อน หรือเลือกทั้งสองไฟล์พร้อมกัน.
  */
-import { bestMatchByName, isMenuStoreOnly, normName } from "@/lib/menu-name-match";
-import type { ChannelLiveStore } from "@/lib/menu-channel-price";
+import { isMenuStoreOnly, namesEqual, normName } from "@/lib/menu-name-match";
+import {
+  classifyUnmatchedItemReason,
+  classifyUnmatchedOptionReason,
+  optionNameGroupKey,
+  replaceUnmatchedForChannel,
+  unmatchedLiveId,
+  type ChannelLiveStore,
+  type UnmatchedLiveEntry,
+} from "@/lib/menu-channel-price";
 import type { MenuItem, MenuOptionGroup } from "@/lib/types";
 
 export type ShopeeExportMenu = {
@@ -170,15 +178,6 @@ export async function parseShopeeExportFiles(files: File[]): Promise<ShopeeExpor
   return out;
 }
 
-function scoreOpt(a: string, b: string): number {
-  const na = normName(a);
-  const nb = normName(b);
-  if (!na || !nb) return 0;
-  if (na === nb) return 1;
-  if (na.includes(nb) || nb.includes(na)) return 0.85;
-  return 0;
-}
-
 export function applyShopeeExportToLiveStore(input: {
   parsed: ShopeeExportParsed;
   items: MenuItem[];
@@ -190,6 +189,24 @@ export function applyShopeeExportToLiveStore(input: {
   const deliveryPos = input.items.filter((p) => p.active !== false && !isMenuStoreOnly(p));
   const items = { ...(input.current.items || {}) };
   const options = { ...(input.current.options || {}) };
+  const unmatchedFresh: UnmatchedLiveEntry[] = [];
+  const unmatchedSeen = new Set<string>();
+
+  function nextUnmatchedId(
+    kind: UnmatchedLiveEntry["kind"],
+    externalId: string | null,
+    name: string,
+    group: string | null,
+  ): string {
+    let id = unmatchedLiveId("shopee", kind, externalId, name, group);
+    if (unmatchedSeen.has(id)) {
+      let n = 2;
+      while (unmatchedSeen.has(`${id}#${n}`)) n += 1;
+      id = `${id}#${n}`;
+    }
+    unmatchedSeen.add(id);
+    return id;
+  }
 
   const posByExt = new Map<string, MenuItem>();
   for (const p of deliveryPos) {
@@ -201,17 +218,25 @@ export function applyShopeeExportToLiveStore(input: {
   let unmatchedMenus = 0;
   const usedPos = new Set<string>();
   for (const it of input.parsed.items) {
-    const byName = deliveryPos.find((p) => !usedPos.has(p.id) && normName(p.name) === normName(it.name)) || null;
+    const byName = deliveryPos.find((p) => !usedPos.has(p.id) && namesEqual(p.name, it.name)) || null;
     const byId = it.dishId && posByExt.get(it.dishId) && !usedPos.has(posByExt.get(it.dishId)!.id)
       ? posByExt.get(it.dishId)!
       : null;
-    const fuzzy =
-      !byName && !byId
-        ? bestMatchByName(it.name, deliveryPos.filter((p) => !usedPos.has(p.id)), { minScore: 0.85 })
-        : null;
-    const hit = byName || byId || (fuzzy && !usedPos.has(fuzzy.id) ? fuzzy : null);
+    const hit = byName || byId;
     if (!hit) {
       unmatchedMenus += 1;
+      unmatchedFresh.push({
+        id: nextUnmatchedId("item", it.dishId, it.name, it.category || null),
+        kind: "item",
+        channel: "shopee",
+        name: it.name || "(ไม่มีชื่อ)",
+        group: it.category || null,
+        price: it.listPrice ?? null,
+        externalId: it.dishId || null,
+        reason: classifyUnmatchedItemReason(it.name || ""),
+        cleanAction: classifyUnmatchedItemReason(it.name || "") === "hidden" ? "blocked" : "review",
+        scannedAt,
+      });
       continue;
     }
     usedPos.add(hit.id);
@@ -252,21 +277,20 @@ export function applyShopeeExportToLiveStore(input: {
   let matchedOpts = 0;
   let unmatchedOpts = 0;
   const usedOpt = new Set<string>();
+  const leftoverOpts: typeof input.parsed.options = [];
   for (const o of input.parsed.options) {
     const byId = o.optionId ? optByExt.get(o.optionId) : null;
-    let best: (Choice & { score: number }) | null = null;
+    let best: Choice | null = null;
     if (!byId) {
-      for (const c of posChoices) {
-        const nameScore = scoreOpt(o.name, c.name);
-        if (nameScore < 0.85) continue;
-        const groupScore = scoreOpt(o.group, c.groupName);
-        const score = nameScore * 0.7 + groupScore * 0.3;
-        if (!best || score > best.score) best = { ...c, score };
-      }
+      const exact = posChoices.filter(
+        (c) => !usedOpt.has(c.key) && namesEqual(o.name, c.name) && namesEqual(o.group, c.groupName),
+      );
+      best = exact[0] || null;
     }
     const hit = (byId && !usedOpt.has(byId.key) ? byId : null) || (best && !usedOpt.has(best.key) ? best : null);
     if (!hit) {
       unmatchedOpts += 1;
+      leftoverOpts.push(o);
       continue;
     }
     usedOpt.add(hit.key);
@@ -283,8 +307,38 @@ export function applyShopeeExportToLiveStore(input: {
     };
   }
 
+  const matchedNameGroups = new Set<string>();
+  for (const c of posChoices) {
+    if (!usedOpt.has(c.key)) continue;
+    matchedNameGroups.add(optionNameGroupKey(c.groupName, c.name));
+  }
+  for (const o of leftoverOpts) {
+    unmatchedFresh.push({
+      id: nextUnmatchedId("option", o.optionId, o.name, o.group || null),
+      kind: "option",
+      channel: "shopee",
+      name: o.name || "(ไม่มีชื่อ)",
+      group: o.group || null,
+      price: typeof o.price === "number" ? o.price : null,
+      externalId: o.optionId,
+      reason: classifyUnmatchedOptionReason({
+        liveGroup: o.group || "",
+        liveName: o.name || "",
+        matchedNameGroups,
+        posHasSameGroup: posChoices.some((c) => namesEqual(c.groupName, o.group || "")),
+      }),
+      cleanAction: "review",
+      scannedAt,
+    });
+  }
+
   return {
-    next: { items, options, updatedAt: Date.now() },
+    next: {
+      items,
+      options,
+      unmatched: replaceUnmatchedForChannel(input.current.unmatched, "shopee", unmatchedFresh),
+      updatedAt: Date.now(),
+    },
     matchedMenus,
     unmatchedMenus,
     matchedOpts,

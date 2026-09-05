@@ -11,6 +11,18 @@ export function normName(s) {
     .trim();
 }
 
+export function namesEqual(a, b) {
+  return normName(a) === normName(b);
+}
+
+/** Ignore parentheses so POS "ชานมไข่มุก (เย็น/ปั่น)" matches channel "ชานมไข่มุก เย็น/ปั่น". */
+export function foldMenuName(s) {
+  return normName(s)
+    .replace(/[()（）]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 /** Parse OptionGroup cell: name##min-max##opt1:price#opt2:price */
 export function parseOptionGroup(cell) {
   const raw = String(cell ?? "").trim();

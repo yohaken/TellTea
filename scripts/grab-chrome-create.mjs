@@ -18,7 +18,7 @@ import { fileURLToPath } from "node:url";
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { getSeedDb } from "./lib/pos-firebase-seed.mjs";
 import { isStoreOnlyName } from "./lib/name-sync-match.mjs";
-import { normName } from "./lib/grab-csv.mjs";
+import { namesEqual, normName } from "./lib/grab-csv.mjs";
 import { applyChannelRule } from "./lib/hub-channel-targets.mjs";
 import { writeHubChannelLiveRow, writeMenuItemHubNote } from "./lib/hub-live-write.mjs";
 import {
@@ -98,7 +98,7 @@ function flattenGrab(menu) {
 }
 
 function findGrabItem(pos, grabItems) {
-  const exact = grabItems.find((g) => fold(g.itemName) === fold(pos.name));
+  const exact = grabItems.find((g) => namesEqual(g.itemName, pos.name));
   if (exact) return { item: exact, how: "exact" };
   const core = coreName(pos.name);
   const hits = grabItems.filter((g) => coreName(g.itemName) === core);

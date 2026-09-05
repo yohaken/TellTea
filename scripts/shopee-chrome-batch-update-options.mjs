@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { getSeedDb } from "./lib/pos-firebase-seed.mjs";
 import { applyChannelRule } from "./lib/hub-channel-targets.mjs";
-import { normName } from "./lib/grab-csv.mjs";
+import { namesEqual } from "./lib/grab-csv.mjs";
 import { findShopeeTab, chromeJsJsonOnTab, sleep } from "./lib/shopee-chrome.mjs";
 import { nextStepPrice } from "./lib/shopee-price-step.mjs";
 
@@ -29,16 +29,8 @@ const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run") || !args.includes("--apply");
 const groupFilter = (args.find((a) => a.startsWith("--group=")) || "").slice(8);
 
-function fold(s) {
-  return normName(s).replace(/ท้อปปิ้ง/g, "ท็อปปิ้ง").replace(/\s+/g, " ");
-}
 function scoreOpt(a, b) {
-  const na = fold(a);
-  const nb = fold(b);
-  if (!na || !nb) return 0;
-  if (na === nb) return 1;
-  if (na.includes(nb) || nb.includes(na)) return 0.85;
-  return 0;
+  return namesEqual(a, b) ? 1 : 0;
 }
 function baht(v) {
   const n = Number(v);
@@ -115,7 +107,7 @@ async function buildPlan() {
     for (const g of byG.keys()) {
       if (used.has(g)) continue;
       const s = scoreOpt(posName, g);
-      if (s < 0.85) continue;
+      if (s < 1) continue;
       if (!best || s > best.score) best = { name: g, score: s, opts: byG.get(g) };
     }
     return best;
@@ -134,7 +126,7 @@ async function buildPlan() {
         const k = o.optionId || o.name;
         if (used.has(k)) continue;
         const s = scoreOpt(c.name, o.name);
-        if (s < 0.85) continue;
+        if (s < 1) continue;
         if (!best || s > best.score) best = { o, score: s, k };
       }
       if (!best) continue;

@@ -5,7 +5,7 @@
  * — ไม่ใช้ราคาต้นแบบเดลิเวอรี่กลาง เพราะ GP แต่ละช่องทางไม่เท่ากัน
  */
 
-import { bestMatchByName, isMenuStoreOnly, normName } from "@/lib/menu-name-match";
+import { bestMatchByName, isMenuStoreOnly, namesEqual, normName } from "@/lib/menu-name-match";
 import type { MenuItem } from "@/lib/types";
 
 export type DeliveryChannel = "shopee" | "grab" | "lineman";
@@ -74,6 +74,14 @@ export type ChannelLiveObservation = {
   applyNote?: string | null;
   /** Shopee 24h cooldown จนถึง */
   cooldownUntil?: string | null;
+  /** หมวดบนแพลตฟอร์มตอนสแกน */
+  category?: string | null;
+  /** ลำดับในไฟล์สแกน (น้อย = บน) — เทียบกับ POS sortOrder ในหมวดเดียวกัน */
+  sortIndex?: number | null;
+  /** กลุ่มตัวเลือกที่ติดเมนูนี้ ตามลำดับบนแพลตฟอร์ม */
+  groupNames?: string[] | null;
+  /** ลำดับตัวเลือกในกลุ่มบนแพลตฟอร์ม */
+  choiceIndex?: number | null;
 };
 
 export type ChannelLiveByItem = Record<
@@ -81,17 +89,139 @@ export type ChannelLiveByItem = Record<
   Partial<Record<DeliveryChannel, ChannelLiveObservation>>
 >;
 
+/** ของบนแพลตฟอร์มที่สแกนได้แต่จับคู่ POS ไม่ได้ — แสดงท้ายตาราง */
+export type UnmatchedLiveKind = "item" | "option" | "category";
+export type UnmatchedLiveReason = "unmatched_name" | "duplicate" | "extra" | "hidden";
+/** คิวคลีนของเกิน — คนละอันกับสถานะราคา POS */
+export type UnmatchedCleanAction =
+  | "delete_orphan"
+  | "delete_empty_cat"
+  | "review"
+  | "blocked"
+  | "skip_only_copy";
+
+export const UNMATCHED_CLEAN_ACTIONS: UnmatchedCleanAction[] = [
+  "delete_orphan",
+  "delete_empty_cat",
+  "skip_only_copy",
+  "review",
+  "blocked",
+];
+
+/** กลุ่มตัวเลือก Grab ที่ห้ามลบแม้ related=0 */
+export const GRAB_PROTECTED_MODIFIER_IDS = [
+  "THMOG20260901152504029308",
+  "THMOG20260901152504018148",
+] as const;
+
+export type UnmatchedLiveEntry = {
+  id: string;
+  kind: UnmatchedLiveKind;
+  channel: DeliveryChannel;
+  name: string;
+  /** หมวดเมนู หรือชื่อกลุ่มตัวเลือก */
+  group: string | null;
+  price: number | null;
+  externalId: string | null;
+  related?: number | null;
+  reason: UnmatchedLiveReason;
+  cleanAction?: UnmatchedCleanAction;
+  scannedAt: string | null;
+};
+
 export type ChannelLiveStore = {
   items: ChannelLiveByItem;
   /** คีย์ = `${groupId}::${choiceId}` — สแกนตัวเลือก แยกจากราคาต้นแบบ */
   options: ChannelLiveByItem;
+  /** ของเกินบนแพลตฟอร์ม (กลุ่มซ้ำ / ลบไม่ได้ / ชื่อไม่ตรง) */
+  unmatched: UnmatchedLiveEntry[];
   updatedAt?: number;
 };
+
+export function emptyChannelLiveStore(): ChannelLiveStore {
+  return { items: {}, options: {}, unmatched: [] };
+}
+
+export function unmatchedLiveId(
+  channel: DeliveryChannel,
+  kind: UnmatchedLiveKind,
+  externalId: string | null | undefined,
+  name: string,
+  group?: string | null,
+): string {
+  return `${channel}:${kind}:${(externalId || "").trim()}:${normName(name)}:${normName(group || "")}`;
+}
+
+export function optionNameGroupKey(group: string, name: string): string {
+  return `${normName(group)}|${normName(name)}`;
+}
+
+export function classifyUnmatchedItemReason(name: string): UnmatchedLiveReason {
+  return /^\s*ลบไม่ได้/.test(name || "") ? "hidden" : "extra";
+}
+
+export function classifyUnmatchedOptionReason(args: {
+  liveGroup: string;
+  liveName: string;
+  matchedNameGroups: ReadonlySet<string>;
+  posHasSameGroup: boolean;
+}): UnmatchedLiveReason {
+  if (args.matchedNameGroups.has(optionNameGroupKey(args.liveGroup, args.liveName))) {
+    return "duplicate";
+  }
+  if (args.posHasSameGroup) return "unmatched_name";
+  return "extra";
+}
+
+export function replaceUnmatchedForChannel(
+  prev: UnmatchedLiveEntry[] | undefined,
+  channel: DeliveryChannel,
+  nextForChannel: UnmatchedLiveEntry[],
+): UnmatchedLiveEntry[] {
+  return [...(prev || []).filter((e) => e.channel !== channel), ...nextForChannel];
+}
+
+export function unmatchedReasonLabel(reason: UnmatchedLiveReason): string {
+  if (reason === "hidden") return "ซ่อน/ลบไม่ได้";
+  if (reason === "duplicate") return "กลุ่ม/ชื่อซ้ำ";
+  if (reason === "unmatched_name") return "ชื่อไม่ตรง POS";
+  return "เกินแพลตฟอร์ม";
+}
+
+export function unmatchedKindLabel(kind: UnmatchedLiveKind): string {
+  if (kind === "option") return "ตัวเลือก";
+  if (kind === "category") return "หมวด";
+  return "เมนู";
+}
+
+export function unmatchedCleanActionLabel(action: UnmatchedCleanAction | undefined): string {
+  if (action === "delete_orphan") return "ลบได้ · สำเนาไม่ผูกเมนู";
+  if (action === "delete_empty_cat") return "ลบได้ · หมวดว่าง";
+  if (action === "skip_only_copy") return "ข้าม · สำเนาเดียวที่เหลือ";
+  if (action === "blocked") return "ลบไม่ได้";
+  return "ต้องดู · ยังผูกเมนู";
+}
+
+export function unmatchedCleanActionHead(action: UnmatchedCleanAction | undefined): string {
+  if (action === "delete_orphan") return "ลบได้ · กลุ่มสำเนาไม่ผูกเมนู";
+  if (action === "delete_empty_cat") return "ลบได้ · หมวดว่าง";
+  if (action === "skip_only_copy") return "ข้าม · อย่าลบ (สำเนาเดียว)";
+  if (action === "blocked") return "ลบไม่ได้";
+  return "ต้องดู · ยังผูกเมนูอยู่";
+}
+
+export function unmatchedCleanActionRank(action: UnmatchedCleanAction | undefined): number {
+  const i = UNMATCHED_CLEAN_ACTIONS.indexOf(action as UnmatchedCleanAction);
+  return i < 0 ? UNMATCHED_CLEAN_ACTIONS.indexOf("review") : i;
+}
 
 export type ChannelMatchStatus = "match" | "mismatch" | "no_live" | "unmatched" | "na";
 
 /** เทียบชื่อ POS ↔ ช่องทาง (แยกจากสถานะราคา) */
 export type ChannelNameStatus = "exact" | "near" | "missing" | "skip";
+
+/** ลำดับบนแพลตฟอร์มเทียบ POS — ชื่อแมตช์แล้วลำดับยังเพี้ยนได้ */
+export type ChannelOrderStatus = "ok" | "wrong" | "unknown";
 
 export type ChannelPriceCell = {
   target: number;
@@ -104,6 +234,18 @@ export type ChannelPriceCell = {
   fromOverride: boolean;
   /** เฉพาะหน้าร้าน — ไม่มีเดลิเวอรี่/ช่องทาง */
   storeOnly?: boolean;
+  /** ลำดับชื่อเมนูในหมวด / ลำดับตัวเลือกในกลุ่ม */
+  orderStatus?: ChannelOrderStatus;
+  /** ลำดับกลุ่มตัวเลือกที่ติดเมนูนี้ */
+  groupOrderStatus?: ChannelOrderStatus;
+  /** ชื่อหมวด POS ↔ หมวดบนแพลตฟอร์ม */
+  categoryNameStatus?: ChannelNameStatus;
+  /** ลำดับหมวดเอง (ไม่ใช่ลำดับเมนูในหมวด) */
+  categoryOrderStatus?: ChannelOrderStatus;
+  /** ลำดับบนแพลตฟอร์ม 1-based ที่โชว์ในคอลัมน์หมวด (หมวด / ตัวเลือกในกลุ่ม) */
+  liveSortRank?: number | null;
+  /** ลำดับเมนูในหมวดบนแพลตฟอร์ม 1-based — คอลัมน์เมนู */
+  liveItemRank?: number | null;
 };
 
 export const DEFAULT_CHANNEL_RULES: ChannelRules = {
@@ -272,12 +414,12 @@ export function channelCellForOption(
     let nameStatus: ChannelNameStatus = "missing";
     let score: number | null = null;
     if (liveName) {
-      if (normName(posName) === normName(liveName)) {
+      if (namesEqual(posName, liveName)) {
         nameStatus = "exact";
         score = 1;
       } else {
         nameStatus = "near";
-        score = 0.7;
+        score = 0;
       }
     }
     if (live == null) {
@@ -347,7 +489,7 @@ export function matchLiveForPos(
   posName: string,
   liveItems: LiveChannelItem[],
 ): { item: LiveChannelItem; score: number } | null {
-  const hit = bestMatchByName(posName, liveItems, { minScore: 0.5 });
+  const hit = bestMatchByName(posName, liveItems);
   if (!hit) return null;
   return { item: hit, score: hit.score };
 }
@@ -359,7 +501,7 @@ function nameStatusForMatch(
 ): ChannelNameStatus {
   if (storeOnly) return "skip";
   if (!matched) return "missing";
-  if (matched.score >= 1 || normName(posName) === normName(matched.item.name)) return "exact";
+  if (namesEqual(posName, matched.item.name)) return "exact";
   return "near";
 }
 
@@ -368,7 +510,7 @@ export function channelCellForItem(
   channel: DeliveryChannel,
   settings: MenuPriceHubSettings,
   liveItems: LiveChannelItem[],
-  /** ค่าที่บันทึกใน hub (สแกน/แก้มือ) — มีแล้วใช้ก่อน fuzzy จาก snapshot */
+  /** ค่าที่บันทึกใน hub (สแกน/แก้มือ) — มีแล้วใช้ก่อนจับคู่ชื่อเป๊ะจาก snapshot */
   observation?: ChannelLiveObservation | null,
 ): ChannelPriceCell {
   const { target, fromOverride } = resolveChannelTarget(item, channel, settings);
@@ -397,12 +539,12 @@ export function channelCellForItem(
     let nameStatus: ChannelNameStatus = "missing";
     let score: number | null = null;
     if (liveName) {
-      if (normName(item.name) === normName(liveName)) {
+      if (namesEqual(item.name, liveName)) {
         nameStatus = "exact";
         score = 1;
       } else {
         nameStatus = "near";
-        score = 0.7;
+        score = 0;
       }
     }
     if (live == null) {
@@ -477,7 +619,9 @@ export type HubStatusFilter =
   | "no_live"
   | "unmatched"
   | "name_issue"
-  | "na";
+  | "order_issue"
+  | "na"
+  | "extras";
 
 export function summarizeRowChannels(
   channels: Record<DeliveryChannel, ChannelPriceCell>,
@@ -495,6 +639,134 @@ export function summarizeRowChannels(
   return "match";
 }
 
+export function liveSortIndex(obs: ChannelLiveObservation | null | undefined): number | null {
+  const n = Number(obs?.sortIndex);
+  return Number.isFinite(n) ? n : null;
+}
+
+export function liveChoiceIndex(obs: ChannelLiveObservation | null | undefined): number | null {
+  const n = Number(obs?.choiceIndex);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * POS ids already in POS order. liveIndexById = scan sortIndex / choiceIndex.
+ * Returns ids whose rank among scanned siblings differs from POS.
+ */
+export function sequenceWrongIds(
+  posIdsInOrder: string[],
+  liveIndexById: Map<string, number>,
+): Set<string> {
+  const known = posIdsInOrder.filter((id) => Number.isFinite(liveIndexById.get(id)));
+  const wrong = new Set<string>();
+  if (known.length < 2) return wrong;
+  const liveOrder = [...known].sort(
+    (a, b) => (liveIndexById.get(a) as number) - (liveIndexById.get(b) as number),
+  );
+  for (let i = 0; i < known.length; i++) {
+    if (known[i] !== liveOrder[i]) {
+      wrong.add(known[i]!);
+      wrong.add(liveOrder[i]!);
+    }
+  }
+  return wrong;
+}
+
+/** ลำดับ 1-based บนแพลตฟอร์ม ในกลุ่มพี่น้องที่สแกนแล้ว — ให้ตัวเลขตรงกับ POS เมื่อลำดับถูก */
+export function liveOrdinalMap(
+  posIdsInOrder: string[],
+  liveIndexById: Map<string, number>,
+): Map<string, number> {
+  const known = posIdsInOrder.filter((id) => Number.isFinite(liveIndexById.get(id)));
+  const liveOrder = [...known].sort(
+    (a, b) => (liveIndexById.get(a) as number) - (liveIndexById.get(b) as number),
+  );
+  const out = new Map<string, number>();
+  liveOrder.forEach((id, i) => out.set(id, i + 1));
+  return out;
+}
+
+export function sequenceStatus(
+  posIdsInOrder: string[],
+  liveIndexById: Map<string, number>,
+  id: string,
+): ChannelOrderStatus {
+  if (sequenceWrongIds(posIdsInOrder, liveIndexById).has(id)) return "wrong";
+  if (Number.isFinite(liveIndexById.get(id))) return "ok";
+  return "unknown";
+}
+
+/** ชื่อกลุ่ม POS ตามลำดับ vs รายชื่อบนแพลตฟอร์ม */
+export function namedListOrderStatus(
+  posNames: string[],
+  liveNames: string[] | null | undefined,
+): ChannelOrderStatus {
+  if (!liveNames || !liveNames.length) return "unknown";
+  const posKept: string[] = [];
+  const usedLive = new Set<number>();
+  for (const p of posNames) {
+    const idx = liveNames.findIndex((ln, i) => !usedLive.has(i) && namesEqual(p, ln));
+    if (idx >= 0) {
+      posKept.push(p);
+      usedLive.add(idx);
+    }
+  }
+  if (posKept.length < 2) return "ok";
+  const liveKept: string[] = [];
+  const usedPos = new Set<number>();
+  for (const ln of liveNames) {
+    const idx = posKept.findIndex((p, i) => !usedPos.has(i) && namesEqual(p, ln));
+    if (idx >= 0) {
+      liveKept.push(posKept[idx]!);
+      usedPos.add(idx);
+    }
+  }
+  for (let i = 0; i < posKept.length; i++) {
+    if (!namesEqual(posKept[i] || "", liveKept[i] || "")) return "wrong";
+  }
+  return "ok";
+}
+
+export function worstOrderStatus(
+  ...xs: Array<ChannelOrderStatus | null | undefined>
+): ChannelOrderStatus {
+  if (xs.some((x) => x === "wrong")) return "wrong";
+  if (xs.some((x) => x === "ok")) return "ok";
+  return "unknown";
+}
+
+export function orderStatusLabel(status: ChannelOrderStatus): string {
+  if (status === "wrong") return "ลำดับไม่ตรง POS";
+  if (status === "ok") return "ลำดับตรง POS";
+  return "ยังไม่สแกนลำดับ";
+}
+
+/** คงหมวด/ลำดับจากสแกนไว้ตอน apply ราคา (อย่าทับด้วยค่าว่าง) */
+export function keepLiveOrderFields(
+  prev: ChannelLiveObservation | null | undefined,
+  next: ChannelLiveObservation,
+): ChannelLiveObservation {
+  const out: ChannelLiveObservation = { ...next };
+  if (out.sortIndex == null && prev?.sortIndex != null) out.sortIndex = prev.sortIndex;
+  if (!(out.category || "").trim() && prev?.category) out.category = prev.category;
+  if ((!out.groupNames || !out.groupNames.length) && prev?.groupNames?.length) {
+    out.groupNames = prev.groupNames;
+  }
+  if (out.choiceIndex == null && prev?.choiceIndex != null) out.choiceIndex = prev.choiceIndex;
+  return out;
+}
+
+export function categoryNameStatusFor(
+  posCategory: string,
+  liveCategory: string | null | undefined,
+  storeOnly?: boolean,
+): ChannelNameStatus {
+  if (storeOnly) return "skip";
+  const live = (liveCategory || "").trim();
+  if (!live) return "missing";
+  return namesEqual(posCategory, live) ? "exact" : "near";
+}
+
 export function rowHasNameIssue(
   channels: Record<DeliveryChannel, ChannelPriceCell>,
   only: readonly DeliveryChannel[] = DELIVERY_CHANNELS,
@@ -505,6 +777,40 @@ export function rowHasNameIssue(
   );
 }
 
+export function channelOrderStatusOf(cell: ChannelPriceCell | undefined): ChannelOrderStatus {
+  return worstOrderStatus(cell?.orderStatus, cell?.groupOrderStatus, cell?.categoryOrderStatus);
+}
+
+export function rowHasItemOrderIssue(
+  channels: Record<DeliveryChannel, ChannelPriceCell>,
+  only: readonly DeliveryChannel[] = DELIVERY_CHANNELS,
+): boolean {
+  const list = only.length ? only : DELIVERY_CHANNELS;
+  return list.some((c) => channels[c].orderStatus === "wrong");
+}
+
+export function rowHasCategoryOrderIssue(
+  channels: Record<DeliveryChannel, ChannelPriceCell>,
+  only: readonly DeliveryChannel[] = DELIVERY_CHANNELS,
+): boolean {
+  const list = only.length ? only : DELIVERY_CHANNELS;
+  return list.some((c) => {
+    if (channels[c].categoryOrderStatus === "wrong") return true;
+    return channels[c].categoryNameStatus === "near";
+  });
+}
+
+export function rowHasOrderIssue(
+  channels: Record<DeliveryChannel, ChannelPriceCell>,
+  only: readonly DeliveryChannel[] = DELIVERY_CHANNELS,
+): boolean {
+  const list = only.length ? only : DELIVERY_CHANNELS;
+  return list.some((c) => {
+    if (channelOrderStatusOf(channels[c]) === "wrong") return true;
+    return channels[c].categoryNameStatus === "near";
+  });
+}
+
 export function rowMatchesFilter(
   worst: ChannelMatchStatus,
   channels: Record<DeliveryChannel, ChannelPriceCell>,
@@ -512,7 +818,9 @@ export function rowMatchesFilter(
   only?: readonly DeliveryChannel[],
 ): boolean {
   if (filter === "all") return true;
+  if (filter === "extras") return false;
   if (filter === "name_issue") return rowHasNameIssue(channels, only);
+  if (filter === "order_issue") return rowHasOrderIssue(channels, only);
   return worst === filter;
 }
 
@@ -522,11 +830,35 @@ export type HubTotals = {
   no_live: number;
   unmatched: number;
   name_issue: number;
+  order_issue: number;
   na: number;
+  extras: number;
 };
 
 export function emptyHubTotals(): HubTotals {
-  return { match: 0, mismatch: 0, no_live: 0, unmatched: 0, name_issue: 0, na: 0 };
+  return {
+    match: 0,
+    mismatch: 0,
+    no_live: 0,
+    unmatched: 0,
+    name_issue: 0,
+    order_issue: 0,
+    na: 0,
+    extras: 0,
+  };
+}
+
+export function liveIndexMap(
+  live: ChannelLiveByItem,
+  channel: DeliveryChannel,
+  field: "sortIndex" | "choiceIndex",
+): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const [id, row] of Object.entries(live)) {
+    const n = Number(row?.[channel]?.[field]);
+    if (Number.isFinite(n)) out.set(id, n);
+  }
+  return out;
 }
 
 export function channelLabel(channel: DeliveryChannel): string {

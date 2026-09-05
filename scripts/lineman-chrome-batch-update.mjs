@@ -168,8 +168,8 @@ async function runOneRound({ apply, workers, limit, from, retryBlocked, tracker 
   const allTodo = plan.todo;
   const todo = allTodo.slice(from, from + (Number.isFinite(limit) ? limit : 9999));
 
-  const ruleLabel = `hub · LINE MAN ${formatRule(meta.linemanRule)}`;
-  console.log(`=== LINE MAN price ×${workers} ${apply ? "APPLY" : "DRY-RUN"} (target=${ruleLabel}) ===`);
+  const ruleLabel = `hub · LINE MAN ผสม · ระบุราคา ${meta.overrideN ?? 0} · คอลัมน์ ${formatRule(meta.linemanRule)} ${meta.columnN ?? 0}`;
+  console.log(`=== LINE MAN price ×${workers} ${apply ? "APPLY" : "DRY-RUN"} (${ruleLabel}) ===`);
   console.log(
     `Remaining ${allTodo.length}/${meta.matched || "?"} → workers=${workers}${
       retryBlocked ? " · retry-blocked" : ""
@@ -193,7 +193,9 @@ async function runOneRound({ apply, workers, limit, from, retryBlocked, tracker 
     const r = { ...(await updateOne(tabIndex, item, apply, windowIndex)), at: new Date().toISOString() };
     log[i] = r;
     const storeBit = item.storePrice != null ? ` · หน้าร้าน ${item.storePrice}` : "";
-    const ruleBit = item.rule ? ` · ${formatRule(item.rule)}` : "";
+    const ruleBit = item.rule
+      ? ` · ${item.fromOverride && item.rule.mode === "absolute" ? "ระบุราคา" : formatRule(item.rule)}`
+      : "";
     console.log(
       `[${i + 1}/${todo.length}] ${r.status}: ${item.name.slice(0, 36)} ${r.before ?? item.current}→${r.attempted ?? item.applyPrice} (เป้า ${item.target}${storeBit}${ruleBit})`,
     );

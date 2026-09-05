@@ -155,6 +155,12 @@ function confirmOrCancel(tabIndex, windowIndex, { confirm }) {
   );
 }
 
+/** Canonical Grab groups — never delete even if related=0. */
+const PROTECTED_GROUP_IDS = new Set([
+  "THMOG20260901152504029308",
+  "THMOG20260901152504018148",
+]);
+
 function buildPlan(parsed) {
   const keep = [];
   const skip = [];
@@ -163,6 +169,12 @@ function buildPlan(parsed) {
     const siblings = parsed.byFold.get(g.fold) || [];
     const usedSiblings = siblings.filter((s) => s.used && s.id !== g.id);
     const row = { ...g, usedSiblingCount: usedSiblings.length, usedSiblingIds: usedSiblings.map((s) => s.id) };
+    if (PROTECTED_GROUP_IDS.has(g.id)) {
+      row.verdict = "skip";
+      row.reason = "SKIP protected canonical group";
+      skip.push(row);
+      continue;
+    }
     if (g.used) {
       row.verdict = "keep";
       row.reason = `KEEP used related=${g.related} linkedOnItem=${g.linkedOnItem}`;
@@ -253,6 +265,10 @@ for (const target of targets) {
     aborted = { why: "item-links-changed", id: target.id };
     rec({ step: "abort", ...aborted });
     break;
+  }
+  if (PROTECTED_GROUP_IDS.has(target.id)) {
+    rec({ step: "skip-protected", id: target.id, name: target.fold });
+    continue;
   }
   if (!live) {
     rec({ step: "already-gone", id: target.id, name: target.fold });

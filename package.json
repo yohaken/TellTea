@@ -116,6 +116,8 @@
     "test:boh-menu-walk-code": "node scripts/test-boh-menu-walk-code.mjs",
     "test:menu-list-thumb-no-fullscreen": "node scripts/test-menu-list-thumb-no-fullscreen.mjs",
     "test:menu-price-placeholder-nbsp": "node scripts/test-menu-price-placeholder-nbsp.mjs",
+    "test:menu-name-exact": "node scripts/test-menu-name-exact.mjs",
+    "test:menu-channel-order": "npx --yes tsx scripts/test-menu-channel-order.ts",
     "test:menu-sales-volume": "node scripts/test-menu-sales-volume.mjs",
     "test:boh-menu-qa-ux": "node scripts/test-boh-menu-qa-ux.mjs",
     "test:boh-menu-bulk-price": "node scripts/test-boh-menu-bulk-price.mjs",
@@ -250,7 +252,8 @@
     "test:npos-sunmi-printer-release": "node scripts/test-npos-sunmi-printer-release.mjs",
     "test:npos-sunmi-bitmap-slip": "node scripts/test-npos-sunmi-bitmap-slip.mjs",
     "test:npos-equip-status": "node scripts/test-npos-equip-status.mjs",
-    "test:npos-bo-sessions-bulk-delete": "node scripts/test-npos-bo-sessions-bulk-delete.mjs"
+    "test:npos-bo-sessions-bulk-delete": "node scripts/test-npos-bo-sessions-bulk-delete.mjs",
+    "menu-cover:green": "node scripts/menu-cover-green-pipeline.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.6.7",

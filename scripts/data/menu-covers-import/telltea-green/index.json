@@ -1,0 +1,286 @@
+{
+  "version": 2,
+  "purpose": "menu-cover-candidates-green-tone",
+  "folder": "telltea-โทนเขียว",
+  "driveFolderId": "1dChZwVd9nms-xHaViZo6E8-bdqHN7sLz",
+  "formula": "_formula/logo-cup-proportion.json",
+  "assets": "_assets/",
+  "items": [
+    {
+      "sku": "SD_01",
+      "folder": "SD_01_หวานเย็นโบราณ",
+      "group": "Signature Drinks",
+      "posName": null,
+      "displayName": "หวานเย็นโบราณ",
+      "source": "เมนูแยก/Signature Drinks/SD_01_หวานเย็นโบราณ.jpg",
+      "sourceDriveId": "16bXNfRVGKfn4f-T9lTPEAzQ76YUKSBPY",
+      "driveSkuFolderId": "1aSOZlDzy54pc24NnxWXcxOOU8Ec6nKhq",
+      "candidates": {
+        "v1": {
+          "file": "Signature Drinks/SD_01_หวานเย็นโบราณ/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1MuXaVdlR2pO0RcXJbBQCvuNEUJxq3yom",
+          "webViewLink": "https://drive.google.com/file/d/1MuXaVdlR2pO0RcXJbBQCvuNEUJxq3yom/view?usp=drivesdk"
+        }
+      },
+      "main": null,
+      "posAttached": false,
+      "posItemId": null,
+      "posBackupAttached": false
+    },
+    {
+      "sku": "SD_02",
+      "folder": "SD_02_กาแฟโบราณบราวน์ชูการ์",
+      "group": "Signature Drinks",
+      "posName": "กาแฟโบราณ บราวน์ชูการ์ (เย็น/ปั่น)",
+      "displayName": "กาแฟโบราณบราวน์ชูการ์",
+      "source": "เมนูแยก/Signature Drinks/SD_02_กาแฟโบราณบราวน์ชูการ์.jpg",
+      "sourceDriveId": "1tE3I3zAqCK4zSZ2SOfC0dlpiQJv__vGI",
+      "driveSkuFolderId": "1Vfr8LQR0doL8LjjoLQDwi4FlJc0hVHHw",
+      "candidates": {
+        "v1": {
+          "file": "Signature Drinks/SD_02_กาแฟโบราณบราวน์ชูการ์/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1h9rLQ5sqUkhTOfIwb2rIp0BQPDe7j9cG",
+          "webViewLink": "https://drive.google.com/file/d/1h9rLQ5sqUkhTOfIwb2rIp0BQPDe7j9cG/view?usp=drivesdk"
+        }
+      },
+      "main": null,
+      "posAttached": false,
+      "posItemId": "fs_item_33768737",
+      "posBackupAttached": true
+    },
+    {
+      "sku": "SD_03",
+      "folder": "SD_03_โกโก้มิ้นต์",
+      "group": "Signature Drinks",
+      "posName": "โกโก้มิ้นต์ (เย็น/ปั่น)",
+      "displayName": "โกโก้มิ้นต์",
+      "source": "เมนูแยก/Signature Drinks/SD_03_โกโก้มิ้นต์.jpg",
+      "sourceDriveId": "1M73Aa35K8gS470fmYoGMtBGONBLoZ5hW",
+      "driveSkuFolderId": "1TVW2RSeZCHDFqLdHe6ClSjWUchy8RUzx",
+      "candidates": {
+        "v1": {
+          "file": "Signature Drinks/SD_03_โกโก้มิ้นต์/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1V9eEKk2x1p3NU5Ptmk3cSc4CyHFZXUYh",
+          "webViewLink": "https://drive.google.com/file/d/1V9eEKk2x1p3NU5Ptmk3cSc4CyHFZXUYh/view?usp=drivesdk"
+        }
+      },
+      "main": null,
+      "posAttached": false,
+      "posItemId": "fs_item_33559309",
+      "posBackupAttached": true
+    },
+    {
+      "sku": "SD_04",
+      "folder": "SD_04_ชานมไข่มุก",
+      "group": "Signature Drinks",
+      "posName": "ชานมไข่มุก (เย็น/ปั่น)",
+      "displayName": "ชานมไข่มุกธรรมดา",
+      "source": "เมนูแยก/Signature Drinks/SD_04_ชานมไข่มุก.jpg",
+      "sourceDriveId": "1WKntkTRu-0X1An08Ra6vQCqp5vxv6nwN",
+      "driveSkuFolderId": "1o0W0bWEQk8UBeXMqWOzOdVOEhpuin1Ub",
+      "candidates": {
+        "v1": {
+          "file": "Signature Drinks/SD_04_ชานมไข่มุก/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1ZXUpyXmfMXRgrTHcXridiBeCcHYBuioH",
+          "webViewLink": "https://drive.google.com/file/d/1ZXUpyXmfMXRgrTHcXridiBeCcHYBuioH/view?usp=drivesdk"
+        }
+      },
+      "main": null,
+      "posAttached": false,
+      "posItemId": "fs_item_33559314",
+      "posBackupAttached": true
+    },
+    {
+      "sku": "SD_05",
+      "folder": "SD_05_ชาไทยชีส",
+      "group": "Signature Drinks",
+      "posName": "ชาไทยชีส (เย็น/ปั่น)",
+      "displayName": "ชาไทยชีส",
+      "source": "เมนูแยก/Signature Drinks/SD_05_ชาไทยชีส.jpg",
+      "sourceDriveId": "1Bg3n7XHyRGb5TCNTM5D5w0ksJxbBNYDh",
+      "driveSkuFolderId": "1lY35ACyE_2F1hU5hFOItOdGWdpR-8KAE",
+      "candidates": {
+        "v1": {
+          "file": "Signature Drinks/SD_05_ชาไทยชีส/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1h7PRxpNXiWR4X3shHuaizr0TfS30ELyC",
+          "webViewLink": "https://drive.google.com/file/d/1h7PRxpNXiWR4X3shHuaizr0TfS30ELyC/view?usp=drivesdk"
+        }
+      },
+      "main": null,
+      "posAttached": false,
+      "posItemId": "fs_item_33768746",
+      "posBackupAttached": true
+    },
+    {
+      "sku": "SD_06",
+      "folder": "SD_06_ชานมไข่มุกบราวน์ชูการ์",
+      "group": "Signature Drinks",
+      "posName": "ชานมไข่มุกบราวน์ชูการ์ (เย็น/ปั่น)",
+      "displayName": "ชานมไข่มุกบราวน์ชูการ์",
+      "source": "เมนูแยก/Signature Drinks/SD_06_ชานมไข่มุกบราวน์ชูการ์.jpg",
+      "sourceDriveId": "1nX039Wd9exNcuHiCYOps2S-6Tf1LypVA",
+      "driveSkuFolderId": "1HgWk0sP_UCF-Lf9W9YNAlcVZONrvo4bM",
+      "candidates": {
+        "v1": {
+          "file": "Signature Drinks/SD_06_ชานมไข่มุกบราวน์ชูการ์/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "11lvsPg9ywbT_Ssma6mkhyaddi_8O9wHr",
+          "webViewLink": "https://drive.google.com/file/d/11lvsPg9ywbT_Ssma6mkhyaddi_8O9wHr/view?usp=drivesdk"
+        }
+      },
+      "main": null,
+      "posAttached": false,
+      "posItemId": "fs_item_33559326",
+      "posBackupAttached": true
+    },
+    {
+      "sku": "SD_07",
+      "folder": "SD_07_โกโก้สตรอว์เบอร์รี",
+      "group": "Signature Drinks",
+      "posName": "โกโก้สตรอว์เบอร์รี (เย็น/ปั่น)",
+      "displayName": "โกโก้สตรอว์เบอร์รี",
+      "source": "เมนูแยก/Signature Drinks/SD_07_โกโก้สตรอว์เบอร์รี.jpg",
+      "sourceDriveId": "1aSK1OAzNat6_haR4OlKLvW8EEpDwE1Zo",
+      "driveSkuFolderId": "1SyazKDZmYdxlX6jMCU7Sr_HuLLwZzce3",
+      "candidates": {
+        "v1": {
+          "file": "Signature Drinks/SD_07_โกโก้สตรอว์เบอร์รี/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1gXaGE0Y3tei6lO4a0vNFneODG7YJIIFD",
+          "webViewLink": "https://drive.google.com/file/d/1gXaGE0Y3tei6lO4a0vNFneODG7YJIIFD/view?usp=drivesdk"
+        }
+      },
+      "main": null,
+      "posAttached": false,
+      "posItemId": "fs_item_33559319",
+      "posBackupAttached": true
+    },
+    {
+      "sku": "SD_08",
+      "folder": "SD_08_โกโก้",
+      "group": "Signature Drinks",
+      "posName": "โกโก้ (เย็น/ปั่น)",
+      "displayName": "โกโก้",
+      "source": "เมนูแยก/นมสด/M_01_โกโก้.jpg",
+      "sourceDriveId": "1VhgMIgVa43hoPwQ0-U1YFcfNy54ci8OH",
+      "driveSkuFolderId": "1Esf2FEdJDgCEBf-BO7t4Tze09q3urCTE",
+      "candidates": {
+        "v1": {
+          "file": "Signature Drinks/SD_08_โกโก้/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1zVBMPqdP77PCfHX9GgCoo_6A7Ejdyv9m",
+          "webViewLink": "https://drive.google.com/file/d/1zVBMPqdP77PCfHX9GgCoo_6A7Ejdyv9m/view?usp=drivesdk",
+          "cup": {
+            "method": "occupancy",
+            "cx": 0.51,
+            "cy": 0.45,
+            "width": 0.335,
+            "height": 0.655,
+            "failed": false
+          },
+          "updatedAt": "2026-09-05T07:01:51.649Z"
+        }
+      },
+      "main": null,
+      "posAttached": false,
+      "posItemId": "fs_item_33559286",
+      "posBackupAttached": true,
+      "generatedWithoutDriveMaster": false,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "SD_09",
+      "folder": "SD_09_ชานมชีส",
+      "group": "Signature Drinks",
+      "posName": "ชานมชีส (เย็น/ปั่น)",
+      "displayName": "ชานมชีส",
+      "source": "เมนูแยก/ชานม/MT_01_ชานมชีส.jpg",
+      "sourceDriveId": "1en865uCqellM0X07cO9HudSdhmIwv-NF",
+      "driveSkuFolderId": "15-Ep-kET8tD1YkCxMSLF-xvRoAOQZ48N",
+      "candidates": {
+        "v1": {
+          "file": "Signature Drinks/SD_09_ชานมชีส/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1dyb5Q4Ge4RlqlxOoweRLkXIiGtjHYKtZ",
+          "webViewLink": "https://drive.google.com/file/d/1dyb5Q4Ge4RlqlxOoweRLkXIiGtjHYKtZ/view?usp=drivesdk",
+          "cup": {
+            "method": "occupancy",
+            "cx": 0.4988,
+            "cy": 0.45,
+            "width": 0.3675,
+            "height": 0.655,
+            "failed": false
+          },
+          "updatedAt": "2026-09-05T07:01:55.208Z"
+        }
+      },
+      "main": null,
+      "posAttached": false,
+      "posItemId": "fs_item_33559318",
+      "posBackupAttached": true,
+      "generatedWithoutDriveMaster": false,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "SD_10",
+      "folder": "SD_10_ชาเขียวนม",
+      "group": "Signature Drinks",
+      "posName": "ชาเขียวนม (เย็น/ปั่น)",
+      "displayName": "ชาเขียวนม",
+      "source": "เมนูแยก/ชานม/MT_02_ชาเขียวนม.jpg",
+      "sourceDriveId": "1NMqLc5sFpJ3dsFxGkLqhKEKrMaV3f-1E",
+      "driveSkuFolderId": "1eJYkb_CWqTGNqiBeQbeIKQZNkK84hM6w",
+      "candidates": {
+        "v1": {
+          "file": "Signature Drinks/SD_10_ชาเขียวนม/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1Wr-XrOpfKnpUwiCPcmuxzhm6Iv4QYGAF",
+          "webViewLink": "https://drive.google.com/file/d/1Wr-XrOpfKnpUwiCPcmuxzhm6Iv4QYGAF/view?usp=drivesdk",
+          "cup": {
+            "method": "grid-cup-center-not-frame",
+            "cx": 0.46,
+            "cy": 0.45,
+            "width": 0.28,
+            "height": 0.58,
+            "failed": false
+          },
+          "updatedAt": "2026-09-05T07:31:43.513Z"
+        }
+      },
+      "main": null,
+      "posAttached": false,
+      "posItemId": "fs_item_33559328",
+      "posBackupAttached": true,
+      "generatedWithoutDriveMaster": false,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "SD_11",
+      "folder": "SD_11_โกโก้ลาวาช็อกขูด",
+      "group": "Signature Drinks",
+      "posName": "โกโก้ลาวาช็อกขูด (เย็น/ปั่น)",
+      "displayName": "โกโก้ลาวาช็อกขูด",
+      "source": "layout=M_01 + drink=POS lava",
+      "sourceDriveId": null,
+      "driveSkuFolderId": "1JCQxoe5R0PxaSs2eVP9WZKV_hk4hPhMB",
+      "candidates": {
+        "v1": {
+          "file": "Signature Drinks/SD_11_โกโก้ลาวาช็อกขูด/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1kyP7iahn-yRJKa2p_omrHY8OZ8zjLhzj",
+          "webViewLink": "https://drive.google.com/file/d/1kyP7iahn-yRJKa2p_omrHY8OZ8zjLhzj/view?usp=drivesdk",
+          "cup": {
+            "method": "occupancy",
+            "cx": 0.51,
+            "cy": 0.4862,
+            "width": 0.335,
+            "height": 0.5825,
+            "failed": false
+          },
+          "updatedAt": "2026-09-05T07:02:01.951Z"
+        }
+      },
+      "main": null,
+      "posAttached": false,
+      "posItemId": "fs_item_47385144",
+      "posBackupAttached": true,
+      "generatedWithoutDriveMaster": true,
+      "logoPlacement": "cup-center-both-axes"
+    }
+  ],
+  "updatedAt": "2026-09-05T07:31:43.513Z"
+}

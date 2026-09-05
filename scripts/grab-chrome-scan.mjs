@@ -11,7 +11,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { findGrabTab, openEditItem, mapPool } from "./lib/grab-chrome.mjs";
 import { loadHubChannelContext } from "./lib/hub-channel-targets.mjs";
-import { bestPosForGrab, isStoreOnlyName } from "./lib/name-sync-match.mjs";
+import { isStoreOnlyName } from "./lib/name-sync-match.mjs";
 import { normName } from "./lib/grab-csv.mjs";
 import { writeHubChannelLiveRow } from "./lib/hub-live-write.mjs";
 
@@ -66,7 +66,8 @@ async function scanOne(tabIndex, item, _i, windowIndex) {
 }
 
 function matchPos(name, items, posByName) {
-  return bestPosForGrab(name, items) || posByName.get(normName(name)) || null;
+  void items;
+  return posByName.get(normName(name)) || null;
 }
 
 async function main() {

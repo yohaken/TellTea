@@ -335,8 +335,18 @@ function mergeTrackerRow(tracker, r, round) {
     entry.currentLive = r.before;
   }
   entry.reachedTarget = entry.currentLive === r.target;
-  if (r.blocked24h || r.status === "blocked_24h" || ((r.status === "blocked_popup" || r.status === "blocked_promo") && !r.changed)) {
-    entry.cooldownUntil = new Date(Date.now() + COOLDOWN_MS).toISOString();
+  // 24h lock starts after a successful price save. A failed 24h popup must not
+  // push cooldown further — retry after the last successful save + 24h.
+  if (r.verified && r.changed) {
+    /* cooldownUntil already set above */
+  } else if (r.blocked24h || r.status === "blocked_24h") {
+    const lastOk = [...(entry.rounds || [])].reverse().find((x) => x.changed);
+    const fromOk = lastOk?.at ? Date.parse(lastOk.at) : NaN;
+    const until = Number.isFinite(fromOk) ? fromOk + COOLDOWN_MS : Date.now() + COOLDOWN_MS;
+    const existing = Date.parse(entry.cooldownUntil || "");
+    if (!Number.isFinite(existing) || existing < until) {
+      entry.cooldownUntil = new Date(until).toISOString();
+    }
   }
   entry.rounds.push({
     round,
@@ -461,6 +471,7 @@ async function runOneRound({ apply, workers, limit, from, source, tracker, pipel
       formatRowLog(row, item, i, todo.length);
       if (apply) await persistRow(tracker, row, round);
       log.push(row);
+      if (apply && i < todo.length - 1) await sleep(2500);
     }
   } else {
     console.log(`Opening ${workers} Chrome tabs…`);

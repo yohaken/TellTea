@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "telltea-cup-logo-v1",
+  "source": "SD_04_ชานมไข่มุก.jpg original printed mark on cup",
+  "measured": {
+    "logoW_over_frameW": 0.2399,
+    "logoH_over_frameH": 0.3612,
+    "note": "Old height includes ICECREAM & TEA subtitle; new logo has no subtitle — match WIDTH"
+  },
+  "standard": {
+    "widthOverFrame": 0.23,
+    "centerX": 0.5,
+    "topY": 0.32,
+    "greenTone": "#405B4A",
+    "greenToneName": "Feldgrau",
+    "masterPx": 2000,
+    "logoColor": "#FFFFFF",
+    "widthOverCup": 0.62,
+    "placeOn": "cup-center-both-axes",
+    "detect": "occupancy-or-lid-edges"
+  },
+  "logoAsset": "../_assets/tell-tea-logo-white-transparent.png",
+  "updatedAt": "2026-09-05T05:25:52.135Z",
+  "note": "Cup logo ink is WHITE on drink; navy source kept only if needed for other surfaces"
+}
