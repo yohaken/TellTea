@@ -59,6 +59,21 @@ function parseObservation(raw: unknown): ChannelLiveObservation | null {
     ...(sortIndex != null ? { sortIndex } : {}),
     ...(choiceIndex != null ? { choiceIndex } : {}),
     ...(groupNames?.length ? { groupNames } : {}),
+    ...(typeof o.photoId === "string" || o.photoId === null
+      ? { photoId: o.photoId == null ? "" : o.photoId }
+      : {}),
+    ...(typeof o.photoPushedId === "string" && o.photoPushedId
+      ? { photoPushedId: o.photoPushedId }
+      : {}),
+    ...(typeof o.photoPushedHash === "string" && o.photoPushedHash
+      ? { photoPushedHash: o.photoPushedHash }
+      : {}),
+    ...(typeof o.photoPushedAt === "string" && o.photoPushedAt
+      ? { photoPushedAt: o.photoPushedAt }
+      : {}),
+    ...(typeof o.photoVerifiedAt === "string" && o.photoVerifiedAt
+      ? { photoVerifiedAt: o.photoVerifiedAt }
+      : {}),
   };
 }
 

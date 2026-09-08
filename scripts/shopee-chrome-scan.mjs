@@ -4,7 +4,10 @@
  * Writes each verified live price into menuPriceHub/channelLive (Shopee only).
  *
  *   node scripts/shopee-chrome-scan.mjs [--workers=6] [--limit=N] [--from=N]
- *   node scripts/shopee-chrome-scan.mjs --workers=10 --no-hub
+ *   node scripts/shopee-chrome-scan.mjs --workers=10
+ *   node scripts/shopee-chrome-scan.mjs --hub          # also write row-by-row (avoid; use channel-scan-to-hub)
+ *   node scripts/shopee-chrome-scan.mjs --no-hub       # default: JSON only
+
  */
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -146,7 +149,7 @@ async function main() {
   const workers = workersArg ? Math.min(10, Math.max(1, Number(workersArg.slice("--workers=".length)))) : 6;
   const limitArg = process.argv.find((a) => a.startsWith("--limit="));
   const fromArg = process.argv.find((a) => a.startsWith("--from="));
-  const noHub = process.argv.includes("--no-hub");
+  const noHub = !process.argv.includes("--hub");
   const retryFail = process.argv.includes("--retry-fail");
   const lastLog = process.argv.includes("--last-log");
   const pendingOnly = process.argv.includes("--pending");

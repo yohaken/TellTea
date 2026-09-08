@@ -676,9 +676,11 @@ export async function verifyPersistedPrice(tabIndex, itemId, name, windowIndex, 
   return page?.listPrice ?? null;
 }
 
-export async function mapPool(items, workers, fn) {
-  const { windowIndex: baseWindow, tabIndices } = ensureWorkerTabs(workers);
-  await sleep(workers > 1 ? 3500 : 2500);
+export async function mapPool(items, workers, fn, pre) {
+  const { windowIndex: baseWindow, tabIndices } = pre?.tabIndices?.length
+    ? { windowIndex: pre.windowIndex, tabIndices: pre.tabIndices }
+    : ensureWorkerTabs(workers);
+  if (!pre?.tabIndices?.length) await sleep(workers > 1 ? 3500 : 2500);
 
   const results = new Array(items.length);
   let cursor = 0;

@@ -1,0 +1,24 @@
+---
+description: Locked TellTea cup-logo placement — icon center on cup center
+alwaysApply: true
+---
+
+# โลโก้บนแก้ว — กฏที่ล็อกแล้ว (อย่าเดาใหม่)
+
+ผู้ใช้ล็อกแล้วจากกลุ่มกาแฟสดเข้มข้น 16 oz (โอเลี้ยงเฮเซลนัทเป็นต้นแบบที่ดูดี)
+
+**จุดยึดคือกึ่งกลางไอคอนคนดูดหลอด ไม่ใช่กึ่งกลางทั้งไฟล์โลโก้**
+
+ไฟล์ PNG (`tell-tea-logo-white-transparent.png`) มี 2 แถบ: ไอคอน (กลางที่ 38.2% ของความสูงไฟล์) และข้อความ Tell Tea ด้านล่าง
+
+1. หาขอบแก้วในรูปนั้น: **ปาก/น้ำแข็ง → ก้นพลาสติก** (ไม่นับสาดที่ฐาน)
+2. จุดกลางแก้ว: `cup.cx`, `cup.cy = (top + bottom) / 2`
+3. วางโลโก้ขาวให้ `กึ่งกลางไอคอน = กึ่งกลางแก้ว`
+   - X: `logo.cx = cup.cx`
+   - Y: `logo.top + 0.382 * logo.height = cup.cy`
+4. กว้างโลโก้ ≈ **62% ของความกว้างแก้ว**
+
+สูตรอยู่ใน `scripts/data/menu-covers-import/telltea-green/_formula/logo-cup-proportion.json`  
+โค้ด: `placeOn: "icon-center-on-cup"` ใน `scripts/menu-cover-green-pipeline.mjs`
+
+ห้าม: จัดกึ่งกลางทั้งบล็อกไอคอน+Tell Tea (จะดึงไอคอนขึ้นไปทับน้ำแข็ง) / ยึดกล่องพี่น้อง JT_01 แทนแก้วในรูปนี้ / ใช้ topOverCup 0.407

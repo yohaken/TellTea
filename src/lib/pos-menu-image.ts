@@ -149,6 +149,23 @@ export function releaseMenuImageCropSource(source: MenuImageCropSource): void {
   URL.revokeObjectURL(source.objectUrl);
 }
 
+/**
+ * Fingerprint of the confirmed main photo (imageUrl).
+ * Not a filename — platforms mint their own CDN ids.
+ */
+export function menuMainImageHash(imageUrl: string | null | undefined): string {
+  const raw = String(imageUrl || "").trim();
+  if (!raw) return "";
+  const payload = raw.includes(",") ? raw.slice(raw.indexOf(",") + 1) : raw;
+  let h = 2166136261;
+  for (let i = 0; i < payload.length; i++) {
+    h ^= payload.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  h ^= payload.length;
+  return `${(h >>> 0).toString(16).padStart(8, "0")}:${payload.length.toString(16)}`;
+}
+
 /** Auto square crop (center) — used when crop UI is skipped. */
 export async function processMenuItemImage(file: File): Promise<string> {
   const prep = await prepareMenuItemImage(file);

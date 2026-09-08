@@ -23,7 +23,10 @@ import { buildShopeeHubPlan } from "./lib/hub-channel-targets.mjs";
 import { writeHubLiveFromApplyResult, writeMenuItemHubNote, loadHubChannelLiveItems, ensureShopeePipelineTableNote } from "./lib/hub-live-write.mjs";
 import {
   findShopeeTab,
+  assertShopeeLoggedIn,
   readEditPage,
+  readDishListing,
+  restoreDishListing,
   savePriceAndRead,
   verifyPersistedPrice,
   chromeJsOnTab,
@@ -126,7 +129,8 @@ function syncScanFromResults(results) {
 
 function isShopee24hBlocked(entry) {
   if (!entry) return false;
-  if (entry.cooldownUntil && Date.now() < Date.parse(entry.cooldownUntil)) return true;
+  const until = Date.parse(entry.cooldownUntil || "");
+  if (Number.isFinite(until)) return Date.now() < until;
   const last = entry.rounds?.at(-1);
   if (!last) return false;
   if (!/24 ชั่วโมง/.test(last.popupText || "")) return false;
@@ -185,13 +189,15 @@ function fmtShortTs(iso) {
   return `${d.getDate()}/${d.getMonth() + 1} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
+function finitePositivePrice(v) {
+  if (v == null || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 /** Compact note for menuItems.hubNote — AI/user reads on next run. */
 function formatShopeeHubNote(r, entry) {
-  const live =
-    Number.isFinite(Number(r.verifyRead)) ? Number(r.verifyRead)
-    : Number.isFinite(Number(r.after)) ? Number(r.after)
-    : Number.isFinite(Number(r.before)) ? Number(r.before)
-    : null;
+  const live = finitePositivePrice(r.verifyRead) ?? finitePositivePrice(r.after) ?? finitePositivePrice(r.before);
   const target = r.target;
   const ts = fmtShortTs(r.at || new Date().toISOString());
   if (live == null) return `S ? ${ts}`;
@@ -217,14 +223,12 @@ function formatShopeeHubNote(r, entry) {
 }
 
 function resolveLivePrice(row) {
-  if (Number.isFinite(Number(row.verifyRead))) return Number(row.verifyRead);
-  if (row.verified && row.changed && Number.isFinite(Number(row.after))) return Number(row.after);
-  if (Number.isFinite(Number(row.before))) return Number(row.before);
-  return null;
+  return finitePositivePrice(row.verifyRead) ?? finitePositivePrice(row.after) ?? finitePositivePrice(row.before);
 }
 
 function syncScanOne(row) {
-  if (!row.verified || row.after == null || !Number.isFinite(Number(row.after))) return;
+  const after = finitePositivePrice(row.after);
+  if (!row.verified || after == null) return;
   if (!existsSync(SCAN)) return;
   const scan = JSON.parse(readFileSync(SCAN, "utf8"));
   const it = (scan.items || []).find((x) => String(x.dishId) === String(row.dishId));
@@ -240,11 +244,36 @@ async function updateOne(tabIndex, item, apply, windowIndex) {
   chromeJsOnTab(tabIndex, `(() => { location.href='${editUrl(item.dishId)}'; return 'ok'; })()`, {
     windowIndex,
   });
-  await sleep(1500);
-  const page = readEditPage(tabIndex, windowIndex);
+  await sleep(2500);
+  let page = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      page = readEditPage(tabIndex, windowIndex);
+      if (page?.onEdit) break;
+    } catch (err) {
+      const msg = String(err?.message || err);
+      if (!/timed out|-1712/i.test(msg)) throw err;
+      console.log(`  ⚠ edit page timeout retry ${attempt + 1} · ${String(item.name || "").slice(0, 28)}`);
+    }
+    await sleep(3000);
+  }
   if (!page?.onEdit) return { ...item, status: "error", error: "edit page not open" };
 
-  const liveBefore = Number(page.listPrice);
+  const liveBefore = finitePositivePrice(page.listPrice);
+  if (liveBefore == null) {
+    return { ...item, status: "error", error: "no live price on edit page" };
+  }
+  let listingPin = null;
+  try {
+    listingPin = readDishListing(tabIndex, item.dishId, windowIndex);
+  } catch (err) {
+    const msg = String(err?.message || err);
+    if (/timed out|-1712/i.test(msg)) {
+      console.log(`  ⚠ listing GET timeout · ${String(item.name || "").slice(0, 28)} — skip pin`);
+    } else {
+      throw err;
+    }
+  }
   if (liveBefore === item.target) {
     return { ...item, status: "skip_at_target", before: liveBefore, after: liveBefore, changed: false };
   }
@@ -274,10 +303,28 @@ async function updateOne(tabIndex, item, apply, windowIndex) {
   }
 
   const persisted = await verifyPersistedPrice(tabIndex, item.dishId, windowIndex);
-  const afterRaw = Number.isFinite(persisted) ? persisted : Number(result.after);
-  const after = Number.isFinite(afterRaw) ? afterRaw : liveBefore;
-  const changed = after !== liveBefore;
-  const verified = Number.isFinite(persisted) && persisted === after;
+  let listingRestore = null;
+  if (listingPin?.ok) {
+    try {
+      listingRestore = restoreDishListing(tabIndex, item.dishId, listingPin, windowIndex);
+    } catch (err) {
+      const msg = String(err?.message || err);
+      if (/timed out|-1712/i.test(msg)) {
+        console.log(`  ⚠ listing restore timeout · ${String(item.name || "").slice(0, 28)}`);
+      } else {
+        throw err;
+      }
+    }
+    if (listingRestore?.restored) {
+      console.log(
+        `  ⚠ restored listing ${item.name.slice(0, 28)} · available ${listingRestore.before?.available}→${listingPin.available} · listing_status ${listingRestore.before?.listing_status}→${listingPin.listing_status}`,
+      );
+    }
+  }
+  const afterRaw = finitePositivePrice(persisted) ?? finitePositivePrice(result.after);
+  const after = afterRaw ?? liveBefore;
+  const changed = afterRaw != null && after !== liveBefore;
+  const verified = finitePositivePrice(persisted) != null && persisted === after;
   const promoBlocked = /โปรโมชัน|promotion price/i.test(result.popupText || "");
   const blocked24h = /24 ชั่วโมง/.test(result.popupText || "");
   let status = "updated";
@@ -301,6 +348,10 @@ async function updateOne(tabIndex, item, apply, windowIndex) {
     popupText: result.popupText || "",
     blocked: !!result.blocked,
     blocked24h,
+    listingPin: listingPin?.ok
+      ? { available: listingPin.available, listing_status: listingPin.listing_status }
+      : null,
+    listingRestore: listingRestore?.restored ? listingRestore : undefined,
   };
 }
 
@@ -328,10 +379,10 @@ function mergeTrackerRow(tracker, r, round) {
   entry.dishId = r.dishId || entry.dishId;
   entry.targetPrice = r.target;
   entry.posId = r.posId || entry.posId;
-  if (r.verified && r.changed) {
+  if (r.verified && r.changed && finitePositivePrice(r.after) != null) {
     entry.currentLive = r.after;
     entry.cooldownUntil = new Date(Date.now() + COOLDOWN_MS).toISOString();
-  } else if (r.before != null) {
+  } else if (finitePositivePrice(r.before) != null) {
     entry.currentLive = r.before;
   }
   entry.reachedTarget = entry.currentLive === r.target;
@@ -375,7 +426,7 @@ async function persistRow(tracker, row, round) {
     const hubNote = formatShopeeHubNote(row, entry);
 
     // hub ก่อน — ตารางเห็นทันที ไม่รอจบคิว / ไม่รอเขียนไฟล์ tracker
-    if (livePrice != null && row.posId) {
+    if (livePrice != null && livePrice > 0 && row.posId) {
       if (row.verified && row.changed) syncScanOne(row);
       const ok = await writeHubLiveFromApplyResult("shopee", {
         ...row,
@@ -458,6 +509,7 @@ async function runOneRound({ apply, workers, limit, from, source, tracker, pipel
   }
 
   const { windowIndex, tabIndex: baseTab } = findShopeeTab();
+  assertShopeeLoggedIn(baseTab, windowIndex);
   const started = Date.now();
   const round = (tracker.round || 0) + (apply ? 1 : 0);
   const log = [];
@@ -466,7 +518,15 @@ async function runOneRound({ apply, workers, limit, from, source, tracker, pipel
     const tabIndex = baseTab;
     for (let i = 0; i < todo.length; i++) {
       const item = todo[i];
-      const r = await updateOne(tabIndex, item, apply, windowIndex);
+      let r;
+      try {
+        assertShopeeLoggedIn(tabIndex, windowIndex);
+        r = await updateOne(tabIndex, item, apply, windowIndex);
+      } catch (err) {
+        const msg = String(err?.message || err);
+        console.log(`[${i + 1}/${todo.length}] error: ${String(item.name || "").slice(0, 32)} · ${msg.slice(0, 160)}`);
+        r = { ...item, status: "error", error: msg.slice(0, 240), changed: false };
+      }
       const row = { ...r, at: new Date().toISOString() };
       formatRowLog(row, item, i, todo.length);
       if (apply) await persistRow(tracker, row, round);

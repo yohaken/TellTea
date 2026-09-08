@@ -15,10 +15,37 @@ const DATA = join(__dir, "data/menu-price-baseline");
 const OUT_SCAN = join(DATA, "grab-live-scan.json");
 const OUT_IDS = join(DATA, "grab-item-ids.json");
 
-function baht(priceInMin) {
-  const n = Number(priceInMin);
-  if (!Number.isFinite(n)) return null;
-  return n >= 100 ? Math.round(n / 100) : n;
+function baht(n) {
+  n = Number(n);
+  return Number.isFinite(n) ? Math.round(n / 100) : null;
+}
+
+function normalizePhotoId(id) {
+  const s = String(id || "").trim();
+  if (!s) return s;
+  try {
+    if (/^https?:\/\//i.test(s)) {
+      return decodeURIComponent(new URL(s).pathname.split("/").filter(Boolean).pop() || s);
+    }
+  } catch {
+    /* fall through */
+  }
+  return s;
+}
+
+function grabItemPhotoId(it) {
+  const photos = it.photos || it.images;
+  if (Array.isArray(photos) && photos.length) {
+    const first = photos[0];
+    if (typeof first === "string" && first.trim()) return normalizePhotoId(first.trim());
+    if (first && typeof first === "object") {
+      const u = first.url || first.photoURL || first.imageURL;
+      if (typeof u === "string" && u.trim()) return normalizePhotoId(u.trim());
+    }
+  }
+  const direct = it.photoURL || it.imageURL || it.itemPhoto || it.photoId;
+  if (typeof direct === "string" && direct.trim()) return normalizePhotoId(direct.trim());
+  return undefined;
 }
 
 function main() {
@@ -52,6 +79,7 @@ function main() {
       const optionGroupNames = (it.linkedModifierGroupIDs || [])
         .map((id) => groupNameById.get(id))
         .filter(Boolean);
+      const photoId = grabItemPhotoId(it);
       items.push({
         name,
         listPrice,
@@ -61,6 +89,7 @@ function main() {
         optionGroupCount: (it.linkedModifierGroupIDs || []).length,
         optionGroupNames,
         sortIndex: items.length,
+        ...(photoId !== undefined ? { photoId } : {}),
       });
       if (itemId) {
         byName[name] = itemId;
@@ -75,6 +104,7 @@ function main() {
     const groupId = g.modifierGroupID || null;
     const related = (g.relatedItemIDs || []).length;
     const linked = related > 0 || linkedIds.has(groupId);
+    let choiceIndex = 0;
     for (const m of g.modifiers || []) {
       options.push({
         group,
@@ -84,6 +114,7 @@ function main() {
         groupId,
         related,
         linked,
+        choiceIndex: choiceIndex++,
       });
     }
   }

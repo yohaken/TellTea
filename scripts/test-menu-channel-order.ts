@@ -96,6 +96,35 @@ assert(kept.groupNames?.[0] === "ความหวาน", "apply keeps groupNa
 assert(kept.choiceIndex === 3, "apply keeps choiceIndex");
 assert(kept.price === 53, "new price wins");
 
+const keptPhoto = keepLiveOrderFields(
+  { name: "ชา", price: 46, photoId: "th-old", photoPushedId: "th-push", photoPushedHash: "abc" },
+  { name: "ชา", price: 53, source: "apply" },
+);
+assert(keptPhoto.photoId === "th-old", "apply keeps live photoId");
+assert(keptPhoto.photoPushedId === "th-push", "apply keeps pushed photo id");
+
+const keptVerified = keepLiveOrderFields(
+  {
+    name: "ชา",
+    price: 46,
+    photoPushedId: "th-push",
+    photoPushedHash: "abc",
+    photoVerifiedAt: "2026-09-06T00:00:00.000Z",
+  },
+  { name: "ชา", price: 53, source: "apply" },
+);
+assert(keptVerified.photoVerifiedAt === "2026-09-06T00:00:00.000Z", "apply keeps photoVerifiedAt");
+const replacedPush = keepLiveOrderFields(
+  {
+    name: "ชา",
+    price: 46,
+    photoPushedId: "th-old",
+    photoVerifiedAt: "2026-09-01T00:00:00.000Z",
+  },
+  { name: "ชา", price: 53, source: "apply", photoPushedId: "th-new" },
+);
+assert(!replacedPush.photoVerifiedAt, "new push without verify drops old photoVerifiedAt");
+
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p: string) => readFileSync(join(root, p), "utf8");
 const hub = read("src/components/PosMenuChannelPriceHub.tsx");
@@ -114,6 +143,11 @@ assert(hub.includes("catOrderWrong"), "cat pill ⇅ only when category order is 
 assert(hub.includes("liveSortRank"), "live rank number in cat column");
 assert(hub.includes("mph-cat-rank"), "POS rank badge in cat column");
 assert(hub.includes("HubItemOrderMarks"), "item-in-category marks in menu column");
+assert(hub.includes("HubPhotoMarks"), "photo marks in menu column");
+assert(hub.includes("photo_issue"), "รูป chip");
+assert(lib.includes("channelPhotoStatusFor"), "photo status helper");
+assert(ingest.includes("livePhotoId"), "ingest photo id");
+assert(ingest.includes("photoVerifiedAt"), "ingest keeps display verify stamp");
 assert(hub.includes("liveItemRank"), "live item rank in menu column");
 assert(hub.includes("ลำดับ S/G/L"), "cat header says where order is");
 assert(hub.includes("ชื่อ · ลำดับในหมวด"), "name header says name + item order");
@@ -129,8 +163,11 @@ assert(ingest.includes("category: o.group"), "option live group in category fiel
 assert(grab.includes("optionGroupNames"), "grab scan linked groups");
 assert(css.includes("mph-cat-cell"), "cat cell layout");
 assert(css.includes(".mph-name-cell {"), "name cell layout");
-assert(/\.mph-name-cell \{[\s\S]*?flex-direction: column/.test(css), "name marks below menu name");
-assert(/\.mph-cat-cell \{[\s\S]*?flex-direction: column/.test(css), "cat marks below category name");
+assert(/\.mph-name-cell \{[\s\S]*?flex-wrap: wrap/.test(css), "name marks wrap under menu name");
+assert(/\.mph-cat-cell \{[\s\S]*?flex-wrap: wrap/.test(css), "cat marks wrap under category name");
+assert(/flex: 1 1 100%/.test(css), "name/cat labels take a full first line");
+assert(css.includes("mph-ch-marks-row"), "name/order/photo marks share one row");
+assert(hub.includes("mph-ch-marks-row"), "item row wraps S/G/L mark groups");
 assert(css.includes("is-order-warn"), "order warn cell");
 
 console.log("ok menu channel order");

@@ -1,25 +1,47 @@
 {
-  "version": 1,
-  "id": "telltea-cup-logo-v1",
-  "source": "SD_04_ชานมไข่มุก.jpg original printed mark on cup",
+  "version": 2,
+  "id": "telltea-cup-logo-v2",
+  "source": "Locked 2026-09-06 from กาแฟสดเข้มข้น 16oz — user approved icon-center-on-cup",
   "measured": {
-    "logoW_over_frameW": 0.2399,
-    "logoH_over_frameH": 0.3612,
-    "note": "Old height includes ICECREAM & TEA subtitle; new logo has no subtitle — match WIDTH"
+    "logoPng": "570x708",
+    "iconBand": { "top": 0.008, "bottom": 0.757, "centerY": 0.382 },
+    "textBand": { "top": 0.811, "bottom": 0.992, "centerY": 0.9 },
+    "note": "Two ink bands in tell-tea-logo-white-transparent.png. Icon is the person+cup. Tell Tea is the lower band."
   },
   "standard": {
     "widthOverFrame": 0.23,
     "centerX": 0.5,
-    "topY": 0.32,
     "greenTone": "#405B4A",
     "greenToneName": "Feldgrau",
     "masterPx": 2000,
     "logoColor": "#FFFFFF",
     "widthOverCup": 0.62,
-    "placeOn": "cup-center-both-axes",
-    "detect": "occupancy-or-lid-edges"
+    "placeOn": "icon-center-on-cup",
+    "iconCenterOverLogo": 0.382,
+    "centerXOnCup": 0.5,
+    "detect": "cup-body-rim-to-base"
   },
   "logoAsset": "../_assets/tell-tea-logo-white-transparent.png",
-  "updatedAt": "2026-09-05T05:25:52.135Z",
-  "note": "Cup logo ink is WHITE on drink; navy source kept only if needed for other surfaces"
+  "updatedAt": "2026-09-06T08:01:00.000Z",
+  "note": "WHITE logo on drink. Place the ICON center on the CUP center — not the center of the whole PNG (icon+Tell Tea).",
+  "rule": {
+    "anchor": "icon-center-on-cup",
+    "x": "logo.cx = cup.cx",
+    "y": "logo.top + 0.382 * logo.height = cup.cy",
+    "cup": "cup.cy = (rimOrIceTop + plasticBase) / 2. Do not use splash as the base. Do not center the full logo block.",
+    "doNot": [
+      "center the whole PNG (icon + Tell Tea) on cup.cy — that lifts the icon onto ice",
+      "use a sibling JT_01 box instead of this cup's rim-to-base",
+      "use topOverCup 0.407 / oleang-hz low stamp"
+    ]
+  },
+  "profiles": {
+    "cup-logo-locked": {
+      "id": "telltea-cup-logo-icon-center-v1",
+      "placeOn": "icon-center-on-cup",
+      "widthOverCup": 0.62,
+      "iconCenterOverLogo": 0.382,
+      "centerXOnCup": 0.5
+    }
+  }
 }

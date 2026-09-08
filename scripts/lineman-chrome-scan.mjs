@@ -4,7 +4,10 @@
  * Writes each verified live price into menuPriceHub/channelLive immediately.
  *
  *   node scripts/lineman-chrome-scan.mjs [--workers=6] [--limit=N] [--from=N]
- *   node scripts/lineman-chrome-scan.mjs --workers=6 --no-hub
+ *   node scripts/lineman-chrome-scan.mjs --workers=6
+ *   node scripts/lineman-chrome-scan.mjs --hub         # also write row-by-row (avoid; use channel-scan-to-hub)
+ *   node scripts/lineman-chrome-scan.mjs --no-hub      # default: JSON only
+
  */
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -72,7 +75,7 @@ async function main() {
     : 6;
   const limitArg = process.argv.find((a) => a.startsWith("--limit="));
   const fromArg = process.argv.find((a) => a.startsWith("--from="));
-  const noHub = process.argv.includes("--no-hub");
+  const noHub = !process.argv.includes("--hub");
   const limit = limitArg ? Number(limitArg.slice("--limit=".length)) : Infinity;
   const from = fromArg ? Number(fromArg.slice("--from=".length)) : 0;
 

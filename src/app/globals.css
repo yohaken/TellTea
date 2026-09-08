@@ -19578,9 +19578,10 @@ body.modal-open .main-panel {
 
 .mph-name-cell {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.08rem;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.08rem 0.18rem;
   min-width: 0;
   width: 100%;
   min-height: 1.15rem;
@@ -19590,17 +19591,19 @@ body.modal-open .main-panel {
 
 .mph-cat-cell {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.08rem;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.08rem 0.18rem;
   min-width: 0;
   width: 100%;
-  padding: 0.06rem 0.06rem 0.1rem;
+  padding: 0.06rem;
 }
 
 .mph-cat-label {
   display: flex;
   align-items: center;
+  flex: 1 1 100%;
   min-width: 0;
   max-width: 100%;
   overflow: hidden;
@@ -19676,7 +19679,8 @@ button.mph-ch-mark {
 }
 
 .mph-ch-marks.is-name .mph-ch-mark,
-.mph-ch-marks.is-item-order .mph-ch-mark {
+.mph-ch-marks.is-item-order .mph-ch-mark,
+.mph-ch-marks.is-photo .mph-ch-mark {
   min-width: 1.5rem;
   height: 1.12rem;
 }
@@ -19714,8 +19718,9 @@ button.mph-ch-mark {
 .mph-name-label {
   display: flex;
   align-items: center;
+  flex: 1 1 100%;
   min-width: 0;
-  width: 100%;
+  width: auto;
   max-width: 100%;
 }
 
@@ -19726,12 +19731,10 @@ button.mph-ch-mark {
   min-width: 0;
 }
 
-.mph-name-cell .mph-name-btn,
-.mph-name-cell .mph-name-input,
-.mph-name-cell .mph-name-text {
-  flex: 0 0 auto;
+.mph-name-cell > .mph-name-label,
+.mph-name-cell > .mph-name-text {
+  flex: 1 1 100%;
   min-width: 0;
-  width: 100%;
 }
 
 .mph-name-cell .mph-name-text {
@@ -19741,10 +19744,24 @@ button.mph-ch-mark {
   white-space: nowrap;
 }
 
-.mph-name-cell .mph-ch-marks,
-.mph-cat-cell .mph-ch-marks {
+.mph-ch-marks-row {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.1rem;
   flex: 0 0 auto;
-  align-self: flex-start;
+}
+
+.mph-ch-marks-row:empty {
+  display: none;
+}
+
+.mph-name-cell .mph-ch-marks,
+.mph-cat-cell .mph-ch-marks,
+.mph-name-cell .mph-ch-marks-row {
+  flex: 0 0 auto;
+  align-self: center;
 }
 
 .mph-sel-col.mph-th,
@@ -30300,6 +30317,8 @@ a.ghost-btn {
   flex-direction: column;
   gap: 0.45rem;
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .pos-ops-corr-head {
@@ -30411,16 +30430,19 @@ a.ghost-btn {
 .pos-ops-corr-svg-wrap {
   position: relative;
   width: 100%;
-  overflow: visible;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 0.15rem 0 0.25rem;
 }
 
 .pos-ops-corr-svg {
   display: block;
   width: 100%;
-  min-width: 560px;
+  max-width: 100%;
+  min-width: 0;
   height: auto;
-  overflow: visible;
 }
 
 .pos-ops-corr-axis-y,

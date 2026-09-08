@@ -172,9 +172,10 @@ export const WONGNAI_GQL = {
  * Run a Wongnai persisted query from the logged-in Chrome tab (wma-token).
  * Always injects JWT `sub` as userId. Does not print the token.
  */
-export async function wongnaiGql(operationName, sha256Hash, variables = {}, timeoutMs = 20_000) {
+export async function wongnaiGql(operationName, sha256Hash, variables = {}, timeoutMs = 20_000, tab) {
   const key = `__wnGql_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  const { windowIndex, tabIndex } = findWongnaiTab();
+  const found = tab?.tabIndex != null ? tab : findWongnaiTab();
+  const { windowIndex, tabIndex } = found;
   chromeJsOnTab(
     tabIndex,
     `(() => {
@@ -202,11 +203,10 @@ export async function wongnaiGql(operationName, sha256Hash, variables = {}, time
   const started = Date.now();
   while (Date.now() - started < timeoutMs) {
     await sleep(350);
-    const found = findWongnaiTab();
     const val = chromeJsJsonOnTab(
-      found.tabIndex,
+      tabIndex,
       `(() => JSON.stringify(window[${JSON.stringify(key)}]))()`,
-      { windowIndex: found.windowIndex },
+      { windowIndex },
     );
     if (val && val !== "pending") return val;
   }
@@ -232,11 +232,17 @@ export async function listWongnaiMenuItems() {
   }));
 }
 
-export async function readWongnaiMenuItem(menuItemId) {
-  const json = await wongnaiGql("menuItem", WONGNAI_GQL.menuItem, {
-    businessId: BUSINESS,
-    menuItemId,
-  });
+export async function readWongnaiMenuItem(menuItemId, tab) {
+  const json = await wongnaiGql(
+    "menuItem",
+    WONGNAI_GQL.menuItem,
+    {
+      businessId: BUSINESS,
+      menuItemId,
+    },
+    20_000,
+    tab,
+  );
   const it = json?.data?.my?.menu?.item;
   if (!it) return { error: json?.err || json?.errors || "no item", raw: json };
   return {
@@ -253,6 +259,7 @@ export async function readWongnaiMenuItem(menuItemId) {
     optionNames: (it.properties || []).map((p) => p.name?.primary || p.name?.thai).filter(Boolean),
     categoryIds: it.menuGroupIds || [],
     hasPhoto: !!it.image?.smallUrl,
+    photoId: it.image?.smallUrl || it.image?.largeUrl || it.image?.url || "",
   };
 }
 
@@ -587,9 +594,11 @@ export async function verifyPersistedPrice(tabIndex, id, windowIndex, href) {
   return page?.listPrice ?? null;
 }
 
-export async function mapPool(items, workers, fn) {
-  const { windowIndex: baseWindow, tabIndices } = ensureWorkerTabs(workers);
-  await sleep(workers > 1 ? 2500 : 1500);
+export async function mapPool(items, workers, fn, pre) {
+  const { windowIndex: baseWindow, tabIndices } = pre?.tabIndices?.length
+    ? { windowIndex: pre.windowIndex, tabIndices: pre.tabIndices }
+    : ensureWorkerTabs(workers);
+  if (!pre?.tabIndices?.length) await sleep(workers > 1 ? 2500 : 1500);
 
   const results = new Array(items.length);
   let cursor = 0;

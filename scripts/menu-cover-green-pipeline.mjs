@@ -54,6 +54,8 @@ function loadCupLogoSpec() {
       greenTone: s.greenTone ?? "#405B4A",
       widthOverCup: s.widthOverCup ?? 0.62,
       topOverCup: s.topOverCup ?? 0.26,
+      placeOn: s.placeOn ?? "icon-center-on-cup",
+      iconCenterOverLogo: s.iconCenterOverLogo ?? 0.382,
     };
   }
   return {
@@ -63,10 +65,77 @@ function loadCupLogoSpec() {
     greenTone: "#405B4A",
     widthOverCup: 0.62,
     topOverCup: 0.26,
+    placeOn: "icon-center-on-cup",
+    iconCenterOverLogo: 0.382,
   };
 }
 
 export const CUP_LOGO_SPEC = loadCupLogoSpec();
+
+/**
+ * 16oz sibling lock — JT_01 ชาจัสมินฝูเจี้ยน.
+ * Logo sits at geometric cup center (upper-middle of the liquid), width 0.62 of cup.
+ */
+export const CUP_16OZ_SIBLING_JT01 = {
+  left: 0.306,
+  right: 0.694,
+  top: 0.182,
+  bottom: 0.777,
+  cx: 0.5,
+  cy: 0.4795,
+  width: 0.388,
+  height: 0.595,
+  method: "sibling-JT_01",
+};
+
+export const ICED_16OZ_LOGO = {
+  widthOverCup: 0.62,
+  placeOn: "icon-center-on-cup",
+  /** Center of the person-and-cup icon inside the PNG (text "Tell Tea" sits below). */
+  iconCenterOverLogo: 0.382,
+};
+
+const FELDGRAU = { r: 0x40, g: 0x5b, b: 0x4a };
+
+/**
+ * Scale+pan a 16oz photo so its cup lands on the JT_01 sibling box.
+ * Dark iced coffee often sits too low/small in frame; occupancy top is clamped at 0.22.
+ */
+export async function fitFrameToSiblingCup(input, srcCup, target = CUP_16OZ_SIBLING_JT01, master = MASTER_PX) {
+  const scale = Math.min(1.16, target.width / Math.max(srcCup.width, 0.34));
+  const scaled = Math.round(master * scale);
+  const srcBuf = await sharp(input).resize(master, master, { fit: "fill" }).toBuffer();
+  const scaledBuf = await sharp(srcBuf)
+    .resize(scaled, scaled, { kernel: sharp.kernel.lanczos3 })
+    .toBuffer();
+  let ol = Math.round(target.cx * master - srcCup.cx * scaled);
+  let ot = Math.round(target.top * master - srcCup.top * scaled);
+  let sl = 0;
+  let st = 0;
+  let sw = scaled;
+  let sh = scaled;
+  if (ol < 0) {
+    sl = -ol;
+    sw -= sl;
+    ol = 0;
+  }
+  if (ot < 0) {
+    st = -ot;
+    sh -= st;
+    ot = 0;
+  }
+  if (ol + sw > master) sw = master - ol;
+  if (ot + sh > master) sh = master - ot;
+  const piece = await sharp(scaledBuf)
+    .extract({ left: sl, top: st, width: Math.max(1, sw), height: Math.max(1, sh) })
+    .toBuffer();
+  return sharp({
+    create: { width: master, height: master, channels: 3, background: FELDGRAU },
+  })
+    .composite([{ input: piece, left: ol, top: ot }])
+    .jpeg({ quality: 90, mozjpeg: true, chromaSubsampling: "4:4:4" })
+    .toBuffer();
+}
 
 /**
  * Resize transparent logo PNG to cup standard and return { buffer, left, top, width, height }.
@@ -282,7 +351,10 @@ export async function detectCupBox(input) {
 }
 
 /**
- * Place logo at the CENTER of the detected cup (both axes) — never the frame center.
+ * Place logo on the cup.
+ * Locked: `icon-center-on-cup` — PNG icon-band center (0.382) sits on cup.cx / cup.cy.
+ * `cup-center-both-axes` centers the whole PNG (icon+Tell Tea) — do not use for new covers.
+ * `cup-top-over-cup`: logo.top = cup.top + topOverCup * cup.height
  */
 export async function placeCupLogoOnCup(logoInput, frameW, frameH, cup, override = {}) {
   const spec = { ...CUP_LOGO_SPEC, ...override };
@@ -304,13 +376,25 @@ export async function placeCupLogoOnCup(logoInput, frameW, frameH, cup, override
   const cupBottom = Math.round(frameH * cup.bottom) - padY;
   const cx = frameW * cup.cx;
   const cy = frameH * cup.cy;
+  const placeOn = spec.placeOn || "cup-center-both-axes";
   let left = Math.round(cx - width / 2);
-  let top = Math.round(cy - height / 2);
+  let top;
+  if (placeOn === "icon-center-on-cup") {
+    const iconCenterOverLogo = spec.iconCenterOverLogo ?? 0.382;
+    top = Math.round(cy - iconCenterOverLogo * height);
+  } else if (placeOn === "cup-top-over-cup" || placeOn === "cup-liquid-face") {
+    const topOverCup = spec.topOverCup ?? 0.407;
+    top = Math.round(frameH * (cup.top + topOverCup * cup.height));
+  } else {
+    top = Math.round(cy - height / 2);
+  }
   if (left < cupLeft) left = cupLeft;
   if (left + width > cupRight) left = Math.max(cupLeft, cupRight - width);
-  if (top < cupTop) top = cupTop;
-  if (top + height > cupBottom) top = Math.max(cupTop, cupBottom - height);
-  return { buffer, left, top, width, height, spec, cup };
+  if (placeOn === "cup-center-both-axes") {
+    if (top < cupTop) top = cupTop;
+    if (top + height > cupBottom) top = Math.max(cupTop, cupBottom - height);
+  }
+  return { buffer, left, top, width, height, spec, cup, placeOn };
 }
 
 /** โฟลเดอร์ Drive เมนูแยก */

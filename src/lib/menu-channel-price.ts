@@ -48,6 +48,8 @@ export type LiveChannelItem = {
   id: string;
   name: string;
   listPrice: number | null;
+  /** รหัสรูปบนแพลตฟอร์ม (Shopee picture / CDN id) — ไม่ใช่ชื่อไฟล์เรา */
+  photoId?: string | null;
 };
 
 export type LiveChannelSnapshot = {
@@ -82,6 +84,15 @@ export type ChannelLiveObservation = {
   groupNames?: string[] | null;
   /** ลำดับตัวเลือกในกลุ่มบนแพลตฟอร์ม */
   choiceIndex?: number | null;
+  /** รหัสรูป live จากสแกน — มีคีย์แม้เป็น "" = รู้ว่าไม่มีรูป */
+  photoId?: string | null;
+  /** รหัสรูปที่ดันจากรูปหลักหลังร้านครั้งล่าสุด */
+  photoPushedId?: string | null;
+  /** แฮชรูปหลักที่ดันไปพร้อม photoPushedId */
+  photoPushedHash?: string | null;
+  photoPushedAt?: string | null;
+  /** ตรวจไฟล์จริง (API id + page <img> + CDN + aHash vs POS) แล้ว */
+  photoVerifiedAt?: string | null;
 };
 
 export type ChannelLiveByItem = Record<
@@ -223,6 +234,16 @@ export type ChannelNameStatus = "exact" | "near" | "missing" | "skip";
 /** ลำดับบนแพลตฟอร์มเทียบ POS — ชื่อแมตช์แล้วลำดับยังเพี้ยนได้ */
 export type ChannelOrderStatus = "ok" | "wrong" | "unknown";
 
+/** รูปหลักหลังร้าน (คอนเฟิร์มแล้ว) ↔ รูปบนแพลตฟอร์ม */
+export type ChannelPhotoStatus =
+  | "skip"
+  | "none"
+  | "missing"
+  | "pending"
+  | "match"
+  | "stale"
+  | "unknown";
+
 export type ChannelPriceCell = {
   target: number;
   live: number | null;
@@ -246,6 +267,9 @@ export type ChannelPriceCell = {
   liveSortRank?: number | null;
   /** ลำดับเมนูในหมวดบนแพลตฟอร์ม 1-based — คอลัมน์เมนู */
   liveItemRank?: number | null;
+  /** รูปหลักที่คอนเฟิร์ม vs รูปบนแพลตฟอร์ม */
+  photoStatus?: ChannelPhotoStatus;
+  livePhotoId?: string | null;
 };
 
 export const DEFAULT_CHANNEL_RULES: ChannelRules = {
@@ -620,6 +644,7 @@ export type HubStatusFilter =
   | "unmatched"
   | "name_issue"
   | "order_issue"
+  | "photo_issue"
   | "na"
   | "extras";
 
@@ -753,6 +778,20 @@ export function keepLiveOrderFields(
     out.groupNames = prev.groupNames;
   }
   if (out.choiceIndex == null && prev?.choiceIndex != null) out.choiceIndex = prev.choiceIndex;
+  if (out.photoId == null && prev?.photoId != null) out.photoId = prev.photoId;
+  if (!out.photoPushedId && prev?.photoPushedId) {
+    out.photoPushedId = prev.photoPushedId;
+    out.photoPushedHash = prev.photoPushedHash ?? null;
+    out.photoPushedAt = prev.photoPushedAt ?? null;
+  }
+  if (
+    !out.photoVerifiedAt &&
+    prev?.photoVerifiedAt &&
+    out.photoPushedId &&
+    out.photoPushedId === prev.photoPushedId
+  ) {
+    out.photoVerifiedAt = prev.photoVerifiedAt;
+  }
   return out;
 }
 
@@ -811,6 +850,95 @@ export function rowHasOrderIssue(
   });
 }
 
+export function resolveLivePhotoId(
+  obs: ChannelLiveObservation | null | undefined,
+  fallbackId: string | undefined,
+): { photoId: string; known: boolean } {
+  if (obs && obs.photoId !== undefined && obs.photoId !== null) {
+    return { photoId: String(obs.photoId).trim(), known: true };
+  }
+  if (typeof fallbackId === "string") {
+    return { photoId: fallbackId.trim(), known: true };
+  }
+  return { photoId: "", known: false };
+}
+
+/**
+ * Grab often stores full CDN URL in scans but filename-only after push.
+ * Compare by basename so those count as the same photo id.
+ */
+export function normalizeChannelPhotoId(id: string | null | undefined): string {
+  const s = String(id || "").trim();
+  if (!s) return "";
+  try {
+    if (/^https?:\/\//i.test(s)) {
+      const u = new URL(s);
+      const base = u.pathname.split("/").filter(Boolean).pop() || "";
+      return decodeURIComponent(base);
+    }
+  } catch {
+    /* fall through */
+  }
+  const m = s.match(/\/([^/?#]+)(?:\?|#|$)/);
+  return m ? decodeURIComponent(m[1]!) : s;
+}
+
+export function channelPhotoIdsEqual(
+  a: string | null | undefined,
+  b: string | null | undefined,
+): boolean {
+  const na = normalizeChannelPhotoId(a);
+  const nb = normalizeChannelPhotoId(b);
+  if (!na || !nb) return false;
+  return na === nb;
+}
+
+export function channelPhotoStatusFor(args: {
+  storeOnly?: boolean;
+  posHash: string;
+  livePhotoId: string;
+  photoKnown: boolean;
+  pushedId?: string | null;
+  pushedHash?: string | null;
+  verifiedAt?: string | null;
+}): ChannelPhotoStatus {
+  if (args.storeOnly) return "skip";
+  const posHash = (args.posHash || "").trim();
+  const liveId = (args.livePhotoId || "").trim();
+  if (!posHash) return liveId && args.photoKnown ? "pending" : "none";
+  if (!args.photoKnown) return "unknown";
+  if (!liveId) return "missing";
+  const pushedId = (args.pushedId || "").trim();
+  const pushedHash = (args.pushedHash || "").trim();
+  if (!pushedId || !pushedHash) return "pending";
+  if (pushedHash === posHash && channelPhotoIdsEqual(pushedId, liveId)) {
+    if (!String(args.verifiedAt || "").trim()) return "pending";
+    return "match";
+  }
+  return "stale";
+}
+
+export function photoStatusLabel(status: ChannelPhotoStatus): string {
+  if (status === "match") return "รูปตรงที่คอนเฟิร์ม";
+  if (status === "stale") return "รูปหลักใหม่กว่าแพลตฟอร์ม";
+  if (status === "missing") return "แพลตฟอร์มยังไม่มีรูป";
+  if (status === "pending") return "มีรูปบนแพลตฟอร์ม — ยังไม่ยืนยันว่าเป็นรูปหลัก";
+  if (status === "none") return "ยังไม่มีรูปหลักหลังร้าน";
+  if (status === "skip") return "เฉพาะหน้าร้าน";
+  return "ยังไม่สแกนรูป";
+}
+
+export function rowHasPhotoIssue(
+  channels: Record<DeliveryChannel, ChannelPriceCell>,
+  only: readonly DeliveryChannel[] = DELIVERY_CHANNELS,
+): boolean {
+  const list = only.length ? only : DELIVERY_CHANNELS;
+  return list.some((c) => {
+    const st = channels[c].photoStatus;
+    return st === "missing" || st === "stale";
+  });
+}
+
 export function rowMatchesFilter(
   worst: ChannelMatchStatus,
   channels: Record<DeliveryChannel, ChannelPriceCell>,
@@ -821,6 +949,7 @@ export function rowMatchesFilter(
   if (filter === "extras") return false;
   if (filter === "name_issue") return rowHasNameIssue(channels, only);
   if (filter === "order_issue") return rowHasOrderIssue(channels, only);
+  if (filter === "photo_issue") return rowHasPhotoIssue(channels, only);
   return worst === filter;
 }
 
@@ -831,6 +960,7 @@ export type HubTotals = {
   unmatched: number;
   name_issue: number;
   order_issue: number;
+  photo_issue: number;
   na: number;
   extras: number;
 };
@@ -843,6 +973,7 @@ export function emptyHubTotals(): HubTotals {
     unmatched: 0,
     name_issue: 0,
     order_issue: 0,
+    photo_issue: 0,
     na: 0,
     extras: 0,
   };

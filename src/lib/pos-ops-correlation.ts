@@ -156,10 +156,10 @@ export type PosOpsCorrPrefs = {
   /** Which series lines are shown */
   visible: Record<PosOpsCorrSeriesId, boolean>;
   /**
-   * Reserved for future manual axis overrides.
-   * Today scale is always auto from visible series peaks.
+   * Chart Y uses each series as % of its own peak in-range ("relative")
+   * so sales (thousands) and bonuses/qty (hundreds) stay comparable.
    */
-  scaleMode?: "auto";
+  scaleMode?: "relative" | "auto";
 };
 
 export function defaultPosOpsCorrVisible(): Record<PosOpsCorrSeriesId, boolean> {
@@ -186,32 +186,32 @@ export function normalizePosOpsCorrVisible(
 export function loadPosOpsCorrPrefs(): PosOpsCorrPrefs {
   const visible = defaultPosOpsCorrVisible();
   if (typeof window === "undefined") {
-    return { version: 1, visible, scaleMode: "auto" };
+    return { version: 1, visible, scaleMode: "relative" };
   }
   try {
     const raw = window.localStorage.getItem(POS_OPS_CORR_PREFS_KEY);
-    if (!raw) return { version: 1, visible, scaleMode: "auto" };
+    if (!raw) return { version: 1, visible, scaleMode: "relative" };
     const parsed = JSON.parse(raw) as { visible?: unknown; scaleMode?: unknown };
     return {
       version: 1,
       visible: normalizePosOpsCorrVisible(parsed?.visible),
-      scaleMode: "auto",
+      scaleMode: "relative",
     };
   } catch {
-    return { version: 1, visible, scaleMode: "auto" };
+    return { version: 1, visible, scaleMode: "relative" };
   }
 }
 
 export function savePosOpsCorrPrefs(prefs: {
   visible: Record<PosOpsCorrSeriesId, boolean>;
-  scaleMode?: "auto";
+  scaleMode?: "relative" | "auto";
 }): void {
   if (typeof window === "undefined") return;
   try {
     const payload: PosOpsCorrPrefs = {
       version: 1,
       visible: normalizePosOpsCorrVisible(prefs.visible),
-      scaleMode: "auto",
+      scaleMode: "relative",
     };
     window.localStorage.setItem(POS_OPS_CORR_PREFS_KEY, JSON.stringify(payload));
   } catch {

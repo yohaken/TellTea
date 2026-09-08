@@ -13,14 +13,11 @@ import { formatPlainNumber, formatStockQty } from "@/lib/utils";
 
 type SeriesId = PosOpsCorrSeriesId;
 
-type SeriesScale = "baht" | "qty";
-
 type SeriesDef = {
   id: SeriesId;
   label: string;
   swatchClass: string;
   lineClass: string;
-  scale: SeriesScale;
   get: (p: PosOpsDayPoint) => number;
   format: (n: number) => string;
 };
@@ -31,7 +28,6 @@ const SERIES: SeriesDef[] = [
     label: "ยอดหน้าร้าน",
     swatchClass: "pos-ops-swatch--sales",
     lineClass: "pos-ops-line--sales",
-    scale: "baht",
     get: (p) => p.storefrontSales,
     format: (n) => `${formatPlainNumber(n)} บาท`,
   },
@@ -40,7 +36,6 @@ const SERIES: SeriesDef[] = [
     label: "โบนัสชงรวม",
     swatchClass: "pos-ops-swatch--brew-bonus",
     lineClass: "pos-ops-line--brew-bonus",
-    scale: "baht",
     get: (p) => p.brewBonus,
     format: (n) => `${formatPlainNumber(n)} บาท`,
   },
@@ -50,7 +45,6 @@ const SERIES: SeriesDef[] = [
       label: s.label,
       swatchClass: `pos-ops-swatch--${s.id}`,
       lineClass: s.colorClass,
-      scale: "baht",
       get: (p) => p.byShift[s.id].bonus,
       format: (n) => `${formatPlainNumber(n)} บาท`,
     }),
@@ -60,7 +54,6 @@ const SERIES: SeriesDef[] = [
     label: "หน่วยชง",
     swatchClass: "pos-ops-swatch--brew-qty",
     lineClass: "pos-ops-line--brew-qty",
-    scale: "qty",
     get: (p) => p.brewQty,
     format: (n) => `${formatStockQty(n)} หน่วย`,
   },
@@ -69,7 +62,6 @@ const SERIES: SeriesDef[] = [
     label: "ชิ้นผลิต",
     swatchClass: "pos-ops-swatch--prod-qty",
     lineClass: "pos-ops-line--prod-qty",
-    scale: "qty",
     get: (p) => p.prodQty,
     format: (n) => `${formatStockQty(n)} ชิ้น`,
   },
@@ -78,20 +70,12 @@ const SERIES: SeriesDef[] = [
     label: "โบนัสผลิต",
     swatchClass: "pos-ops-swatch--prod-bonus",
     lineClass: "pos-ops-line--prod-bonus",
-    scale: "baht",
     get: (p) => p.prodBonus,
     format: (n) => `${formatPlainNumber(n)} บาท`,
   },
 ];
 
-function niceMax(raw: number): number {
-  if (!(raw > 0)) return 1;
-  const pad = raw * 1.08;
-  const mag = 10 ** Math.floor(Math.log10(pad));
-  const norm = pad / mag;
-  const step = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10;
-  return step * mag;
-}
+const REL_MAX = 100;
 
 function yTicks(max: number, count = 4): number[] {
   const out: number[] = [];
@@ -104,7 +88,7 @@ function yTicks(max: number, count = 4): number[] {
 }
 
 function formatAxisNumber(n: number): string {
-  return formatPlainNumber(Math.round(n));
+  return `${Math.round(n)}%`;
 }
 
 function linePath(points: Array<{ x: number; y: number }>): string {
@@ -114,13 +98,14 @@ function linePath(points: Array<{ x: number; y: number }>): string {
 
 /**
  * Top correlation chart: storefront sales × brew units/bonus (by shift) × production.
- * Legend toggles persist in localStorage; dual axes rescale to visible series.
+ * Each series is plotted as % of its own peak in-range so different units stay readable.
+ * Legend toggles persist in localStorage. Tooltip shows absolute values.
  */
 export function PosOpsCorrelationChart({ points }: { points: PosOpsDayPoint[] }) {
   const W = 960;
   const H = 320;
-  // Extra gutters so full axis numerals (left/right) and tilted date labels (bottom) stay inside the SVG.
-  const pad = { top: 20, right: 72, bottom: 78, left: 72 };
+  // Extra gutters so full axis numerals (left) and tilted date labels (bottom) stay inside the SVG.
+  const pad = { top: 20, right: 28, bottom: 78, left: 48 };
   const innerW = W - pad.left - pad.right;
   const innerH = H - pad.top - pad.bottom;
 
@@ -137,7 +122,7 @@ export function PosOpsCorrelationChart({ points }: { points: PosOpsDayPoint[] })
 
   useEffect(() => {
     if (!prefsReady) return;
-    savePosOpsCorrPrefs({ visible, scaleMode: "auto" });
+    savePosOpsCorrPrefs({ visible, scaleMode: "relative" });
   }, [visible, prefsReady]);
 
   const activeSeries = useMemo(
@@ -145,56 +130,43 @@ export function PosOpsCorrelationChart({ points }: { points: PosOpsDayPoint[] })
     [visible],
   );
 
-  const { bahtMax, qtyMax, bahtTicks, qtyTicks, paths, xs, showBaht, showQty, xLabels } =
-    useMemo(() => {
-      const bahtActive = activeSeries.filter((s) => s.scale === "baht");
-      const qtyActive = activeSeries.filter((s) => s.scale === "qty");
+  const { peaks, ticks, paths, xs, xLabels } = useMemo(() => {
+    const peakMap: Partial<Record<SeriesId, number>> = {};
+    for (const s of activeSeries) {
+      const peak = Math.max(0, ...points.map((p) => s.get(p)));
+      peakMap[s.id] = peak > 0 ? peak : 1;
+    }
 
-      const bahtPeak = bahtActive.length
-        ? Math.max(
-            0,
-            ...points.flatMap((p) => bahtActive.map((s) => s.get(p))),
-          )
-        : 0;
-      const qtyPeak = qtyActive.length
-        ? Math.max(0, ...points.flatMap((p) => qtyActive.map((s) => s.get(p))))
-        : 0;
+    const n = Math.max(points.length, 1);
+    const xAt = (i: number) =>
+      pad.left + (n === 1 ? innerW / 2 : (i / (n - 1)) * innerW);
+    const yRel = (pct: number) => pad.top + innerH - (pct / REL_MAX) * innerH;
 
-      const bMax = niceMax(bahtPeak || (bahtActive.length ? 1 : 1000));
-      const qMax = niceMax(qtyPeak || (qtyActive.length ? 1 : 10));
-      const n = Math.max(points.length, 1);
-      const xAt = (i: number) =>
-        pad.left + (n === 1 ? innerW / 2 : (i / (n - 1)) * innerW);
-      const yBaht = (v: number) => pad.top + innerH - (v / bMax) * innerH;
-      const yQty = (v: number) => pad.top + innerH - (v / qMax) * innerH;
+    const xsLocal = points.map((_, i) => xAt(i));
+    const pathMap: Partial<Record<SeriesId, string>> = {};
+    for (const s of activeSeries) {
+      const peak = peakMap[s.id] || 1;
+      pathMap[s.id] = linePath(
+        points.map((p, i) => ({
+          x: xsLocal[i],
+          y: yRel((s.get(p) / peak) * REL_MAX),
+        })),
+      );
+    }
 
-      const xsLocal = points.map((_, i) => xAt(i));
-      const pathMap: Partial<Record<SeriesId, string>> = {};
-      for (const s of activeSeries) {
-        const yOf = s.scale === "baht" ? yBaht : yQty;
-        pathMap[s.id] = linePath(
-          points.map((p, i) => ({ x: xsLocal[i], y: yOf(s.get(p)) })),
-        );
-      }
+    const labelStep = n > 120 ? 14 : n > 60 ? 7 : n > 31 ? 3 : n > 14 ? 2 : 1;
+    const labels = points
+      .map((p, i) => ({ i, label: p.label, x: xsLocal[i] }))
+      .filter((row) => row.i % labelStep === 0 || row.i === n - 1);
 
-      const labelStep =
-        n > 120 ? 14 : n > 60 ? 7 : n > 31 ? 3 : n > 14 ? 2 : 1;
-      const labels = points
-        .map((p, i) => ({ i, label: p.label, x: xsLocal[i] }))
-        .filter((row) => row.i % labelStep === 0 || row.i === n - 1);
-
-      return {
-        bahtMax: bMax,
-        qtyMax: qMax,
-        bahtTicks: yTicks(bMax),
-        qtyTicks: yTicks(qMax),
-        paths: pathMap,
-        xs: xsLocal,
-        showBaht: bahtActive.length > 0,
-        showQty: qtyActive.length > 0,
-        xLabels: labels,
-      };
-    }, [points, activeSeries, innerH, innerW, pad.left, pad.top]);
+    return {
+      peaks: peakMap,
+      ticks: yTicks(REL_MAX),
+      paths: pathMap,
+      xs: xsLocal,
+      xLabels: labels,
+    };
+  }, [points, activeSeries, innerH, innerW, pad.left, pad.top]);
 
   const totals = useMemo(() => {
     return points.reduce(
@@ -257,8 +229,8 @@ export function PosOpsCorrelationChart({ points }: { points: PosOpsDayPoint[] })
       <div className="pos-ops-corr-head">
         <h3 className="pos-dash-card-title">ความสัมพันธ์ · หน้าร้าน × ชง × ผลิต</h3>
         <p className="muted pos-ops-corr-note">
-          แตะคำอธิบายเพื่อเปิด/ปิดเส้น · สเกลปรับตามเส้นที่เปิด · ตั้งค่าจำอัตโนมัติในเครื่องนี้ ·
-          ชี้หรือลากบนกราฟดูค่ารายวัน
+          เส้นเทียบสัดส่วนสูงสุดของตัวเองในช่วง (แกน % ) · tooltip แสดงค่าจริง · แตะคำอธิบายเพื่อเปิด/ปิดเส้น ·
+          ตั้งค่าจำอัตโนมัติในเครื่องนี้ · ชี้หรือลากบนกราฟดูค่ารายวัน
         </p>
       </div>
       <ul className="pos-ops-corr-legend" aria-label="เปิดปิดเส้นกราฟ">
@@ -309,14 +281,13 @@ export function PosOpsCorrelationChart({ points }: { points: PosOpsDayPoint[] })
           preserveAspectRatio="xMidYMid meet"
           className="pos-ops-corr-svg"
           role="img"
-          aria-label="กราฟความสัมพันธ์ยอดขายชงผลิตรายวัน"
+          aria-label="กราฟความสัมพันธ์ยอดขายชงผลิตรายวัน แกนสัมพัทธ์ร้อยละ"
           onPointerMove={onPointerMove}
           onPointerDown={onPointerMove}
           onPointerLeave={onPointerLeave}
         >
-          {(showBaht ? bahtTicks : showQty ? qtyTicks : bahtTicks).map((t, i) => {
-            const max = showBaht ? bahtMax : qtyMax;
-            const y = pad.top + innerH - (t / max) * innerH;
+          {ticks.map((t, i) => {
+            const y = pad.top + innerH - (t / REL_MAX) * innerH;
             return (
               <g key={`grid-${i}-${t}`}>
                 <line
@@ -343,7 +314,7 @@ export function PosOpsCorrelationChart({ points }: { points: PosOpsDayPoint[] })
             );
           })}
 
-          {hoverX != null ? (
+          {hoverX != null && hoverIdx != null ? (
             <g className="pos-ops-corr-crosshair" pointerEvents="none">
               <line
                 x1={hoverX}
@@ -353,11 +324,9 @@ export function PosOpsCorrelationChart({ points }: { points: PosOpsDayPoint[] })
                 className="pos-ops-corr-crosshair-line"
               />
               {activeSeries.map((s) => {
-                const v = s.get(points[hoverIdx!]);
-                const y =
-                  pad.top +
-                  innerH -
-                  (v / (s.scale === "baht" ? bahtMax : qtyMax)) * innerH;
+                const peak = peaks[s.id] || 1;
+                const pct = (s.get(points[hoverIdx]) / peak) * REL_MAX;
+                const y = pad.top + innerH - (pct / REL_MAX) * innerH;
                 return (
                   <circle
                     key={s.id}
@@ -381,39 +350,20 @@ export function PosOpsCorrelationChart({ points }: { points: PosOpsDayPoint[] })
             className="pos-ops-corr-hit"
           />
 
-          {/* Axis labels painted last so lines/tooltip never cover them */}
-          {showBaht
-            ? bahtTicks.map((t, i) => {
-                const y = pad.top + innerH - (t / bahtMax) * innerH;
-                return (
-                  <text
-                    key={`b-${i}-${t}`}
-                    x={pad.left - 8}
-                    y={y + 3}
-                    textAnchor="end"
-                    className="pos-dash-chart-axis pos-ops-corr-axis-y"
-                  >
-                    {formatAxisNumber(t)}
-                  </text>
-                );
-              })
-            : null}
-          {showQty
-            ? qtyTicks.map((t, i) => {
-                const y = pad.top + innerH - (t / qtyMax) * innerH;
-                return (
-                  <text
-                    key={`q-${i}-${t}`}
-                    x={W - pad.right + 8}
-                    y={y + 3}
-                    textAnchor="start"
-                    className="pos-dash-chart-axis pos-ops-corr-axis-y"
-                  >
-                    {formatAxisNumber(t)}
-                  </text>
-                );
-              })
-            : null}
+          {ticks.map((t, i) => {
+            const y = pad.top + innerH - (t / REL_MAX) * innerH;
+            return (
+              <text
+                key={`pct-${i}-${t}`}
+                x={pad.left - 8}
+                y={y + 3}
+                textAnchor="end"
+                className="pos-dash-chart-axis pos-ops-corr-axis-y"
+              >
+                {formatAxisNumber(t)}
+              </text>
+            );
+          })}
 
           {xLabels.map((row) => (
             <text

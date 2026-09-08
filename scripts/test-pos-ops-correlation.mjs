@@ -10,7 +10,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
 assert.ok(
-  Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)?.[1] || 0) >= 879,
+  Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)?.[1] || 0) >= 900,
 );
 assert.ok(
   Number(read("src/lib/pos-version.ts").match(/POS_BUILD = (\d+)/)?.[1] || 0) >= 221,
@@ -53,7 +53,11 @@ assert.match(chart, /aria-pressed/);
 assert.match(chart, /loadPosOpsCorrPrefs/);
 assert.match(chart, /savePosOpsCorrPrefs/);
 assert.match(chart, /จำอัตโนมัติ/);
+assert.match(chart, /สัดส่วนสูงสุด/);
+assert.match(chart, /REL_MAX/);
 assert.match(lib, /pos-ops-line--morning/);
+assert.match(lib, /scaleMode/);
+assert.match(lib, /relative/);
 
 const dash = read("src/components/PosSalesDashboard.tsx");
 assert.match(dash, /PosOpsCorrelationChart/);
@@ -78,5 +82,8 @@ assert.match(css, /\.pos-ops-swatch--prod-bonus/);
 assert.match(css, /\.pos-ops-legend-btn/);
 assert.match(css, /\.pos-ops-corr-tooltip/);
 assert.match(css, /\.pos-ops-corr-axis-y/);
+assert.match(css, /overflow:\s*hidden/);
+assert.match(css, /min-width:\s*0/);
+assert.doesNotMatch(css, /pos-ops-corr-svg[^{]*\{[^}]*min-width:\s*560px/);
 
 console.log("OK test-pos-ops-correlation");

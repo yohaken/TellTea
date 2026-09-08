@@ -4,6 +4,7 @@
  */
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { getSeedDb } from "./pos-firebase-seed.mjs";
+import { bahtFromMicros } from "./shopee-money.mjs";
 
 /** @type {Promise<import('firebase/firestore').Firestore> | null} */
 let dbPromise = null;
@@ -37,6 +38,13 @@ export async function loadHubChannelLiveItems() {
  *   applyStatus?: string | null,
  *   applyNote?: string | null,
  *   cooldownUntil?: string | null,
+ *   photoId?: string | null,
+ *   photoPushedId?: string | null,
+ *   photoPushedHash?: string | null,
+ *   photoPushedAt?: string | null,
+ *   photoVerifiedAt?: string | null,
+ *   groupNames?: string[] | null,
+ *   category?: string | null,
  *   scope?: 'item' | 'option',
  * }} row
  */
@@ -44,10 +52,11 @@ export function writeHubChannelLiveRow(row) {
   const posId = row?.posId;
   const channel = row?.channel;
   if (!posId || !channel) return Promise.resolve(false);
-  const price =
-    row.price == null || !Number.isFinite(Number(row.price)) || Number(row.price) < 0
+  let price =
+    row.price == null || !Number.isFinite(Number(row.price)) || Number(row.price) <= 0
       ? null
       : Number(row.price);
+  if (channel === "shopee" && price != null) price = bahtFromMicros(price);
   // still allow writing name-only? prefer skip empty
   if (price == null && !(row.name || "").trim()) return Promise.resolve(false);
 
@@ -59,11 +68,23 @@ export function writeHubChannelLiveRow(row) {
     externalId: row.externalId != null ? String(row.externalId) : null,
   };
   if (row.targetPrice != null && Number.isFinite(Number(row.targetPrice))) {
-    observation.targetPrice = Number(row.targetPrice);
+    const tgt = channel === "shopee" ? bahtFromMicros(row.targetPrice) : Number(row.targetPrice);
+    if (tgt != null) observation.targetPrice = tgt;
   }
   if (row.applyStatus) observation.applyStatus = String(row.applyStatus);
   if (row.applyNote) observation.applyNote = String(row.applyNote);
   if (row.cooldownUntil) observation.cooldownUntil = String(row.cooldownUntil);
+  if (row.photoId !== undefined) observation.photoId = row.photoId == null ? "" : String(row.photoId);
+  if (row.photoPushedId) {
+    observation.photoPushedId = String(row.photoPushedId);
+    if (row.photoPushedHash) observation.photoPushedHash = String(row.photoPushedHash);
+    observation.photoPushedAt = String(row.photoPushedAt || new Date().toISOString());
+  }
+  if (row.photoVerifiedAt) observation.photoVerifiedAt = String(row.photoVerifiedAt);
+  if (Array.isArray(row.groupNames) && row.groupNames.length) {
+    observation.groupNames = row.groupNames.map((n) => String(n));
+  }
+  if (row.category) observation.category = String(row.category);
 
   const bucket = row.scope === "option" ? "options" : "items";
 
@@ -76,8 +97,8 @@ export function writeHubChannelLiveRow(row) {
     const options = { ...(data.options || {}) };
     const unmatched = Array.isArray(data.unmatched) ? data.unmatched : [];
     const bucketMap = bucket === "options" ? options : items;
-    const row = { ...(bucketMap[posId] || {}) };
-    const prev = row[channel] || {};
+    const liveRow = { ...(bucketMap[posId] || {}) };
+    const prev = liveRow[channel] || {};
     const merged = { ...observation };
     if (merged.sortIndex == null && prev.sortIndex != null) merged.sortIndex = prev.sortIndex;
     if (!(merged.category || "").trim() && prev.category) merged.category = prev.category;
@@ -85,8 +106,22 @@ export function writeHubChannelLiveRow(row) {
       merged.groupNames = prev.groupNames;
     }
     if (merged.choiceIndex == null && prev.choiceIndex != null) merged.choiceIndex = prev.choiceIndex;
-    row[channel] = merged;
-    bucketMap[posId] = row;
+    if (merged.photoId === undefined && prev.photoId != null) merged.photoId = prev.photoId;
+    if (!merged.photoPushedId && prev.photoPushedId) {
+      merged.photoPushedId = prev.photoPushedId;
+      merged.photoPushedHash = prev.photoPushedHash || null;
+      merged.photoPushedAt = prev.photoPushedAt || null;
+    }
+    if (
+      !merged.photoVerifiedAt &&
+      prev.photoVerifiedAt &&
+      merged.photoPushedId &&
+      merged.photoPushedId === prev.photoPushedId
+    ) {
+      merged.photoVerifiedAt = prev.photoVerifiedAt;
+    }
+    liveRow[channel] = merged;
+    bucketMap[posId] = liveRow;
     // Full-doc write so sibling channels (Grab / LINE MAN) are never replaced.
     await setDoc(ref, {
       items,
@@ -152,6 +187,12 @@ export async function ensureShopeePipelineTableNote() {
   return true;
 }
 
+function finitePositivePrice(v) {
+  if (v == null || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 /**
  * From apply/verify result → hub row (uses verifyRead/after/before).
  * @param {'shopee' | 'grab' | 'lineman'} channel
@@ -160,16 +201,10 @@ export async function ensureShopeePipelineTableNote() {
 export function writeHubLiveFromApplyResult(channel, result) {
   const posId = result?.posId;
   if (!posId) return Promise.resolve(false);
-  const verifyRead = Number(result.verifyRead);
-  const after = Number(result.after);
-  const before = Number(result.before);
-  const price = Number.isFinite(verifyRead)
-    ? verifyRead
-    : Number.isFinite(after) && after > 0
-      ? after
-      : Number.isFinite(before) && before > 0
-        ? before
-        : null;
+  const verifyRead = finitePositivePrice(result.verifyRead);
+  const after = finitePositivePrice(result.after);
+  const before = finitePositivePrice(result.before);
+  const price = verifyRead ?? after ?? before;
   if (price == null) return Promise.resolve(false);
   const ext =
     result.dishId != null

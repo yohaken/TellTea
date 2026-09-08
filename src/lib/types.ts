@@ -292,6 +292,8 @@ export type MenuItem = {
   recommended?: boolean;
   /** รูปหลักที่แสดงขาย / หน้าร้าน */
   imageUrl?: string;
+  /** ลายนิ้วมือของ imageUrl — เทียบซิงค์รูปแพลตฟอร์ม ไม่ใช่ชื่อไฟล์ */
+  imageHash?: string;
   /**
    * รูปสำรองสำหรับเทียบ/ออกแบบใหม่ — ไม่แสดงขายจนกว่าจะสลับขึ้นเป็น imageUrl
    * เก็บเป็น data URL JPEG 480 เหมือนรูปหลัก · จำกัดจำนวนใน UI

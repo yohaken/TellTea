@@ -13,6 +13,10 @@ const panel = readFileSync(
   join(root, "src/components/BonusDeductionEvidencePanel.tsx"),
   "utf8",
 );
+const photoCell = readFileSync(
+  join(root, "src/components/EntryPhotoCell.tsx"),
+  "utf8",
+);
 const versionSrc = readFileSync(join(root, "src/lib/version.ts"), "utf8");
 
 assert.match(panel, /resolveEvidencePhotoSrc/);
@@ -20,9 +24,11 @@ assert.match(panel, /pilePreview/);
 assert.match(panel, /กำลังโหลดรูป/);
 assert.match(panel, /replaceState\(null/);
 assert.match(panel, /แตะไอคอนรูปเปิดดูได้เลย/);
+assert.match(photoCell, /replaceState\(null/);
+assert.doesNotMatch(photoCell, /history\.back\(/);
 assert.match(versionSrc, /APP_BUILD = \d+/);
 const build = Number(versionSrc.match(/APP_BUILD = (\d+)/)?.[1] || 0);
-assert.ok(build >= 562, `APP_BUILD must be >= 562 (got ${build})`);
+assert.ok(build >= 899, `APP_BUILD must be >= 899 (got ${build})`);
 
 // Tiny 1x1 PNG
 const DATA_PNG =

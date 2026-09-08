@@ -1,5 +1,5 @@
 rules_version = '2';
-// TellTea shop · Who×Action×Where (≤50 lines) · UI filters menus
+// TellTea shop · Who×Action×Where (≤55 lines) · UI filters menus
 // Archive: firestore.rules.full.bak · Sibling apps must not deploy rules
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -33,11 +33,9 @@ service cloud.firestore {
       }
     }
 
-    // Weather cache — owner/staff read; writes only via Admin SDK (Cloud Functions)
-    match /weatherDays/{dateId} {
-      allow read: if signedIn();
-      allow write: if false;
-    }
+    // Admin-SDK-only: weather cache + FinPeer Gemini secret
+    match /weatherDays/{dateId} { allow read: if signedIn(); allow write: if false; }
+    match /finpeerSecrets/{docId} { allow read, write: if false; }
 
     // Shop + POS (incl. anonymous Auth)
     match /{collection}/{document=**} {
@@ -45,7 +43,8 @@ service cloud.firestore {
         && collection != 'taxtag'
         && collection != 'userData'
         && collection != 'loginTickets'
-        && collection != 'weatherDays';
+        && collection != 'weatherDays'
+        && collection != 'finpeerSecrets';
     }
   }
 }

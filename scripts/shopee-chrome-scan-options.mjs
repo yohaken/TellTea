@@ -16,28 +16,46 @@ import {
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const CHECK = join(__dir, "data/menu-price-baseline/shopee-option-group-live-check.json");
+const IDS = join(__dir, "data/menu-price-baseline/shopee-option-groups-ids.json");
 const PREV = join(__dir, "data/menu-price-baseline/shopee-live-options.json");
 const OUT = PREV;
+const EDIT_URL = (id) =>
+  `https://partner.shopee.co.th/shopee-pos/menu-management/option-group/edit?id=${id}&storeId=10212109&defaultTab=sf`;
 
+/** Canonical list = ids file; URLs filled from check/prev when present. */
 function collectGroups() {
   const byId = new Map();
+  function upsert(id, { url, group } = {}) {
+    if (!id) return;
+    const sid = String(id);
+    const prev = byId.get(sid) || { id: sid, url: EDIT_URL(sid), group: "" };
+    byId.set(sid, {
+      id: sid,
+      url: url || prev.url || EDIT_URL(sid),
+      group: group || prev.group || "",
+    });
+  }
+  if (existsSync(IDS)) {
+    const ids = JSON.parse(readFileSync(IDS, "utf8"));
+    for (const g of Array.isArray(ids) ? ids : []) upsert(g.id, { group: g.name });
+  }
   if (existsSync(CHECK)) {
     const check = JSON.parse(readFileSync(CHECK, "utf8"));
     for (const g of check.scanned || []) {
-      const id = (g.url || "").match(/id=(\d+)/)?.[1];
-      if (id) byId.set(id, { id, url: g.url, group: g.group });
+      const id = g.id || (g.url || "").match(/id=(\d+)/)?.[1];
+      upsert(id, { url: g.url, group: g.group });
     }
   }
   if (existsSync(PREV)) {
     try {
       const prev = JSON.parse(readFileSync(PREV, "utf8"));
       for (const o of prev.options || []) {
-        const id = (o.url || "").match(/id=(\d+)/)?.[1];
-        if (id && !byId.has(id)) byId.set(id, { id, url: o.url, group: o.group });
+        const id = o.groupId || (o.url || "").match(/id=(\d+)/)?.[1];
+        upsert(id, { url: o.url, group: o.group });
       }
       for (const r of prev.raw || []) {
         const id = r.id || (r.url || "").match(/id=(\d+)/)?.[1];
-        if (id && r.url && !byId.has(id)) byId.set(id, { id, url: r.url, group: r.group });
+        upsert(id, { url: r.url, group: r.group });
       }
     } catch {
       /* ignore broken prev */

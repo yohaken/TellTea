@@ -6,7 +6,10 @@
  *
  *   node scripts/shopee-chrome-create.mjs --dry-run
  *   node scripts/shopee-chrome-create.mjs --apply --limit=1
- *   node scripts/shopee-chrome-create.mjs --apply
+ *   node scripts/shopee-chrome-create.mjs --apply --exclude=อู่หลง --limit=16
+ *
+ * Option bind: always edit-page UI tick + บันทึก (PUT option_group_ids does not persist).
+ * After save, require live option_group_count === POS group count.
  */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -41,6 +44,8 @@ const apply = args.includes("--apply");
 const dryRun = !apply || args.includes("--dry-run");
 const limit = Number((args.find((a) => a.startsWith("--limit=")) || "").slice(8)) || 0;
 const only = (args.find((a) => a.startsWith("--only=")) || "").slice(7).trim();
+const exclude = (args.find((a) => a.startsWith("--exclude=")) || "").slice(10).trim();
+const preferFile = (args.find((a) => a.startsWith("--prefer=")) || "").slice(9).trim();
 
 const QUOTA_RE =
   /limit|quota|สูงสุด|เต็ม|ไม่สามารถสร้าง|exceed|too many|จำนวน.*(เต็ม|สูงสุด)|reach|maximum/i;
@@ -203,11 +208,14 @@ function pickSibling(pos, onShopee) {
   const sameMode = sameCat.filter((s) => modeKey(s.pos) === modeKey(pos));
   const pool = sameMode.length ? sameMode : sameCat;
   const want = [...pos.optionNames].map(fold).sort().join("|");
-  return (
+  const hit =
     pool.find((s) => [...s.pos.optionNames].map(fold).sort().join("|") === want) ||
     pool[0] ||
-    null
-  );
+    null;
+  if (hit) return hit;
+  // Empty Shopee category (e.g. hot / fusion): borrow picture from same mode elsewhere.
+  const modePool = onShopee.filter((s) => modeKey(s.pos) === modeKey(pos) && s.shopee.picture);
+  return modePool[0] || onShopee.find((s) => s.shopee.picture) || null;
 }
 
 function mapOptionGroupIds(optionNames, shopeeGroups) {
@@ -314,51 +322,111 @@ function bindOptionsPut(dishId, row, liveDish) {
   return xhrJson("PUT", `${API}/${dishId}`, { dish });
 }
 
+async function waitEditReady(dishId, minCbs = 0) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < 20000) {
+    const st = js(`(() => {
+      const crop = document.querySelector('[class*=crop_modal]');
+      if (crop) {
+        const btn = [...crop.querySelectorAll('button')].find((b) => /ยกเลิก|Cancel/i.test((b.innerText||'').trim()));
+        if (btn) btn.click();
+      }
+      return JSON.stringify({
+        onEdit: location.href.includes('/dish/edit') && location.href.includes('${dishId}'),
+        cbs: document.querySelectorAll('input[type="checkbox"]').length,
+        crop: !!crop,
+      });
+    })()`);
+    const need = Number(minCbs) <= 0 ? 0 : Number(minCbs);
+    if (st?.onEdit && !st?.crop && (need <= 0 || Number(st.cbs) >= need)) return st;
+    await sleep(400);
+  }
+  return null;
+}
+
+function confirmOverwriteIfNeeded() {
+  return js(`(() => {
+    const dialog = [...document.querySelectorAll('[class*=modal], [class*=dialog], [class*=confirm]')]
+      .find((e) => /บันทึกแทนที่|อัปเดตข้อมูล/i.test(e.innerText || ''));
+    if (!dialog) return JSON.stringify({ ok: true, confirmed: false });
+    const ok = [...dialog.querySelectorAll('button')].find((b) => /ตกลง|OK|ยืนยัน/i.test((b.innerText || '').trim()));
+    if (ok) ok.click();
+    return JSON.stringify({ ok: !!ok, confirmed: true });
+  })()`);
+}
+
 async function bindOptionsUi(dishId, optionNames) {
   go(editUrl(dishId));
-  await sleep(2800);
-  const ready = js(`JSON.stringify({
-    url: location.href,
-    onEdit: location.href.includes('/dish/edit')
-  })`);
-  if (!ready?.onEdit) return { ok: false, reason: "edit-not-ready", url: ready?.url };
+  await sleep(1500);
+  const wantN = (optionNames || []).length;
+  const minCbs = wantN <= 0 ? 0 : wantN >= 4 ? 8 : 2;
+  const ready = await waitEditReady(dishId, minCbs);
+  if (!ready?.onEdit) return { ok: false, reason: "edit-not-ready", ready };
+  js(`(() => {
+    const names = ${JSON.stringify(optionNames)};
+    const fold = (s) => String(s || '').replace(/\\u00a0/g,' ').replace(/\\s+/g,' ').trim().toLowerCase()
+      .replace(/ท้อปปิ้ง/g, 'ท็อปปิ้ง');
+    for (const name of names) {
+      for (const tr of document.querySelectorAll('tr')) {
+        const first = (tr.innerText || '').trim().split('\\n')[0].trim();
+        if (fold(first) !== fold(name)) continue;
+        const label = tr.querySelector('label.shopee-pos-checkbox-wrapper') || tr.querySelector('label');
+        const cb = tr.querySelector('input[type="checkbox"]');
+        if (cb && !cb.checked) (label || cb).click();
+        break;
+      }
+    }
+    return 'ticked';
+  })()`);
+  await sleep(700);
   const ticked = js(`(() => {
     const names = ${JSON.stringify(optionNames)};
-    const fold = (s) => String(s || '').replace(/\\u00a0/g,' ').replace(/\\s+/g,' ').trim().toLowerCase();
-    const want = new Set(names.map(fold));
+    const fold = (s) => String(s || '').replace(/\\u00a0/g,' ').replace(/\\s+/g,' ').trim().toLowerCase()
+      .replace(/ท้อปปิ้ง/g, 'ท็อปปิ้ง');
     const done = [];
     const missed = [];
     for (const name of names) {
       let hit = false;
       for (const tr of document.querySelectorAll('tr')) {
-        const tx = (tr.innerText || '').trim();
-        if (!tx) continue;
-        const first = tx.split('\\n')[0].trim();
+        const first = (tr.innerText || '').trim().split('\\n')[0].trim();
         if (fold(first) !== fold(name)) continue;
         const cb = tr.querySelector('input[type="checkbox"]');
-        if (!cb) continue;
-        if (!cb.checked) cb.click();
-        hit = true;
-        done.push({ name, checked: true });
+        const wrap = tr.querySelector('.shopee-pos-checkbox');
+        const checked = !!cb?.checked || /checked/i.test(wrap?.className || '');
+        hit = checked;
+        done.push({ name, checked });
         break;
       }
       if (!hit) missed.push(name);
     }
     return JSON.stringify({ done, missed });
   })()`);
+  if ((ticked?.missed || []).length) {
+    return { ok: false, reason: "missed-groups", ticked };
+  }
   const save = js(`(() => {
     const btn = [...document.querySelectorAll('button')].find((b) => (b.innerText || '').trim() === 'บันทึก');
     if (!btn) return JSON.stringify({ ok: false, reason: 'no-save' });
     btn.click();
     return JSON.stringify({ ok: true });
   })()`);
+  await sleep(800);
+  const overwrite = confirmOverwriteIfNeeded();
   await sleep(3500);
-  const after = js(`JSON.stringify({
-    url: location.href,
-    sample: (document.body.innerText || '').slice(0, 500)
-  })`);
-  const blocked = QUOTA_RE.test(String(after?.sample || ""));
-  return { ok: !!save?.ok && !blocked, ticked, save, after, blocked };
+  return { ok: !!save?.ok && !(ticked?.missed || []).length, ticked, save, overwrite };
+}
+
+function readDishGroups(dishId) {
+  const got = xhrJson("GET", `${API}/${dishId}`, null);
+  const live = got.json?.data?.dish || null;
+  return {
+    ok: got.json?.code === 0 && live?.id != null,
+    option_group_count: live?.option_group_count ?? null,
+    picture: live?.picture || "",
+    available: live?.available,
+    listing_status: live?.listing_status,
+    live,
+  };
 }
 
 function appendScan(row, dishId, price) {
@@ -405,11 +473,39 @@ async function main() {
   const plan = buildPlan(ctx);
   let rows = plan.rows;
   if (only) rows = rows.filter((r) => fold(r.name).includes(fold(only)));
+  if (exclude) {
+    const ex = fold(exclude);
+    rows = rows.filter((r) => !fold(r.name).includes(ex) && !fold(r.category).includes(ex));
+  }
+  // Prefer sales-ranked create list when present
+  const preferPath = preferFile
+    ? preferFile
+    : join(DATA, "shopee-create-from-delivery-sales.json");
+  if (existsSync(preferPath)) {
+    try {
+      const pref = JSON.parse(readFileSync(preferPath, "utf8"));
+      const order = [
+        ...(pref.recommendTop16 || []),
+        ...(pref.allMissing || []),
+      ]
+        .map((r) => fold(r.name || ""))
+        .filter(Boolean);
+      const rank = new Map(order.map((n, i) => [n, i]));
+      rows.sort((a, b) => {
+        const ra = rank.has(fold(a.name)) ? rank.get(fold(a.name)) : 9999;
+        const rb = rank.has(fold(b.name)) ? rank.get(fold(b.name)) : 9999;
+        return ra - rb || a.category.localeCompare(b.category, "th") || a.name.localeCompare(b.name, "th");
+      });
+    } catch {
+      /* ignore prefer file */
+    }
+  }
   if (limit > 0) rows = rows.slice(0, limit);
-  writeFileSync(PLAN, JSON.stringify({ ...plan, selected: rows.length }, null, 2) + "\n");
+  writeFileSync(PLAN, JSON.stringify({ ...plan, selected: rows.length, exclude, preferPath }, null, 2) + "\n");
 
   console.log(
-    `Shopee ${plan.shopeeCount} · POS delivery ${plan.posDelivery} · exact ${plan.matchedExact} · missing ${plan.missing} · selected ${rows.length} dryRun=${dryRun}`,
+    `Shopee ${plan.shopeeCount} · POS delivery ${plan.posDelivery} · exact ${plan.matchedExact} · missing ${plan.missing} · selected ${rows.length} dryRun=${dryRun}` +
+      (exclude ? ` · exclude=${exclude}` : ""),
   );
   for (const r of rows) {
     console.log(
@@ -459,20 +555,50 @@ async function main() {
     const livePrice = bahtFromMicros(dish.price ?? dish.list_price) || row.target;
     console.log(`created ${dishId} price ${livePrice}`);
 
+    const expectOg = (row.optionNames || []).length;
     let bind = { skipped: true };
-    if (row.optionGroupIds.length) {
-      bind = bindOptionsPut(dishId, row, dish);
-      if (bind.json?.code !== 0) {
-        console.log("PUT options fallback to UI", bind.json?.msg || bind.raw);
-        bind = await bindOptionsUi(dishId, row.optionNames);
-      } else {
-        console.log("PUT options ok", bind.json?.msg);
+    let ogCount = null;
+    if (expectOg > 0) {
+      // Never rely on PUT option_group_ids — it reports success but does not persist.
+      bind = await bindOptionsUi(dishId, row.optionNames);
+      if (!bind.ok) {
+        console.log("UI bind retry", bind.reason || bind.ticked?.missed || "");
+        bind = { ...bind, retry: await bindOptionsUi(dishId, row.optionNames) };
+        bind.ok = !!bind.retry?.ok;
       }
+      let liveCheck = readDishGroups(dishId);
+      ogCount = liveCheck.option_group_count;
+      if (ogCount !== expectOg) {
+        console.log(`⚠ option count ${ogCount} != POS ${expectOg} — rebind UI`);
+        const again = await bindOptionsUi(dishId, row.optionNames);
+        bind = { ...bind, rebind: again };
+        liveCheck = readDishGroups(dishId);
+        ogCount = liveCheck.option_group_count;
+      }
+      if (ogCount !== expectOg) {
+        console.log(`FAIL options still ${ogCount}/${expectOg} — leave dish for manual fix`);
+        log.results.push({
+          name: row.name,
+          posId: row.posId,
+          dishId,
+          price: livePrice,
+          target: row.target,
+          optionGroupCount: ogCount,
+          expectOg,
+          bind,
+          status: "created_options_mismatch",
+        });
+        writeFileSync(LOG, JSON.stringify(log, null, 2) + "\n");
+        appendScan(row, dishId, livePrice);
+        go(LIST_URL);
+        await sleep(1200);
+        continue;
+      }
+      console.log(`options OK ${ogCount}/${expectOg}`);
+    } else {
+      ogCount = 0;
     }
 
-    const got = xhrJson("GET", `${API}/${dishId}`, null);
-    const live = got.json?.data?.dish || dish;
-    const ogCount = live?.option_group_count ?? null;
     appendScan(row, dishId, livePrice);
     await writeHubChannelLiveRow({
       posId: row.posId,
@@ -493,18 +619,26 @@ async function main() {
       price: livePrice,
       target: row.target,
       optionGroupCount: ogCount,
+      expectOg,
       bind,
       status: "created",
     };
     log.results.push(entry);
     writeFileSync(LOG, JSON.stringify(log, null, 2) + "\n");
     console.log(`hub wrote ${row.name} S=${livePrice} opts=${ogCount}`);
+    go(LIST_URL);
+    await sleep(1000);
   }
 
   const ok = log.results.filter((r) => r.status === "created").length;
+  const badOg = log.results.filter((r) => r.status === "created_options_mismatch").length;
   const quota = log.results.find((r) => r.status === "quota");
-  console.log(`\nDone created ${ok}/${rows.length}${quota ? " · hit quota" : ""}`);
-  process.exit(0);
+  console.log(
+    `\nDone created ${ok}/${rows.length}` +
+      (badOg ? ` · options-mismatch ${badOg}` : "") +
+      (quota ? " · hit quota" : ""),
+  );
+  process.exit(badOg || quota ? 1 : 0);
 }
 
 main().catch((err) => {

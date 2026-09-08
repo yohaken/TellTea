@@ -6,7 +6,7 @@ type RawBundle = Record<
   {
     scannedAt: string | null;
     count: number;
-    items: { id: string; name: string; listPrice: number | null }[];
+    items: { id: string; name: string; listPrice: number | null; photoId?: string | null }[];
   }
 >;
 

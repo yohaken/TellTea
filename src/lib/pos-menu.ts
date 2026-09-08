@@ -19,6 +19,7 @@ import { mapFirestoreError } from "./firestore-errors";
 import { listMenuOptionGroups, subscribeMenuOptionGroups } from "./pos-menu-options";
 import { bumpMenuVersion } from "./pos-menu-version";
 import { sanitizeMenuLabel } from "./pos-menu-text";
+import { menuMainImageHash } from "./pos-menu-image";
 import type { MenuCategory, MenuItem, MenuOptionGroup } from "./types";
 
 export { bumpMenuVersion } from "./pos-menu-version";
@@ -78,6 +79,7 @@ function mapItem(id: string, data: Record<string, unknown>): MenuItem {
       ? { hubNote: data.hubNote.trim() }
       : {}),
     imageUrl: typeof data.imageUrl === "string" && data.imageUrl ? data.imageUrl : undefined,
+    imageHash: typeof data.imageHash === "string" && data.imageHash ? data.imageHash : undefined,
     imageBackups: Array.isArray(data.imageBackups)
       ? data.imageBackups.filter((x): x is string => typeof x === "string" && Boolean(x.trim()))
       : undefined,
@@ -366,7 +368,12 @@ export async function updateMenuItem(id: string, patch: MenuItemPatch): Promise<
   if (patch.active != null) next.active = patch.active;
   if (patch.visibleOnPos != null) next.visibleOnPos = patch.visibleOnPos;
   if (patch.recommended != null) next.recommended = patch.recommended;
-  if (patch.imageUrl != null) next.imageUrl = patch.imageUrl.trim();
+  if (patch.imageUrl != null) {
+    const url = patch.imageUrl.trim();
+    next.imageUrl = url;
+    const hash = menuMainImageHash(url);
+    next.imageHash = hash || deleteField();
+  }
   if (patch.imageBackups !== undefined) {
     if (patch.imageBackups == null || !patch.imageBackups.length) {
       next.imageBackups = deleteField();

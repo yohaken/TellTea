@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 /**
  * Reorder items within each category on Shopee / Grab / LINE MAN to match POS หลังร้าน.
- * Does not create missing POS items. Unmatched platform leftovers (ลบไม่ได้, extras) stay at the end.
+ * Rank APIs only — never send available / menuStatus / listing_status.
+ * Platform งดขาย stays งดขาย. Sold-out POS items keep their sortOrder (not moved to the end).
+ * After apply, any availability flip is restored to the snapshot taken before rank.
  *
  *   node scripts/channel-reorder-items-to-pos.mjs --dry-run
  *   node scripts/channel-reorder-items-to-pos.mjs --apply --channel=all
@@ -53,6 +55,43 @@ function sameNames(a, b) {
   return a.every((n, i) => namesEqual(n, b[i] || ""));
 }
 
+function availSig(it) {
+  if (typeof it.available === "boolean") return it.available ? "on" : "off";
+  const s = it.status;
+  if (s === 3 || s === "3" || s === "SUSPENDED") return "off";
+  if (s === 1 || s === "1" || s === "AVAILABLE" || s === "") return "on";
+  if (s == null) return "?";
+  return String(s);
+}
+
+function snapshotAvail(cats) {
+  const rows = [];
+  for (const c of cats || []) {
+    for (const it of c.items || []) {
+      rows.push({
+        cat: c.name,
+        id: String(it.id || ""),
+        name: it.name,
+        avail: availSig(it),
+      });
+    }
+  }
+  return rows;
+}
+
+function diffAvail(before, after) {
+  const by = new Map(after.map((r) => [`${r.cat}\t${r.id || r.name}`, r]));
+  const flips = [];
+  for (const b of before) {
+    const a = by.get(`${b.cat}\t${b.id || b.name}`);
+    if (!a) continue;
+    if (b.avail !== a.avail && b.avail !== "?" && a.avail !== "?") {
+      flips.push({ name: b.name, cat: b.cat, before: b.avail, after: a.avail });
+    }
+  }
+  return flips;
+}
+
 function printCat(label, catName, live, want) {
   const liveN = live.map((x) => x.name);
   const wantN = want.map((x) => x.name);
@@ -81,7 +120,7 @@ async function loadPosByCat() {
   const cats = catsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
   const items = itemsSnap.docs
     .map((d) => ({ id: d.id, ...d.data() }))
-    .filter((it) => it.active !== false && !it.storeOnly && !isStoreOnlyName(it.name || ""));
+    .filter((it) => !it.storeOnly && !isStoreOnlyName(it.name || ""));
   items.sort(
     (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || String(a.name || "").localeCompare(b.name || "", "th"),
   );
@@ -167,6 +206,7 @@ function fetchGrabCats() {
       id: it.itemID || it.itemId,
       name: it.itemName || it.name || "",
       sortOrder: it.sortOrder,
+      status: it.availableStatus ?? it.status ?? "",
     })),
   }));
 }
@@ -303,6 +343,7 @@ function writeLinemanScan(cats) {
 
 async function runChannel(label, posByCat, fetchCats, applyCat) {
   const liveCats = await fetchCats();
+  const availBefore = snapshotAvail(liveCats);
   const byName = new Map(liveCats.map((c) => [c.name, c]));
   const result = { cats: [], applied: 0, already: 0, skipped: 0 };
   console.log(`=== ${label} ===`);
@@ -340,8 +381,17 @@ async function runChannel(label, posByCat, fetchCats, applyCat) {
     }
   }
   result.wrongAfter = wrong;
+  result.availFlips = apply ? diffAvail(availBefore, snapshotAvail(after)) : [];
+  if (result.availFlips.length) {
+    console.log(`  ⚠ ${label} สถานะขายขยับ ${result.availFlips.length} รายการ (ไม่ตั้งใจ)`);
+    for (const f of result.availFlips) {
+      console.log(`    ${f.name}: ${f.before} → ${f.after}`);
+    }
+  } else if (apply) {
+    console.log(`  ${label} สถานะขายไม่ขยับ`);
+  }
   console.log(`  สรุป ${label}: ตรงแล้ว ${result.already} · จัด ${result.applied} · หมวดที่ยังไม่ตรงหลังจัด ${wrong}`);
-  return { result, after };
+  return { result, after, availBefore };
 }
 
 async function main() {

@@ -26,7 +26,7 @@ function b64Js(js) {
   return Buffer.from(js, "utf8").toString("base64");
 }
 
-/** Find 1-based window + tab index of first Shopee Partner tab. */
+/** Find 1-based window + tab index of first Shopee Partner POS tab (not login). */
 export function findShopeeTab() {
   const script = `
 tell application "Google Chrome"
@@ -36,7 +36,8 @@ tell application "Google Chrome"
     set ti to 0
     repeat with tb in tabs of w
       set ti to ti + 1
-      if URL of tb as string contains "${URL_PART}" then
+      set u to URL of tb as string
+      if u contains "partner.shopee.co.th/shopee-pos" then
         return (wi as string) & "," & (ti as string)
       end if
     end repeat
@@ -51,15 +52,37 @@ end tell
   return { windowIndex: w, tabIndex: t };
 }
 
+export function readTabUrl(tabIndex, windowIndex) {
+  const wi = windowIndex ?? cachedWindowIndex ?? findShopeeTab().windowIndex;
+  const script = `
+tell application "Google Chrome"
+  return URL of tab ${tabIndex} of window ${wi} as string
+end tell
+`;
+  return runAppleScript(script);
+}
+
+export function assertShopeeLoggedIn(tabIndex, windowIndex) {
+  const url = readTabUrl(tabIndex, windowIndex) || "";
+  if (/authenticate\/login|accounts\.shopee/i.test(url) || !/shopee-pos/i.test(url)) {
+    throw new Error(
+      "Shopee session expired — เปิด Chrome แล้วล็อกอิน partner.shopee.co.th/shopee-pos ก่อนรันใหม่",
+    );
+  }
+  return url;
+}
+
 export function chromeJsOnTab(tabIndex, js, { windowIndex } = {}) {
   const wi = windowIndex ?? cachedWindowIndex ?? findShopeeTab().windowIndex;
   const b64 = b64Js(js);
   const script = `
 tell application "Google Chrome"
-  tell window ${wi}
-    set js to do shell script "echo ${b64} | base64 -D"
-    return execute tab ${tabIndex} javascript js
-  end tell
+  with timeout of 120 seconds
+    tell window ${wi}
+      set js to do shell script "echo ${b64} | base64 -D"
+      return execute tab ${tabIndex} javascript js
+    end tell
+  end timeout
 end tell
 `;
   const out = runAppleScript(script);
@@ -336,6 +359,7 @@ export function setPriceOnTab(tabIndex, price, apply, windowIndex) {
       }
       for (const btn of document.querySelectorAll('button')) {
         const t = (btn.innerText||'').trim();
+        // ห้ามคลิกสวิตช์มีจำหน่าย / งดขาย — บันทึกราคาอย่างเดียว
         if (t === 'บันทึก' || t === 'Save') {
           btn.click();
           return JSON.stringify({ saved: true, before, after: priceInput.value });
@@ -388,6 +412,92 @@ export async function savePriceAndRead(tabIndex, price, apply, windowIndex) {
   return { ...attempt, ...after, after: after?.afterInput ?? null };
 }
 
+const DISH_API = "https://foody.shopee.co.th/api/seller/store/dishes";
+
+function dishIdDigits(dishId) {
+  return String(dishId ?? "").replace(/[^\d]/g, "");
+}
+
+/** Read live listing flags. Price-only saves must not change these. */
+export function readDishListing(tabIndex, dishId, windowIndex) {
+  const id = dishIdDigits(dishId);
+  if (!id) return { ok: false, error: "no dishId" };
+  return chromeJsJsonOnTab(
+    tabIndex,
+    `(() => {
+      const x = new XMLHttpRequest();
+      x.open('GET', '${DISH_API}/${id}', false);
+      x.withCredentials = true;
+      x.send(null);
+      let json = null;
+      try { json = JSON.parse(x.responseText); } catch {}
+      const d = json?.data?.dish || {};
+      return JSON.stringify({
+        ok: json?.code === 0 && d.id != null,
+        available: d.available,
+        listing_status: d.listing_status,
+        list_price: d.list_price,
+        name: d.name,
+      });
+    })()`,
+    { windowIndex },
+  );
+}
+
+/**
+ * If a form save flipped มีจำหน่าย / listing_status, restore the pinned values.
+ * Keeps the current list_price from the live GET (do not rewind the price step).
+ */
+export function restoreDishListing(tabIndex, dishId, pin, windowIndex) {
+  const id = dishIdDigits(dishId);
+  if (!id || !pin) return { restored: false, skipped: true };
+  const availableJs = JSON.stringify(pin.available);
+  const listingJs = JSON.stringify(pin.listing_status);
+  return chromeJsJsonOnTab(
+    tabIndex,
+    `(() => {
+      const xhr = (method, url, body) => {
+        const x = new XMLHttpRequest();
+        x.open(method, url, false);
+        x.withCredentials = true;
+        if (body != null) x.setRequestHeader('Content-Type', 'application/json');
+        x.send(body == null ? null : JSON.stringify(body));
+        let json = null;
+        try { json = JSON.parse(x.responseText); } catch {}
+        return { status: x.status, code: json?.code, msg: json?.msg, json };
+      };
+      const got = xhr('GET', '${DISH_API}/${id}', null);
+      const dish = got.json?.data?.dish;
+      if (!dish) return JSON.stringify({ restored: false, error: 'no dish' });
+      const pinAvail = ${availableJs};
+      const pinListing = ${listingJs};
+      const flipped =
+        (pinAvail !== undefined && dish.available !== pinAvail) ||
+        (pinListing !== undefined && dish.listing_status !== pinListing);
+      if (!flipped) {
+        return JSON.stringify({
+          restored: false,
+          skipped: true,
+          available: dish.available,
+          listing_status: dish.listing_status,
+        });
+      }
+      const next = { ...dish };
+      if (pinAvail !== undefined) next.available = pinAvail;
+      if (pinListing !== undefined) next.listing_status = pinListing;
+      const put = xhr('POST', '${DISH_API}/${id}', { dish: next });
+      return JSON.stringify({
+        restored: put.code === 0,
+        before: { available: dish.available, listing_status: dish.listing_status },
+        pin: { available: pinAvail, listing_status: pinListing },
+        msg: put.msg || '',
+        code: put.code,
+      });
+    })()`,
+    { windowIndex },
+  );
+}
+
 /** Re-open edit page and read persisted list price. */
 export async function verifyPersistedPrice(tabIndex, dishId, windowIndex) {
   chromeJsOnTab(tabIndex, `(() => { location.href='${editUrl(dishId)}'; return 'ok'; })()`, {
@@ -430,10 +540,14 @@ export function setNameOnTab(tabIndex, newName, apply, windowIndex) {
   );
 }
 
-export async function mapPool(items, workers, fn) {
-  const { windowIndex } = findShopeeTab();
-  let tabIndices = ensureWorkerTabs(workers);
-  await sleep(2000);
+export async function mapPool(items, workers, fn, pre) {
+  let windowIndex = pre?.windowIndex;
+  let tabIndices = pre?.tabIndices?.length ? [...pre.tabIndices] : null;
+  if (!tabIndices?.length) {
+    windowIndex = findShopeeTab().windowIndex;
+    tabIndices = ensureWorkerTabs(workers);
+    await sleep(2000);
+  }
 
   const results = new Array(items.length);
   let cursor = 0;

@@ -76,6 +76,39 @@ function itemPrice(it, priceKey) {
   return null;
 }
 
+/** Shopee picture / Grab CDN id — store basename when URL so hub ≠ push filename. */
+function livePhotoId(it) {
+  if (!it || typeof it !== "object") return undefined;
+  const keys = ["picture", "photoId", "photoURL", "photoUrl", "imageUrl", "imageURL", "imageId"];
+  let raw;
+  for (const k of keys) {
+    if (typeof it[k] === "string" && it[k].trim()) {
+      raw = it[k].trim();
+      break;
+    }
+  }
+  if (raw == null && Array.isArray(it.photos) && it.photos.length) {
+    const p = it.photos[0];
+    if (typeof p === "string" && p.trim()) raw = p.trim();
+    else if (p && typeof p === "object") {
+      const u = p.url || p.photoURL || p.imageURL;
+      if (typeof u === "string" && u.trim()) raw = u.trim();
+    }
+  }
+  if (raw == null) {
+    if (Object.prototype.hasOwnProperty.call(it, "picture")) return "";
+    return undefined;
+  }
+  try {
+    if (/^https?:\/\//i.test(raw)) {
+      return decodeURIComponent(new URL(raw).pathname.split("/").filter(Boolean).pop() || raw);
+    }
+  } catch {
+    /* keep raw */
+  }
+  return raw;
+}
+
 function liveGroupNames(it) {
   const raw = it.optionGroupNames || it.option_group_names || it.optionGroups || [];
   if (!Array.isArray(raw)) return [];
@@ -86,15 +119,31 @@ function liveGroupNames(it) {
 }
 
 function choiceIndexByOption(optList) {
+  // Prefer linked / higher-related groups first so orphan duplicates
+  // (same group name, wrong order) do not overwrite name→index.
+  const ranked = optList.slice().sort((a, b) => {
+    const ra = Number(a.related) || (a.linked ? 1 : 0);
+    const rb = Number(b.related) || (b.linked ? 1 : 0);
+    if (rb !== ra) return rb - ra;
+    return 0;
+  });
   const map = new Map();
-  const seen = new Map();
-  for (const o of optList) {
+  const seen = new Map(); // per groupId (or name) — reset index per physical group
+  const nameRank = new Map(); // best related score already stored for name key
+  for (const o of ranked) {
     const g = o.group || "";
-    const i = seen.get(g) || 0;
-    seen.set(g, i + 1);
+    const gid = String(o.groupId || o.groupID || g);
+    const i = seen.get(gid) || 0;
+    seen.set(gid, i + 1);
     const ext = String(o.optionId || o.id || "").trim();
     if (ext) map.set(`id:${ext}`, i);
-    map.set(`name:${normName(g)}|${normName(o.name || "")}`, i);
+    const nameKey = `name:${normName(g)}|${normName(o.name || "")}`;
+    const score = Number(o.related) || (o.linked ? 1 : 0);
+    const prev = nameRank.get(nameKey);
+    if (prev == null || score > prev) {
+      map.set(nameKey, i);
+      nameRank.set(nameKey, score);
+    }
   }
   return map;
 }
@@ -186,6 +235,8 @@ async function ingestChannel(channel, db, posItems, posChoices, current, posCatN
     matchedMenus += 1;
     const groupNames = liveGroupNames(it);
     const row = { ...(items[hit.id] || {}) };
+    const prevCh = row[channel] || {};
+    const photoId = livePhotoId(it);
     row[channel] = {
       name: it.name || "",
       price,
@@ -195,8 +246,26 @@ async function ingestChannel(channel, db, posItems, posChoices, current, posCatN
       category: it.category || "",
       sortIndex: Number.isFinite(Number(it.sortIndex)) ? Number(it.sortIndex) : i,
       ...(groupNames.length ? { groupNames } : {}),
+      ...(photoId !== undefined ? { photoId } : {}),
+      ...(prevCh.photoPushedId
+        ? {
+            photoPushedId: prevCh.photoPushedId,
+            photoPushedHash: prevCh.photoPushedHash || null,
+            photoPushedAt: prevCh.photoPushedAt || null,
+            ...(prevCh.photoVerifiedAt ? { photoVerifiedAt: prevCh.photoVerifiedAt } : {}),
+          }
+        : {}),
     };
     items[hit.id] = row;
+  }
+
+  // Drop stale live cells for this channel when this scan did not rematch the POS item.
+  for (const [id, row] of Object.entries(items)) {
+    if (usedPos.has(id) || !row?.[channel]) continue;
+    const next = { ...row };
+    delete next[channel];
+    if (Object.keys(next).length) items[id] = next;
+    else delete items[id];
   }
 
   let matchedOpts = 0;
@@ -375,11 +444,15 @@ async function ingestChannel(channel, db, posItems, posChoices, current, posCatN
     count: scan.items.filter((x) => itemPrice(x, cfg.priceKey) != null).length,
     items: scan.items
       .filter((x) => x.name && itemPrice(x, cfg.priceKey) != null)
-      .map((x) => ({
-        id: String(x[cfg.idKey] || x.dishId || x.itemId || x.id || x.name),
-        name: x.name,
-        listPrice: itemPrice(x, cfg.priceKey),
-      })),
+      .map((x) => {
+        const photoId = livePhotoId(x);
+        return {
+          id: String(x[cfg.idKey] || x.dishId || x.itemId || x.id || x.name),
+          name: x.name,
+          listPrice: itemPrice(x, cfg.priceKey),
+          ...(photoId !== undefined ? { photoId } : {}),
+        };
+      }),
   };
   if (!DRY) writeFileSync(LIVE_BUNDLE, JSON.stringify(bundle, null, 2) + "\n");
 

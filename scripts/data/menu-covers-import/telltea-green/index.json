@@ -43,8 +43,8 @@
           "webViewLink": "https://drive.google.com/file/d/1h9rLQ5sqUkhTOfIwb2rIp0BQPDe7j9cG/view?usp=drivesdk"
         }
       },
-      "main": null,
-      "posAttached": false,
+      "main": "v1",
+      "posAttached": true,
       "posItemId": "fs_item_33768737",
       "posBackupAttached": true
     },
@@ -64,8 +64,8 @@
           "webViewLink": "https://drive.google.com/file/d/1V9eEKk2x1p3NU5Ptmk3cSc4CyHFZXUYh/view?usp=drivesdk"
         }
       },
-      "main": null,
-      "posAttached": false,
+      "main": "v1",
+      "posAttached": true,
       "posItemId": "fs_item_33559309",
       "posBackupAttached": true
     },
@@ -85,8 +85,8 @@
           "webViewLink": "https://drive.google.com/file/d/1ZXUpyXmfMXRgrTHcXridiBeCcHYBuioH/view?usp=drivesdk"
         }
       },
-      "main": null,
-      "posAttached": false,
+      "main": "v1",
+      "posAttached": true,
       "posItemId": "fs_item_33559314",
       "posBackupAttached": true
     },
@@ -106,8 +106,8 @@
           "webViewLink": "https://drive.google.com/file/d/1h7PRxpNXiWR4X3shHuaizr0TfS30ELyC/view?usp=drivesdk"
         }
       },
-      "main": null,
-      "posAttached": false,
+      "main": "v1",
+      "posAttached": true,
       "posItemId": "fs_item_33768746",
       "posBackupAttached": true
     },
@@ -127,8 +127,8 @@
           "webViewLink": "https://drive.google.com/file/d/11lvsPg9ywbT_Ssma6mkhyaddi_8O9wHr/view?usp=drivesdk"
         }
       },
-      "main": null,
-      "posAttached": false,
+      "main": "v1",
+      "posAttached": true,
       "posItemId": "fs_item_33559326",
       "posBackupAttached": true
     },
@@ -148,8 +148,8 @@
           "webViewLink": "https://drive.google.com/file/d/1gXaGE0Y3tei6lO4a0vNFneODG7YJIIFD/view?usp=drivesdk"
         }
       },
-      "main": null,
-      "posAttached": false,
+      "main": "v1",
+      "posAttached": true,
       "posItemId": "fs_item_33559319",
       "posBackupAttached": true
     },
@@ -178,8 +178,8 @@
           "updatedAt": "2026-09-05T07:01:51.649Z"
         }
       },
-      "main": null,
-      "posAttached": false,
+      "main": "v1",
+      "posAttached": true,
       "posItemId": "fs_item_33559286",
       "posBackupAttached": true,
       "generatedWithoutDriveMaster": false,
@@ -210,8 +210,8 @@
           "updatedAt": "2026-09-05T07:01:55.208Z"
         }
       },
-      "main": null,
-      "posAttached": false,
+      "main": "v1",
+      "posAttached": true,
       "posItemId": "fs_item_33559318",
       "posBackupAttached": true,
       "generatedWithoutDriveMaster": false,
@@ -242,8 +242,8 @@
           "updatedAt": "2026-09-05T07:31:43.513Z"
         }
       },
-      "main": null,
-      "posAttached": false,
+      "main": "v1",
+      "posAttached": true,
       "posItemId": "fs_item_33559328",
       "posBackupAttached": true,
       "generatedWithoutDriveMaster": false,
@@ -274,13 +274,3986 @@
           "updatedAt": "2026-09-05T07:02:01.951Z"
         }
       },
-      "main": null,
-      "posAttached": false,
+      "main": "v1",
+      "posAttached": true,
       "posItemId": "fs_item_47385144",
       "posBackupAttached": true,
       "generatedWithoutDriveMaster": true,
       "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "MT_03",
+      "folder": "MT_03_ชานมใต้หวัน",
+      "group": "ชานม",
+      "posName": "ชานมใต้หวัน (เย็น/ปั่น)",
+      "displayName": "ชานมใต้หวัน",
+      "source": "เมนูแยก/ชานม/MT_03_ชานมใต้หวัน.jpg",
+      "sourceDriveId": "1n8cUjRYDzR_hOF0-uOqvvo-Y0x5lLOAK",
+      "driveSkuFolderId": "1SsFVA0Y1fW3pQEdriibVVbpJ3kEwNf8D",
+      "candidates": {
+        "v1": {
+          "file": "ชานม/MT_03_ชานมใต้หวัน/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1_n4rybrdK8ZJI7u6SCjdFtbhb8nM958A",
+          "webViewLink": "https://drive.google.com/file/d/1_n4rybrdK8ZJI7u6SCjdFtbhb8nM958A/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T07:55:10.061Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559327",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "MT_04",
+      "folder": "MT_04_ชาไทย",
+      "group": "ชานม",
+      "posName": "ชาไทย (เย็น/ปั่น)",
+      "displayName": "ชาไทย",
+      "source": "เมนูแยก/ชานม/MT_04_ชาไทย.jpg",
+      "sourceDriveId": "1KgTnE1ir1W_rUGDJcqZ7hQfVXVrCVpsH",
+      "driveSkuFolderId": "13CW-tzpbhNVD_5gwABj0zygEhJGfkNO0",
+      "candidates": {
+        "v1": {
+          "file": "ชานม/MT_04_ชาไทย/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1ESqnZd5h29ZSyCsuc7u2OZXg0Anl7N53",
+          "webViewLink": "https://drive.google.com/file/d/1ESqnZd5h29ZSyCsuc7u2OZXg0Anl7N53/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T07:55:17.736Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559280",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "MT_05",
+      "folder": "MT_05_ชานมเฮเซลนัท",
+      "group": "ชานม",
+      "posName": "ชานมเฮเซลนัท (เย็น/ปั่น)",
+      "displayName": "ชานมเฮเซลนัท",
+      "source": "เมนูแยก/ชานม/MT_05_ชานมเฮเซลนัท.jpg",
+      "sourceDriveId": "1LHLipDKf4myF3RqBn_t4orHdVsIPUOKA",
+      "driveSkuFolderId": "16LgveMkPok0dUvRtws5VcA-svGmRJOa3",
+      "candidates": {
+        "v1": {
+          "file": "ชานม/MT_05_ชานมเฮเซลนัท/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1FbrV0Ldit11CowcrbHrqH5Uqk1k-T_cR",
+          "webViewLink": "https://drive.google.com/file/d/1FbrV0Ldit11CowcrbHrqH5Uqk1k-T_cR/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T07:55:26.738Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559269",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "MT_06",
+      "folder": "MT_06_ชานมกาแฟ",
+      "group": "ชานม",
+      "posName": "ชานมกาแฟ (เย็น/ปั่น)",
+      "displayName": "ชานมกาแฟ",
+      "source": "เมนูแยก/ชานม/MT_06_ชานมกาแฟ.jpg",
+      "sourceDriveId": "1RLFcv-q6e2qw_dVR__ZnPxbtKNK9FMF5",
+      "driveSkuFolderId": "1c__wX2-wOGL--kyChGwZ09PS3rU2nJsU",
+      "candidates": {
+        "v1": {
+          "file": "ชานม/MT_06_ชานมกาแฟ/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1hAtsddqkRQx2eJnyflzu4pE6AFJfvtM1",
+          "webViewLink": "https://drive.google.com/file/d/1hAtsddqkRQx2eJnyflzu4pE6AFJfvtM1/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T07:55:35.755Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559338",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "MT_07",
+      "folder": "MT_07_ชานมคาราเมล",
+      "group": "ชานม",
+      "posName": "ชานมคาราเมล (เย็น/ปั่น)",
+      "displayName": "ชานมคาราเมล",
+      "source": "เมนูแยก/ชานม/MT_07_ชานมคาราเมล.jpg",
+      "sourceDriveId": "1ltyX30u_-MBr5Xi40LQX3KnwFTJBukDt",
+      "driveSkuFolderId": "1O3r_CBobBDShdN9O51JXj5HV_N1mWOOv",
+      "candidates": {
+        "v1": {
+          "file": "ชานม/MT_07_ชานมคาราเมล/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1zGdw9oce-eMt5fof1gAuegph6FUKS3ab",
+          "webViewLink": "https://drive.google.com/file/d/1zGdw9oce-eMt5fof1gAuegph6FUKS3ab/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T07:55:43.948Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559271",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "MT_08",
+      "folder": "MT_08_ชานมมิ้นต์",
+      "group": "ชานม",
+      "posName": "ชานมมิ้นต์ (เย็น/ปั่น)",
+      "displayName": "ชานมมิ้นต์",
+      "source": "เมนูแยก/ชานม/MT_08_ชานมมิ้นต์.jpg",
+      "sourceDriveId": "1NC50DMesMcfMWuX2E96BBIkQ_wx-eFWD",
+      "driveSkuFolderId": "10uH0XVCrbCL-iOCRCG4f4JlqMdTeXIyE",
+      "candidates": {
+        "v1": {
+          "file": "ชานม/MT_08_ชานมมิ้นต์/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1XZHYFZirJ6MvSlsO-CtWQGljq5PsI9Qq",
+          "webViewLink": "https://drive.google.com/file/d/1XZHYFZirJ6MvSlsO-CtWQGljq5PsI9Qq/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T07:55:51.597Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559270",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "MT_09",
+      "folder": "MT_09_ชานมเผือก",
+      "group": "ชานม",
+      "posName": "ชานมเผือก (เย็น/ปั่น)",
+      "displayName": "ชานมเผือก",
+      "source": "เมนูแยก/ชานม/MT_09_ชานมเผือก.jpg",
+      "sourceDriveId": "1RD4WdNzbqs75JCX2GGIGXfuXedz1xYhW",
+      "driveSkuFolderId": "19Vt_Mg9dg1w242Kiu67v6BlIfJZjmNQ8",
+      "candidates": {
+        "v1": {
+          "file": "ชานม/MT_09_ชานมเผือก/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1TOiETfAyB4ylOogAzm8ZPe-uNI3UComZ",
+          "webViewLink": "https://drive.google.com/file/d/1TOiETfAyB4ylOogAzm8ZPe-uNI3UComZ/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T07:55:58.054Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559268",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "M_02",
+      "folder": "M_02_นมสดมิ้นต์",
+      "group": "นมสด",
+      "posName": "นมสดมิ้นต์ (เย็น/ปั่น)",
+      "displayName": "นมสดมิ้นต์",
+      "source": "เมนูแยก/นมสด/M_02_นมสดมิ้น.jpg",
+      "sourceDriveId": "1hOdMEjLLNzuN1UEf38Qx8n4pbS-eMctb",
+      "driveSkuFolderId": "1OnosD001YQhtpEkHEmkXqpMDP4tav2AN",
+      "candidates": {
+        "v1": {
+          "file": "นมสด/M_02_นมสดมิ้นต์/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1eWNw-xyA6fEYhV8N256ZrhpFcV4h4-TB",
+          "webViewLink": "https://drive.google.com/file/d/1eWNw-xyA6fEYhV8N256ZrhpFcV4h4-TB/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:06:48.097Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559336",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "M_03",
+      "folder": "M_03_ไมโล",
+      "group": "นมสด",
+      "posName": "ไมโล (เย็น/ปั่น)",
+      "displayName": "ไมโล",
+      "source": "เมนูแยก/นมสด/M_03_ไมโล.jpg",
+      "sourceDriveId": "1D5CG3WyVFgiXFidMqFOZF9vKG38cX1eu",
+      "driveSkuFolderId": "11T36V6sXJ_VaNULbPsmHNxmp5nnmVZeg",
+      "candidates": {
+        "v1": {
+          "file": "นมสด/M_03_ไมโล/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1iNfNZy-_yOP-DG9VsedtmyCPAfrLW1cA",
+          "webViewLink": "https://drive.google.com/file/d/1iNfNZy-_yOP-DG9VsedtmyCPAfrLW1cA/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:06:48.097Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559308",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "M_04",
+      "folder": "M_04_นมไข่มุกบราวน์ชูการ์",
+      "group": "นมสด",
+      "posName": "นมสดไข่มุกบราวน์ชูการ์ (เย็น/ปั่น)",
+      "displayName": "นมไข่มุกบราวน์ชูการ์",
+      "source": "เมนูแยก/นมสด/M_04_นมไข่มุก บราวชูก้า.jpg",
+      "sourceDriveId": "1LZSjxYXxts286UEAtoW8KTmUhddTBScO",
+      "driveSkuFolderId": "1xu4_Q6ceD9wJ-ySqhAVu6jpcCHDs1rxe",
+      "candidates": {
+        "v1": {
+          "file": "นมสด/M_04_นมไข่มุกบราวน์ชูการ์/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1U8eqzBZkL-Vlbi56_XNbwR-FaufyDugO",
+          "webViewLink": "https://drive.google.com/file/d/1U8eqzBZkL-Vlbi56_XNbwR-FaufyDugO/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:06:48.097Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559301",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "M_05",
+      "folder": "M_05_โอวัลติน",
+      "group": "นมสด",
+      "posName": "โอวัลติน (เย็น/ปั่น)",
+      "displayName": "โอวัลติน",
+      "source": "เมนูแยก/นมสด/M_05_โอวัลติน.jpg",
+      "sourceDriveId": "1YEMs3_mzhA53wT8dPhX7iUv07OzMKYvu",
+      "driveSkuFolderId": "14KZUlKcjEbJzd4RuOekhuwpH3Nk0yH8u",
+      "candidates": {
+        "v1": {
+          "file": "นมสด/M_05_โอวัลติน/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1883NeZWmbqVjwUKBKFDS8XY1JonVPoW6",
+          "webViewLink": "https://drive.google.com/file/d/1883NeZWmbqVjwUKBKFDS8XY1JonVPoW6/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:06:48.097Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559307",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "M_06",
+      "folder": "M_06_นมสดเย็น",
+      "group": "นมสด",
+      "posName": "นมสดเย็น (เย็น/ปั่น)",
+      "displayName": "นมสดเย็น",
+      "source": "เมนูแยก/นมสด/M_06_นมสดเย็น.jpg",
+      "sourceDriveId": "1qeeG5IXCGP9HmAXI4fIitAX7HTMJF61r",
+      "driveSkuFolderId": "1f-Ocz3KXiyzPSzRc7ea0-AhfxkV1lwsd",
+      "candidates": {
+        "v1": {
+          "file": "นมสด/M_06_นมสดเย็น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1U-12XTddnXX2plaUXWMZjzqZNNfW31za",
+          "webViewLink": "https://drive.google.com/file/d/1U-12XTddnXX2plaUXWMZjzqZNNfW31za/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T08:33:08.382Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559294",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "M_07",
+      "folder": "M_07_นมสดน้ำผึ้ง",
+      "group": "นมสด",
+      "posName": "นมสดน้ำผึ้ง (เย็น/ปั่น)",
+      "displayName": "นมสดน้ำผึ้ง",
+      "source": "เมนูแยก/นมสด/M_07_นมสดน้ำผึ้ง.jpg",
+      "sourceDriveId": "1OjS_XgNHU7PLJWBPGv4t7cICBay7JkD4",
+      "driveSkuFolderId": "18tz_l8b7E4pCqa1RuLJtLldTNKIYQaHC",
+      "candidates": {
+        "v1": {
+          "file": "นมสด/M_07_นมสดน้ำผึ้ง/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1JyijCfXKaR_BCmKEg47kkBZ0ACA7WUMN",
+          "webViewLink": "https://drive.google.com/file/d/1JyijCfXKaR_BCmKEg47kkBZ0ACA7WUMN/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:06:48.097Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559332",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "M_08",
+      "folder": "M_08_นมสดคาราเมล",
+      "group": "นมสด",
+      "posName": "นมสดคาราเมล (เย็น/ปั่น)",
+      "displayName": "นมสดคาราเมล",
+      "source": "เมนูแยก/นมสด/M_08_นมสดคาราเมล.jpg",
+      "sourceDriveId": "10eIYMZpl1KQhFlmgsBLPyhaHn8whici-",
+      "driveSkuFolderId": "1pIh6_xrkUk1uCEQqBh3M7WdkCkvsdfrq",
+      "candidates": {
+        "v1": {
+          "file": "นมสด/M_08_นมสดคาราเมล/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1mtRVU3F-D5lDMZZry6WJ9fZumKSU7AQN",
+          "webViewLink": "https://drive.google.com/file/d/1mtRVU3F-D5lDMZZry6WJ9fZumKSU7AQN/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T08:33:20.564Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559306",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "M_09",
+      "folder": "M_09_นมสดเฮเซลนัท",
+      "group": "นมสด",
+      "posName": "นมสดเฮเซลนัท (เย็น/ปั่น)",
+      "displayName": "นมสดเฮเซลนัท",
+      "source": "เมนูแยก/นมสด/M_09_นมสดเฮลเซนัท.jpg",
+      "sourceDriveId": "1Hv_StCO74fjeNm1yt8U8XYXxC0Z-pS3k",
+      "driveSkuFolderId": "1aELhJKkJ_nLxjnFKhpI78UH-lGEjx_t6",
+      "candidates": {
+        "v1": {
+          "file": "นมสด/M_09_นมสดเฮเซลนัท/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1zvRLcOMw8P735aT7NlXg1uPwzc40zfA9",
+          "webViewLink": "https://drive.google.com/file/d/1zvRLcOMw8P735aT7NlXg1uPwzc40zfA9/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T08:33:26.646Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559305",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "M_10",
+      "folder": "M_10_นมชมพู",
+      "group": "นมสด",
+      "posName": "นมชมพู (เย็น/ปั่น)",
+      "displayName": "นมชมพู",
+      "source": "เมนูแยก/นมสด/M_10_นมชมพู.jpg",
+      "sourceDriveId": "1H9XpAwcUG2w8jRLXBTyRIW-Ci4g9PpcW",
+      "driveSkuFolderId": "1gw0PuEasIQrFOa1396bUujNPwQFNUtnJ",
+      "candidates": {
+        "v1": {
+          "file": "นมสด/M_10_นมชมพู/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1GAeTfxFfKsL3L_i3AXSM_QGiEpeipO43",
+          "webViewLink": "https://drive.google.com/file/d/1GAeTfxFfKsL3L_i3AXSM_QGiEpeipO43/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T08:33:32.309Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559303",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "M_11",
+      "folder": "M_11_นมมรกต",
+      "group": "นมสด",
+      "posName": "นมมรกต (เย็น/ปั่น)",
+      "displayName": "นมมรกต",
+      "source": "เมนูแยก/นมสด/M_11_นมมรกต.jpg",
+      "sourceDriveId": "1NgS6mVEXOjtSedfws6oIZFsF-lXyEEjy",
+      "driveSkuFolderId": "16Fuh0aAAAwG_t1zcLMwYKkg7Yzp27tbQ",
+      "candidates": {
+        "v1": {
+          "file": "นมสด/M_11_นมมรกต/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1ONNmKTm3rpNSPtFygORl7EDOm_ig41Qi",
+          "webViewLink": "https://drive.google.com/file/d/1ONNmKTm3rpNSPtFygORl7EDOm_ig41Qi/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:19:51.190Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559304",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "M_12",
+      "folder": "M_12_นมสดเผือก",
+      "group": "นมสด",
+      "posName": "นมสดเผือก (เย็น/ปั่น)",
+      "displayName": "นมสดเผือก",
+      "source": "เมนูแยก/นมสด/M_12_นมสดเผือก.jpg",
+      "sourceDriveId": "1Kb8sqCQr2LHbic6NNqRzi0Wrlj_u6iUq",
+      "driveSkuFolderId": "1sI-3VqIPkNlUC-fIq66miIZobQGPP-Hu",
+      "candidates": {
+        "v1": {
+          "file": "นมสด/M_12_นมสดเผือก/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1QJk1X02-9VSfYk3auOe4mt_k4Bz9gfez",
+          "webViewLink": "https://drive.google.com/file/d/1QJk1X02-9VSfYk3auOe4mt_k4Bz9gfez/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:06:48.097Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559295",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "M_13",
+      "folder": "M_13_นมสดมันม่วง",
+      "group": "นมสด",
+      "posName": "นมสดมันม่วง",
+      "displayName": "นมสดมันม่วง",
+      "candidates": {
+        "v1": {
+          "file": "นมสด/M_13_นมสดมันม่วง/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "18Exl5WJCIFz3CBNJCWUnJna39mXCnMwE",
+          "webViewLink": "https://drive.google.com/file/d/18Exl5WJCIFz3CBNJCWUnJna39mXCnMwE/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:19:51.190Z"
+        }
+      },
+      "driveSkuFolderId": "17JdAjPwrHMxW66U-q3xYiXWbbY2Cdyd2",
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_43577310",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "T_01",
+      "folder": "T_01_ชาดำเย็น",
+      "group": "ชา",
+      "posName": "ชาดำเย็น",
+      "displayName": "ชาดำเย็น",
+      "source": "เมนูแยก/ชา/T_01_ชาดำเย็น.jpg",
+      "sourceDriveId": "1cG9FSbfzl7p7GqRInf1_qtkV2w5B8TT4",
+      "driveSkuFolderId": "1H7ktpdFgnkarydzUpyDcheif3EX41huS",
+      "candidates": {
+        "v1": {
+          "file": "ชา/T_01_ชาดำเย็น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1lQa0kKA7j7vs5xr-C05UVhn3q1JqCXcf",
+          "webViewLink": "https://drive.google.com/file/d/1lQa0kKA7j7vs5xr-C05UVhn3q1JqCXcf/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T08:37:10.118Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559312",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "T_02",
+      "folder": "T_02_ชาเขียวมะลิ",
+      "group": "ชา",
+      "posName": "ชาเขียวมะลิ",
+      "displayName": "ชาเขียวมะลิ",
+      "source": "เมนูแยก/ชา/T_02_ชาเขียวมะลิ.jpg",
+      "sourceDriveId": "1Sw8encNO9BWj67w8S1IZDnQbN3i3gtLm",
+      "driveSkuFolderId": "1xeUTYPOqJGDkXT7lRJeQhFIkhl42xiOV",
+      "candidates": {
+        "v1": {
+          "file": "ชา/T_02_ชาเขียวมะลิ/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1bSGYnEQIzV_1u5u2oSOq_VO-vreKYXbd",
+          "webViewLink": "https://drive.google.com/file/d/1bSGYnEQIzV_1u5u2oSOq_VO-vreKYXbd/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T04:33:17.227Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559279",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "T_03",
+      "folder": "T_03_ชาสตรอว์เบอร์รี",
+      "group": "ชา",
+      "posName": "ชาสตรอว์เบอร์รี",
+      "displayName": "ชาสตรอว์เบอร์รี",
+      "source": "เมนูแยก/ชา/T_03_ชาสตอเบอรี่.jpg",
+      "sourceDriveId": "1HCphltib9qDY2iCIl4s59vguDjyosoxY",
+      "driveSkuFolderId": "19gtVxZj8UoC9A6RtSpx4zkTlm8GPw_ds",
+      "candidates": {
+        "v1": {
+          "file": "ชา/T_03_ชาสตรอว์เบอร์รี/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1m9J2xC994DcPmq6eYZlJ2GXHOSqwSTLm",
+          "webViewLink": "https://drive.google.com/file/d/1m9J2xC994DcPmq6eYZlJ2GXHOSqwSTLm/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T04:33:17.227Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559278",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "T_04",
+      "folder": "T_04_ชาลิ้นจี่",
+      "group": "ชา",
+      "posName": "ชาลิ้นจี่",
+      "displayName": "ชาลิ้นจี่",
+      "source": "เมนูแยก/ชา/T_04_ชาลิ้นจี่.jpg",
+      "sourceDriveId": "1krqQKd-71rqmm2JABxiRozdwn_QeOd43",
+      "driveSkuFolderId": "1OCpbpoIlvYWAbvXNQuje3n6h96AeQwRw",
+      "candidates": {
+        "v1": {
+          "file": "ชา/T_04_ชาลิ้นจี่/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "17bRzVMBNjGS2KYlExYFPX1WUaPP2gY4a",
+          "webViewLink": "https://drive.google.com/file/d/17bRzVMBNjGS2KYlExYFPX1WUaPP2gY4a/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T04:33:17.227Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559329",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "T_05",
+      "folder": "T_05_ชามะนาว",
+      "group": "ชา",
+      "posName": "ชามะนาว",
+      "displayName": "ชามะนาว",
+      "source": "เมนูแยก/ชา/T_05_ชามะนาว.jpg",
+      "sourceDriveId": "14F2FOQJIJUxoG93TG6iEnOBMHuQMUs4S",
+      "driveSkuFolderId": "1Q9erJ4gMTUPjpIDzu8tgDw8InfnqDGda",
+      "candidates": {
+        "v1": {
+          "file": "ชา/T_05_ชามะนาว/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1sEPUEnAHBtHTcdnkq2StWyWDuvMsANGs",
+          "webViewLink": "https://drive.google.com/file/d/1sEPUEnAHBtHTcdnkq2StWyWDuvMsANGs/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T08:37:33.414Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559272",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "T_06",
+      "folder": "T_06_ชาแอปเปิ้ล",
+      "group": "ชา",
+      "posName": "ชาแอปเปิ้ล",
+      "displayName": "ชาแอปเปิ้ล",
+      "source": "เมนูแยก/ชา/T_06_ชาแอปเปิ้ล.jpg",
+      "sourceDriveId": "1uv0DkC0BlYdWA24zy3ENKCeP0T5SI8s4",
+      "driveSkuFolderId": "17yX4tFaFYsW6uzFKRxbdNEeA4mbNSzJi",
+      "candidates": {
+        "v1": {
+          "file": "ชา/T_06_ชาแอปเปิ้ล/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1paibxVboidjomfiiwYpMYgMzKoP-sNir",
+          "webViewLink": "https://drive.google.com/file/d/1paibxVboidjomfiiwYpMYgMzKoP-sNir/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T04:33:17.227Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559331",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "T_07",
+      "folder": "T_07_ชาเสาวรส",
+      "group": "ชา",
+      "posName": "ชาเสาวรส",
+      "displayName": "ชาเสาวรส",
+      "source": "เมนูแยก/ชา/T_07_ชาเสาวรส.jpg",
+      "sourceDriveId": "1-px7rp1SwhUfGzMvpJWEWGpDg23T_3Dp",
+      "driveSkuFolderId": "18sfPcaVSktrmoGn-8DTNvDkGAEbGitPQ",
+      "candidates": {
+        "v1": {
+          "file": "ชา/T_07_ชาเสาวรส/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1tX9M5M6c-IegqwCv7Q4QaXVtQiAyah6R",
+          "webViewLink": "https://drive.google.com/file/d/1tX9M5M6c-IegqwCv7Q4QaXVtQiAyah6R/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T08:37:45.427Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559277",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "T_08",
+      "folder": "T_08_ชาบลูเบอร์รี่",
+      "group": "ชา",
+      "posName": "ชาบลูเบอร์รี่",
+      "displayName": "ชาบลูเบอร์รี่",
+      "source": "เมนูแยก/ชา/T_08_ชาบลูเบอร์รี่.jpg",
+      "sourceDriveId": "1xU0tDmrggWIjmYoSuP5faJ0cdE3LzMgH",
+      "driveSkuFolderId": "1TYQW8rC5JvV1Cap8udBBr1d92yoyzX-3",
+      "candidates": {
+        "v1": {
+          "file": "ชา/T_08_ชาบลูเบอร์รี่/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1zU89vPzSMXt3ao5HwxVxxZJfspFjAega",
+          "webViewLink": "https://drive.google.com/file/d/1zU89vPzSMXt3ao5HwxVxxZJfspFjAega/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T08:37:51.715Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559276",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "C_01",
+      "folder": "C_01_โกปี๊อ้อ",
+      "group": "กาแฟ",
+      "posName": "โกปี๊อ้อ (โอเลี้ยง) (เย็น/ปั่น)",
+      "displayName": "โกปี๊อ้อ",
+      "source": "เมนูแยก/กาแฟ/C_01_โกปี๊อ้อ.jpg",
+      "sourceDriveId": "1IhqHUbhuYq5uHa03EuKVPVAlZyFKXd44",
+      "driveSkuFolderId": "1dRdIb_qoddiPC1LALYneCCSCQddIR_aT",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟ/C_01_โกปี๊อ้อ/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1fMhBfDqOWzc4xm1P0MfrroDfkyaKupyY",
+          "webViewLink": "https://drive.google.com/file/d/1fMhBfDqOWzc4xm1P0MfrroDfkyaKupyY/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:06:48.097Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559287",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "C_02",
+      "folder": "C_02_โกปี้ยกล้อ",
+      "group": "กาแฟ",
+      "posName": "โกปี๊ ยกล้อ (ใส่นม) (เย็น/ปั่น)",
+      "displayName": "โกปี้ยกล้อ",
+      "source": "เมนูแยก/กาแฟ/C_02_โกปี้ยกล้อ.jpg",
+      "sourceDriveId": "1C4O4A2iJ4UyfTT4PaUGIWP8arFueZG7I",
+      "driveSkuFolderId": "1MrQRQCElVtAWWQN8CX0fHWhohPYYK0hC",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟ/C_02_โกปี้ยกล้อ/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1ji59hTYzvsKunyERFG5ua-M6paDyfWf8",
+          "webViewLink": "https://drive.google.com/file/d/1ji59hTYzvsKunyERFG5ua-M6paDyfWf8/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T08:43:39.702Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559267",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "C_03",
+      "folder": "C_03_โกปี้โบราณ",
+      "group": "กาแฟ",
+      "posName": "โกปี๊ โบราณ (เย็น/ปั่น)",
+      "displayName": "โกปี้โบราณ",
+      "source": "เมนูแยก/กาแฟ/C_03_โกปี้ โบราณ.jpg",
+      "sourceDriveId": "18zOIrsXQBSZ6SX0K7x_SeVFrqan_w-mA",
+      "driveSkuFolderId": "14ex85tLzxZiJcnYIS7iSvCvmdB4WrraB",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟ/C_03_โกปี้โบราณ/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1mucAHxTLxY9xlXx_-COR7b-mKC4ZZOox",
+          "webViewLink": "https://drive.google.com/file/d/1mucAHxTLxY9xlXx_-COR7b-mKC4ZZOox/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T08:43:46.328Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559284",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "C_04",
+      "folder": "C_04_เนสกาแฟ",
+      "group": "กาแฟ",
+      "posName": "เนสกาแฟ (เย็น/ปั่น)",
+      "displayName": "เนสกาแฟ",
+      "source": "เมนูแยก/กาแฟ/C_04_เนสกาแฟ.jpg",
+      "sourceDriveId": "1onbFVIOYnNK3D6GbuwQx-qz6KRBoIH-Q",
+      "driveSkuFolderId": "1sO8uHVVhHrzQ9g2Z-ugKqaVlNhKlvwg4",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟ/C_04_เนสกาแฟ/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "124MMwxdWcE0Fx1ybnVqUOZcCkrvnxPSg",
+          "webViewLink": "https://drive.google.com/file/d/124MMwxdWcE0Fx1ybnVqUOZcCkrvnxPSg/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T08:43:52.874Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559283",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "C_05",
+      "folder": "C_05_มอคค่า",
+      "group": "กาแฟ",
+      "posName": "มอคค่า (เย็น/ปั่น)",
+      "displayName": "มอคค่า",
+      "source": "เมนูแยก/กาแฟ/C_05_มอคค่า.jpg",
+      "sourceDriveId": "1qqVkF1gYs1clVzxin7C9pgntIMVqsgac",
+      "driveSkuFolderId": "1r5_rApDl2lvpuCrucTlkVtcffGSFHjjP",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟ/C_05_มอคค่า/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "11Fb_e4ycXSWdPpmkAjH80sCAlchpPuIs",
+          "webViewLink": "https://drive.google.com/file/d/11Fb_e4ycXSWdPpmkAjH80sCAlchpPuIs/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T08:43:59.493Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559282",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "C_06",
+      "folder": "C_06_ลาเต้",
+      "group": "กาแฟ",
+      "posName": "ลาเต้ (เย็น/ปั่น)",
+      "displayName": "ลาเต้",
+      "source": "เมนูแยก/กาแฟ/C_06_ลาเต้.jpg",
+      "sourceDriveId": "1P_9zMqleKrWfkQ7jBCC_ofgnyqOcWTxM",
+      "driveSkuFolderId": "1-HAQkUPraNtLjXckyO_d8vYWrTnTPjJw",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟ/C_06_ลาเต้/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1HK3AuVosZzNQaHdm2p-mR9Qmh_fNGdOG",
+          "webViewLink": "https://drive.google.com/file/d/1HK3AuVosZzNQaHdm2p-mR9Qmh_fNGdOG/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T08:44:04.432Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559281",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "FT_01",
+      "folder": "FT_01_ชาส้มยูสุ",
+      "group": "Fruit tea",
+      "posName": "ชาส้มยูสุ",
+      "displayName": "ชาส้มยูสุ",
+      "source": "เมนูแยก/Fruit tea/FT_01_ชาส้มยูสุ..jpg",
+      "sourceDriveId": "1ow_YRp2NolJouvkC0YxxQZV6HQX_3kjv",
+      "driveSkuFolderId": "1iIPHvLIgSjnzX-rtVx1tjqfCIdWhsf69",
+      "candidates": {
+        "v1": {
+          "file": "Fruit tea/FT_01_ชาส้มยูสุ/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1dHkwZGYmboLvozLpr2XIhUvBPHan04uo",
+          "webViewLink": "https://drive.google.com/file/d/1dHkwZGYmboLvozLpr2XIhUvBPHan04uo/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T04:49:18.875Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33768723",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "FT_02",
+      "folder": "FT_02_ชาพีช",
+      "group": "Fruit tea",
+      "posName": "ชาพีช",
+      "displayName": "ชาพีช",
+      "source": "เมนูแยก/Fruit tea/FT_02_ชาพีช..jpg",
+      "sourceDriveId": "18Tnz8mHw5avL10UrhPKkKM_LAmiB5k9R",
+      "driveSkuFolderId": "1GlP-J_DJ9j4j1eWPUTS8pmQI4NJiE6MH",
+      "candidates": {
+        "v1": {
+          "file": "Fruit tea/FT_02_ชาพีช/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1TACdjjU617e1pCmdL-paLcQq8D7rKQVG",
+          "webViewLink": "https://drive.google.com/file/d/1TACdjjU617e1pCmdL-paLcQq8D7rKQVG/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T04:49:18.875Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33768707",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "FT_03",
+      "folder": "FT_03_ชามิกซ์เบอร์รี่",
+      "group": "Fruit tea",
+      "posName": "ชามิกซ์เบอร์รี่",
+      "displayName": "ชามิกซ์เบอร์รี่",
+      "source": "เมนูแยก/Fruit tea/FT_03_ชามิกเบอร์รี่.jpg",
+      "sourceDriveId": "14DOqaRWj9pdlQfCO9YzYtuY7G2gKKO-O",
+      "driveSkuFolderId": "1gIn2U6H0v_vefTTMCyG53H3mRflmShXq",
+      "candidates": {
+        "v1": {
+          "file": "Fruit tea/FT_03_ชามิกซ์เบอร์รี่/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1q-I7np3IkIYidD8laTXx_34juq2C-mQH",
+          "webViewLink": "https://drive.google.com/file/d/1q-I7np3IkIYidD8laTXx_34juq2C-mQH/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T04:49:18.875Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33752414",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "FT_04",
+      "folder": "FT_04_ชาพีชส้มยูสุ",
+      "group": "Fruit tea",
+      "posName": "ชาพีชส้มยูสุ",
+      "displayName": "ชาพีชส้มยูสุ",
+      "source": "เมนูแยก/Fruit tea/FT_04_ชาพีชส้มยูสุ.jpg",
+      "sourceDriveId": "1T_oiVOUOX_GarPx_1eaj__x63XCuMXJ0",
+      "driveSkuFolderId": "158BfI1oOwmtIh5Naky_aHRN_38sA22Y3",
+      "candidates": {
+        "v1": {
+          "file": "Fruit tea/FT_04_ชาพีชส้มยูสุ/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1G_KR_UiqyDcs4H2VH4eVRokrTtGsPk75",
+          "webViewLink": "https://drive.google.com/file/d/1G_KR_UiqyDcs4H2VH4eVRokrTtGsPk75/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T04:49:18.875Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33768729",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "FT_05",
+      "folder": "FT_05_ชาผลไม้รวม",
+      "group": "Fruit tea",
+      "posName": "ชาผลไม้รวม",
+      "displayName": "ชาผลไม้รวม",
+      "source": "เมนูแยก/Fruit tea/FT_05_ชาผลไม้รวม.jpg",
+      "sourceDriveId": "1jxhYIQthsqh0dHrLZc18F5i2HVLk56x_",
+      "driveSkuFolderId": "1LwvEwJUabs-uAC4_307mPkNwL2ubdnej",
+      "candidates": {
+        "v1": {
+          "file": "Fruit tea/FT_05_ชาผลไม้รวม/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1dv2Uz05ZSAuLnemDH0weYbsnCoWsklAo",
+          "webViewLink": "https://drive.google.com/file/d/1dv2Uz05ZSAuLnemDH0weYbsnCoWsklAo/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T04:49:18.875Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33768547",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "IS_01",
+      "folder": "IS_01_แดงโซดา",
+      "group": "โซดา",
+      "posName": "แดงโซดา",
+      "displayName": "แดงโซดา",
+      "source": "เมนูแยก/โซดา/IS_01_แดงโซดา.jpg",
+      "sourceDriveId": "19jFtOuNQV0XWHadFBaQJ2fpuemkx57Lz",
+      "driveSkuFolderId": "13vZAeIv_CNsIfnphWe_BISbOXuui9PFo",
+      "candidates": {
+        "v1": {
+          "file": "โซดา/IS_01_แดงโซดา/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1VpLsiBTVu1SqqYFIgIUSzH1k9Bexvbxq",
+          "webViewLink": "https://drive.google.com/file/d/1VpLsiBTVu1SqqYFIgIUSzH1k9Bexvbxq/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T08:49:35.259Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559335",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "IS_02",
+      "folder": "IS_02_เขียวโซดา",
+      "group": "โซดา",
+      "posName": "เขียวโซดา",
+      "displayName": "เขียวโซดา",
+      "source": "เมนูแยก/โซดา/IS_02_เขียวโซดา.jpg",
+      "sourceDriveId": "1m5k5SiQWDWYYTAm97oXWWr0JOc9sm1lG",
+      "driveSkuFolderId": "1X68BlB55q79Ln5XZs3KQaliWuxBUo6jX",
+      "candidates": {
+        "v1": {
+          "file": "โซดา/IS_02_เขียวโซดา/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1yJW76UvQkPTAdK7jn7pfhMHUCh52At-a",
+          "webViewLink": "https://drive.google.com/file/d/1yJW76UvQkPTAdK7jn7pfhMHUCh52At-a/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T06:10:56.038Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559290",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "IS_03",
+      "folder": "IS_03_น้ำผึ้งมะนาวโซดา",
+      "group": "โซดา",
+      "posName": "น้ำผึ้งมะนาวโซดา",
+      "displayName": "น้ำผึ้งมะนาวโซดา",
+      "source": "เมนูแยก/โซดา/IS_03_น้ำผึ้งมะนาวโซดา.jpg",
+      "sourceDriveId": "1pl6jm4QTUj7TRGANbIsWsXvlz1-iAhUg",
+      "driveSkuFolderId": "1GYBicN1kwQgUqHTfR4uz2LL1-A0hLBMK",
+      "candidates": {
+        "v1": {
+          "file": "โซดา/IS_03_น้ำผึ้งมะนาวโซดา/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1Cqf2JFm7YQ8vk3CxFdbbwseyjICSXFk2",
+          "webViewLink": "https://drive.google.com/file/d/1Cqf2JFm7YQ8vk3CxFdbbwseyjICSXFk2/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T08:49:46.797Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559299",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "IS_04",
+      "folder": "IS_04_แดงมะนาวโซดา",
+      "group": "โซดา",
+      "posName": "แดงมะนาวโซดา",
+      "displayName": "แดงมะนาวโซดา",
+      "source": "เมนูแยก/โซดา/IS_04_แดงมะนาวโซดา.jpg",
+      "sourceDriveId": "1eqn3NuLOD6gM8Qn3lc1ivF1vwzOpn1TW",
+      "driveSkuFolderId": "1E95Oe42U3IDibKMrLZQz5DGoRWQkTLLj",
+      "candidates": {
+        "v1": {
+          "file": "โซดา/IS_04_แดงมะนาวโซดา/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1bxW1vcZwfYb9BVXxGiS9vhZTXF_LG7m2",
+          "webViewLink": "https://drive.google.com/file/d/1bxW1vcZwfYb9BVXxGiS9vhZTXF_LG7m2/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T08:49:53.559Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559289",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "IS_05",
+      "folder": "IS_05_เขียวมะนาวโซดา",
+      "group": "โซดา",
+      "posName": "เขียวมะนาวโซดา",
+      "displayName": "เขียวมะนาวโซดา",
+      "source": "เมนูแยก/โซดา/IS_05_เขียวมะนาวโซดา.jpg",
+      "sourceDriveId": "19AO4Pw7oBsU1VLvhYJ6ZA5PDJGn0Ch3B",
+      "driveSkuFolderId": "1Nu_cWKOD8YLIVD6gX8TfnFAbGzarQ2GD",
+      "candidates": {
+        "v1": {
+          "file": "โซดา/IS_05_เขียวมะนาวโซดา/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1LdPaa4fJ-ua292lRRMDk5zqoYbpdjtez",
+          "webViewLink": "https://drive.google.com/file/d/1LdPaa4fJ-ua292lRRMDk5zqoYbpdjtez/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T06:11:27.821Z",
+          "cup": {
+            "method": "sibling-MT_03",
+            "cx": 0.495
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559288",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "IS_06",
+      "folder": "IS_06_บ๊วยโซดา",
+      "group": "โซดา",
+      "posName": "บ๊วยโซดา",
+      "displayName": "บ๊วยโซดา",
+      "source": "เมนูแยก/โซดา/IS_06_บ๊วยโซดา.jpg",
+      "sourceDriveId": "1xFTM2n_ZUcBbbSMPUrmorjkW0JUKTH2r",
+      "driveSkuFolderId": "1hvPgaTwsu-sWNSY5MtaDGubf8JBuKX6g",
+      "candidates": {
+        "v1": {
+          "file": "โซดา/IS_06_บ๊วยโซดา/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1KQCA-hidEvbqTbSTzUGGPxI0qTBaTWAc",
+          "webViewLink": "https://drive.google.com/file/d/1KQCA-hidEvbqTbSTzUGGPxI0qTBaTWAc/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T08:50:04.264Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559298",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "IS_07",
+      "folder": "IS_07_มะนาวโซดา",
+      "group": "โซดา",
+      "posName": "มะนาวโซดา",
+      "displayName": "มะนาวโซดา",
+      "source": "เมนูแยก/โซดา/IS_07_มะนาวโซดา.jpg",
+      "sourceDriveId": "1M556LYae92MBFGBVuIMntC_pweuZrxaa",
+      "driveSkuFolderId": "1l1zKMZocnT_PancYePnwzOIjF0qUqPTx",
+      "candidates": {
+        "v1": {
+          "file": "โซดา/IS_07_มะนาวโซดา/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1nokvibBgc4Zs6lMfoQOPM4ixzr5mC1Vy",
+          "webViewLink": "https://drive.google.com/file/d/1nokvibBgc4Zs6lMfoQOPM4ixzr5mC1Vy/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T08:50:10.531Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559337",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "IS_08",
+      "folder": "IS_08_สตรอว์เบอร์รีโซดา",
+      "group": "โซดา",
+      "posName": "สตรอว์เบอร์รีโซดา",
+      "displayName": "สตรอว์เบอร์รีโซดา",
+      "source": "เมนูแยก/โซดา/IS_08_สตอเบอรี่โซดา.jpg",
+      "sourceDriveId": "1c2C20IuY_XXNcr69gm_MY7fZ2pbFM7gY",
+      "driveSkuFolderId": "13aRWEKwBFhq-vxm57KeK5wbVfURF-fD0",
+      "candidates": {
+        "v1": {
+          "file": "โซดา/IS_08_สตรอว์เบอร์รีโซดา/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1Uk6JVP6tQEYXX-8wHMU0Mx9Su_LyhxxW",
+          "webViewLink": "https://drive.google.com/file/d/1Uk6JVP6tQEYXX-8wHMU0Mx9Su_LyhxxW/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T08:50:16.920Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559334",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "IS_09",
+      "folder": "IS_09_เสาวรสโซดา",
+      "group": "โซดา",
+      "posName": "เสาวรสโซดา",
+      "displayName": "เสาวรสโซดา",
+      "source": "เมนูแยก/โซดา/IS_09_เสาวรสโซดา.jpg",
+      "sourceDriveId": "1Us9q5eNSzvVNj9SOqRFGNBsG2I__nYQT",
+      "driveSkuFolderId": "1xC5roFnywIXgHGgYU9fhcyPca5gwvZle",
+      "candidates": {
+        "v1": {
+          "file": "โซดา/IS_09_เสาวรสโซดา/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1fLSOT6RbDQnESLQjI1sp0GluiallTQWO",
+          "webViewLink": "https://drive.google.com/file/d/1fLSOT6RbDQnESLQjI1sp0GluiallTQWO/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T08:50:23.300Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559333",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "IS_10",
+      "folder": "IS_10_ลิ้นจี่โซดา",
+      "group": "โซดา",
+      "posName": "ลิ้นจี่โซดา",
+      "displayName": "ลิ้นจี่โซดา",
+      "source": "เมนูแยก/โซดา/IS_10_ลิ้นจี่โซดา.jpg",
+      "sourceDriveId": "1-2E9pW-bf0RSIUsbhPKnHVAAnQI0-Uur",
+      "driveSkuFolderId": "183wUt6aGf9-Dho3mTcdHs8QZouhz3lCn",
+      "candidates": {
+        "v1": {
+          "file": "โซดา/IS_10_ลิ้นจี่โซดา/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1FMU4O-524NzMlf4cxKqeuQFz77FVs3IN",
+          "webViewLink": "https://drive.google.com/file/d/1FMU4O-524NzMlf4cxKqeuQFz77FVs3IN/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T08:50:29.699Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559296",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "IS_11",
+      "folder": "IS_11_บลูเบอร์รี่โซดา",
+      "group": "โซดา",
+      "posName": "บลูเบอร์รี่โซดา",
+      "displayName": "บลูเบอร์รี่โซดา",
+      "source": "เมนูแยก/โซดา/IS_11_บลูเบอร์รี่โซดา.jpg",
+      "sourceDriveId": "1VQHZ08-HKYj6APeC3Wur1nl6ySGwtMbf",
+      "driveSkuFolderId": "1gsrf-W6F-B4cf16lja_sv_tl_uast-LV",
+      "candidates": {
+        "v1": {
+          "file": "โซดา/IS_11_บลูเบอร์รี่โซดา/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "10MUMh62SAnUHrzoHg3amp96Z5iX_m74B",
+          "webViewLink": "https://drive.google.com/file/d/10MUMh62SAnUHrzoHg3amp96Z5iX_m74B/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T08:50:34.443Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559297",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "IS_12",
+      "folder": "IS_12_แอปเปิ้ลโซดา",
+      "group": "โซดา",
+      "posName": "แอปเปิ้ลโซดา",
+      "displayName": "แอปเปิ้ลโซดา",
+      "source": "เมนูแยก/โซดา/IS_12_แอปเปิ้ลโซดา.jpg",
+      "sourceDriveId": "1zt5E56uguW7Kz_CLs8op-KXHR9W30Xse",
+      "driveSkuFolderId": "1jxhUyZhJWQakrao-UA0piRCbH25shXbp",
+      "candidates": {
+        "v1": {
+          "file": "โซดา/IS_12_แอปเปิ้ลโซดา/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1bmlqXKB7-LRUgUYgk2OhWX9_trOwcwKH",
+          "webViewLink": "https://drive.google.com/file/d/1bmlqXKB7-LRUgUYgk2OhWX9_trOwcwKH/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T08:50:40.848Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559291",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "IS_13",
+      "folder": "IS_13_บลูฮาวายโซดา",
+      "group": "โซดา",
+      "posName": "บลูฮาวายโซดา",
+      "displayName": "บลูฮาวายโซดา",
+      "source": "เมนูแยก/โซดา/IS_13_บลูฮาวายโซดา.jpg",
+      "sourceDriveId": "1HbWcOz6wttKgpQf06KJfnvDStLZE4a7K",
+      "driveSkuFolderId": "1OXw8sOozSyqvDHts2ao_s7AA2skJum_X",
+      "candidates": {
+        "v1": {
+          "file": "โซดา/IS_13_บลูฮาวายโซดา/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1DyGz-mGMs-C_7tbZ_dumzMRCYJEIzFhH",
+          "webViewLink": "https://drive.google.com/file/d/1DyGz-mGMs-C_7tbZ_dumzMRCYJEIzFhH/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T08:50:47.143Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_33559300",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "ZC_T_mali",
+      "folder": "ZC_T_ชามะลิ",
+      "group": "0% แคล",
+      "posName": "0% แคล ชามะลิ",
+      "displayName": "0% แคล ชามะลิ",
+      "source": "เมนูแยก/0% แคล/ชา 0 แคล ชามะลิ.jpg",
+      "sourceDriveId": "1dPyolRDvnz_UKaejFSIUwzI_tNddzJOV",
+      "driveSkuFolderId": "1X-TM4gI9TdJVbRm-xfdnZz4Q2b2boSZ2",
+      "candidates": {
+        "v1": {
+          "file": "0% แคล/ZC_T_ชามะลิ/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1If0IPTQ_Ogl8a1aocJe8-u2amjvd-KYN",
+          "webViewLink": "https://drive.google.com/file/d/1If0IPTQ_Ogl8a1aocJe8-u2amjvd-KYN/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:52:54.915Z",
+          "cup": {
+            "method": "occupancy",
+            "cx": 0.501
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41638761",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "ZC_T_peach",
+      "folder": "ZC_T_ชาพีช",
+      "group": "0% แคล",
+      "posName": "0% แคล ชาพีช",
+      "displayName": "0% แคล ชาพีช",
+      "source": "เมนูแยก/0% แคล/ชา 0 แคล ชาพีช.jpg",
+      "sourceDriveId": "1GSH0x3dbZB2ANL8HXWuQJh72o3V2geSx",
+      "driveSkuFolderId": "1gynMTCUWMNrELwNgWhaR5OpkI-Y7WzDp",
+      "candidates": {
+        "v1": {
+          "file": "0% แคล/ZC_T_ชาพีช/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1_KX5bO9ky9z0pmfMc8CdexotQTREB0Jf",
+          "webViewLink": "https://drive.google.com/file/d/1_KX5bO9ky9z0pmfMc8CdexotQTREB0Jf/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:52:54.915Z",
+          "cup": {
+            "method": "occupancy",
+            "cx": 0.5
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41608475",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "ZC_T_honey",
+      "folder": "ZC_T_ชาน้ำผึ้ง",
+      "group": "0% แคล",
+      "posName": "0% แคล ชาน้ำผึ้ง",
+      "displayName": "0% แคล ชาน้ำผึ้ง",
+      "source": "เมนูแยก/0% แคล/ชา  0 แคล น้ำผึ้ง.jpg",
+      "sourceDriveId": "1EjXFnEORF6ih4QA9f54TbInSwPsRmv3W",
+      "driveSkuFolderId": "1gdB1iaIL18bRUmHf7br839sgF3ILXNuY",
+      "candidates": {
+        "v1": {
+          "file": "0% แคล/ZC_T_ชาน้ำผึ้ง/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1cE2UPNr1pZqNQQYi1Up4N1sKnrSlcj0t",
+          "webViewLink": "https://drive.google.com/file/d/1cE2UPNr1pZqNQQYi1Up4N1sKnrSlcj0t/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:52:54.915Z",
+          "cup": {
+            "method": "occupancy",
+            "cx": 0.496
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41608489",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "ZC_T_honeylemon",
+      "folder": "ZC_T_ชาน้ำผึ้งมะนาว",
+      "group": "0% แคล",
+      "posName": "0% แคล ชาน้ำผึ้งมะนาว",
+      "displayName": "0% แคล ชาน้ำผึ้งมะนาว",
+      "source": "เมนูแยก/0% แคล/ชา  0 แคล น้ำผึ้งมะนาว.jpg",
+      "sourceDriveId": "1_a3QHWKUhviyUYKr_6AiNmXzZRquqXEm",
+      "driveSkuFolderId": "1E_TieW3Z1OcygallZxnfAMRR0jrGk0NA",
+      "candidates": {
+        "v1": {
+          "file": "0% แคล/ZC_T_ชาน้ำผึ้งมะนาว/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1QOUUGZY3VkdCDfnb05HyFeH4f1RuDetS",
+          "webViewLink": "https://drive.google.com/file/d/1QOUUGZY3VkdCDfnb05HyFeH4f1RuDetS/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:52:54.915Z",
+          "cup": {
+            "method": "occupancy",
+            "cx": 0.5
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41608527",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "ZC_T_punch",
+      "folder": "ZC_T_ชาฟรุตพันช์",
+      "group": "0% แคล",
+      "posName": "0% แคล ชาฟรุตพันช์",
+      "displayName": "0% แคล ชาฟรุตพันช์",
+      "source": "เมนูแยก/0% แคล/ชา 0 แคล ชาฟรุตพันท์.jpg",
+      "sourceDriveId": "1JJOO6QicwF1hvZvCCY4xAXbxFLuSQyV7",
+      "driveSkuFolderId": "1zaCcjAG_f38NTeW3sRi4GM_g6lDmKVy6",
+      "candidates": {
+        "v1": {
+          "file": "0% แคล/ZC_T_ชาฟรุตพันช์/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1l1Ml3VYwQlvyHqHyUGfl1tCuGVOcPfr-",
+          "webViewLink": "https://drive.google.com/file/d/1l1Ml3VYwQlvyHqHyUGfl1tCuGVOcPfr-/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:52:54.915Z",
+          "cup": {
+            "method": "occupancy",
+            "cx": 0.498
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41638755",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "ZC_T_cantaloupe",
+      "folder": "ZC_T_ชาแคนตาลูป",
+      "group": "0% แคล",
+      "posName": "0% แคล ชาแคนตาลูป",
+      "displayName": "0% แคล ชาแคนตาลูป",
+      "source": "เมนูแยก/0% แคล/ชา 0 แคล ชาแคนตาลูป.jpg",
+      "sourceDriveId": "15hqzsQ-9KXj2cyB3rpYq0KLItAtHNGsm",
+      "driveSkuFolderId": "18JGUsSseaBM2ARP9cQ3al9MZTf2dUwBk",
+      "candidates": {
+        "v1": {
+          "file": "0% แคล/ZC_T_ชาแคนตาลูป/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1DSk8y60hWZ6KEAIrgUrfozQj0xLd34wf",
+          "webViewLink": "https://drive.google.com/file/d/1DSk8y60hWZ6KEAIrgUrfozQj0xLd34wf/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:52:54.915Z",
+          "cup": {
+            "method": "occupancy",
+            "cx": 0.5
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41638745",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "ZC_T_grape",
+      "folder": "ZC_T_ชาองุ่น",
+      "group": "0% แคล",
+      "posName": "0% แคล ชาองุ่น",
+      "displayName": "0% แคล ชาองุ่น",
+      "source": "เมนูแยก/0% แคล/ชา0% แคล ชาองุ่น.jpg",
+      "sourceDriveId": "1YwmIK1G86XmB__rrWBPw--XNXRT-of2L",
+      "driveSkuFolderId": "1z2Fy2apXOCuK0o5FjFfhOTf93ZnRRrGM",
+      "candidates": {
+        "v1": {
+          "file": "0% แคล/ZC_T_ชาองุ่น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "16xSxR0aqxfPp35TjDt6ztHGped73mT4e",
+          "webViewLink": "https://drive.google.com/file/d/16xSxR0aqxfPp35TjDt6ztHGped73mT4e/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:52:54.915Z",
+          "cup": {
+            "method": "occupancy",
+            "cx": 0.495
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41589757",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "ZC_T_sala",
+      "folder": "ZC_T_ชาสละ",
+      "group": "0% แคล",
+      "posName": "0% แคล ชาสละ",
+      "displayName": "0% แคล ชาสละ",
+      "source": "เมนูแยก/0% แคล/ชา0% แคล ชาสละ.jpg",
+      "sourceDriveId": "1nXrSfGRlmUOsVPikypZ-2rL0x5oZgJkx",
+      "driveSkuFolderId": "1MTIu7LmdOQmo-ndr33yDrL5qJkW_-TT0",
+      "candidates": {
+        "v1": {
+          "file": "0% แคล/ZC_T_ชาสละ/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1meQvA8ZXl33yq3-gGlpQGJ3QTlkp6FqN",
+          "webViewLink": "https://drive.google.com/file/d/1meQvA8ZXl33yq3-gGlpQGJ3QTlkp6FqN/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:52:54.915Z",
+          "cup": {
+            "method": "occupancy",
+            "cx": 0.496
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41589746",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "ZC_T_lychee",
+      "folder": "ZC_T_ชาลิ้นจี่",
+      "group": "0% แคล",
+      "posName": "0% แคล ชาลิ้นจี่",
+      "displayName": "0% แคล ชาลิ้นจี่",
+      "source": "เมนูแยก/0% แคล/ชา0% แคล ชาลิ้นจี่.jpg",
+      "sourceDriveId": "1fQLieV0V2FS7eyhbKZ8aR1P1tZae3DoA",
+      "driveSkuFolderId": "1_zwLFmLdZ6SWWrWV5VCU68aKZ87gsmep",
+      "candidates": {
+        "v1": {
+          "file": "0% แคล/ZC_T_ชาลิ้นจี่/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1v7Tpsmbmq8phsBGJG_taVhWc0Ygp7ZY9",
+          "webViewLink": "https://drive.google.com/file/d/1v7Tpsmbmq8phsBGJG_taVhWc0Ygp7ZY9/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:52:54.915Z",
+          "cup": {
+            "method": "occupancy",
+            "cx": 0.499
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41589715",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "ZC_T_coconut",
+      "folder": "ZC_T_ชามะพร้าว",
+      "group": "0% แคล",
+      "posName": null,
+      "displayName": "0% แคล ชามะพร้าว",
+      "source": "เมนูแยก/0% แคล/ชา 0 แคลชามะพร้าว.jpg",
+      "sourceDriveId": "1pp5Rp6_HOGjqHoHnlmLHIPeIaC1Ootfn",
+      "driveSkuFolderId": "1Pkg0c-aRRrWY1WAOc0JewJASXXIbyIeG",
+      "candidates": {
+        "v1": {
+          "file": "0% แคล/ZC_T_ชามะพร้าว/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1EGZqkHn72f7GdDoJNS2doUBZ2tTRyt1r",
+          "webViewLink": "https://drive.google.com/file/d/1EGZqkHn72f7GdDoJNS2doUBZ2tTRyt1r/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T09:36:54.892Z",
+          "cup": {
+            "method": "occupancy",
+            "cx": 0.508
+          }
+        }
+      },
+      "main": null,
+      "posAttached": false,
+      "posItemId": null,
+      "posBackupAttached": false,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "ZC_S_cola",
+      "folder": "ZC_S_โซดาโคล่า",
+      "group": "0% แคล",
+      "posName": "0% โคล่าโซดา",
+      "displayName": "0% โคล่าโซดา",
+      "source": "เมนูแยก/0% แคล/โซดา 0 แคล โซดาโคล่า.jpg",
+      "sourceDriveId": "16hZXdisgHkWJQUgKL8Zb6jKRqdWkLJi-",
+      "driveSkuFolderId": "1ifd2RS4RET47GrLYEWrlGIck3zByAYFN",
+      "candidates": {
+        "v1": {
+          "file": "0% แคล/ZC_S_โซดาโคล่า/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1t21y3KcATCnGTNY8ddRlUrzUlJtH7JRA",
+          "webViewLink": "https://drive.google.com/file/d/1t21y3KcATCnGTNY8ddRlUrzUlJtH7JRA/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:52:54.915Z",
+          "cup": {
+            "method": "occupancy",
+            "cx": 0.515
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41836328",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "ZC_S_colalime",
+      "folder": "ZC_S_โซดาโคล่ามะนาว",
+      "group": "0% แคล",
+      "posName": "0% โคล่าโซดามะนาว",
+      "displayName": "0% โคล่าโซดามะนาว",
+      "candidates": {
+        "v1": {
+          "file": "0% แคล/ZC_S_โซดาโคล่ามะนาว/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1H_d9LJXJHbua85hwoUtt037oo4fVGEku",
+          "webViewLink": "https://drive.google.com/file/d/1H_d9LJXJHbua85hwoUtt037oo4fVGEku/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:52:54.915Z",
+          "cup": {
+            "method": "occupancy",
+            "cx": 0.5
+          }
+        }
+      },
+      "driveSkuFolderId": "1wTWcw60QGCM3xk7fxwWzHzalA9yzMimO",
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41836317",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "ZC_S_peach",
+      "folder": "ZC_S_โซดาพีช",
+      "group": "0% แคล",
+      "posName": "0% แคล โซดาพีช",
+      "displayName": "0% แคล โซดาพีช",
+      "source": "เมนูแยก/0% แคล/โซดา 0 แคล โซดาพีช.jpg",
+      "sourceDriveId": "1zIfjDC_qZBHg3_tFhpFceRFPztwhGmLd",
+      "driveSkuFolderId": "1ZT8C0HipmCnvh-cpEb1YwOktTyuJH_kD",
+      "candidates": {
+        "v1": {
+          "file": "0% แคล/ZC_S_โซดาพีช/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "10u_XwUUTgo6l79oRbUdqpGxe_jH0b6ry",
+          "webViewLink": "https://drive.google.com/file/d/10u_XwUUTgo6l79oRbUdqpGxe_jH0b6ry/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:52:54.915Z",
+          "cup": {
+            "method": "occupancy",
+            "cx": 0.504
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41655229",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "ZC_S_grape",
+      "folder": "ZC_S_โซดาองุ่น",
+      "group": "0% แคล",
+      "posName": "0% แคล โซดาองุ่น",
+      "displayName": "0% แคล โซดาองุ่น",
+      "source": "เมนูแยก/0% แคล/โซดา 0 แคล โซดาองุ่น.jpg",
+      "sourceDriveId": "11A_Q5gPbLqeO0H-f-Dwm0t6GS5s-3ywz",
+      "driveSkuFolderId": "1YVDilt0Oi93cf4XXcydgPBqSkK3Uy1H7",
+      "candidates": {
+        "v1": {
+          "file": "0% แคล/ZC_S_โซดาองุ่น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "17lIzMf-2XTjqD9sXeJJPFyQmHNL8U97X",
+          "webViewLink": "https://drive.google.com/file/d/17lIzMf-2XTjqD9sXeJJPFyQmHNL8U97X/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:52:54.915Z",
+          "cup": {
+            "method": "sibling-MT_03",
+            "cx": 0.495
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41638902",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "ZC_S_honey",
+      "folder": "ZC_S_โซดาน้ำผึ้ง",
+      "group": "0% แคล",
+      "posName": "0% แคล โซดาน้ำผึ้ง",
+      "displayName": "0% แคล โซดาน้ำผึ้ง",
+      "source": "เมนูแยก/0% แคล/โซดา 0 แคล โซดาน้ำผึ้ง.jpg",
+      "sourceDriveId": "15Kq9DFBNbMmaqENW961hvF-HKjJll3j_",
+      "driveSkuFolderId": "1gR3Zx7lHibv5gfJKRJUybtNeZg_wSIaV",
+      "candidates": {
+        "v1": {
+          "file": "0% แคล/ZC_S_โซดาน้ำผึ้ง/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1aFR-xMwhhfuoubkKfW0N_86IzlVIv3zI",
+          "webViewLink": "https://drive.google.com/file/d/1aFR-xMwhhfuoubkKfW0N_86IzlVIv3zI/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:52:54.915Z",
+          "cup": {
+            "method": "occupancy",
+            "cx": 0.502
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41638870",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "ZC_S_honeylemon",
+      "folder": "ZC_S_โซดาน้ำผึ้งมะนาว",
+      "group": "0% แคล",
+      "posName": "0% แคล โซดาน้ำผึ้งมะนาว",
+      "displayName": "0% แคล โซดาน้ำผึ้งมะนาว",
+      "source": "เมนูแยก/0% แคล/โซดา 0 แคล โซดาน้ำผึ้งมะนาว.jpg",
+      "sourceDriveId": "1uRVL7bMDAF7vCgCTEnyQjoXjj88suFVd",
+      "driveSkuFolderId": "1X0UFfq5oI5ECT5K4oSOXnQyWJRkgKXFq",
+      "candidates": {
+        "v1": {
+          "file": "0% แคล/ZC_S_โซดาน้ำผึ้งมะนาว/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1aayrpPUowwkSP39wM7oi_YRd4rKi98fG",
+          "webViewLink": "https://drive.google.com/file/d/1aayrpPUowwkSP39wM7oi_YRd4rKi98fG/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:52:54.915Z",
+          "cup": {
+            "method": "occupancy",
+            "cx": 0.511
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41638888",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "ZC_S_punch",
+      "folder": "ZC_S_โซดาฟรุตพันช์",
+      "group": "0% แคล",
+      "posName": "0% แคล โซดาฟรุตพันช์",
+      "displayName": "0% แคล โซดาฟรุตพันช์",
+      "source": "เมนูแยก/0% แคล/โซดา 0 แคล  โซดาฟรุตพันช์.jpg",
+      "sourceDriveId": "1nBXTiga86-ayl-WdWXX-yMPyPAxVDxv7",
+      "driveSkuFolderId": "1aO980kTTo7XzUBoQhh5HN1f2ReGZO2Jw",
+      "candidates": {
+        "v1": {
+          "file": "0% แคล/ZC_S_โซดาฟรุตพันช์/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1ffHOonKtcK-RNU7p-RmBwBwcuUkqpdKQ",
+          "webViewLink": "https://drive.google.com/file/d/1ffHOonKtcK-RNU7p-RmBwBwcuUkqpdKQ/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:52:54.915Z",
+          "cup": {
+            "method": "occupancy",
+            "cx": 0.505
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41655299",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "ZC_S_lychee",
+      "folder": "ZC_S_โซดาลิ้นจี่",
+      "group": "0% แคล",
+      "posName": "0% แคล โซดาลิ้นจี่",
+      "displayName": "0% แคล โซดาลิ้นจี่",
+      "source": "เมนูแยก/0% แคล/โซดา 0 แคล โซดาลิ้นจี่.jpg",
+      "sourceDriveId": "1x-YTSnY_k7CaKwaaonycKjS0uTHhjKwq",
+      "driveSkuFolderId": "1BGMMcbp1uDqVBRRyRJujjVB3gtJ_6XOA",
+      "candidates": {
+        "v1": {
+          "file": "0% แคล/ZC_S_โซดาลิ้นจี่/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1L63sPhkPKO6m2KYaC961ZRampKmEmTnQ",
+          "webViewLink": "https://drive.google.com/file/d/1L63sPhkPKO6m2KYaC961ZRampKmEmTnQ/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:52:54.915Z",
+          "cup": {
+            "method": "occupancy",
+            "cx": 0.504
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41638847",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "ZC_S_cantaloupe",
+      "folder": "ZC_S_โซดาแคนตาลูป",
+      "group": "0% แคล",
+      "posName": "0% แคล โซดาแคนตาลูป",
+      "displayName": "0% แคล โซดาแคนตาลูป",
+      "source": "เมนูแยก/0% แคล/โซดา 0 แคล โซดาแคนตาลูป.jpg",
+      "sourceDriveId": "1LZNeuhxhG5FCWqJo_MGtETp3jOknemul",
+      "driveSkuFolderId": "1NEaD4zwwXyqiz_INpQSx4teIY8a4Z7h7",
+      "candidates": {
+        "v1": {
+          "file": "0% แคล/ZC_S_โซดาแคนตาลูป/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1W_HRUy0qZruPHFNpFS6GAIltr2N8MS5P",
+          "webViewLink": "https://drive.google.com/file/d/1W_HRUy0qZruPHFNpFS6GAIltr2N8MS5P/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:52:54.915Z",
+          "cup": {
+            "method": "occupancy",
+            "cx": 0.5
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41655205",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "ZC_S_coconut",
+      "folder": "ZC_S_โซดามะพร้าว",
+      "group": "0% แคล",
+      "posName": null,
+      "displayName": "0% แคล โซดามะพร้าว",
+      "source": "เมนูแยก/0% แคล/โซดา 0 แคล โซดามะพร้าว.jpg",
+      "sourceDriveId": "1PB3-ckBWpBy-wpjoDMxWiUOuGFYV_fA9",
+      "driveSkuFolderId": "1SPAQoUED7K2hToLuVL21CBzHFc5hB2cn",
+      "candidates": {
+        "v1": {
+          "file": "0% แคล/ZC_S_โซดามะพร้าว/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "12xpIN_RAcijxClsQEhSUJ29-Uc5hjzD0",
+          "webViewLink": "https://drive.google.com/file/d/12xpIN_RAcijxClsQEhSUJ29-Uc5hjzD0/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T09:37:43.452Z",
+          "cup": {
+            "method": "occupancy",
+            "cx": 0.496
+          }
+        }
+      },
+      "main": null,
+      "posAttached": false,
+      "posItemId": null,
+      "posBackupAttached": false,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "ZC_S_sala",
+      "folder": "ZC_S_โซดาสละ",
+      "group": "0% แคล",
+      "posName": null,
+      "displayName": "0% แคล โซดาสละ",
+      "source": "เมนูแยก/0% แคล/โซดา 0 แคล โซดาสละ.jpg",
+      "sourceDriveId": "1ylpmKe9uaY2Y5v4J7SSsQdZRkDdaEm5t",
+      "driveSkuFolderId": "1FLRB0AdHEbefmDjG2WO_dBqQSHp009jD",
+      "candidates": {
+        "v1": {
+          "file": "0% แคล/ZC_S_โซดาสละ/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1xJTehi9zuOd8aEZzaZWRNsZ99lLGMqHh",
+          "webViewLink": "https://drive.google.com/file/d/1xJTehi9zuOd8aEZzaZWRNsZ99lLGMqHh/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T09:37:47.891Z",
+          "cup": {
+            "method": "occupancy",
+            "cx": 0.499
+          }
+        }
+      },
+      "main": null,
+      "posAttached": false,
+      "posItemId": null,
+      "posBackupAttached": false,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "FC_americano",
+      "folder": "FC_อเมริกาโน่_เย็น",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด อเมริกาโน่ เย็น 16 ออนซ์",
+      "displayName": "อเมริกาโน่ เย็น",
+      "source": "เมนูแยก/กาแฟสด/เย็น/เย็น-Americano (อเมริกาโน่).jpg",
+      "sourceDriveId": "1suUcQB2FOE-KM-d9stMylMMSf50d9DBc",
+      "driveSkuFolderId": "1-06iSlmiNo0V-ednFh3vPcnlD8gU8gL2",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_อเมริกาโน่_เย็น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1l74wwyHHpCJD9ie6KaD8zigbYv3h0oC7",
+          "webViewLink": "https://drive.google.com/file/d/1l74wwyHHpCJD9ie6KaD8zigbYv3h0oC7/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T07:49:08.545Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.245,
+            "bottom": 0.9,
+            "cy": 0.573,
+            "cx": 0.52,
+            "iconCenterOverLogo": 0.382
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41276630",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "FC_latte",
+      "folder": "FC_ลาเต้_เย็น",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด ลาเต้ เย็น 16 ออนซ์",
+      "displayName": "ลาเต้ เย็น",
+      "source": "เมนูแยก/กาแฟสด/เย็น/เย็น-Latte (ลาเต้).jpg",
+      "sourceDriveId": "1XU0QjRmNy4rZN-7sVPZLG9NhaYdDzrqq",
+      "driveSkuFolderId": "1hbeUxl7FoPVC_SstKoX25g4ijLOVQoKo",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_ลาเต้_เย็น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1APVs4ou-J9J72_2neZ7taAdTeYi17FFy",
+          "webViewLink": "https://drive.google.com/file/d/1APVs4ou-J9J72_2neZ7taAdTeYi17FFy/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T08:08:33.988Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.235,
+            "bottom": 0.9,
+            "cy": 0.568,
+            "cx": 0.51,
+            "iconCenterOverLogo": 0.382
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41277718",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "FC_espresso",
+      "folder": "FC_เอสเปรสโซ่_เย็น",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด เอสเปรสโซ่ เย็น 16 ออนซ์",
+      "displayName": "เอสเปรสโซ่ เย็น",
+      "source": "เมนูแยก/กาแฟสด/เย็น/เย็น-Espresso (เอสเปรสโซ่).jpg",
+      "sourceDriveId": "1HjjX-1zcO_9CB-zr5xK0_hCuQyn5ltT8",
+      "driveSkuFolderId": "1Eh5CXbcUd79JJmxc41PmPfNYtzDQLY93",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_เอสเปรสโซ่_เย็น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1bizjSCTBpqlLcSjjW7VsuMWho4BqmiUu",
+          "webViewLink": "https://drive.google.com/file/d/1bizjSCTBpqlLcSjjW7VsuMWho4BqmiUu/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T07:49:08.545Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.225,
+            "bottom": 0.9,
+            "cy": 0.563,
+            "cx": 0.5,
+            "iconCenterOverLogo": 0.382
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41277766",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "FC_mocha",
+      "folder": "FC_มอคค่า_เย็น",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด มอคค่า เย็น 16 ออนซ์",
+      "displayName": "มอคค่า เย็น",
+      "source": "เมนูแยก/กาแฟสด/เย็น/เย็น-Mocha(มอคค่า).jpg",
+      "sourceDriveId": "1oY7qQDeYD3UD5Ja5Y6EzFmB2jkBXBg--",
+      "driveSkuFolderId": "140clhJOT9bNNFC4acRmKSvLmGUXsq6E-",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_มอคค่า_เย็น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "15frDvcPU9mYehvAB59FNHgGh4yYvmz2g",
+          "webViewLink": "https://drive.google.com/file/d/15frDvcPU9mYehvAB59FNHgGh4yYvmz2g/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T08:08:33.988Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.24,
+            "bottom": 0.9,
+            "cy": 0.57,
+            "cx": 0.501,
+            "iconCenterOverLogo": 0.382
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41391572",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "FC_cappuccino",
+      "folder": "FC_คาปูชิโน่_เย็น",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด คาปูชิโน่ เย็น 16 ออนซ์",
+      "displayName": "คาปูชิโน่ เย็น",
+      "source": "เมนูแยก/กาแฟสด/เย็น/เย็น-Cappuccino(คาปูชิโน่).jpg",
+      "sourceDriveId": "1oPXFTjjnkkEGkTd2JqFtTTEWWFW8tzQ6",
+      "driveSkuFolderId": "1ZuM1LhJy7p_XCsz9De3HSAy7tEh10Wll",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_คาปูชิโน่_เย็น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1dIQjhwdbzPKT5BCdW_xFk-uBEcELweTr",
+          "webViewLink": "https://drive.google.com/file/d/1dIQjhwdbzPKT5BCdW_xFk-uBEcELweTr/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T08:08:33.988Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.24,
+            "bottom": 0.9,
+            "cy": 0.57,
+            "cx": 0.499,
+            "iconCenterOverLogo": 0.382
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41279794",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "FC_flatwhite",
+      "folder": "FC_แฟลตไวท์_เย็น",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด แฟลตไวท์ เย็น 16 ออนซ์",
+      "displayName": "แฟลตไวท์ เย็น",
+      "source": "เมนูแยก/กาแฟสด/เย็น/เย็น-Flat White.jpg",
+      "sourceDriveId": "1EWdyXmzShc_h0LgFTn9rNGv2wDq0UNs3",
+      "driveSkuFolderId": "1hREvWLqRcwOYVNHkKrX9BDLfg6zmfMnC",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_แฟลตไวท์_เย็น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1DJITSVLWZMaRLVbGO_dxL1FmAUc-0dHZ",
+          "webViewLink": "https://drive.google.com/file/d/1DJITSVLWZMaRLVbGO_dxL1FmAUc-0dHZ/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T08:08:33.988Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.24,
+            "bottom": 0.9,
+            "cy": 0.57,
+            "cx": 0.499,
+            "iconCenterOverLogo": 0.382
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41321223",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "FC_longblack",
+      "folder": "FC_ลองแบล็ค_เย็น",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด ลองแบล็ค เย็น 16 ออนซ์",
+      "displayName": "ลองแบล็ค เย็น",
+      "source": "เมนูแยก/กาแฟสด/เย็น/เย็น-Long Black.jpg",
+      "sourceDriveId": "15tuKs3bWp0t_Ir_tq4fO3vpcTuPTQz1o",
+      "driveSkuFolderId": "12kpTLHyLnbUptpmmmE_7v_f-JrFuvSQe",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_ลองแบล็ค_เย็น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "14mDzRWnjbWemgF7QE8CadAthmiiV2MAE",
+          "webViewLink": "https://drive.google.com/file/d/14mDzRWnjbWemgF7QE8CadAthmiiV2MAE/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T07:49:08.545Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.223,
+            "bottom": 0.9,
+            "cy": 0.561,
+            "cx": 0.5,
+            "iconCenterOverLogo": 0.382
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41321144",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "FC_boran",
+      "folder": "FC_กาแฟโบราณ_เย็น",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด กาแฟโบราณ เย็น 16 ออนซ์",
+      "displayName": "กาแฟโบราณ เย็น",
+      "source": "เมนูแยก/กาแฟสด/เย็น/เย็น-Cafe Boran(กาแฟโบราณ).jpg",
+      "sourceDriveId": "1h8cVBpVLFisGEpStxTx6HvV3ZZ4yGLAj",
+      "driveSkuFolderId": "1w_xUUl8D-2GhUsFgfPcwn4xIxa6YduZz",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_กาแฟโบราณ_เย็น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1jsR__Qgh6nVcvS_h8c_AGgCkgObIQ30h",
+          "webViewLink": "https://drive.google.com/file/d/1jsR__Qgh6nVcvS_h8c_AGgCkgObIQ30h/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T07:49:08.545Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.223,
+            "bottom": 0.9,
+            "cy": 0.561,
+            "cx": 0.499,
+            "iconCenterOverLogo": 0.382
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41411740",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "FC_oleang",
+      "folder": "FC_โอเลี้ยง_เย็น",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด โอเลี้ยง เย็น 16 ออนซ์",
+      "displayName": "โอเลี้ยง เย็น",
+      "source": "เมนูแยก/กาแฟสด/เย็น/เย็น-Thai Iced Coffee(โอเลี้ยง).jpg",
+      "sourceDriveId": "1aMb-B8zxft2kOnaFAeTpvLwR4jsm8MgE",
+      "driveSkuFolderId": "1S6ZdmU4MaSsXZf_zjcNjiU7ZbXF3zG8u",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_โอเลี้ยง_เย็น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1onQifcPtB7DGYIaxk7TwI-ocw5nsQehM",
+          "webViewLink": "https://drive.google.com/file/d/1onQifcPtB7DGYIaxk7TwI-ocw5nsQehM/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T07:49:08.545Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.223,
+            "bottom": 0.9,
+            "cy": 0.561,
+            "cx": 0.501,
+            "iconCenterOverLogo": 0.382
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41411727",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "FC_oleang-hazelnut",
+      "folder": "FC_โอเลี้ยงเฮเซลนัท_เย็น",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด โอเลี้ยงเฮเซลนัท เย็น 16 ออนซ์",
+      "displayName": "โอเลี้ยงเฮเซลนัท เย็น",
+      "source": "เมนูแยก/กาแฟสด/เย็น/เย็น-โอเลี้ยงเฮเซลนัท (Thai Black Coffee Hazelnut).jpg",
+      "sourceDriveId": "1pDfaHKdTNHHLlG7M-992IwZFIKBYdp2U",
+      "driveSkuFolderId": "1PsD8gSwq5MLmloFLd0SzA06id9T82_RQ",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_โอเลี้ยงเฮเซลนัท_เย็น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "17QZ6TDmK7UI4w_hsVBJFpmSZ6pcqGiBr",
+          "webViewLink": "https://drive.google.com/file/d/17QZ6TDmK7UI4w_hsVBJFpmSZ6pcqGiBr/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T07:49:08.545Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.237,
+            "bottom": 0.9,
+            "cy": 0.569,
+            "cx": 0.499,
+            "iconCenterOverLogo": 0.382
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41456560",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "FC_caramel-macchiato",
+      "folder": "FC_คาราเมลมัคคิอาโต้_เย็น",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด คาราเมลมัคคิอาโต้ เย็น 16 ออนซ์",
+      "displayName": "คาราเมลมัคคิอาโต้ เย็น",
+      "source": "เมนูแยก/กาแฟสด/เย็น/เย็น-Caramel Macchiato (คาราเมลมัคคิอาโต้).jpg",
+      "sourceDriveId": "1EDM8GlR54ueoJb9zEluQDBCZn17hkUi0",
+      "driveSkuFolderId": "1_E7eD1hvn4xkD1bNPgvM3hrBIeZmZKY3",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_คาราเมลมัคคิอาโต้_เย็น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "18HjLlGvfCQN1Fj5ILDC_7Exo2kIVcLg5",
+          "webViewLink": "https://drive.google.com/file/d/18HjLlGvfCQN1Fj5ILDC_7Exo2kIVcLg5/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T08:08:33.988Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.25,
+            "bottom": 0.9,
+            "cy": 0.575,
+            "cx": 0.502,
+            "iconCenterOverLogo": 0.382
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41391590",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "FC_espresso-thai",
+      "folder": "FC_เอสเปรสโซ่ไทยสไตล์_เย็น",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด เอสเปรสโซ่ไทยสไตล์ เย็น 16 ออนซ์",
+      "displayName": "เอสเปรสโซ่ไทยสไตล์ เย็น",
+      "source": "เมนูแยก/กาแฟสด/เย็น/เย็น- Espresso Thai Style(-เอสเปรสโซ่ไทยสไตล์).jpg",
+      "sourceDriveId": "1TbG1yWiXjMMwULVhzbr7N95n41VSC3cZ",
+      "driveSkuFolderId": "1X08DJOkC0aDTcCyeSVH9f0pm7ICnZJJM",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_เอสเปรสโซ่ไทยสไตล์_เย็น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1SHmk87qqxiC3LLvcVLbml_hkCdyYmL7i",
+          "webViewLink": "https://drive.google.com/file/d/1SHmk87qqxiC3LLvcVLbml_hkCdyYmL7i/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T08:08:33.988Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.237,
+            "bottom": 0.9,
+            "cy": 0.569,
+            "cx": 0.499,
+            "iconCenterOverLogo": 0.382
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41391600",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "FC_chocolate-milk",
+      "folder": "FC_ช็อกโกแลตมิลค์_เย็น",
+      "group": "กาแฟสด",
+      "posName": "ช็อกโกแลตมิลค์ เย็น 16 ออนซ์",
+      "displayName": "ช็อกโกแลตมิลค์ เย็น",
+      "source": "เมนูแยก/กาแฟสด/เย็น/เย็น-Chocolate Milk(ช็อกโกแลตมิลค์ ).jpg",
+      "sourceDriveId": "1VqRmr4fU0L1X8uNzZ9Io984b6xwWSOIv",
+      "driveSkuFolderId": "1J4MAxJvpocOMRJvqGVm3RKMFJevcjIYc",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_ช็อกโกแลตมิลค์_เย็น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1edovjc_bbLJ7sBFk7EwqCCSoZGGcULyh",
+          "webViewLink": "https://drive.google.com/file/d/1edovjc_bbLJ7sBFk7EwqCCSoZGGcULyh/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T08:08:33.988Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.237,
+            "bottom": 0.9,
+            "cy": 0.569,
+            "cx": 0.497,
+            "iconCenterOverLogo": 0.382
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41411718",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "FC_chocolate-espresso",
+      "folder": "FC_ช็อกโกแลตเอสเปรสโซ่_เย็น",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด ช็อกโกแลตเอสเปรสโซ่ เย็น 16 ออนซ์",
+      "displayName": "ช็อกโกแลตเอสเปรสโซ่ เย็น",
+      "source": "เมนูแยก/กาแฟสด/เย็น/เย็น-ช็อกโกแลตเอสเปรสโซ่ (Chocolate Espresso).jpg",
+      "sourceDriveId": "12dhhE1BnuqdmzOGy7ieoWASuu2vHoZfx",
+      "driveSkuFolderId": "1uZQ5_GXvaxfrO8bOYIXreMCU9gaZUSO-",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_ช็อกโกแลตเอสเปรสโซ่_เย็น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1N65ennes2zIPMgYmKFCXeOw1Ng5MJQh9",
+          "webViewLink": "https://drive.google.com/file/d/1N65ennes2zIPMgYmKFCXeOw1Ng5MJQh9/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T08:08:33.988Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.24,
+            "bottom": 0.9,
+            "cy": 0.57,
+            "cx": 0.499,
+            "iconCenterOverLogo": 0.382
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41456583",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "FC_ovaltine-espresso",
+      "folder": "FC_โอวัลตินช็อตกาแฟ_เย็น",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด โอวัลตินช็อตกาแฟ เย็น 16 ออนซ์",
+      "displayName": "โอวัลตินช็อตกาแฟ เย็น",
+      "source": "เมนูแยก/กาแฟสด/เย็น/เย็น-โอวัลตินช็อตกาแฟ (Ovaltine Espresso Shot).jpg",
+      "sourceDriveId": "1tc0syWI4HwMd_KZ419J56VFs91C4f9LK",
+      "driveSkuFolderId": "1r_yZ0jIp6-szFYTY5bMgYVBEjtf3-Cgl",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_โอวัลตินช็อตกาแฟ_เย็น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1laxEdHmpnmTCvDGAj15ko5a5uVNAy1MS",
+          "webViewLink": "https://drive.google.com/file/d/1laxEdHmpnmTCvDGAj15ko5a5uVNAy1MS/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T08:08:33.988Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.24,
+            "bottom": 0.9,
+            "cy": 0.57,
+            "cx": 0.496,
+            "iconCenterOverLogo": 0.382
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41457162",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "FC_milo-coffee",
+      "folder": "FC_ไมโลกาแฟ_เย็น",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด ไมโลกาแฟ เย็น 16 ออนซ์",
+      "displayName": "ไมโลกาแฟ เย็น",
+      "source": "เมนูแยก/กาแฟสด/เย็น/เย็น-ไมโลกาแฟเย็น (Milo Coffee).jpg",
+      "sourceDriveId": "1He2wU5hpP7A5i1SHo0j8eEoFTYnHOhD_",
+      "driveSkuFolderId": "1O7jl2lnEZJyjgkH5uXUctVcuDYqKMcvf",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_ไมโลกาแฟ_เย็น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1mnZcmpH79PCwgO9aj_nsTkxaqc9JEdBl",
+          "webViewLink": "https://drive.google.com/file/d/1mnZcmpH79PCwgO9aj_nsTkxaqc9JEdBl/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T08:08:33.988Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.237,
+            "bottom": 0.9,
+            "cy": 0.569,
+            "cx": 0.499,
+            "iconCenterOverLogo": 0.382
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41456676",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "FC_honeylemon-coffee",
+      "folder": "FC_น้ำผึ้งมะนาว_เย็น",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด น้ำผึ้งมะนาว เย็น 16 ออนซ์",
+      "displayName": "น้ำผึ้งมะนาว เย็น",
+      "source": "เมนูแยก/กาแฟสด/เย็น/เย็น-กาแฟน้ำผึ้งมะนาว (Honey Lemon Coffee).jpg",
+      "sourceDriveId": "1_gHemXGNHL7aI3VFj3qEWxunwV9VYGai",
+      "driveSkuFolderId": "1zArLZzAlt8wwbOEpRFj0_WOSEyKcC2Cb",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_น้ำผึ้งมะนาว_เย็น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1bf4AHPGlEkthgDeMHSX-8zkjdWVkU-31",
+          "webViewLink": "https://drive.google.com/file/d/1bf4AHPGlEkthgDeMHSX-8zkjdWVkU-31/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T08:29:35.921Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.235,
+            "bottom": 0.9,
+            "cy": 0.568,
+            "cx": 0.497,
+            "iconCenterOverLogo": 0.382
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41466326",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "FC_brownsugar-boba",
+      "folder": "FC_บุกบราวน์ชูการ์_เย็น",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด บุกบราวน์ชูการ์ เย็น 16 ออนซ์",
+      "displayName": "บุกบราวน์ชูการ์ เย็น",
+      "source": "เมนูแยก/กาแฟสด/เย็น/เย็น-บุกบราวน์ชูการ์กาแฟเย็น (Brown Sugar Bubble Coffee).jpg",
+      "sourceDriveId": "1oVyf09iW8OgsXF8WO8RfofZNd2NPanFu",
+      "driveSkuFolderId": "1UcSDDIXGGie66j5XF8IYy5j_C0a1fYbw",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_บุกบราวน์ชูการ์_เย็น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1QiYiT129mdIzKyr9qU0K2c4sTNN0l5Ol",
+          "webViewLink": "https://drive.google.com/file/d/1QiYiT129mdIzKyr9qU0K2c4sTNN0l5Ol/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T08:29:35.921Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.228,
+            "bottom": 0.9,
+            "cy": 0.564,
+            "cx": 0.504,
+            "iconCenterOverLogo": 0.382
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41467100",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "FC_mango-espresso-soda",
+      "folder": "FC_เอสเปรสโซ่มะม่วงโซดา_เย็น",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสดโซดา เอสเปรสโซ่มะม่วง เย็น 16 ออนซ์",
+      "displayName": "เอสเปรสโซ่มะม่วงโซดา เย็น",
+      "source": "เมนูแยก/กาแฟสด/เย็น/เย็น-เอสเปรสโซ่มะม่วงโซดา (Mango Espresso Soda).jpg",
+      "sourceDriveId": "1HGUgcQeXziZm4NIJeEpRGW35Pv8Q01Yl",
+      "driveSkuFolderId": "1vaUmOdp2tOUBGdyaL5yNRvfKbP0DPtos",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_เอสเปรสโซ่มะม่วงโซดา_เย็น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1RdYKBhvUn8mcvkOK--cjMhAb_5JZJely",
+          "webViewLink": "https://drive.google.com/file/d/1RdYKBhvUn8mcvkOK--cjMhAb_5JZJely/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T08:29:35.921Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.235,
+            "bottom": 0.9,
+            "cy": 0.568,
+            "cx": 0.499,
+            "iconCenterOverLogo": 0.382
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41486445",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "FC_plum-espresso-soda",
+      "folder": "FC_เอสเปรสโซ่บ๊วยโซดา_เย็น",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสดโซดา เอสเปรสโซ่บ๊วย เย็น 16 ออนซ์",
+      "displayName": "เอสเปรสโซ่บ๊วยโซดา เย็น",
+      "source": "เมนูแยก/กาแฟสด/เย็น/เอสเปรสโซ่บ๊วยโซดา (Plum Espresso Soda).jpg",
+      "sourceDriveId": "1P4QZ3JlHwEnK3dKscfkC0xybXQ1vJSVf",
+      "driveSkuFolderId": "1KG_yfrvyEs6Rpaaes_RC6klx3TwwyxYL",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_เอสเปรสโซ่บ๊วยโซดา_เย็น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1fx4SV1ijD0b-JY3QQ5-w-lqwUCw17E3u",
+          "webViewLink": "https://drive.google.com/file/d/1fx4SV1ijD0b-JY3QQ5-w-lqwUCw17E3u/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T08:29:35.921Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.237,
+            "bottom": 0.9,
+            "cy": 0.569,
+            "cx": 0.499,
+            "iconCenterOverLogo": 0.382
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41486436",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "FC_lychee-espresso-soda",
+      "folder": "FC_เอสเปรสโซ่ลิ้นจี่โซดา_เย็น",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสดโซดา เอสเปรสโซ่ลิ้นจี่ เย็น 16 ออนซ์",
+      "displayName": "เอสเปรสโซ่ลิ้นจี่โซดา เย็น",
+      "source": "เมนูแยก/กาแฟสด/เย็น/เย็น-เอสเปรสโซ่ลิ้นจี่โซดา (Lychee Espresso Soda).jpg",
+      "sourceDriveId": "11Z6hhkA5ecme1O3uzFvzDL2S929gwl6-",
+      "driveSkuFolderId": "1JE-bMK8yuSsJNIi4z22GWM6K-gKvy_iu",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_เอสเปรสโซ่ลิ้นจี่โซดา_เย็น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1aQHhKu-Lgm8deaCKN_11j7StXy0m36e0",
+          "webViewLink": "https://drive.google.com/file/d/1aQHhKu-Lgm8deaCKN_11j7StXy0m36e0/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T08:29:35.921Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.237,
+            "bottom": 0.9,
+            "cy": 0.569,
+            "cx": 0.499,
+            "iconCenterOverLogo": 0.382
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41486430",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "FC_passion-espresso-soda",
+      "folder": "FC_เอสเปรสโซ่เสาวรสโซดา_เย็น",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสดโซดา เอสเปรสโซ่เสาวรส เย็น 16 ออนซ์",
+      "displayName": "เอสเปรสโซ่เสาวรสโซดา เย็น",
+      "source": "เมนูแยก/กาแฟสด/เย็น/เย็น-เอสเปรสโซ่เสาวรสโซดา (Passionfruit Espresso Soda).jpg",
+      "sourceDriveId": "1v7nmllLzQ_qVp9XcUlT76LoUd9nRIn5-",
+      "driveSkuFolderId": "1ungEod9RQK-bgep1Cvc0ZKKWMpKd0TH1",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_เอสเปรสโซ่เสาวรสโซดา_เย็น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1Cl_HNLA-yRnX5uyWUR8rVgUe7vK1gGGk",
+          "webViewLink": "https://drive.google.com/file/d/1Cl_HNLA-yRnX5uyWUR8rVgUe7vK1gGGk/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T08:29:35.921Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.242,
+            "bottom": 0.9,
+            "cy": 0.571,
+            "cx": 0.499,
+            "iconCenterOverLogo": 0.382
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41486422",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "FC_bluehawaii-espresso-soda",
+      "folder": "FC_เอสเปรสโซ่บลูฮาวายโซดา_เย็น",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสดโซดา เอสเปรสโซ่บลูฮาวาย เย็น 16 ออนซ์",
+      "displayName": "เอสเปรสโซ่บลูฮาวายโซดา เย็น",
+      "source": "เมนูแยก/กาแฟสด/เย็น/เย็น-เอสเปรสโซ่บลูฮาวายโซดา (Blue Hawaii Espresso Soda).jpg",
+      "sourceDriveId": "1InnY6jUQjDPqgOno1lbCUU-SgTsD2Tiv",
+      "driveSkuFolderId": "1RUAYxP2MG4N5CHAeDniz5E5ozWj64DU9",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_เอสเปรสโซ่บลูฮาวายโซดา_เย็น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "12a34cykKI-1tu4dnRDJ5MJ0tDrHgTYOZ",
+          "webViewLink": "https://drive.google.com/file/d/12a34cykKI-1tu4dnRDJ5MJ0tDrHgTYOZ/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T08:29:35.921Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.24,
+            "bottom": 0.9,
+            "cy": 0.57,
+            "cx": 0.499,
+            "iconCenterOverLogo": 0.382
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41486377",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "FC_plum-espresso",
+      "folder": "FC_บ๊วยเอสเปรสโซ่_เย็น",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด บ๊วยเอสเปรสโซ่ เย็น 16 ออนซ์",
+      "displayName": "บ๊วยเอสเปรสโซ่ เย็น",
+      "source": "เมนูแยก/กาแฟสด/เย็น/เย็น-Plum Espresso(บ๊วยเอสเปรสโซ่).jpg",
+      "sourceDriveId": "1U7qULAgGi5RWbwjio2pwdToVqi8_mY_Z",
+      "driveSkuFolderId": "1wuwMcCsrslUHLZqJm50-eGTEA2HdXUKg",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_บ๊วยเอสเปรสโซ่_เย็น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1WwZeXGxoWRcEbiYkE23RFIEPRmx0ukdc",
+          "webViewLink": "https://drive.google.com/file/d/1WwZeXGxoWRcEbiYkE23RFIEPRmx0ukdc/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T08:29:35.921Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.245,
+            "bottom": 0.9,
+            "cy": 0.573,
+            "cx": 0.5,
+            "iconCenterOverLogo": 0.382
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41444824",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "FC_passion-espresso",
+      "folder": "FC_เสาวรสเอสเปรสโซ่_เย็น",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด เสาวรสเอสเปรสโซ่ เย็น 16 ออนซ์",
+      "displayName": "เสาวรสเอสเปรสโซ่ เย็น",
+      "source": "เมนูแยก/กาแฟสด/เย็น/เย็น-Passionfruit Espresso(เสาวรสเอสเปรสโซ่ ).jpg",
+      "sourceDriveId": "1VZSEF7DyoPoqIHBRE2MmRIm5wJMRAivj",
+      "driveSkuFolderId": "1spbSJT95TGh5JaTAEd6qp7nBE-z1JhZY",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_เสาวรสเอสเปรสโซ่_เย็น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1RM7nV6EQ_WfTsOSS-cehvzGn9svj2NQk",
+          "webViewLink": "https://drive.google.com/file/d/1RM7nV6EQ_WfTsOSS-cehvzGn9svj2NQk/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T08:29:35.921Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.24,
+            "bottom": 0.9,
+            "cy": 0.57,
+            "cx": 0.499,
+            "iconCenterOverLogo": 0.382
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41444851",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "FC_bluehawaii-espresso",
+      "folder": "FC_บลูฮาวายเอสเปรสโซ่_เย็น",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด บลูฮาวายเอสเปรสโซ่ เย็น 16 ออนซ์",
+      "displayName": "บลูฮาวายเอสเปรสโซ่ เย็น",
+      "source": "เมนูแยก/กาแฟสด/เย็น/เย็น-Blue Hawaii Espresso(บลูฮาวายเอสเปรสโซ่)03.jpg",
+      "sourceDriveId": "10yCSUn8p3764RF9G_BjNBQJPd5Dw3z4M",
+      "driveSkuFolderId": "1PiGanv3dlq-q7C83OitNtd46fr8My-rz",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_บลูฮาวายเอสเปรสโซ่_เย็น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1_QJo1quTlnipWTxaPL-jrXPzXPMK6E6y",
+          "webViewLink": "https://drive.google.com/file/d/1_QJo1quTlnipWTxaPL-jrXPzXPMK6E6y/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T08:29:35.921Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.22,
+            "bottom": 0.833,
+            "cy": 0.526,
+            "cx": 0.497,
+            "iconCenterOverLogo": 0.382
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41444782",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "FC_H_taro-latte",
+      "folder": "FC_เผือกลาเต้_ร้อน",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด เผือกลาเต้ร้อน",
+      "displayName": "เผือกลาเต้ร้อน",
+      "source": "เมนูแยก/กาแฟสด/ร้อน/ร้อน-เผือกลาเต้ร้อน (Taro Latte).jpg",
+      "sourceDriveId": "14Cmlxc4Y-Ac_neOcPoB943uCUKzhZZuh",
+      "driveSkuFolderId": "1H0ERLFBxBBc5X210zmA80NTWS8hiMhks",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_เผือกลาเต้_ร้อน/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1sb9IK5x576Cn3e7CKUzVurUrB1Dg6Za9",
+          "webViewLink": "https://drive.google.com/file/d/1sb9IK5x576Cn3e7CKUzVurUrB1Dg6Za9/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T11:05:49.816Z",
+          "cup": {
+            "method": "hot-paper-face-logo-center",
+            "top": 0.438,
+            "bottom": 0.836,
+            "cy": 0.637,
+            "cx": 0.493
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41574401",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "FC_H_ovaltine-espresso",
+      "folder": "FC_โอวัลตินเอสเปรสโซ่_ร้อน",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด โอวัลตินเอสเปรสโซ่ร้อน",
+      "displayName": "โอวัลตินเอสเปรสโซ่ร้อน",
+      "source": "เมนูแยก/กาแฟสด/ร้อน/ร้อน-โอวัลตินเอสเปรสโซ่ (Ovaltine Espresso).jpg",
+      "sourceDriveId": "12q20CxmJAmNWRj2n8BKIyyQiyvmWx4Q9",
+      "driveSkuFolderId": "17awnx_3BUmQmP3ZTOUeqWVu2AboRrtCa",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_โอวัลตินเอสเปรสโซ่_ร้อน/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1IiSxGPlXjQZ67T1Iqay1K1wdXY0Ig4xA",
+          "webViewLink": "https://drive.google.com/file/d/1IiSxGPlXjQZ67T1Iqay1K1wdXY0Ig4xA/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T11:05:49.816Z",
+          "cup": {
+            "method": "hot-paper-face-logo-center",
+            "top": 0.452,
+            "bottom": 0.828,
+            "cy": 0.64,
+            "cx": 0.492
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41574263",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "FC_H_chocolate-milk",
+      "folder": "FC_ช็อกโกแลตมิลค์_ร้อน",
+      "group": "กาแฟสด",
+      "posName": "ช็อกโกแลตมิลค์ร้อน 12 ออนซ์",
+      "displayName": "ช็อกโกแลตมิลค์ร้อน",
+      "source": "เมนูแยก/กาแฟสด/ร้อน/ร้อน-ช็อกโกแลตมิลค์ (Chocolate Milk).jpg",
+      "sourceDriveId": "1J_214gnUmqgVKniKPCUfY_EWXV6BGfNA",
+      "driveSkuFolderId": "1sWB-5b_m2qRtSNDfHlAWOVpq8xUYGZTv",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_ช็อกโกแลตมิลค์_ร้อน/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1dG5G2y5iNZf6GyrfOT8f0XCB9JHdm-Wa",
+          "webViewLink": "https://drive.google.com/file/d/1dG5G2y5iNZf6GyrfOT8f0XCB9JHdm-Wa/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T11:05:49.816Z",
+          "cup": {
+            "method": "hot-paper-face-logo-center",
+            "top": 0.44,
+            "bottom": 0.812,
+            "cy": 0.626,
+            "cx": 0.493
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41574246",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "FC_H_hot-milk",
+      "folder": "FC_นมร้อน",
+      "group": "กาแฟสด",
+      "posName": "นมร้อน 12 ออนซ์",
+      "displayName": "นมร้อน",
+      "source": "เมนูแยก/กาแฟสด/ร้อน/ร้อน-นมร้อน (Hot Milk).jpg",
+      "sourceDriveId": "1v6TyOUHVuOKEfScTuroOnAfx5VFUFaHN",
+      "driveSkuFolderId": "1zaVfEatw5R6_m7mXeteKW5T1yXzK4-G4",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_นมร้อน/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "18h0oGmwae3Cremo7RbGnm4BCTLJ1brda",
+          "webViewLink": "https://drive.google.com/file/d/18h0oGmwae3Cremo7RbGnm4BCTLJ1brda/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T11:05:49.816Z",
+          "cup": {
+            "method": "hot-paper-face-logo-center",
+            "top": 0.442,
+            "bottom": 0.866,
+            "cy": 0.654,
+            "cx": 0.493
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41574233",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "FC_H_mint-mocha",
+      "folder": "FC_มอคค่ามิ้นต์_ร้อน",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด มอคค่ามิ้นต์ร้อน",
+      "displayName": "มอคค่ามิ้นต์ร้อน",
+      "source": "เมนูแยก/กาแฟสด/ร้อน/ร้อน-มอคค่ามิ้นต์ (Mint Mocha).jpg",
+      "sourceDriveId": "1H0u1FbREmI-fTDPT31atCMm8cS5CzL3k",
+      "driveSkuFolderId": "1tDt2vKyJ1QMHLnswD7Lr0zt7k5Qzh7uH",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_มอคค่ามิ้นต์_ร้อน/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1KkBZwIpoIUB7eMweVIJBwP6FpQiW6dKG",
+          "webViewLink": "https://drive.google.com/file/d/1KkBZwIpoIUB7eMweVIJBwP6FpQiW6dKG/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T11:05:49.816Z",
+          "cup": {
+            "method": "hot-paper-face-logo-center",
+            "top": 0.438,
+            "bottom": 0.814,
+            "cy": 0.626,
+            "cx": 0.493
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41574397",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "FC_H_cocoa-mocha",
+      "folder": "FC_โกโก้มอคค่า_ร้อน",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด โกโก้มอคค่าร้อน",
+      "displayName": "โกโก้มอคค่าร้อน",
+      "source": "เมนูแยก/กาแฟสด/ร้อน/ร้อน-โกโก้มอคค่า (Cocoa Mocha).jpg",
+      "sourceDriveId": "1yfPemcqtm3r63Inul7DLOoi1T5FvGrtz",
+      "driveSkuFolderId": "1kPSJDW4m4RIepaAq7Exbzqfkm42Qckwb",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_โกโก้มอคค่า_ร้อน/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1uHmzta9aRVOZkT7zDGr0narMoaClUQOk",
+          "webViewLink": "https://drive.google.com/file/d/1uHmzta9aRVOZkT7zDGr0narMoaClUQOk/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T11:05:49.816Z",
+          "cup": {
+            "method": "hot-paper-face-logo-center",
+            "top": 0.452,
+            "bottom": 0.806,
+            "cy": 0.629,
+            "cx": 0.493
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41574391",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "FC_H_caramel-latte",
+      "folder": "FC_คาราเมลลาเต้_ร้อน",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด คาราเมลลาเต้ร้อน 12 ออนซ์",
+      "displayName": "คาราเมลลาเต้ร้อน",
+      "source": "เมนูแยก/กาแฟสด/ร้อน/ร้อน-คาราเมลลาเต้ร้อน (Caramel Latte).jpg",
+      "sourceDriveId": "1CxDSc0v9Yqb7mswEGm9aAvFJcWijsqkR",
+      "driveSkuFolderId": "1HWwUKhCD8X2UcYc1ZU9nEamliVkVd2VF",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_คาราเมลลาเต้_ร้อน/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1giswQAQTR5LNEgb92RjK4d3pFMvmEepJ",
+          "webViewLink": "https://drive.google.com/file/d/1giswQAQTR5LNEgb92RjK4d3pFMvmEepJ/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T11:05:49.816Z",
+          "cup": {
+            "method": "hot-paper-face-logo-center",
+            "top": 0.452,
+            "bottom": 0.894,
+            "cy": 0.673,
+            "cx": 0.5
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41574254",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "FC_H_hazelnut-mocha",
+      "folder": "FC_เฮเซลนัทมอคค่า_ร้อน",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด เฮเซลนัทมอคค่าร้อน 12 ออนซ์",
+      "displayName": "เฮเซลนัทมอคค่าร้อน",
+      "source": "เมนูแยก/กาแฟสด/ร้อน/ร้อน-เฮเซลนัทมอคค่า (Hazelnut Mocha).jpg",
+      "sourceDriveId": "1hIOz0lLPt0PQySW36MpPlCwWBReSjsJ9",
+      "driveSkuFolderId": "1Rs1ueagq-aMpREjv3FVt51TBSARrtSx-",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_เฮเซลนัทมอคค่า_ร้อน/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1i5DjChMoj38MqVSdOCtHQpgZC7mRCU4s",
+          "webViewLink": "https://drive.google.com/file/d/1i5DjChMoj38MqVSdOCtHQpgZC7mRCU4s/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T11:05:49.816Z",
+          "cup": {
+            "method": "hot-paper-face-logo-center",
+            "top": 0.442,
+            "bottom": 0.806,
+            "cy": 0.624,
+            "cx": 0.493
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41574255",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "FC_H_caramel-macchiato",
+      "folder": "FC_คาราเมลมัคคิอาโต้_ร้อน",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด Caramel Macchiato (คาราเมลมัคคิอาโต้) ร้อน 12 ออนซ์",
+      "displayName": "คาราเมลมัคคิอาโต้ร้อน",
+      "source": "เมนูแยก/กาแฟสด/ร้อน/ร้อน-Caramel Macchiato (คาราเมลมัคคิอาโต้).jpg",
+      "sourceDriveId": "1PGjyh-j3FoBVRWKvnNFolbsEEaDcjODX",
+      "driveSkuFolderId": "1S6aAvyNwJ9o2TBhvahvl_SvXNRHmHVH7",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_คาราเมลมัคคิอาโต้_ร้อน/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1CiPK3gvVvfY5S2yNXhPhVbFcZTMpmrrg",
+          "webViewLink": "https://drive.google.com/file/d/1CiPK3gvVvfY5S2yNXhPhVbFcZTMpmrrg/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T11:05:49.816Z",
+          "cup": {
+            "method": "hot-paper-face-logo-center",
+            "top": 0.452,
+            "bottom": 0.816,
+            "cy": 0.634,
+            "cx": 0.493
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41331368",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "JT_01",
+      "folder": "JT_01_ชาจัสมินฝูเจี้ยน",
+      "group": "ชา",
+      "posName": "ชาจัสมินฝูเจี้ยน (เย็น/ปั่น) 16 oz",
+      "displayName": "ชาจัสมินฝูเจี้ยน",
+      "source": "POS/ชาจัสมินฝูเจี้ยน (เย็น/ปั่น) 16 oz",
+      "sourceDriveId": null,
+      "driveSkuFolderId": "1dH_s5-uojQeEofeJhHF9nbRpatXH08qk",
+      "candidates": {
+        "v1": {
+          "file": "ชา/JT_01_ชาจัสมินฝูเจี้ยน/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1a2bC8bI-p8yIJHUMQKNGrgNDUiEw9jka",
+          "webViewLink": "https://drive.google.com/file/d/1a2bC8bI-p8yIJHUMQKNGrgNDUiEw9jka/view?usp=drivesdk",
+          "updatedAt": "2026-09-05T11:38:09.035Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_47068210",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "T_09",
+      "folder": "T_09_ชาอู่หลงเย็น",
+      "group": "ชา",
+      "posName": "ชาอู่หลงเย็น",
+      "displayName": "ชาอู่หลงเย็น",
+      "source": "POS/ชาอู่หลงเย็น",
+      "sourceDriveId": null,
+      "driveSkuFolderId": "1HrxmruB4X5xsiMbETv1ZXASxfDYuRiA3",
+      "candidates": {
+        "v1": {
+          "file": "ชา/T_09_ชาอู่หลงเย็น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1bA32sBPk59pwhmFlb_2_tXyoLIqltktw",
+          "webViewLink": "https://drive.google.com/file/d/1bA32sBPk59pwhmFlb_2_tXyoLIqltktw/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T04:33:17.227Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_44722774",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "T_10",
+      "folder": "T_10_ชาอู่หลงน้ำผึ้ง",
+      "group": "ชา",
+      "posName": "ชาอู่หลงน้ำผึ้ง",
+      "displayName": "ชาอู่หลงน้ำผึ้ง",
+      "source": "POS/ชาอู่หลงน้ำผึ้ง",
+      "sourceDriveId": null,
+      "driveSkuFolderId": "186Uz7jylOS62hR23Lo6H0oOXdNiYNxSy",
+      "candidates": {
+        "v1": {
+          "file": "ชา/T_10_ชาอู่หลงน้ำผึ้ง/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1zOpfRdiOREkdjA8ryAdZ1iwB41Eat6mG",
+          "webViewLink": "https://drive.google.com/file/d/1zOpfRdiOREkdjA8ryAdZ1iwB41Eat6mG/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T04:33:17.227Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_44722825",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "T_11",
+      "folder": "T_11_ชาอู่หลงน้ำผึ้งมะนาว",
+      "group": "ชา",
+      "posName": "ชาอู่หลงน้ำผึ้งมะนาว",
+      "displayName": "ชาอู่หลงน้ำผึ้งมะนาว",
+      "source": "POS/ชาอู่หลงน้ำผึ้งมะนาว",
+      "sourceDriveId": null,
+      "driveSkuFolderId": "1lGb-GdniUsmF9bMhMR1PM19HgKe37x7I",
+      "candidates": {
+        "v1": {
+          "file": "ชา/T_11_ชาอู่หลงน้ำผึ้งมะนาว/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1GtOt9f_CIbfJ6Zvtg8ISYfByiWFrwmn7",
+          "webViewLink": "https://drive.google.com/file/d/1GtOt9f_CIbfJ6Zvtg8ISYfByiWFrwmn7/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T04:33:17.227Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_44722799",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "MT_10",
+      "folder": "MT_10_ชาไทยมันม่วง",
+      "group": "ชานม",
+      "posName": "ชาไทยมันม่วง",
+      "displayName": "ชาไทยมันม่วง",
+      "source": "POS/ชาไทยมันม่วง",
+      "sourceDriveId": null,
+      "driveSkuFolderId": "1Jsbe8rywLgNsctbtV0czdSf8aFmPqI0T",
+      "candidates": {
+        "v1": {
+          "file": "ชานม/MT_10_ชาไทยมันม่วง/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1VlvKf6xBOtDAMTYxwHXYlGcd3bWa8EWw",
+          "webViewLink": "https://drive.google.com/file/d/1VlvKf6xBOtDAMTYxwHXYlGcd3bWa8EWw/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T02:49:30.510Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_43577153",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "MT_11",
+      "folder": "MT_11_ชานมมันม่วง",
+      "group": "ชานม",
+      "posName": "ชานมมันม่วง",
+      "displayName": "ชานมมันม่วง",
+      "source": "POS/ชานมมันม่วง",
+      "sourceDriveId": null,
+      "driveSkuFolderId": "1A8rnqA7lU175-RepQFpPNFdIMFVClCyG",
+      "candidates": {
+        "v1": {
+          "file": "ชานม/MT_11_ชานมมันม่วง/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1DnW8k1AAbqZ6sSt0eBztwTMiaUeKgtov",
+          "webViewLink": "https://drive.google.com/file/d/1DnW8k1AAbqZ6sSt0eBztwTMiaUeKgtov/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T03:09:28.462Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_43577260",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "BL_01",
+      "folder": "BL_01_สตรอเบอร์รี่ปั่น",
+      "group": "ผลไม้ปั่น & สมูทตี้",
+      "posName": "สตรอเบอร์รี่ปั่น แก้วใหญ่ 22 ออนซ์",
+      "displayName": "สตรอเบอร์รี่ปั่น",
+      "source": "POS/สตรอเบอร์รี่ปั่น แก้วใหญ่ 22 ออนซ์",
+      "sourceDriveId": null,
+      "driveSkuFolderId": "1BXCN1u0qgGwpHHzwinCjYvAJPHCzND1f",
+      "candidates": {
+        "v1": {
+          "file": "ผลไม้ปั่น & สมูทตี้/BL_01_สตรอเบอร์รี่ปั่น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1J6UFmlicOlRz03Vrr7i0BGfOin5aFWbH",
+          "webViewLink": "https://drive.google.com/file/d/1J6UFmlicOlRz03Vrr7i0BGfOin5aFWbH/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T03:58:01.090Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_43337115",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "SM_01",
+      "folder": "SM_01_สตรอเบอร์รี่",
+      "group": "ผลไม้ปั่น & สมูทตี้",
+      "posName": "(สมูทตี้) สตรอเบอร์รี่ แก้วใหญ่ 22 ออนซ์",
+      "displayName": "สมูทตี้สตรอเบอร์รี่",
+      "source": "POS/(สมูทตี้) สตรอเบอร์รี่ แก้วใหญ่ 22 ออนซ์",
+      "sourceDriveId": null,
+      "driveSkuFolderId": "1__l5HVlcOmTy5jlOaZEnYfUwp_ZIb1nz",
+      "candidates": {
+        "v1": {
+          "file": "ผลไม้ปั่น & สมูทตี้/SM_01_สตรอเบอร์รี่/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "11tYJjJz6Jo24yapVEgq5ucZAm86qbzMD",
+          "webViewLink": "https://drive.google.com/file/d/11tYJjJz6Jo24yapVEgq5ucZAm86qbzMD/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T03:34:48.966Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_43337275",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "BL_02",
+      "folder": "BL_02_มิกซ์เบอร์รี่ปั่น",
+      "group": "ผลไม้ปั่น & สมูทตี้",
+      "posName": "มิกซ์เบอร์รี่ปั่น แก้วใหญ่ 22 ออนซ์",
+      "displayName": "มิกซ์เบอร์รี่ปั่น",
+      "source": "POS/มิกซ์เบอร์รี่ปั่น แก้วใหญ่ 22 ออนซ์",
+      "sourceDriveId": null,
+      "driveSkuFolderId": "1Yr5LObG176sBr0T9DRIBHm_Ui8HE8t7Q",
+      "candidates": {
+        "v1": {
+          "file": "ผลไม้ปั่น & สมูทตี้/BL_02_มิกซ์เบอร์รี่ปั่น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1I4XNdk94QpsoxZ3GBkOArgYY1b7qRXCs",
+          "webViewLink": "https://drive.google.com/file/d/1I4XNdk94QpsoxZ3GBkOArgYY1b7qRXCs/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T03:58:04.000Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_43406368",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "SM_02",
+      "folder": "SM_02_มิกซ์เบอร์รี่",
+      "group": "ผลไม้ปั่น & สมูทตี้",
+      "posName": "(สมูทตี้) มิกซ์เบอร์รี่ แก้วใหญ่ 22 ออนซ์",
+      "displayName": "สมูทตี้มิกซ์เบอร์รี่",
+      "source": "POS/(สมูทตี้) มิกซ์เบอร์รี่ แก้วใหญ่ 22 ออนซ์",
+      "sourceDriveId": null,
+      "driveSkuFolderId": "1gdl98L5l6QFV4kRwLkLScd3g3bur1rAC",
+      "candidates": {
+        "v1": {
+          "file": "ผลไม้ปั่น & สมูทตี้/SM_02_มิกซ์เบอร์รี่/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1x5wRlvHCdM95oxVpeWAK6g9JBVR_n1eZ",
+          "webViewLink": "https://drive.google.com/file/d/1x5wRlvHCdM95oxVpeWAK6g9JBVR_n1eZ/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T03:34:54.398Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_43406465",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "BL_03",
+      "folder": "BL_03_ส้มปั่น",
+      "group": "ผลไม้ปั่น & สมูทตี้",
+      "posName": "ส้มปั่น แก้วใหญ่ 22 ออนซ์",
+      "displayName": "ส้มปั่น",
+      "source": "POS/ส้มปั่น แก้วใหญ่ 22 ออนซ์",
+      "sourceDriveId": null,
+      "driveSkuFolderId": "1kztySx8UKfuMjbIqRjzy_s4TDXcRY8hq",
+      "candidates": {
+        "v1": {
+          "file": "ผลไม้ปั่น & สมูทตี้/BL_03_ส้มปั่น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1Aw8c5evWmfacKWqTGOhMYilHLKvpOhfV",
+          "webViewLink": "https://drive.google.com/file/d/1Aw8c5evWmfacKWqTGOhMYilHLKvpOhfV/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T03:34:57.017Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_43412772",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "SM_03",
+      "folder": "SM_03_ส้ม",
+      "group": "ผลไม้ปั่น & สมูทตี้",
+      "posName": "(สมูทตี้) ส้ม แก้วใหญ่ 22 ออนซ์",
+      "displayName": "สมูทตี้ส้ม",
+      "source": "POS/(สมูทตี้) ส้ม แก้วใหญ่ 22 ออนซ์",
+      "sourceDriveId": null,
+      "driveSkuFolderId": "1tWBtjBYVCnNF5AWV-iwiXO4b9WayRWfs",
+      "candidates": {
+        "v1": {
+          "file": "ผลไม้ปั่น & สมูทตี้/SM_03_ส้ม/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1s-RoFpWmUz7j_DWpo2KurSj9ljsXkmu7",
+          "webViewLink": "https://drive.google.com/file/d/1s-RoFpWmUz7j_DWpo2KurSj9ljsXkmu7/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T03:34:59.760Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_43412845",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "BL_04",
+      "folder": "BL_04_มะม่วงปั่น",
+      "group": "ผลไม้ปั่น & สมูทตี้",
+      "posName": "มะม่วงปั่น แก้วใหญ่ 22 ออนซ์",
+      "displayName": "มะม่วงปั่น",
+      "source": "POS/มะม่วงปั่น แก้วใหญ่ 22 ออนซ์",
+      "sourceDriveId": null,
+      "driveSkuFolderId": "1K2_Pa25kyrILRps5LsoGklQFsNoZy0cz",
+      "candidates": {
+        "v1": {
+          "file": "ผลไม้ปั่น & สมูทตี้/BL_04_มะม่วงปั่น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1TcMrHRb4MHFFBPrRsOQrnd8n9WVTT82x",
+          "webViewLink": "https://drive.google.com/file/d/1TcMrHRb4MHFFBPrRsOQrnd8n9WVTT82x/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T03:58:06.709Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_43461233",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "SM_04",
+      "folder": "SM_04_มะม่วง",
+      "group": "ผลไม้ปั่น & สมูทตี้",
+      "posName": "(สมูทตี้) มะม่วง แก้วใหญ่ 22 ออนซ์",
+      "displayName": "สมูทตี้มะม่วง",
+      "source": "POS/(สมูทตี้) มะม่วง แก้วใหญ่ 22 ออนซ์",
+      "sourceDriveId": null,
+      "driveSkuFolderId": "1JoSPcWnmVfTRUdiq-lkIPEqeqa3qyr7E",
+      "candidates": {
+        "v1": {
+          "file": "ผลไม้ปั่น & สมูทตี้/SM_04_มะม่วง/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1xhjUJcOmOqD62uxBjRnsdN5G9teut4To",
+          "webViewLink": "https://drive.google.com/file/d/1xhjUJcOmOqD62uxBjRnsdN5G9teut4To/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T04:10:27.842Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_43461330",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "SM_05",
+      "folder": "SM_05_มันม่วง",
+      "group": "ผลไม้ปั่น & สมูทตี้",
+      "posName": "(สมูทตี้) มันม่วง แก้วใหญ่ 22 ออนซ์",
+      "displayName": "สมูทตี้มันม่วง",
+      "source": "POS/(สมูทตี้) มันม่วง แก้วใหญ่ 22 ออนซ์",
+      "sourceDriveId": null,
+      "driveSkuFolderId": "11QnmgJCGTXAVdpzvcfiuojL7127zsxde",
+      "candidates": {
+        "v1": {
+          "file": "ผลไม้ปั่น & สมูทตี้/SM_05_มันม่วง/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1BzK0BcBZffpLMYfRy7I_FdYNTZuPYtfu",
+          "webViewLink": "https://drive.google.com/file/d/1BzK0BcBZffpLMYfRy7I_FdYNTZuPYtfu/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T03:35:08.002Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_43577356",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "TF_01",
+      "folder": "TF_01_สูตรดั้งเดิม",
+      "group": "น้ำเต้าหู้",
+      "posName": "น้ำเต้าหู้สูตรดั้งเดิม (เย็น/ปั่น)",
+      "displayName": "น้ำเต้าหู้สูตรดั้งเดิม",
+      "source": "POS/น้ำเต้าหู้สูตรดั้งเดิม (เย็น/ปั่น)",
+      "sourceDriveId": null,
+      "driveSkuFolderId": "1kpqmm9W42ej9QhfgPogMwtYOfyO5V5NK",
+      "candidates": {
+        "v1": {
+          "file": "น้ำเต้าหู้/TF_01_สูตรดั้งเดิม/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1uB72I8jvJXcLj2ya6PZJyRF2Q8cW7bUW",
+          "webViewLink": "https://drive.google.com/file/d/1uB72I8jvJXcLj2ya6PZJyRF2Q8cW7bUW/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:39:51.941Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_42817721",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "TF_02",
+      "folder": "TF_02_นมสด",
+      "group": "น้ำเต้าหู้",
+      "posName": "น้ำเต้าหู้นมสด (เย็น/ปั่น)",
+      "displayName": "น้ำเต้าหู้นมสด",
+      "source": "POS/น้ำเต้าหู้นมสด (เย็น/ปั่น)",
+      "sourceDriveId": null,
+      "driveSkuFolderId": "1Me95lH7Yi2H2Xvg0s-7Bca1KzuQD25t_",
+      "candidates": {
+        "v1": {
+          "file": "น้ำเต้าหู้/TF_02_นมสด/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1fL5sqO3TMXAsS0WM_0tnDjm_xW5o6PxT",
+          "webViewLink": "https://drive.google.com/file/d/1fL5sqO3TMXAsS0WM_0tnDjm_xW5o6PxT/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:39:51.941Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_42818071",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "TF_03",
+      "folder": "TF_03_โอวัลติน",
+      "group": "น้ำเต้าหู้",
+      "posName": "น้ำเต้าหู้โอวัลติน (เย็น/ปั่น)",
+      "displayName": "น้ำเต้าหู้โอวัลติน",
+      "source": "POS/น้ำเต้าหู้โอวัลติน (เย็น/ปั่น)",
+      "sourceDriveId": null,
+      "driveSkuFolderId": "124_eyDh16mu_jM2weGd06w5UDHFPUu0F",
+      "candidates": {
+        "v1": {
+          "file": "น้ำเต้าหู้/TF_03_โอวัลติน/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1zsmQLZR7SP4-pG7L-kEIuKNiTRm5SC6O",
+          "webViewLink": "https://drive.google.com/file/d/1zsmQLZR7SP4-pG7L-kEIuKNiTRm5SC6O/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:39:51.941Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_42818345",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "TF_04",
+      "folder": "TF_04_เผือก",
+      "group": "น้ำเต้าหู้",
+      "posName": "น้ำเต้าหู้เผือก (เย็น/ปั่น)",
+      "displayName": "น้ำเต้าหู้เผือก",
+      "source": "POS/น้ำเต้าหู้เผือก (เย็น/ปั่น)",
+      "sourceDriveId": null,
+      "driveSkuFolderId": "1HRDOzU42jewidh1OfZ9mpONHJJ9wZYVb",
+      "candidates": {
+        "v1": {
+          "file": "น้ำเต้าหู้/TF_04_เผือก/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "10uNmRJ84YnPXZvrLpRVKAzH3n5gD4ie-",
+          "webViewLink": "https://drive.google.com/file/d/10uNmRJ84YnPXZvrLpRVKAzH3n5gD4ie-/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:39:51.941Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_42818404",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "TF_05",
+      "folder": "TF_05_โกโก้",
+      "group": "น้ำเต้าหู้",
+      "posName": "น้ำเต้าหู้โกโก้ (เย็น/ปั่น)",
+      "displayName": "น้ำเต้าหู้โกโก้",
+      "source": "POS/น้ำเต้าหู้โกโก้ (เย็น/ปั่น)",
+      "sourceDriveId": null,
+      "driveSkuFolderId": "1BdL1Zkr4R2RW-HQPTFD4xNTHzqmDTO6s",
+      "candidates": {
+        "v1": {
+          "file": "น้ำเต้าหู้/TF_05_โกโก้/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1TMvp2rgXQo0irc6OOFj2-DcnovXdoBed",
+          "webViewLink": "https://drive.google.com/file/d/1TMvp2rgXQo0irc6OOFj2-DcnovXdoBed/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T05:39:51.941Z"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_42818456",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "FC_H_americano",
+      "folder": "FC_อเมริกาโน่_ร้อน",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
+      "displayName": "อเมริกาโน่ร้อน",
+      "source": "",
+      "sourceDriveId": "",
+      "driveSkuFolderId": "125bK8ZjGBq0bDJSz-O5hjTzxRnatQdO0",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_อเมริกาโน่_ร้อน/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1jJi1E920Ftu-SQLCEVHePhopSEG7vQkJ",
+          "webViewLink": "https://drive.google.com/file/d/1jJi1E920Ftu-SQLCEVHePhopSEG7vQkJ/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T10:54:51.155Z",
+          "cup": {
+            "method": "hot-paper-face-logo-center",
+            "top": 0.454,
+            "bottom": 0.816,
+            "cy": 0.635,
+            "cx": 0.494
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41321830",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "FC_H_espresso",
+      "folder": "FC_เอสเปรสโซ่_ร้อน",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด Espresso (เอสเปรสโซ่) ร้อน 12 ออนซ์",
+      "displayName": "เอสเปรสโซ่ร้อน",
+      "source": "",
+      "sourceDriveId": "",
+      "driveSkuFolderId": "1xetGuYzA75-5mySTY2AJTjVqOPs7cFSI",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_เอสเปรสโซ่_ร้อน/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1W4m1-c3-OawkdgxBWlwXTvXSTwV5urqm",
+          "webViewLink": "https://drive.google.com/file/d/1W4m1-c3-OawkdgxBWlwXTvXSTwV5urqm/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T10:54:51.155Z",
+          "cup": {
+            "method": "hot-paper-face-logo-center",
+            "top": 0.452,
+            "bottom": 0.836,
+            "cy": 0.644,
+            "cx": 0.493
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41321907",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "FC_H_latte",
+      "folder": "FC_ลาเต้_ร้อน",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด ลาเต้ (Latte) ร้อน 12 ออนซ์",
+      "displayName": "ลาเต้ร้อน",
+      "source": "",
+      "sourceDriveId": "",
+      "driveSkuFolderId": "1IVeDOZuXmo15-ixMR9j-RwdDCWeWQC47",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_ลาเต้_ร้อน/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1koFQPsrTsFqWq_VWem2HWvmNBP_vFM8H",
+          "webViewLink": "https://drive.google.com/file/d/1koFQPsrTsFqWq_VWem2HWvmNBP_vFM8H/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T10:54:51.155Z",
+          "cup": {
+            "method": "hot-paper-face-logo-center",
+            "top": 0.436,
+            "bottom": 0.786,
+            "cy": 0.611,
+            "cx": 0.504
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41321986",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "FC_H_cappuccino",
+      "folder": "FC_คาปูชิโน่_ร้อน",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด Cappuccino (คาปูชิโน่) ร้อน 12 ออนซ์",
+      "displayName": "คาปูชิโน่ร้อน",
+      "source": "",
+      "sourceDriveId": "",
+      "driveSkuFolderId": "1fPMnrOYHcGXNgu1BDCmJVA28pNF2C8XP",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_คาปูชิโน่_ร้อน/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1NUUKJRyosIXvPnSrNtr8iQnI_jbayMJ3",
+          "webViewLink": "https://drive.google.com/file/d/1NUUKJRyosIXvPnSrNtr8iQnI_jbayMJ3/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T10:54:51.155Z",
+          "cup": {
+            "method": "hot-paper-face-logo-center",
+            "top": 0.452,
+            "bottom": 0.85,
+            "cy": 0.651,
+            "cx": 0.493
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41322135",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "FC_H_longblack",
+      "folder": "FC_ลองแบล็ค_ร้อน",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด Long Black (ลองแบล็ค) ร้อน 12 ออนซ์",
+      "displayName": "ลองแบล็คร้อน",
+      "source": "",
+      "sourceDriveId": "",
+      "driveSkuFolderId": "1kGv_n744QV7gPOpPXpBYNHIqTMmerbp9",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_ลองแบล็ค_ร้อน/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "12DrVKCe92kBu32qjHPqwjBibRoNCB0Z_",
+          "webViewLink": "https://drive.google.com/file/d/12DrVKCe92kBu32qjHPqwjBibRoNCB0Z_/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T10:54:51.155Z",
+          "cup": {
+            "method": "hot-paper-face-logo-center",
+            "top": 0.436,
+            "bottom": 0.868,
+            "cy": 0.652,
+            "cx": 0.493
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41322247",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "FC_H_flatwhite",
+      "folder": "FC_แฟลตไวท์_ร้อน",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด Flat White (แฟลตไวท์) ร้อน 12 ออนซ์",
+      "displayName": "แฟลตไวท์ร้อน",
+      "source": "",
+      "sourceDriveId": "",
+      "driveSkuFolderId": "1NyTZVkhqkvGibY4u32POAkwMs2afsbzP",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_แฟลตไวท์_ร้อน/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "11ZhoIZINJINsKgHHxXunxQ2jjVKDE4H0",
+          "webViewLink": "https://drive.google.com/file/d/11ZhoIZINJINsKgHHxXunxQ2jjVKDE4H0/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T10:54:51.155Z",
+          "cup": {
+            "method": "hot-paper-face-logo-center",
+            "top": 0.438,
+            "bottom": 0.852,
+            "cy": 0.645,
+            "cx": 0.493
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41322288",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "FC_H_mocha",
+      "folder": "FC_มอคค่า_ร้อน",
+      "group": "กาแฟสด",
+      "posName": "กาแฟสด มอคค่า ร้อน 12 ออนซ์",
+      "displayName": "มอคค่าร้อน",
+      "source": "",
+      "sourceDriveId": "",
+      "driveSkuFolderId": "1lixdDg1XHGHEkP4eT2P_9XdTsSfmTfNU",
+      "candidates": {
+        "v1": {
+          "file": "กาแฟสด/FC_มอคค่า_ร้อน/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1OOP2xkXsle7LxSAs2G_EEicG1dC11IGH",
+          "webViewLink": "https://drive.google.com/file/d/1OOP2xkXsle7LxSAs2G_EEicG1dC11IGH/view?usp=drivesdk",
+          "updatedAt": "2026-09-06T11:05:49.816Z",
+          "cup": {
+            "method": "hot-paper-face-logo-center",
+            "top": 0.436,
+            "bottom": 0.828,
+            "cy": 0.632,
+            "cx": 0.493
+          }
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_41460373",
+      "posBackupAttached": true,
+      "logoPlacement": "cup-center-both-axes"
+    },
+    {
+      "sku": "MC_matcha-latte",
+      "folder": "MC_มัทฉะลาเต้",
+      "group": "มัจฉะแท้",
+      "posName": "มัทฉะลาเต้ (Matcha Latte)",
+      "displayName": "มัทฉะลาเต้",
+      "source": "",
+      "sourceDriveId": "",
+      "driveSkuFolderId": "1wLlH84WCZWwvO_ulGfxduFl3UklkBUtU",
+      "candidates": {
+        "v1": {
+          "file": "มัจฉะแท้/MC_มัทฉะลาเต้/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1Qbck1cLTxulUholjSUa4agZKGnxHiVJc",
+          "webViewLink": "https://drive.google.com/file/d/1Qbck1cLTxulUholjSUa4agZKGnxHiVJc/view?usp=drivesdk",
+          "updatedAt": "2026-09-07T02:42:08.562Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.24,
+            "bottom": 0.88,
+            "cy": 0.56,
+            "cx": 0.505,
+            "iconCenterOverLogo": 0.382
+          },
+          "note": "v2 photoreal; shipped as POS main"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_42217588",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "MC_matcha-cheese",
+      "folder": "MC_มัทฉะครีมชีส",
+      "group": "มัจฉะแท้",
+      "posName": "มัทฉะครีมชีส (Matcha Cheese Tea)",
+      "displayName": "มัทฉะครีมชีส",
+      "source": "",
+      "sourceDriveId": "",
+      "driveSkuFolderId": "1yJroburSf4I3B9HJn4b_RuFCOci76S7t",
+      "candidates": {
+        "v1": {
+          "file": "มัจฉะแท้/MC_มัทฉะครีมชีส/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1aBuBtjKJs0MwOWateGOMC4UeB2FxBWxf",
+          "webViewLink": "https://drive.google.com/file/d/1aBuBtjKJs0MwOWateGOMC4UeB2FxBWxf/view?usp=drivesdk",
+          "updatedAt": "2026-09-07T02:42:08.562Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.239,
+            "bottom": 0.88,
+            "cy": 0.559,
+            "cx": 0.502,
+            "iconCenterOverLogo": 0.382
+          },
+          "note": "v2 photoreal; shipped as POS main"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_42221555",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "MC_matcha-brownsugar-boba",
+      "folder": "MC_มัทฉะบราวน์ชูการ์ไข่มุก",
+      "group": "มัจฉะแท้",
+      "posName": "มัทฉะบราวน์ชูการ์ไข่มุก (Matcha Brown Sugar Boba)",
+      "displayName": "มัทฉะบราวน์ชูการ์ไข่มุก",
+      "source": "",
+      "sourceDriveId": "",
+      "driveSkuFolderId": "1WglOT-6B15uAh8DmRm6GEHPSQTRYlW8x",
+      "candidates": {
+        "v1": {
+          "file": "มัจฉะแท้/MC_มัทฉะบราวน์ชูการ์ไข่มุก/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1atvOi-ikJBu4IlcL73vDw9iiGhOyypNP",
+          "webViewLink": "https://drive.google.com/file/d/1atvOi-ikJBu4IlcL73vDw9iiGhOyypNP/view?usp=drivesdk",
+          "updatedAt": "2026-09-07T02:42:08.562Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.244,
+            "bottom": 0.88,
+            "cy": 0.562,
+            "cx": 0.5,
+            "iconCenterOverLogo": 0.382
+          },
+          "note": "v2 photoreal; shipped as POS main"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_42221669",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "MC_pure-matcha",
+      "folder": "MC_เพียวมัทฉะ",
+      "group": "มัจฉะแท้",
+      "posName": "เพียวมัทฉะ (Pure Matcha)",
+      "displayName": "เพียวมัทฉะ",
+      "source": "",
+      "sourceDriveId": "",
+      "driveSkuFolderId": "14S5tspFEZcLZfbfiDNQKl6BYs8eITj-H",
+      "candidates": {
+        "v1": {
+          "file": "มัจฉะแท้/MC_เพียวมัทฉะ/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1xdXwFHe-fO6AaPnZTL9Nm96Z7QCZ8rBm",
+          "webViewLink": "https://drive.google.com/file/d/1xdXwFHe-fO6AaPnZTL9Nm96Z7QCZ8rBm/view?usp=drivesdk",
+          "updatedAt": "2026-09-07T02:42:08.562Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.246,
+            "bottom": 0.88,
+            "cy": 0.563,
+            "cx": 0.502,
+            "iconCenterOverLogo": 0.382
+          },
+          "note": "v2 photoreal; shipped as POS main"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_42221869",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "MC_matcha-coconut",
+      "folder": "MC_มัทฉะมะพร้าว",
+      "group": "มัจฉะแท้",
+      "posName": "มัทฉะมะพร้าว",
+      "displayName": "มัทฉะมะพร้าว",
+      "source": "",
+      "sourceDriveId": "",
+      "driveSkuFolderId": "1uMn9JKRw3VS_c8l3jij16Q8RYos-lcKd",
+      "candidates": {
+        "v1": {
+          "file": "มัจฉะแท้/MC_มัทฉะมะพร้าว/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1F8rLas-ilQBywQ9yjISkDnDx7xy8xz3_",
+          "webViewLink": "https://drive.google.com/file/d/1F8rLas-ilQBywQ9yjISkDnDx7xy8xz3_/view?usp=drivesdk",
+          "updatedAt": "2026-09-07T02:42:08.562Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.241,
+            "bottom": 0.88,
+            "cy": 0.561,
+            "cx": 0.503,
+            "iconCenterOverLogo": 0.382
+          },
+          "note": "v2 photoreal; shipped as POS main"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_42571021",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "MC_matcha-coconut-milk",
+      "folder": "MC_มัทฉะมะพร้าวนม",
+      "group": "มัจฉะแท้",
+      "posName": "มัทฉะมะพร้าวนม",
+      "displayName": "มัทฉะมะพร้าวนม",
+      "source": "",
+      "sourceDriveId": "",
+      "driveSkuFolderId": "1ajjKXB3agJmeY50mzl5jcjIKkyRFtCd2",
+      "candidates": {
+        "v1": {
+          "file": "มัจฉะแท้/MC_มัทฉะมะพร้าวนม/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1DknH2HuF6bvE1RZUbVED_CbsNJdrlyhK",
+          "webViewLink": "https://drive.google.com/file/d/1DknH2HuF6bvE1RZUbVED_CbsNJdrlyhK/view?usp=drivesdk",
+          "updatedAt": "2026-09-07T02:42:08.562Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.195,
+            "bottom": 0.88,
+            "cy": 0.537,
+            "cx": 0.5,
+            "iconCenterOverLogo": 0.382
+          },
+          "note": "v2 photoreal; shipped as POS main"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_42571194",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "MC_matcha-lemon",
+      "folder": "MC_มัทฉะเลม่อนเย็น",
+      "group": "มัจฉะแท้",
+      "posName": "มัทฉะเลม่อนเย็น (Matcha Lemon)",
+      "displayName": "มัทฉะเลม่อนเย็น",
+      "source": "",
+      "sourceDriveId": "",
+      "driveSkuFolderId": "1OGJTWfyxlnD4ptVPpQDbPe3vaFELJEbz",
+      "candidates": {
+        "v1": {
+          "file": "มัจฉะแท้/MC_มัทฉะเลม่อนเย็น/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1wNNwsVXFuLHLTvnT6Yqv553bArMrnEiR",
+          "webViewLink": "https://drive.google.com/file/d/1wNNwsVXFuLHLTvnT6Yqv553bArMrnEiR/view?usp=drivesdk",
+          "updatedAt": "2026-09-07T02:42:08.562Z",
+          "cup": {
+            "method": "icon-center-on-cup",
+            "top": 0.24,
+            "bottom": 0.88,
+            "cy": 0.56,
+            "cx": 0.502,
+            "iconCenterOverLogo": 0.382
+          },
+          "note": "v2 photoreal; shipped as POS main"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_43979100",
+      "posBackupAttached": true,
+      "logoPlacement": "icon-center-on-cup"
+    },
+    {
+      "sku": "BK_shio-pan",
+      "folder": "BK_ชิโอปัง",
+      "group": "เบเกอรี่",
+      "posName": "ชิโอปัง (Shio Pan) โฮมเมด ใหญ่ขึ้น",
+      "displayName": "ชิโอปัง",
+      "source": "",
+      "sourceDriveId": "",
+      "driveSkuFolderId": "1HaJiTvH4fgOiXDHB3GQoYA4VCdMYZC8g",
+      "candidates": {
+        "v1": {
+          "file": "เบเกอรี่/BK_ชิโอปัง/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1rdN4gT3EPTyi5LLYeE5RsIS_9BJ-e0Wk",
+          "webViewLink": "https://drive.google.com/file/d/1rdN4gT3EPTyi5LLYeE5RsIS_9BJ-e0Wk/view?usp=drivesdk",
+          "updatedAt": "2026-09-07T03:31:04.607Z",
+          "logo": {
+            "placeOn": "corner-top-right",
+            "widthOverFrame": 0.11,
+            "color": "white"
+          },
+          "note": "shipped POS main v2 slightly larger; corner-top-right white logo"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_44187147",
+      "posBackupAttached": true,
+      "logoPlacement": "corner-top-right"
+    },
+    {
+      "sku": "BK_brownie",
+      "folder": "BK_บราวนี่",
+      "group": "เบเกอรี่",
+      "posName": "บราวนี่โฮมเมด",
+      "displayName": "บราวนี่",
+      "source": "",
+      "sourceDriveId": "",
+      "driveSkuFolderId": "1j0JYZ0SJU90a8zdkE87b4UwOUtLLcWDi",
+      "candidates": {
+        "v1": {
+          "file": "เบเกอรี่/BK_บราวนี่/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1uTwFr3BgQUBJUDwyq3LJJyYAwHBhNOoy",
+          "webViewLink": "https://drive.google.com/file/d/1uTwFr3BgQUBJUDwyq3LJJyYAwHBhNOoy/view?usp=drivesdk",
+          "updatedAt": "2026-09-07T03:26:39.903Z",
+          "logo": {
+            "placeOn": "corner-top-right",
+            "widthOverFrame": 0.11,
+            "color": "white"
+          },
+          "note": "shipped POS main v3 plate; corner-top-right white logo"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_44909012",
+      "posBackupAttached": true,
+      "logoPlacement": "corner-top-right"
+    },
+    {
+      "sku": "BK_waffle",
+      "folder": "BK_วาฟเฟิลเบลเยียม",
+      "group": "เบเกอรี่",
+      "posName": "วาฟเฟิลเบลเยียม โฮมเมด",
+      "displayName": "วาฟเฟิลเบลเยียม",
+      "source": "",
+      "sourceDriveId": "",
+      "driveSkuFolderId": "1ip7Pp2ysNiKWqJRt4ezfOOYaLVKSMxpJ",
+      "candidates": {
+        "v1": {
+          "file": "เบเกอรี่/BK_วาฟเฟิลเบลเยียม/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1sXPZCrUxStgnZ7sZOOGPL6kKhd4ORyr0",
+          "webViewLink": "https://drive.google.com/file/d/1sXPZCrUxStgnZ7sZOOGPL6kKhd4ORyr0/view?usp=drivesdk",
+          "updatedAt": "2026-09-07T03:17:22.830Z",
+          "logo": {
+            "placeOn": "corner-top-right",
+            "widthOverFrame": 0.11,
+            "color": "white"
+          },
+          "note": "shipped POS main; corner-top-right white logo"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_49538393",
+      "posBackupAttached": true,
+      "logoPlacement": "corner-top-right"
+    },
+    {
+      "sku": "BK_taro-bread",
+      "folder": "BK_ปังมันม่วง",
+      "group": "เบเกอรี่",
+      "posName": "ปังมันม่วง อบสด โฮมเมด",
+      "displayName": "ปังมันม่วง",
+      "source": "",
+      "sourceDriveId": "",
+      "driveSkuFolderId": "1vo1Gx3tWhZH5-Q8MfwALAOg6Je2QCsEg",
+      "candidates": {
+        "v1": {
+          "file": "เบเกอรี่/BK_ปังมันม่วง/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1AY_bO8ilJOHpxhe2kZ3ibtDRBFiYiqR2",
+          "webViewLink": "https://drive.google.com/file/d/1AY_bO8ilJOHpxhe2kZ3ibtDRBFiYiqR2/view?usp=drivesdk",
+          "updatedAt": "2026-09-07T03:17:22.830Z",
+          "logo": {
+            "placeOn": "corner-top-right",
+            "widthOverFrame": 0.11,
+            "color": "white"
+          },
+          "note": "shipped POS main; corner-top-right white logo"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_44359362",
+      "posBackupAttached": true,
+      "logoPlacement": "corner-top-right"
+    },
+    {
+      "sku": "BK_thai-yam",
+      "folder": "BK_มันไทยอบ",
+      "group": "เบเกอรี่",
+      "posName": "มันไทยอบ ดั้งเดิม",
+      "displayName": "มันไทยอบ",
+      "source": "",
+      "sourceDriveId": "",
+      "driveSkuFolderId": "1wemOfy21jD-ojDp3OVJ0dJRF1ezFXlYb",
+      "candidates": {
+        "v1": {
+          "file": "เบเกอรี่/BK_มันไทยอบ/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1i4S9pJd1WqpiPrT1W8oXwCfn8tUvzncp",
+          "webViewLink": "https://drive.google.com/file/d/1i4S9pJd1WqpiPrT1W8oXwCfn8tUvzncp/view?usp=drivesdk",
+          "updatedAt": "2026-09-07T03:17:22.830Z",
+          "logo": {
+            "placeOn": "corner-top-right",
+            "widthOverFrame": 0.11,
+            "color": "white"
+          },
+          "note": "shipped POS main; corner-top-right white logo"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_47343036",
+      "posBackupAttached": true,
+      "logoPlacement": "corner-top-right"
+    },
+    {
+      "sku": "BK_banana-cake",
+      "folder": "BK_เค้กกล้วยหอม",
+      "group": "เบเกอรี่",
+      "posName": "เค้กกล้วยหอม โฮมเมด",
+      "displayName": "เค้กกล้วยหอม",
+      "source": "",
+      "sourceDriveId": "",
+      "driveSkuFolderId": "1CaM3NZ0o8wZ2HcEFYmBnQRjjXXL3N4Ri",
+      "candidates": {
+        "v1": {
+          "file": "เบเกอรี่/BK_เค้กกล้วยหอม/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1zhDU86uu3Tqatw-IRoGG9Rkujx56xqar",
+          "webViewLink": "https://drive.google.com/file/d/1zhDU86uu3Tqatw-IRoGG9Rkujx56xqar/view?usp=drivesdk",
+          "updatedAt": "2026-09-07T03:17:22.830Z",
+          "logo": {
+            "placeOn": "corner-top-right",
+            "widthOverFrame": 0.11,
+            "color": "white"
+          },
+          "note": "shipped POS main; corner-top-right white logo"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_47642235",
+      "posBackupAttached": true,
+      "logoPlacement": "corner-top-right"
+    },
+    {
+      "sku": "BK_soft-cookie",
+      "folder": "BK_ซอฟต์คุกกี้",
+      "group": "เบเกอรี่",
+      "posName": "ซอฟต์คุกกี้ โฮมเมด (เลือกได้)",
+      "displayName": "ซอฟต์คุกกี้",
+      "source": "",
+      "sourceDriveId": "",
+      "driveSkuFolderId": "1lQXXyG3gRVcWjTDD8oGC6_GCre1nQtns",
+      "candidates": {
+        "v1": {
+          "file": "เบเกอรี่/BK_ซอฟต์คุกกี้/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1duvcG979vR3gBAvNDTdwWE7GBRiD6HfH",
+          "webViewLink": "https://drive.google.com/file/d/1duvcG979vR3gBAvNDTdwWE7GBRiD6HfH/view?usp=drivesdk",
+          "updatedAt": "2026-09-07T03:26:39.903Z",
+          "logo": {
+            "placeOn": "corner-top-right",
+            "widthOverFrame": 0.11,
+            "color": "white"
+          },
+          "note": "shipped POS main v3 plate; corner-top-right white logo"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_45717125",
+      "posBackupAttached": true,
+      "logoPlacement": "corner-top-right"
+    },
+    {
+      "sku": "BK_butter-bread",
+      "folder": "BK_ปังเนยกรอบอบไอน้ำ",
+      "group": "เบเกอรี่",
+      "posName": "ปังเนยกรอบอบไอน้ำ",
+      "displayName": "ปังเนยกรอบอบไอน้ำ",
+      "source": "",
+      "sourceDriveId": "",
+      "driveSkuFolderId": "1VpimjDXQrjlUpJVSLueQzqnA4gDXEAGK",
+      "candidates": {
+        "v1": {
+          "file": "เบเกอรี่/BK_ปังเนยกรอบอบไอน้ำ/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "1Wq3LFtFZIce2qYmqKLh50N5fHB2vCOT_",
+          "webViewLink": "https://drive.google.com/file/d/1Wq3LFtFZIce2qYmqKLh50N5fHB2vCOT_/view?usp=drivesdk",
+          "updatedAt": "2026-09-07T03:17:22.830Z",
+          "logo": {
+            "placeOn": "corner-top-right",
+            "widthOverFrame": 0.11,
+            "color": "white"
+          },
+          "note": "shipped POS main; corner-top-right white logo"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_43772079",
+      "posBackupAttached": true,
+      "logoPlacement": "corner-top-right"
+    },
+    {
+      "sku": "BK_icecream-togo",
+      "folder": "BK_ไอศครีมทูโก",
+      "group": "เบเกอรี่",
+      "posName": "Ice Cream To-Go แก้วใหญ่ 16oz (แถมถุงเย็น)",
+      "displayName": "Ice Cream To-Go",
+      "source": "",
+      "sourceDriveId": "",
+      "driveSkuFolderId": "1ai7OHQfL8V9qUg7b0ttYYNW9r9tInCUx",
+      "candidates": {
+        "v1": {
+          "file": "เบเกอรี่/BK_ไอศครีมทูโก/v1-โทนเขียว-2000.jpg",
+          "driveFileId": "122RyOxSDtfDYSO8ckpN-4G1h9hwm6abc",
+          "webViewLink": "https://drive.google.com/file/d/122RyOxSDtfDYSO8ckpN-4G1h9hwm6abc/view?usp=drivesdk",
+          "updatedAt": "2026-09-07T04:17:52.161Z",
+          "logo": {
+            "placeOn": "chin-center-on-cup",
+            "chinOverLogo": 0.434,
+            "centerXOnLogo": 0.5,
+            "widthOverCup": 0.62,
+            "color": "white"
+          },
+          "note": "shipped POS main v5; chin of icon = cup center both axes"
+        }
+      },
+      "main": "v1",
+      "posAttached": true,
+      "posItemId": "fs_item_44595674",
+      "posBackupAttached": true,
+      "logoPlacement": "chin-center-on-cup"
     }
   ],
-  "updatedAt": "2026-09-05T07:31:43.513Z"
+  "updatedAt": "2026-09-07T04:17:52.161Z"
 }

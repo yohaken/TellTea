@@ -169,7 +169,7 @@ export function ImagePreviewModal({
     setMounted(true);
   }, []);
 
-  /** ปุ่มย้อนกลับ / gesture กลับของมือถือ → ปิดแค่ตัวดูรูป ไม่หลุดฟอร์ม */
+  /** ปุ่มย้อนกลับ / gesture กลับของมือถือ → ปิดแค่ตัวดูรูป ไม่หลุดหน้า */
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   useEffect(() => {
@@ -183,12 +183,14 @@ export function ImagePreviewModal({
     window.addEventListener("popstate", onPop);
     return () => {
       window.removeEventListener("popstate", onPop);
+      // อย่า pop history — Next.js เจอ popstate ที่ไม่มี __NA จะ reload ทั้งหน้า
+      // และ Strict remount ใน `next dev` จะเด้งออกทันทีที่กดดูรูป
       if (
         !closedByPop &&
         window.history.state &&
         (window.history.state as { photoFs?: string }).photoFs === token
       ) {
-        window.history.back();
+        window.history.replaceState(null, "");
       }
     };
   }, []);
