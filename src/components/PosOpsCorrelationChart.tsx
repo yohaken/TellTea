@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   loadPosOpsCorrPrefs,
   savePosOpsCorrPrefs,
@@ -110,9 +110,13 @@ export function PosOpsCorrelationChart({ points }: { points: PosOpsDayPoint[] })
   const innerH = H - pad.top - pad.bottom;
 
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const tipRef = useRef<HTMLDivElement | null>(null);
   const [visible, setVisible] = useState<Record<SeriesId, boolean>>(defaultPosOpsCorrVisible);
   const [prefsReady, setPrefsReady] = useState(false);
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+  /** Pixel left edge of tooltip — clamped so the box stays inside the chart wrap. */
+  const [tipLeftPx, setTipLeftPx] = useState(0);
 
   useEffect(() => {
     const prefs = loadPosOpsCorrPrefs();
@@ -221,8 +225,21 @@ export function PosOpsCorrelationChart({ points }: { points: PosOpsDayPoint[] })
 
   const hoverPoint = hoverIdx != null ? points[hoverIdx] : null;
   const hoverX = hoverIdx != null ? xs[hoverIdx] : null;
-  const tipLeftPct =
-    hoverX != null ? Math.min(92, Math.max(8, (hoverX / W) * 100)) : 50;
+
+  useLayoutEffect(() => {
+    if (hoverIdx == null || hoverX == null || !hoverPoint) {
+      return;
+    }
+    const wrap = wrapRef.current;
+    const tip = tipRef.current;
+    if (!wrap || !tip) return;
+    const margin = 4;
+    const wrapW = wrap.clientWidth;
+    const tipW = tip.offsetWidth;
+    const anchor = (hoverX / W) * wrapW;
+    const maxLeft = Math.max(margin, wrapW - tipW - margin);
+    setTipLeftPx(Math.min(maxLeft, Math.max(margin, anchor - tipW / 2)));
+  }, [hoverIdx, hoverX, hoverPoint, activeSeries]);
 
   return (
     <section className="pos-ops-corr-card" aria-label="ความสัมพันธ์ยอดขาย ชง ผลิต">
@@ -256,11 +273,12 @@ export function PosOpsCorrelationChart({ points }: { points: PosOpsDayPoint[] })
         {formatStockQty(totals.brewQty)} · โบนัสชง {formatPlainNumber(totals.brewBonus)} · ผลิต{" "}
         {formatStockQty(totals.prodQty)} · โบนัสผลิต {formatPlainNumber(totals.prodBonus)}
       </div>
-      <div className="pos-ops-corr-svg-wrap">
+      <div className="pos-ops-corr-svg-wrap" ref={wrapRef}>
         {hoverPoint && activeSeries.length ? (
           <div
+            ref={tipRef}
             className="pos-ops-corr-tooltip"
-            style={{ left: `${tipLeftPct}%` }}
+            style={{ left: tipLeftPx }}
             role="status"
           >
             <div className="pos-ops-corr-tooltip-date">{hoverPoint.label}</div>
@@ -268,7 +286,7 @@ export function PosOpsCorrelationChart({ points }: { points: PosOpsDayPoint[] })
               {activeSeries.map((s) => (
                 <li key={s.id}>
                   <span className={`pos-ops-swatch ${s.swatchClass}`} />
-                  <span>{s.label}</span>
+                  <span className="pos-ops-corr-tooltip-label">{s.label}</span>
                   <strong>{s.format(s.get(hoverPoint))}</strong>
                 </li>
               ))}
