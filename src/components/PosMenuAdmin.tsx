@@ -108,7 +108,6 @@ export function PosMenuAdmin({
   const [quickAdd, setQuickAdd] = useState<QuickAdd>(null);
   const [quickName, setQuickName] = useState("");
   const [quickPrice, setQuickPrice] = useState("45");
-  const [quickDeliveryPrice, setQuickDeliveryPrice] = useState("");
   const [categories, setCategories] = useState<MenuCategory[]>(seeded.categories);
   const [items, setItems] = useState<MenuItem[]>(seeded.items);
   const [optionGroups, setOptionGroups] = useState<MenuOptionGroup[]>(seeded.optionGroups);
@@ -359,7 +358,6 @@ export function PosMenuAdmin({
   function openQuickAdd(next: QuickAdd) {
     setQuickName("");
     setQuickPrice("45");
-    setQuickDeliveryPrice("");
     setQuickAdd(next);
   }
 
@@ -377,14 +375,10 @@ export function PosMenuAdmin({
         setScreen({ kind: "edit-group", id });
       } else {
         const price = Number(quickPrice) || 0;
-        const deliveryRaw = quickDeliveryPrice.trim();
-        const deliveryPrice =
-          deliveryRaw !== "" ? Math.max(0, Number(deliveryRaw) || 0) : undefined;
         const id = await addMenuItem({
           categoryId: quickAdd.categoryId,
           name: quickName.trim(),
           price,
-          ...(typeof deliveryPrice === "number" ? { deliveryPrice } : {}),
         });
         const now = Date.now();
         const optimistic: MenuItem = {
@@ -392,7 +386,6 @@ export function PosMenuAdmin({
           categoryId: quickAdd.categoryId,
           name: quickName.trim(),
           price,
-          ...(typeof deliveryPrice === "number" ? { deliveryPrice } : {}),
           sortOrder: now,
           active: true,
           visibleOnPos: true,
@@ -832,12 +825,6 @@ export function PosMenuAdmin({
                                         </span>
                                         <span className="muted pos-menu-item-price-line">
                                           ฿{formatPlainNumber(item.price)}
-                                          {" · ส่ง ฿"}
-                                          {formatPlainNumber(
-                                            typeof item.deliveryPrice === "number"
-                                              ? item.deliveryPrice
-                                              : item.price,
-                                          )}
                                           {item.code ? ` · ${item.code}` : ""}
                                         </span>
                                       </button>
@@ -1110,30 +1097,17 @@ export function PosMenuAdmin({
             </label>
             {quickAdd.kind === "item" ? (
               <>
-                <div className="pos-menu-price-row">
-                  <label>
-                    <span>ราคาหน้าร้าน (฿)</span>
-                    <input
-                      type="number"
-                      min={0}
-                      step={1}
-                      value={quickPrice}
-                      onChange={(e) => setQuickPrice(e.target.value)}
-                      required
-                    />
-                  </label>
-                  <label>
-                    <span>ราคาเดลิเวอรี่ (฿)</span>
-                    <input
-                      type="number"
-                      min={0}
-                      step={1}
-                      value={quickDeliveryPrice}
-                      onChange={(e) => setQuickDeliveryPrice(e.target.value)}
-                      placeholder="ว่าง = ใช้หน้าร้าน"
-                    />
-                  </label>
-                </div>
+                <label>
+                  <span>ราคาหน้าร้าน (฿)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={quickPrice}
+                    onChange={(e) => setQuickPrice(e.target.value)}
+                    required
+                  />
+                </label>
                 <p className="muted pos-menu-quick-hint">
                   หลังกดเพิ่ม จะเปิดตั้งค่ารูป · รายละเอียด · ช่องทางขาย · กลุ่มตัวเลือกทันที
                 </p>

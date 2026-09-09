@@ -109,6 +109,7 @@ import {
   formatDateShortBe,
   formatDateTimeShortBe,
   formatPlainNumber,
+  formatWeekdayTh,
   parseDateInput,
   startOfLocalDay,
   todayInputValue,
@@ -1627,7 +1628,6 @@ function OtSheetTable({
   onError: (msg: string) => void;
   onViewPhoto: (urls: string[], title: string, entryDateMs?: number) => void;
 }) {
-  const colCount = 19 + (isOwner ? 1 : 0);
   const slotCount = groups[0]?.slots.length || 3;
 
   return (
@@ -1635,7 +1635,7 @@ function OtSheetTable({
       <table className="sheet-table ot-table sheet-table--dense">
         <thead>
           <tr>
-            <th className="ot-th-staff col-sticky-left ot-col-date">วันที่</th>
+            <th className="ot-th-staff col-sticky-left ot-col-date">วัน</th>
             <th className="ot-th-staff ot-col-worker">พนักงาน</th>
             <th className="ot-th-staff ot-col-shift">รอบงาน</th>
             <th className="ot-th-machine col-out">เครื่อง</th>
@@ -1658,7 +1658,7 @@ function OtSheetTable({
           </tr>
         </thead>
         <tbody>
-          {groups.map((group) => {
+          {groups.map((group, dayIdx) => {
             const futureDay = isFutureLocalDay(group.date);
             return (
             <Fragment key={group.date}>
@@ -1723,14 +1723,34 @@ function OtSheetTable({
                             ? "ot-day-future row-out"
                             : "row-out";
 
+                const dayRowClass = [
+                  rowClass,
+                  idx === 0 && dayIdx > 0 ? "ot-day-start" : "",
+                  photoFlagged ? "is-photo-flag" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ");
+
                 return (
                   <tr
                     key={`${group.date}-${slot.shiftId}`}
-                    className={photoFlagged ? `${rowClass} is-photo-flag` : rowClass}
+                    className={dayRowClass}
                   >
                     {idx === 0 ? (
-                      <td className="col-sticky-left ot-col-date ot-date-cell" rowSpan={slotCount}>
-                        {formatDateShortBe(group.date)}
+                      <td
+                        className="col-sticky-left ot-col-date ot-date-cell"
+                        rowSpan={slotCount}
+                      >
+                        <span className="ot-date-head">
+                          <span className="ot-date-weekday">{formatWeekdayTh(group.date)}</span>
+                          <span className="ot-date-num">{formatDateShortBe(group.date)}</span>
+                        </span>
+                        <span className="ot-date-meta">
+                          หน่วย {formatPlainNumber(group.summaryQty)}
+                        </span>
+                        <span className="ot-date-meta">
+                          โบนัส ฿{formatPlainNumber(group.totalBonus)}
+                        </span>
                       </td>
                     ) : null}
                     <td className="ot-col-worker">
@@ -1870,12 +1890,6 @@ function OtSheetTable({
                   </tr>
                 );
               })}
-              <tr className="ot-day-summary">
-                <td colSpan={colCount}>
-                  สรุป {formatDateShortBe(group.date)}: {group.filledCount}/{group.slots.length} กะ · สรุปหน่วย{" "}
-                  {formatPlainNumber(group.summaryQty)} · โบนัสรวม ฿{formatPlainNumber(group.totalBonus)}
-                </td>
-              </tr>
             </Fragment>
             );
           })}

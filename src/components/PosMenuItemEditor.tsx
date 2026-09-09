@@ -19,7 +19,6 @@ function hydrateEditorState(item: MenuItem) {
     code: item.code || "",
     categoryId: item.categoryId,
     price: String(item.price),
-    deliveryPrice: typeof item.deliveryPrice === "number" ? String(item.deliveryPrice) : "",
     description: item.description || "",
     imageUrl: item.imageUrl || "",
     imageBackups: Array.isArray(item.imageBackups) ? item.imageBackups.filter(Boolean) : [],
@@ -59,7 +58,6 @@ export function PosMenuItemEditor({
     preferredCategoryId || initial.categoryId,
   );
   const [price, setPrice] = useState(initial.price);
-  const [deliveryPrice, setDeliveryPrice] = useState(initial.deliveryPrice);
   const [description, setDescription] = useState(initial.description);
   const [imageUrl, setImageUrl] = useState(initial.imageUrl);
   const [imageBackups, setImageBackups] = useState<string[]>(initial.imageBackups);
@@ -82,7 +80,6 @@ export function PosMenuItemEditor({
     setCode(next.code);
     setCategoryId(preferredCategoryId || next.categoryId);
     setPrice(next.price);
-    setDeliveryPrice(next.deliveryPrice);
     setDescription(next.description);
     setImageUrl(next.imageUrl);
     setImageBackups(next.imageBackups);
@@ -167,8 +164,6 @@ export function PosMenuItemEditor({
         code: code.trim() || null,
         categoryId,
         price: Number(price) || 0,
-        deliveryPrice:
-          deliveryPrice.trim() === "" ? null : Math.max(0, Number(deliveryPrice) || 0),
         description: description.trim() || undefined,
         imageUrl: imageUrl.trim() || undefined,
         imageBackups: imageBackups.length ? imageBackups : null,
@@ -190,8 +185,6 @@ export function PosMenuItemEditor({
     .map((id) => activeGroups.find((g) => g.id === id))
     .filter((g): g is MenuOptionGroup => g != null);
   const unlinkedGroups = activeGroups.filter((g) => !linkedGroupIds.includes(g.id));
-  const deliveryEffective =
-    deliveryPrice.trim() === "" ? Number(price) || 0 : Number(deliveryPrice) || 0;
 
   return (
     <div className={modal ? "pos-menu-editor-modal" : "pos-menu-admin-screen"}>
@@ -335,8 +328,7 @@ export function PosMenuItemEditor({
             <section className="pos-menu-editor-card" aria-label="ช่องทางในการขาย">
               <h2 className="pos-menu-editor-card-title">ช่องทางในการขาย</h2>
               <p className="muted pos-menu-price-dual-hint">
-                ตั้งราคาแยกหน้าร้านกับเดลิเวอรี่ · ว่าง = ใช้หน้าร้าน · placeholder «ส่ง» · ใส่ 0
-                ถ้าต้องการราคาเดลิเป็นศูนย์จริง
+                ราคาขายหน้าร้าน (nPos) · ราคาแอปส่งตั้งที่จัดการราคาช่องทาง
               </p>
               <div className="pos-menu-channel-table" role="table" aria-label="ราคาตามช่องทาง">
                 <div className="pos-menu-channel-head" role="row">
@@ -364,32 +356,9 @@ export function PosMenuItemEditor({
                     ฿{formatPlainNumber(Number(price) || 0)}
                   </span>
                 </div>
-                <div className="pos-menu-channel-row" role="row">
-                  <span className="pos-menu-channel-name" role="cell">
-                    เดลิเวอรี่
-                  </span>
-                  <label className="pos-menu-channel-price" role="cell">
-                    <span className="sr-only">ราคาเดลิเวอรี่</span>
-                    <input
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={deliveryPrice}
-                      onChange={(e) => setDeliveryPrice(e.target.value)}
-                      placeholder="ส่ง"
-                      title="ว่าง = ใช้ราคาหน้าร้าน"
-                      aria-label="ราคาเดลิเวอรี่"
-                    />
-                  </label>
-                  <span className="pos-menu-channel-effective" role="cell">
-                    ฿{formatPlainNumber(deliveryEffective)}
-                  </span>
-                </div>
               </div>
-              {/* Keep dual-price class hook for existing tests */}
               <div className="pos-menu-price-row pos-menu-price-row--sr" aria-hidden="true">
                 <span>ราคาหน้าร้าน</span>
-                <span>ราคาเดลิเวอรี่</span>
               </div>
             </section>
 
@@ -516,9 +485,6 @@ export function PosMenuItemEditor({
 
           <p className="muted pos-menu-price-hint">
             หน้าร้าน ฿{formatPlainNumber(Number(price) || 0)}
-            {deliveryPrice.trim() !== ""
-              ? ` · เดลิเวอรี่ ฿${formatPlainNumber(Number(deliveryPrice) || 0)}`
-              : " · เดลิเวอรี่ = หน้าร้าน"}
           </p>
 
           <div className="pos-menu-editor-actions">

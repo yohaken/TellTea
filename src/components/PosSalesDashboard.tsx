@@ -537,10 +537,19 @@ export function PosSalesDashboard({
       ) : null}
       {loading ? <p className="empty">กำลังโหลดแดชบอร์ด...</p> : null}
 
-      {!rangeTooLong ? <PosOpsCorrelationChart points={opsPoints} /> : null}
-
       {!loading && !rangeTooLong ? (
         <>
+          <div className="pos-dash-daily-block">
+            <PosDashDailyTotalsTable
+              points={byDay}
+              weatherByDay={weatherByDay}
+              weatherLoading={weatherLoading}
+            />
+            <PosDashDailyAreaChart points={byDay} />
+          </div>
+
+          <PosOpsCorrelationChart points={opsPoints} />
+
           <div className="pos-dash-top-grid">
             <article className="pos-dash-card pos-dash-card--net">
               <h3 className="pos-dash-card-title">ยอดรับเงินจริง</h3>
@@ -691,15 +700,6 @@ export function PosSalesDashboard({
                 </div>
               </div>
             </article>
-          </div>
-
-          <div className="pos-dash-daily-block">
-            <PosDashDailyTotalsTable
-              points={byDay}
-              weatherByDay={weatherByDay}
-              weatherLoading={weatherLoading}
-            />
-            <PosDashDailyAreaChart points={byDay} />
           </div>
 
           <PosSalesDashboardMembers

@@ -9,8 +9,8 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 365/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 102/);
+assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD\s*=\s*(\d+)/)?.[1] || 0) >= 904);
+assert.ok(Number(read("src/lib/pos-version.ts").match(/POS_BUILD\s*=\s*(\d+)/)?.[1] || 0) >= 102);
 
 // P3 — search / duplicate / archive
 const admin = read("src/components/PosMenuAdmin.tsx");
@@ -36,13 +36,13 @@ assert.match(optLib, /export async function archiveMenuOptionGroup/);
 assert.match(read("src/components/PosMenuItemEditor.tsx"), /เก็บเข้าคลัง/);
 assert.match(read("src/components/PosOptionGroupEditor.tsx"), /เก็บเข้าคลัง/);
 
-// P4 — sell channel
+// P4 — sell channel locked to storefront (delivery UI retired)
 const sell = read("src/components/PosSellView.tsx");
 assert.match(sell, /priceChannel/);
-assert.match(sell, /applyPriceChannel/);
 assert.match(sell, /resolveMenuItemPrice/);
-assert.match(sell, /pos-sell-channel/);
 assert.match(sell, /channel=\{priceChannel\}/);
+assert.match(sell, /priceChannel: MenuPriceChannel = "store"/);
+assert.doesNotMatch(sell, /applyPriceChannel|pos-sell-channel/);
 
 const cart = read("src/lib/pos-menu-cart.ts");
 assert.match(cart, /selectionsFromCounts\([\s\S]*channel/);
@@ -54,7 +54,7 @@ const picker = read("src/components/PosOptionPickerModal.tsx");
 assert.match(picker, /channel\?: MenuPriceChannel/);
 assert.match(picker, /resolveOptionPriceDelta\(opt, channel\)/);
 
-// channel math smoke (mirrors resolve helpers)
+// channel math smoke (mirrors resolve helpers — delivery still in schema)
 function resolveMenuItemPrice(item, channel = "store") {
   if (channel === "delivery" && typeof item.deliveryPrice === "number") {
     return Math.max(0, item.deliveryPrice);
@@ -74,14 +74,12 @@ assert.equal(resolveOptionPriceDelta({ priceDelta: 10, deliveryPriceDelta: 15 },
 assert.equal(resolveOptionPriceDelta({ priceDelta: 10 }, "delivery"), 10);
 
 const nposSell = read("npos-telltea/app/src/main/java/app/telltea/npos/SellActivity.java");
-assert.match(nposSell, /deliveryChannel/);
-assert.match(nposSell, /priceForChannel|itemPrice\(/);
+assert.match(nposSell, /itemPrice\(/);
 assert.match(nposSell, /optionDelta\(/);
-assert.match(nposSell, /priceChannelToggle/);
-assert.match(nposSell, /togglePriceChannel/);
+assert.doesNotMatch(nposSell, /togglePriceChannel|priceChannelToggle/);
 
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode 66/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName "1.14.49"/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode \d+/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName "/);
 
 // P5 — cut POS menu admin (+ web counter retired)
 const posMenuPage = read("src/app/pos/menu/page.tsx");

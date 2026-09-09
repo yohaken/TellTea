@@ -6,7 +6,7 @@ import { menuTextIncludes } from "@/lib/pos-menu-text";
 import type { MenuCategory, MenuItem } from "@/lib/types";
 
 /**
- * Bulk edit menu item prices (store × delivery) — flat list, search across categories.
+ * Bulk edit menu item storefront prices — flat list, search across categories.
  */
 export function PosMenuItemPriceTable({
   items,
@@ -37,7 +37,7 @@ export function PosMenuItemPriceTable({
   );
 
   const [query, setQuery] = useState("");
-  const [draft, setDraft] = useState<Record<string, { store: string; delivery: string }>>({});
+  const [draft, setDraft] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
@@ -62,17 +62,11 @@ export function PosMenuItemPriceTable({
   }
 
   function getDraft(item: MenuItem) {
-    return (
-      draft[item.id] || {
-        store: String(item.price ?? 0),
-        delivery: typeof item.deliveryPrice === "number" ? String(item.deliveryPrice) : "",
-      }
-    );
+    return draft[item.id] ?? String(item.price ?? 0);
   }
 
-  function setCell(item: MenuItem, field: "store" | "delivery", value: string) {
-    const cur = getDraft(item);
-    setDraft((prev) => ({ ...prev, [item.id]: { ...cur, [field]: value } }));
+  function setCell(item: MenuItem, value: string) {
+    setDraft((prev) => ({ ...prev, [item.id]: value }));
     setOk(null);
   }
 
@@ -88,13 +82,10 @@ export function PosMenuItemPriceTable({
       }
       await Promise.all(
         ids.map((id) => {
-          const d = draft[id];
-          if (!d) return Promise.resolve();
-          const deliveryRaw = d.delivery.trim();
+          const raw = draft[id];
+          if (raw === undefined) return Promise.resolve();
           return updateMenuItem(id, {
-            price: Math.max(0, Number(d.store) || 0),
-            deliveryPrice:
-              deliveryRaw === "" ? null : Math.max(0, Number(deliveryRaw) || 0),
+            price: Math.max(0, Number(raw) || 0),
           });
         }),
       );
@@ -111,8 +102,7 @@ export function PosMenuItemPriceTable({
   return (
     <div className="pos-menu-price-table-wrap">
       <p className="muted pos-menu-sort-hint">
-        ตั้งราคาเมนูทั้งร้านในตารางเดียว · ไม่แยกหมวด · ค้นหาชื่อ/รหัส/หมวดได้ · เดลิเวอรี่ว่างหรือ
-        «ส่ง» = ใช้หน้าร้าน · ใส่ 0 ถ้าต้องการศูนย์จริง
+        ตั้งราคาเมนูทั้งร้านในตารางเดียว · ไม่แยกหมวด · ค้นหาชื่อ/รหัส/หมวดได้ · ราคาแอปส่งตั้งที่จัดการราคาช่องทาง
       </p>
       <div className="pos-menu-toolbar">
         <input
@@ -152,12 +142,11 @@ export function PosMenuItemPriceTable({
               <th>เมนู</th>
               <th>หมวด</th>
               <th>หน้าร้าน (฿)</th>
-              <th>เดลิเวอรี่ (฿)</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((item) => {
-              const d = getDraft(item);
+              const store = getDraft(item);
               return (
                 <tr key={item.id}>
                   <td>
@@ -171,21 +160,9 @@ export function PosMenuItemPriceTable({
                       type="number"
                       min={0}
                       step={0.01}
-                      value={d.store}
-                      onChange={(e) => setCell(item, "store", e.target.value)}
+                      value={store}
+                      onChange={(e) => setCell(item, e.target.value)}
                       aria-label={`หน้าร้าน ${item.name}`}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={d.delivery}
-                      placeholder="ส่ง"
-                      title="ว่าง = ใช้ราคาหน้าร้าน"
-                      onChange={(e) => setCell(item, "delivery", e.target.value)}
-                      aria-label={`เดลิเวอรี่ ${item.name}`}
                     />
                   </td>
                 </tr>
@@ -193,7 +170,7 @@ export function PosMenuItemPriceTable({
             })}
             {!rows.length ? (
               <tr>
-                <td colSpan={4} className="muted">
+                <td colSpan={3} className="muted">
                   ไม่พบเมนู
                 </td>
               </tr>

@@ -50,12 +50,12 @@ assert.match(optLib, /deliveryPriceDelta/);
 assert.match(optLib, /resolveOptionPriceDelta/);
 
 const itemEditor = read("src/components/PosMenuItemEditor.tsx");
-assert.match(itemEditor, /ราคาเดลิเวอรี่/);
-assert.match(itemEditor, /deliveryPrice/);
+assert.match(itemEditor, /ราคาหน้าร้าน/);
+assert.doesNotMatch(itemEditor, /ราคาเดลิเวอรี่|aria-label="ราคาเดลิเวอรี่"/);
 
 const groupEditor = read("src/components/PosOptionGroupEditor.tsx");
-assert.match(groupEditor, /deliveryPriceDelta/);
-assert.match(groupEditor, /ราคาเพิ่มเดลิเวอรี่/);
+assert.match(groupEditor, /ราคาเพิ่มหน้าร้าน/);
+assert.doesNotMatch(groupEditor, /ราคาเพิ่มเดลิเวอรี่|aria-label="ราคาเพิ่มเดลิเวอรี่"/);
 
 const types = read("src/lib/types.ts");
 assert.match(types, /deliveryPrice\?:/);

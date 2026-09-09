@@ -206,6 +206,38 @@ export function formatDateShortBe(ms: number) {
   return `${p.day}/${p.month}/${p.year2}`;
 }
 
+const TH_WEEKDAY_LABELS = [
+  "อาทิตย์",
+  "จันทร์",
+  "อังคาร",
+  "พุธ",
+  "พฤหัส",
+  "ศุกร์",
+  "เสาร์",
+] as const;
+
+const EN_WEEKDAY_SHORT: Record<string, number> = {
+  Sun: 0,
+  Mon: 1,
+  Tue: 2,
+  Wed: 3,
+  Thu: 4,
+  Fri: 5,
+  Sat: 6,
+};
+
+/** ชื่อวันไทยตามปฏิทิน Asia/Bangkok — เช่น จันทร์ · อังคาร */
+export function formatWeekdayTh(ms: number) {
+  if (!ms) return "—";
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Bangkok",
+    weekday: "short",
+  }).formatToParts(new Date(ms));
+  const key = parts.find((p) => p.type === "weekday")?.value || "";
+  const idx = EN_WEEKDAY_SHORT[key];
+  return idx == null ? "—" : TH_WEEKDAY_LABELS[idx];
+}
+
 /**
  * Default UI short date — พ.ศ. Asia/Bangkok (phases 0–13).
  * Use formatDateShortCe only when Gregorian display is required.

@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 365/);
+assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD\s*=\s*(\d+)/)?.[1] || 0) >= 904);
 
 const admin = read("src/components/PosMenuAdmin.tsx");
 const editor = read("src/components/PosMenuItemEditor.tsx");
@@ -26,8 +26,7 @@ assert.match(admin, /addMenuItem/);
 
 // —— Quick-add fields (ขั้นแรก) ——
 assert.match(admin, /ราคาหน้าร้าน/);
-assert.match(admin, /ราคาเดลิเวอรี่/);
-assert.match(admin, /ว่าง = ใช้หน้าร้าน/);
+assert.doesNotMatch(admin, /ราคาเดลิเวอรี่/);
 assert.match(admin, /pos-menu-quick-hint/);
 assert.match(admin, /หลังกดเพิ่ม จะเปิดตั้งค่ารูป/);
 assert.match(admin, /เพิ่มแล้วตั้งค่าต่อ/);

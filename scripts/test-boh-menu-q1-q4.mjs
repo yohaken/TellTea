@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 365/);
+assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD\s*=\s*(\d+)/)?.[1] || 0) >= 904);
 
 const admin = read("src/components/PosMenuAdmin.tsx");
 const itemEditor = read("src/components/PosMenuItemEditor.tsx");
@@ -24,21 +24,19 @@ const checklist = read("docs/boh-menu-q1-q4-checklist.md");
 // —— No CSV import UI ——
 assert.doesNotMatch(admin, /นำเข้าไฟล์|FoodStory|Wongnai CSV|importCsv|csvImport/i);
 assert.doesNotMatch(itemEditor, /นำเข้าไฟล์|FoodStory|importCsv/i);
-assert.match(menuPage, /ไม่มีนำเข้า CSV/);
-assert.doesNotMatch(menuPage, /type=["']file["']|accept=["']\.csv/i);
+assert.doesNotMatch(menuPage, /type=["']file["']|accept=["']\.csv|importCsv|csvImport/i);
 
-// —— Q1: dual price + code ——
+// —— Q1: storefront price + code (delivery UI removed) ——
 assert.match(itemEditor, /pos-menu-price-row/);
 assert.match(itemEditor, /ราคาหน้าร้าน/);
-assert.match(itemEditor, /ราคาเดลิเวอรี่/);
-assert.match(itemEditor, /ว่าง = ใช้หน้าร้าน/);
+assert.doesNotMatch(itemEditor, /ราคาเดลิเวอรี่|aria-label="ราคาเดลิเวอรี่"/);
 assert.match(itemEditor, /รหัสเมนู/);
 assert.match(itemEditor, /code: code\.trim\(\) \|\| null/);
 assert.match(itemEditor, /ผูกแล้ว \{linkedGroupIds\.length\} กลุ่ม/);
 assert.match(groupEditor, /pos-menu-option-colhead/);
 assert.match(groupEditor, /หน้าร้าน/);
-assert.match(groupEditor, /เดลิเวอรี่/);
-assert.match(admin, /· ส่ง ฿/);
+assert.doesNotMatch(groupEditor, /ราคาเพิ่มเดลิเวอรี่|aria-label="ราคาเพิ่มเดลิเวอรี่"/);
+assert.doesNotMatch(admin, /· ส่ง ฿/);
 assert.match(admin, /item\.code/);
 assert.match(menuLib, /patch\.code/);
 assert.match(css, /\.pos-menu-price-row/);
@@ -65,15 +63,17 @@ assert.match(admin, /optionGroupIds/);
 assert.match(groupEditor, /พร้อมขาย/);
 assert.match(groupEditor, /opt\.active !== false/);
 
-// —— Q4: price table ——
-assert.match(admin, /PosMenuOptionPriceTable/);
+// —— Q4: channel price hub (bulk item/option tables no longer mounted in admin) ——
+assert.match(admin, /PosMenuChannelPriceHub/);
 assert.match(admin, /ตั้งราคา/);
 assert.match(admin, /tab === "prices"/);
 assert.match(priceTable, /pos-menu-price-table/);
 assert.match(priceTable, /saveMenuOptionGroupFull/);
-assert.match(priceTable, /deliveryPriceDelta/);
+assert.match(priceTable, /priceDelta/);
+assert.doesNotMatch(priceTable, /deliveryPriceDelta/);
 assert.match(priceTable, /ค้นหาตัวเลือกหรือกลุ่ม/);
 assert.match(css, /\.pos-menu-price-table/);
+assert.match(css, /\.mph/);
 
 assert.match(checklist, /Q1/);
 assert.match(checklist, /Q4/);

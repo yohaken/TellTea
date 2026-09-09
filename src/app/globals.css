@@ -6514,6 +6514,11 @@ body.modal-open .main-panel {
   min-width: 52rem;
 }
 
+/* 3 กะ/วัน — ปิด zebra แถวคู่ (ไม่งั้นแถวเช้าโดนแถบคนละสีทุกวัน) */
+.ot-table.sheet-table tr.row-out:nth-child(even) {
+  background: transparent;
+}
+
 /*
  * Phase 6 table layout — OT (.ot-sheet-wrap).
  * Date/row sizing from ledger-staff-sheet prototype; bleed via shared .sheet-bleed.
@@ -6526,10 +6531,11 @@ body.modal-open .main-panel {
 }
 
 .ot-page .ot-sheet-wrap .ot-table .ot-col-date {
-  width: 3.55rem;
-  min-width: 3.55rem;
-  max-width: 3.55rem;
+  width: 5.4rem;
+  min-width: 5.4rem;
+  max-width: 5.4rem;
   white-space: nowrap;
+  text-align: center;
   font-variant-numeric: tabular-nums;
 }
 
@@ -6617,11 +6623,51 @@ body.modal-open .main-panel {
 
 .ot-table .ot-date-cell {
   font-weight: 700;
-  vertical-align: top;
+  vertical-align: middle;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.ot-table .ot-date-cell .ot-date-head,
+.ot-table .ot-date-cell .ot-date-meta {
+  display: block;
+}
+
+.ot-table .ot-date-cell .ot-date-head {
+  white-space: nowrap;
+}
+
+.ot-table .ot-date-cell .ot-date-weekday {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: rgba(28, 42, 31, 0.78);
+}
+
+.ot-table .ot-date-cell .ot-date-num {
+  margin-left: 0.35em;
+  font-variant-numeric: tabular-nums;
+}
+
+.ot-table .ot-date-cell .ot-date-meta {
+  margin-top: 0.55rem;
+  font-size: 0.52rem;
+  font-weight: 650;
+  color: rgba(27, 67, 50, 0.88);
+  white-space: nowrap;
+}
+
+.ot-table .ot-date-cell .ot-date-meta + .ot-date-meta {
+  margin-top: 0.06rem;
+}
+
+/* คั่นวัน — เว้นระยะ + เส้นหนาขึ้นนิด */
+.ot-table tr.ot-day-start > td {
+  border-top: 3px solid rgba(28, 42, 31, 0.28);
+  padding-top: 0.42rem;
 }
 
 .ot-table .ot-col-date {
-  min-width: 2.8rem;
+  min-width: 5rem;
 }
 
 .ot-table .ot-col-worker {
@@ -6702,15 +6748,6 @@ body.modal-open .main-panel {
 .ot-table .ot-bonus-cell {
   font-size: 0.72rem;
   cursor: help;
-}
-
-.ot-day-summary td {
-  background: rgba(149, 213, 178, 0.22);
-  font-size: 0.6rem;
-  font-weight: 700;
-  color: #1b4332;
-  text-align: left;
-  padding: 0.18rem 0.35rem;
 }
 
 .ot-table tr.ot-slot-empty td {
@@ -18934,7 +18971,7 @@ body.modal-open .main-panel {
 
 .pos-menu-option-colhead {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 4.25rem 4.25rem 2rem 2rem;
+  grid-template-columns: minmax(0, 1fr) 4.25rem 2rem 2rem;
   gap: 0.35rem;
   align-items: end;
   padding: 0 0.15rem 0.25rem 2.1rem;
@@ -30449,6 +30486,17 @@ a.ghost-btn {
   fill: rgba(28, 42, 31, 0.72);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
+}
+
+.pos-ops-corr-value-label {
+  fill: rgba(28, 42, 31, 0.88);
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  paint-order: stroke;
+  stroke: rgba(255, 255, 255, 0.92);
+  stroke-width: 3px;
+  stroke-linejoin: round;
 }
 
 .pos-ops-corr-hit {
