@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 /**
  * Apply hub option price targets on LINE MAN (Wongnai) via Chrome UI.
- * Path: remove choice → re-add with new delivery/pickup/offline → save group.
+ * Path: remove choice → re-add with delivery (LINE MAN) price only → save group.
+ * รับที่ร้าน / หน้าร้าน: ปล่อยว่าง — Wongnai จะใส่เท่าเดลิเวอรีให้อัตโนมัติ (ไม่ใส่ราคาหน้าร้าน/store)
  *
- *   node scripts/lineman-chrome-batch-update-options.mjs [--dry-run] [--group=ท้อปปิ้ง] [--limit=N]
+ *   node scripts/lineman-chrome-batch-update-options.mjs [--dry-run] [--workers=4]
+ *   node scripts/lineman-chrome-batch-update-options.mjs --refresh --workers=4
+ *   node scripts/lineman-chrome-batch-update-options.mjs --group=ท้อปปิ้ง --limit=N
  */
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -12,6 +15,7 @@ import { execFileSync } from "node:child_process";
 import { applyChannelRule } from "./lib/hub-channel-targets.mjs";
 import { getSeedDb } from "./lib/pos-firebase-seed.mjs";
 import { collection, getDocs, getDoc, doc } from "firebase/firestore";
+import { findWongnaiTab, mapPool, sleep as lmSleep } from "./lib/lineman-chrome.mjs";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const DATA = join(__dir, "data/menu-price-baseline");
@@ -22,10 +26,16 @@ const LOG = join(DATA, "lineman-option-update-log.json");
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
 const allowBigJump = args.includes("--allow-big-jump");
+/** รวมตัวเลือกที่มี override แม้ราคาเดลิเวอรีตรงแล้ว — เพื่อล้าง pickup/offline ที่เคยใส่ผิด */
+const refresh = args.includes("--refresh");
 const groupFilter = (args.find((a) => a.startsWith("--group=")) || "").slice(8);
 const limit = Number((args.find((a) => a.startsWith("--limit=")) || "").slice(8)) || 0;
+const workers = Math.max(
+  1,
+  Number((args.find((a) => a.startsWith("--workers=")) || "").slice(10)) || 4,
+);
 
-function runAS(script, timeoutMs = 180_000) {
+function runApple(script, timeoutMs = 180_000) {
   return execFileSync("osascript", ["-e", script], {
     encoding: "utf8",
     timeout: timeoutMs,
@@ -37,28 +47,9 @@ function b64Js(js) {
   return Buffer.from(js, "utf8").toString("base64");
 }
 
-function findWongnaiTab() {
-  const out = runAS(`tell application "Google Chrome"
-  set wi to 0
-  repeat with w in windows
-    set wi to wi + 1
-    set ti to 0
-    repeat with tb in tabs of w
-      set ti to ti + 1
-      if URL of tb as string contains "merchant.wongnai.com" then
-        return (wi as string) & "," & (ti as string)
-      end if
-    end repeat
-  end repeat
-  error "NO_WONGNAI_TAB"
-end tell`);
-  const [w, t] = out.split(",").map(Number);
-  return { windowIndex: w, tabIndex: t };
-}
-
 function chromeJs(tabIndex, windowIndex, code) {
   const b64 = b64Js(code);
-  const out = runAS(`tell application "Google Chrome"
+  const out = runApple(`tell application "Google Chrome"
   tell window ${windowIndex}
     set j to do shell script "echo ${b64} | base64 -D"
     return execute tab ${tabIndex} javascript j
@@ -77,7 +68,7 @@ function chromeJson(tabIndex, windowIndex, code) {
   }
 }
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const sleep = (ms) => lmSleep(ms);
 
 function norm(s) {
   return String(s || "")
@@ -127,6 +118,7 @@ async function buildDiffs() {
   let overrideN = 0;
   let columnN = 0;
   let atTarget = 0;
+  let refreshN = 0;
   for (const o of live.options || []) {
     const pos = bestPos(o.group, o.name);
     if (!pos) continue;
@@ -135,11 +127,13 @@ async function buildDiffs() {
     else columnN += 1;
     const target = applyChannelRule(pos.store, ov || rule);
     const current = Number(o.price);
-    if (current === target) {
+    const priceMiss = current !== target;
+    if (!priceMiss) {
       atTarget += 1;
-      continue;
-    }
-    if (current > 0 && Math.abs(target - current) / current > 1 && !allowBigJump) {
+      // --refresh: rewrite override ที่ราคาเพิ่ม (ไม่ใช่ฟรี) เพื่อล้าง pickup/offline ที่เคยใส่ผิด
+      if (!(refresh && ov && target !== 0)) continue;
+      refreshN += 1;
+    } else if (current > 0 && Math.abs(target - current) / current > 1 && !allowBigJump) {
       console.log(`skip >100% ${o.group} | ${o.name}: ${current}→${target}`);
       continue;
     }
@@ -153,6 +147,7 @@ async function buildDiffs() {
       id: o.id,
       posKey: pos.key,
       fromOverride: !!ov,
+      refreshOnly: !priceMiss,
       rule: ov || rule,
     });
   }
@@ -173,6 +168,8 @@ async function buildDiffs() {
     overrideN,
     columnN,
     atTarget,
+    refresh,
+    refreshN,
     diffs,
     byUrl: groups,
   };
@@ -260,14 +257,13 @@ function openAddDialog(tabIndex, windowIndex) {
   );
 }
 
-function fillAddDialog(tabIndex, windowIndex, { name, target, store }) {
+function fillAddDialog(tabIndex, windowIndex, { name, target }) {
   return chromeJson(
     tabIndex,
     windowIndex,
     `(()=>{
       const name=${JSON.stringify(name)};
       const target=${Number(target)};
-      const store=${Number(store)};
       const setNative=(el,val)=>{
         if (!el) return;
         const desc=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value');
@@ -291,13 +287,13 @@ function fillAddDialog(tabIndex, windowIndex, { name, target, store }) {
   );
 }
 
-function fillPricesAndConfirm(tabIndex, windowIndex, { target, store }) {
+/** ใส่เฉพาะราคาเดลิเวอรี (LINE MAN) — ล้างรับที่ร้าน/หน้าร้าน */
+function fillPricesAndConfirm(tabIndex, windowIndex, { target }) {
   return chromeJson(
     tabIndex,
     windowIndex,
     `(()=>{
       const target=${Number(target)};
-      const store=${Number(store)};
       const setNative=(el,val)=>{
         if (!el) return;
         const desc=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value');
@@ -305,20 +301,27 @@ function fillPricesAndConfirm(tabIndex, windowIndex, { target, store }) {
         el.dispatchEvent(new Event('input',{bubbles:true}));
         el.dispatchEvent(new Event('change',{bubbles:true}));
       };
+      const clearNative=(el)=>{
+        if (!el) return;
+        setNative(el, '');
+        el.focus?.();
+        el.blur?.();
+      };
       if (target !== 0) {
         const delivery=document.querySelector('input[name=deliveryPrice]');
         const pickup=document.querySelector('input[name=selfPickupPrice]');
         const offline=document.querySelector('input[name=offlinePrice]');
         if (!delivery) return JSON.stringify({ok:false, reason:'no-price-inputs'});
         setNative(delivery, target);
-        setNative(pickup, target);
-        setNative(offline, store);
+        // ว่างไว้ — Wongnai ใส่เท่าเดลิเวอรีให้อัตโนมัติ (ไม่ใส่ราคา store ที่ offline)
+        clearNative(pickup);
+        clearNative(offline);
       }
       const saves=[...document.querySelectorAll('button')].filter(b=>(b.innerText||'').trim()==='บันทึก');
       const save=saves[saves.length-1];
       if (!save) return JSON.stringify({ok:false, reason:'no-dialog-save'});
       save.click();
-      return JSON.stringify({ok:true});
+      return JSON.stringify({ok:true, deliveryOnly:true});
     })()`,
   );
 }
@@ -375,7 +378,13 @@ async function applyGroup(tabIndex, windowIndex, group) {
   );
 
   for (const row of group.rows) {
-    const entry = { name: row.name, from: row.current, to: row.target, store: row.store };
+    const entry = {
+      name: row.name,
+      from: row.current,
+      to: row.target,
+      store: row.store,
+      refreshOnly: !!row.refreshOnly,
+    };
     const rem = removeChoice(tabIndex, windowIndex, row.name);
     await sleep(450);
     if (!rem?.ok) {
@@ -460,17 +469,22 @@ async function main() {
   if (groupFilter) groups = groups.filter((g) => g.group.includes(groupFilter));
   if (limit > 0) groups = groups.slice(0, limit);
 
-  // Skip ชีส-only already done? Still include full topping group remaining.
   console.log(
-    `เป้าผสม · ระบุราคา ${payload.overrideN ?? 0} · คอลัมน์ ${payload.rule?.mode || "gp"} ${payload.rule?.value ?? "?"} ${payload.columnN ?? 0} · at-target ${payload.atTarget ?? 0}`,
+    `เป้าผสม · ระบุราคา ${payload.overrideN ?? 0} · คอลัมน์ ${payload.rule?.mode || "gp"} ${payload.rule?.value ?? "?"} ${payload.columnN ?? 0} · at-target ${payload.atTarget ?? 0}` +
+      (refresh ? ` · refresh-overrides ${payload.refreshN ?? 0}` : ""),
   );
   console.log(
-    `Groups to apply: ${groups.length}, choices: ${groups.reduce((n, g) => n + g.rows.length, 0)} dryRun=${dryRun}`,
+    `Groups to apply: ${groups.length}, choices: ${groups.reduce((n, g) => n + g.rows.length, 0)} dryRun=${dryRun} workers=${workers} deliveryOnly=true`,
   );
   for (const g of groups) {
     console.log(
       ` - ${g.group}:`,
-      g.rows.map((r) => `${r.name} ${r.current}->${r.target}`).join(" | "),
+      g.rows
+        .map(
+          (r) =>
+            `${r.name} ${r.current}->${r.target}${r.refreshOnly ? " (refresh)" : ""}`,
+        )
+        .join(" | "),
     );
   }
 
@@ -479,15 +493,13 @@ async function main() {
     return;
   }
 
-  const { windowIndex, tabIndex } = findWongnaiTab();
-  console.log(`Chrome window=${windowIndex} tab=${tabIndex}`);
+  // warm find so mapPool can open worker tabs
+  const found = findWongnaiTab();
+  console.log(`Chrome seed window=${found.windowIndex} tab=${found.tabIndex}`);
 
-  const log = { at: new Date().toISOString(), dryRun, results: [] };
-
-  for (const g of groups) {
-    console.log(`\n=== ${g.group} (${g.rows.length}) ===`);
+  const results = await mapPool(groups, workers, async (tabIndex, g, i, windowIndex) => {
+    console.log(`\n=== [${i + 1}/${groups.length}] tab=${tabIndex} ${g.group} (${g.rows.length}) ===`);
     const res = await applyGroup(tabIndex, windowIndex, g);
-    log.results.push(res);
     const okN = res.rows.filter((r) => (dryRun ? !r.error && r.draftOk : r.liveOk)).length;
     console.log(`done ok=${res.ok} verified=${okN}/${res.rows.length}`, res.error || "");
     for (const r of res.rows) {
@@ -495,12 +507,20 @@ async function main() {
         `  ${r.name}: ${r.from}->${r.to} draft=${r.draftOk} live=${r.liveOk} ${r.error || ""}`,
       );
     }
-    writeFileSync(LOG, JSON.stringify(log, null, 2) + "\n");
-  }
+    return res;
+  });
 
+  const log = {
+    at: new Date().toISOString(),
+    dryRun,
+    workers,
+    deliveryOnly: true,
+    refresh,
+    results,
+  };
   writeFileSync(LOG, JSON.stringify(log, null, 2) + "\n");
-  const failed = log.results.filter((r) => !r.ok);
-  console.log(`\nFinished. groups ok=${log.results.length - failed.length}/${log.results.length}`);
+  const failed = results.filter((r) => !r.ok);
+  console.log(`\nFinished. groups ok=${results.length - failed.length}/${results.length}`);
   console.log("log:", LOG);
   if (failed.length) process.exitCode = 2;
 }

@@ -28,6 +28,10 @@ import { writeHubChannelLiveRow } from "./lib/hub-live-write.mjs";
 const __dir = dirname(fileURLToPath(import.meta.url));
 const SCAN = join(__dir, "data/menu-price-baseline/lineman-live-scan.json");
 
+function priceReady(data) {
+  return !!(data?.onEdit && data.pricesReady && data.listPrice != null);
+}
+
 async function scanOne(tabIndex, item, _i, windowIndex) {
   const href = item.href || editUrl(item.id);
   chromeJsOnTab(
@@ -35,21 +39,24 @@ async function scanOne(tabIndex, item, _i, windowIndex) {
     `(() => { location.href=${JSON.stringify(href)}; return 'ok'; })()`,
     { windowIndex },
   );
-  await sleep(1200);
-  let data = readEditPage(tabIndex, windowIndex);
-  if (!data?.onEdit || data.listPrice == null) {
-    await sleep(1000);
+  let data = null;
+  for (let attempt = 0; attempt < 8; attempt++) {
+    await sleep(attempt === 0 ? 1400 : 700);
     data = readEditPage(tabIndex, windowIndex);
+    if (priceReady(data)) break;
   }
-  if (!data?.onEdit || data.listPrice == null) {
-    return {
-      id: item.id,
-      name: item.name,
-      href,
-      category: item.category || "",
-      listPrice: null,
-      error: "read_fail",
-    };
+  if (!priceReady(data)) {
+    // Last chance: accept non-zero listPrice even if pricesReady flag missed
+    if (!(data?.onEdit && data.listPrice != null && data.listPrice > 0)) {
+      return {
+        id: item.id,
+        name: item.name,
+        href,
+        category: item.category || "",
+        listPrice: null,
+        error: "read_fail",
+      };
+    }
   }
   return {
     id: data.id || item.id,

@@ -25,7 +25,7 @@ import archiver from "archiver";
 import { collection, getDocs } from "firebase/firestore";
 import { getSeedDb } from "./lib/pos-firebase-seed.mjs";
 import { isStoreOnlyName } from "./lib/name-sync-match.mjs";
-import { namesEqual, normName } from "./lib/grab-csv.mjs";
+import { namesEqual, normName, foldMenuName } from "./lib/grab-csv.mjs";
 import { findShopeeTab, chromeJsJsonOnTab as shopeeJs } from "./lib/shopee-chrome.mjs";
 import {
   findGrabTab,
@@ -83,10 +83,43 @@ async function loadPos() {
   return { cats, posCats, posByName };
 }
 
+/** Soft key so "เย็น, ปั่น" pairs with POS "เย็น/ปั่น" without reordering. */
+function softCatKey(s) {
+  return foldMenuName(s)
+    .replace(/เย็น,\s*ปั่น/g, "เย็น/ปั่น")
+    .replace(/\s*,\s*/g, "/")
+    .replace(/\s*\/\s*/g, "/")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function pairCats(liveCats, posCats, posByName) {
   const todo = [];
   const exact = [];
   const leftover = [];
+  const posByFold = new Map();
+  for (const p of posCats) {
+    const f = foldMenuName(p);
+    if (!f) continue;
+    if (!posByFold.has(f)) posByFold.set(f, []);
+    posByFold.get(f).push(p);
+  }
+  const posBySoft = new Map();
+  for (const p of posCats) {
+    const f = softCatKey(p);
+    if (!f) continue;
+    if (!posBySoft.has(f)) posBySoft.set(f, []);
+    posBySoft.get(f).push(p);
+  }
+  // fold index of POS item names for votes
+  const posByFoldItem = new Map();
+  for (const [n, p] of posByName) {
+    const f = foldMenuName(n);
+    if (!f) continue;
+    if (!posByFoldItem.has(f)) posByFoldItem.set(f, []);
+    posByFoldItem.get(f).push(p);
+  }
+
   for (const live of liveCats) {
     const name = live.name || "";
     if (!name) continue;
@@ -94,9 +127,35 @@ function pairCats(liveCats, posCats, posByName) {
       exact.push({ id: live.id, name });
       continue;
     }
+    const softHits = posBySoft.get(softCatKey(name)) || [];
+    if (softHits.length === 1 && !namesEqual(name, softHits[0])) {
+      todo.push({
+        id: live.id,
+        from: name,
+        to: softHits[0],
+        n: (live.items || []).length,
+        votes: { soft: 1 },
+      });
+      continue;
+    }
+    const foldHits = posByFold.get(foldMenuName(name)) || [];
+    if (foldHits.length === 1 && !namesEqual(name, foldHits[0])) {
+      todo.push({
+        id: live.id,
+        from: name,
+        to: foldHits[0],
+        n: (live.items || []).length,
+        votes: { fold: 1 },
+      });
+      continue;
+    }
     const votes = new Map();
     for (const item of live.items || []) {
-      const pos = posByName.get(normName(item));
+      let pos = posByName.get(normName(item));
+      if (!pos) {
+        const hits = posByFoldItem.get(foldMenuName(item)) || [];
+        if (hits.length === 1) pos = hits[0];
+      }
       if (!pos?.cat) continue;
       votes.set(pos.cat, (votes.get(pos.cat) || 0) + 1);
     }

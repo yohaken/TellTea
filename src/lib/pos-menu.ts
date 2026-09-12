@@ -4,6 +4,7 @@ import {
   deleteDoc,
   deleteField,
   doc,
+  getDocFromServer,
   getDocs,
   getDocsFromCache,
   onSnapshot,
@@ -404,6 +405,19 @@ export async function updateMenuItem(id: string, patch: MenuItemPatch): Promise<
     void bumpMenuVersion();
   } catch (err) {
     throw new Error(mapFirestoreError(err, "อัปเดตเมนู", menuErrorHint()));
+  }
+  if (patch.price != null) {
+    const expected = Math.max(0, Number(patch.price) || 0);
+    const snap = await getDocFromServer(doc(getMenuDb(), MENU_ITEMS_COL, id));
+    if (!snap.exists()) {
+      throw new Error("เซฟราคาหน้าร้านแล้ว แต่หาเมนูใน Firestore ไม่เจอ");
+    }
+    const got = Math.max(0, Number(snap.data()?.price) || 0);
+    if (got !== expected) {
+      throw new Error(
+        `เซฟราคาหน้าร้านแล้วแต่ Firestore ยังเป็น ${got}฿ (ตั้งใจ ${expected}฿) — ลองอีกครั้ง`,
+      );
+    }
   }
 }
 

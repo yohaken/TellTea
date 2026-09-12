@@ -205,13 +205,26 @@ export function PosMenuAdmin({
       (e) => setError(e.message),
     );
     const u2 = subscribeMenuItems(
-      (list) => {
+      (list, fromCache) => {
         setItems((prev) => {
           const fid = freshItemIdRef.current;
-          if (!fid) return list;
-          if (list.some((i) => i.id === fid)) return list;
+          let next = list;
+          // กันแคชเก่าทับราคาที่เพิ่งแพตช์จาก hub
+          if (fromCache && prev.length) {
+            const prevById = new Map(prev.map((i) => [i.id, i]));
+            next = list.map((row) => {
+              const old = prevById.get(row.id);
+              if (!old) return row;
+              if (old.price !== row.price && (old.updatedAt || 0) >= (row.updatedAt || 0)) {
+                return { ...row, price: old.price };
+              }
+              return row;
+            });
+          }
+          if (!fid) return next;
+          if (next.some((i) => i.id === fid)) return next;
           const optimistic = prev.find((i) => i.id === fid);
-          return optimistic ? [...list, optimistic] : list;
+          return optimistic ? [...next, optimistic] : next;
         });
       },
       (e) => setError(e.message),
@@ -615,6 +628,20 @@ export function PosMenuAdmin({
                 items={items}
                 categories={categories}
                 optionGroups={optionGroups}
+                onMenuItemPriceSaved={(itemId, price) => {
+                  setItems((prev) =>
+                    prev.map((i) =>
+                      i.id === itemId ? { ...i, price, updatedAt: Date.now() } : i,
+                    ),
+                  );
+                }}
+                onOptionGroupSaved={(groupId, options) => {
+                  setOptionGroups((prev) =>
+                    prev.map((g) =>
+                      g.id === groupId ? { ...g, options, updatedAt: Date.now() } : g,
+                    ),
+                  );
+                }}
               />
             </div>
           ) : null}

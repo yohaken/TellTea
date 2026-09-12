@@ -5,6 +5,7 @@ import {
   deleteField,
   doc,
   getDoc,
+  getDocFromServer,
   getDocs,
   onSnapshot,
   orderBy,
@@ -331,5 +332,22 @@ export async function saveMenuOptionGroupFull(id: string, input: MenuOptionGroup
     void bumpMenuVersion();
   } catch (err) {
     throw new Error(mapFirestoreError(err, "อัปเดตกลุ่มตัวเลือก", menuErrorHint()));
+  }
+
+  const snap = await getDocFromServer(doc(getMenuDb(), MENU_OPTION_GROUPS_COL, id));
+  if (!snap.exists()) {
+    throw new Error("เซฟตัวเลือกแล้ว แต่หากลุ่มใน Firestore ไม่เจอ");
+  }
+  const savedOpts = Array.isArray(snap.data()?.options) ? (snap.data()!.options as Array<Record<string, unknown>>) : [];
+  for (const want of options) {
+    const wantId = String(want.id || "");
+    const got = savedOpts.find((o) => String(o?.id || "") === wantId);
+    const gotPrice = Math.max(0, Number(got?.priceDelta) || 0);
+    const wantPrice = Math.max(0, Number(want.priceDelta) || 0);
+    if (!got || gotPrice !== wantPrice) {
+      throw new Error(
+        `เซฟตัวเลือกแล้วแต่ Firestore ยังไม่ตรง · ${String(want.name || wantId)} (${gotPrice}≠${wantPrice}฿) — ลองอีกครั้ง`,
+      );
+    }
   }
 }

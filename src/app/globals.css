@@ -19671,23 +19671,45 @@ body.modal-open .main-panel {
 .mph-ch-marks {
   display: inline-flex;
   align-items: center;
-  gap: 0.1rem;
+  gap: 0.06rem;
   flex: 0 0 auto;
+}
+
+.mph-ch-marks-label {
+  display: inline-block;
+  margin-right: 0.04rem;
+  font-size: 0.5rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  color: #6b7280;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.mph-ch-marks-paren {
+  display: inline-block;
+  font-size: 0.52rem;
+  font-weight: 600;
+  line-height: 1;
+  color: #9ca3af;
+  flex: 0 0 auto;
+  user-select: none;
 }
 
 .mph-ch-mark {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.04rem;
-  min-width: 1.45rem;
-  height: 1.12rem;
-  padding: 0 0.16rem;
-  border-radius: 3px;
+  gap: 0.02rem;
+  min-width: 0;
+  height: 0.92rem;
+  padding: 0 0.12rem;
+  border-radius: 2px;
   border: 1px solid #b8b8b8;
   background: #f3f3f3;
-  font-size: 0.66rem;
-  font-weight: 800;
+  font-size: 0.52rem;
+  font-weight: 700;
   line-height: 1;
   letter-spacing: 0;
   white-space: nowrap;
@@ -19695,31 +19717,39 @@ body.modal-open .main-panel {
 
 button.mph-ch-mark {
   font: inherit;
-  font-size: 0.66rem;
-  font-weight: 800;
+  font-size: 0.52rem;
+  font-weight: 700;
   cursor: pointer;
 }
 
 .mph-ch-mark-ch {
-  font-size: 0.58rem;
+  font-size: 0.48rem;
   font-weight: 800;
-  opacity: 0.9;
+  opacity: 0.88;
+}
+
+.mph-ch-mark-logo {
+  width: 0.62rem;
+  height: 0.62rem;
+  display: block;
+  flex: 0 0 auto;
+  border-radius: 1.5px;
+  object-fit: contain;
+  pointer-events: none;
 }
 
 .mph-ch-mark-g {
-  font-size: 0.68rem;
+  font-size: 0.52rem;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
-.mph-ch-marks.is-cat .mph-ch-mark {
-  min-width: 1.7rem;
-}
-
+.mph-ch-marks.is-cat .mph-ch-mark,
 .mph-ch-marks.is-name .mph-ch-mark,
 .mph-ch-marks.is-item-order .mph-ch-mark,
 .mph-ch-marks.is-photo .mph-ch-mark {
-  min-width: 1.5rem;
-  height: 1.12rem;
+  min-width: 0;
+  height: 0.92rem;
 }
 
 .mph-ch-mark.is-ok {
@@ -19786,7 +19816,7 @@ button.mph-ch-mark {
   flex-direction: row;
   flex-wrap: nowrap;
   align-items: center;
-  gap: 0.1rem;
+  gap: 0.22rem;
   flex: 0 0 auto;
 }
 
@@ -20137,8 +20167,25 @@ tr.mph-opt-row.is-row-sel-some .mph-td.mph-sel-col {
 }
 
 /* แถวเดียว: เป้า = จริง ชื่อ สถานะ — ไม่ซ้อนแกน Y */
-.mph-td.is-ch {
+.mph-pair {
   overflow: visible;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 0.12rem;
+  width: 100%;
+  min-height: 1.85rem;
+  line-height: 1;
+  padding-top: 0.05rem;
+}
+
+.mph-td.is-ch {
+  overflow: visible !important;
+  vertical-align: middle;
+  height: auto;
+  min-height: 2.55rem;
+  padding-top: 0.12rem !important;
+  padding-bottom: 0.12rem !important;
 }
 
 .mph-cell-compact {
@@ -20190,28 +20237,26 @@ tr.mph-opt-row.is-row-sel-some .mph-td.mph-sel-col {
 }
 
 .mph-th-ch .mph-live-at {
-  margin-top: 0.05rem;
-  font-size: 0.5rem;
-  color: #4b5563;
+  margin-top: 0;
 }
 
-.mph-pair {
-  overflow: visible;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 0.1rem;
-  width: 100%;
-  min-height: 1.2rem;
-  line-height: 1;
+/* เวลาสแกน/อัปเดต — ซ่อนจากจอ เหลือใน DOM ให้ AI */
+.mph-ai-meta[hidden],
+.mph-ai-meta {
+  display: none !important;
 }
 
 .mph-pair-t-wrap {
   position: relative;
   flex: 0 0 auto;
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
+  justify-content: flex-end;
+  gap: 0.04rem;
   max-width: 100%;
+  overflow: visible;
+  z-index: 1;
 }
 
 .mph-pair-t {
@@ -20379,6 +20424,12 @@ tr.mph-opt-row.is-row-sel-some .mph-td.mph-sel-col {
   color: #6b4e00;
 }
 
+.mph-rule-kind.is-follow {
+  background: #e8f5e4;
+  border-color: #7aab74;
+  color: #1a5c37;
+}
+
 .mph-rule-kind.is-gp {
   border-color: #7aa2c4;
 }
@@ -20417,9 +20468,14 @@ tr.mph-opt-row.is-row-sel-some .mph-td.mph-sel-col {
   position: relative;
   flex: 1 1 auto;
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
+  justify-content: flex-end;
+  gap: 0.04rem;
   min-width: 0;
-  max-width: 3.4rem;
+  max-width: 3.6rem;
+  overflow: visible;
+  z-index: 1;
 }
 
 .mph-pair-live-wrap .mph-live-price {
@@ -20427,24 +20483,26 @@ tr.mph-opt-row.is-row-sel-some .mph-td.mph-sel-col {
   max-width: none;
 }
 
-/* ป้ายเหลือถึงร้าน — ซ้อนมุม ไม่ขยายคอลัม */
+/* ป้ายเหลือถึงร้าน — วางเหนือตัวเลขใน flow ไม่ซ้อนทับ/ไม่ถูกบัง */
 .mph-pair-margin {
-  position: absolute;
-  top: -0.45rem;
-  left: 50%;
-  transform: translateX(-50%);
+  position: static;
+  top: auto;
+  left: auto;
+  transform: none;
   z-index: 2;
-  min-width: 0.7rem;
-  padding: 0 0.14rem;
+  flex: 0 0 auto;
+  min-width: 0.85rem;
+  padding: 0 0.16rem;
   border: 1px solid #9a9a9a;
   background: #fff;
   color: #444;
-  font-size: 0.5rem;
+  font-size: 0.52rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
-  line-height: 0.9;
+  line-height: 1.05;
   pointer-events: none;
   white-space: nowrap;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9);
 }
 
 .mph-pair-margin.is-plus {
@@ -20606,15 +20664,127 @@ tr.mph-opt-row.is-row-sel-some .mph-td.mph-sel-col {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 0.08rem;
+  gap: 0.1rem;
   padding: 0.06rem 0.12rem 0.08rem;
   pointer-events: auto;
 }
 
 .mph-th.is-ch {
   height: auto;
-  min-height: 2.2rem;
+  min-height: 3.6rem;
+  overflow: visible;
   background: #d6ead0;
+  vertical-align: top;
+}
+
+.mph-th.is-ch:has(.mph-th-ch.is-follow.is-extra-open) {
+  min-height: 5.2rem;
+}
+
+.mph-th-ch.is-main {
+  background: transparent;
+}
+
+.mph-th-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.08rem;
+  margin: 0;
+  cursor: pointer;
+  font-size: 0.5rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.mph-th-role input {
+  width: 0.7rem;
+  height: 0.7rem;
+  margin: 0;
+  accent-color: #217346;
+}
+
+.mph-th-role.is-main {
+  color: #0f5132;
+}
+
+.mph-th-role.is-follow {
+  color: #5a6b5e;
+}
+
+.mph-th-role-mark {
+  min-width: 1.4rem;
+}
+
+.mph-th-extra-tog {
+  appearance: none;
+  border: 1px solid #9ab59a;
+  background: #f3f8f2;
+  color: #2f5a38;
+  font: inherit;
+  font-size: 0.48rem;
+  font-weight: 800;
+  line-height: 1;
+  padding: 0.1rem 0.18rem;
+  cursor: pointer;
+  border-radius: 0;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.mph-th-extra-tog.is-on {
+  background: #dcefd8;
+  border-color: #5a9a5a;
+}
+
+.mph-th-sec {
+  display: flex;
+  align-items: center;
+  gap: 0.12rem;
+  min-height: 1.2rem;
+}
+
+.mph-th-sec.is-extra {
+  background: #f4f7f2;
+  border: 1px dashed #a8c4a8;
+  padding: 0.06rem 0.1rem;
+}
+
+.mph-th-sec-lab {
+  flex: 0 0 auto;
+  font-size: 0.48rem;
+  font-weight: 800;
+  color: #1a5c37;
+  letter-spacing: 0.02em;
+  min-width: 1.6rem;
+}
+
+.mph-th-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1rem;
+  pointer-events: auto;
+  flex-wrap: nowrap;
+  flex: 1 1 auto;
+  background: #eef6ea;
+  border: 1px solid #8fbf8a;
+  padding: 0.04rem 0.08rem;
+}
+
+.mph-th-actions {
+  display: flex;
+  align-items: stretch;
+  gap: 0.12rem;
+  width: 100%;
+}
+
+.mph-th-actions .mph-th-clear {
+  flex: 0 0 auto;
+}
+
+.mph-th-actions .mph-th-fill {
+  flex: 1 1 auto;
+  width: auto;
 }
 
 .mph-th.is-waiting {
@@ -20641,6 +20811,34 @@ tr.mph-opt-row.is-row-sel-some .mph-td.mph-sel-col {
   border-color: #217346;
   background: #e8f0ea;
   color: #1a5c37;
+}
+
+.mph-th-fill {
+  appearance: none;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #2f6fed;
+  background: #eaf1ff;
+  color: #1a3f8a;
+  font: inherit;
+  font-size: 0.52rem;
+  font-weight: 800;
+  line-height: 1;
+  padding: 0.18rem 0.12rem;
+  cursor: pointer;
+  border-radius: 0;
+  pointer-events: auto;
+  white-space: nowrap;
+}
+
+.mph-th-fill:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.mph-th-fill:hover:not(:disabled) {
+  background: #d6e4ff;
 }
 
 .mph-waiting-label {
@@ -20716,6 +20914,58 @@ tr.mph-opt-row.is-row-sel-some .mph-td.mph-sel-col {
 .mph-th-filter-input:focus {
   outline: 1px solid #217346;
   outline-offset: 0;
+}
+
+.mph-th-filter-combo {
+  position: relative;
+  min-width: 0;
+}
+
+.mph-th-filter-list {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 1px);
+  left: 0;
+  right: 0;
+  min-width: 4.5rem;
+  max-height: 14rem;
+  margin: 0;
+  padding: 0.12rem 0;
+  list-style: none;
+  overflow: auto;
+  border: 1px solid #8a7a5a;
+  background: #fffdf6;
+  box-shadow: 0 4px 12px rgba(28, 20, 8, 0.12);
+}
+
+.mph-th-filter-opt {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0.18rem 0.35rem;
+  border: 0;
+  background: transparent;
+  color: #1c1408;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mph-th-filter-opt:hover,
+.mph-th-filter-opt:focus-visible {
+  background: #e8f0ea;
+  outline: none;
+}
+
+.mph-th-filter-opt.is-on {
+  background: #d7ebe0;
+  color: #0f5132;
+}
+
+.mph-th-filter-opt.is-jump {
+  box-shadow: inset 2px 0 0 #217346;
 }
 
 .mph-th.is-sorted {
@@ -21076,6 +21326,39 @@ tr.mph-opt-row.is-row-sel-some .mph-td.mph-sel-col {
   gap: 0.25rem;
   justify-content: flex-end;
   margin-top: 0.25rem;
+}
+
+.mph-dialog-wait {
+  margin: 0.65rem 0 0;
+  padding: 0.55rem 0.7rem;
+  border-radius: 8px;
+  background: #fff6e4;
+  border: 1px solid #e8d4a8;
+  color: #7a5a18;
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.mph-dialog-ok {
+  margin: 0.65rem 0 0;
+  padding: 0.55rem 0.7rem;
+  border-radius: 8px;
+  background: #e8f6ec;
+  border: 1px solid #b7dfc2;
+  color: #1d6b38;
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.mph-dialog-err {
+  margin: 0.65rem 0 0;
+  padding: 0.55rem 0.7rem;
+  border-radius: 8px;
+  background: #fdeceb;
+  border: 1px solid #f0b8b4;
+  color: #a32020;
+  font-size: 0.88rem;
+  font-weight: 650;
 }
 
 .mph-dl {
@@ -26910,6 +27193,23 @@ a.ghost-btn {
   font-weight: 500;
 }
 
+/* GP% หลังยอด — ดูเฉยๆ (คชจ.÷ยอดขายแอพ) */
+.vat-gp-cell {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 0.22rem;
+  flex-wrap: nowrap;
+}
+
+.vat-gp-pct-hint {
+  font-size: 0.58rem;
+  font-weight: 500;
+  opacity: 0.55;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
 .vat-include-input-toggle {
   display: flex;
   flex-wrap: wrap;
@@ -31131,12 +31431,23 @@ a.ghost-btn {
   overflow: hidden;
 }
 
+.pos-dash-chart-svg-wrap.pos-ops-corr-svg-wrap {
+  min-height: 14rem;
+  overflow: visible;
+}
+
 .pos-dash-chart-svg {
   display: block;
   width: 100%;
   height: 100%;
   min-height: 11rem;
   max-height: 16.5rem;
+}
+
+.pos-dash-chart-svg.pos-ops-corr-svg {
+  min-height: 14rem;
+  max-height: none;
+  height: auto;
 }
 
 .pos-dash-chart-grid {

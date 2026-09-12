@@ -33,7 +33,7 @@ assert.ok(items.length >= 170, `เมนูอย่างน้อย 170 (ไ
 assert.ok(groupKeys.length >= 20, `กลุ่มอย่างน้อย 20 (ได้ ${groupKeys.length})`);
 
 const milo = items.find((i) => i.name.includes("ไมโล"));
-assert.ok(milo, "มีไมโล (เย็น/ปั่น)");
+assert.ok(milo, "มีไมโล เย็น/ปั่น");
 assert.ok(milo.optionGroupKeys.length >= 3, "ไมโลผูกประเภท+ความหวาน+ท็อปปิ้ง");
 
 const ice = items.find((i) => i.name.includes("ไอศกรีมซอฟต์เสิร์ฟ") && i.name.includes("เล็ก"));

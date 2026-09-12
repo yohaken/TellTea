@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 import { collection, doc, getDoc, getDocs, setDoc } from "firebase/firestore";
 import { getSeedDb } from "./lib/pos-firebase-seed.mjs";
 import { isStoreOnlyName } from "./lib/name-sync-match.mjs";
-import { namesEqual, normName as normGrab } from "./lib/grab-csv.mjs";
+import { namesEqual, normName as normGrab, foldMenuName } from "./lib/grab-csv.mjs";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const DATA = join(__dir, "data/menu-price-baseline");
@@ -46,6 +46,22 @@ const CHANNELS = {
 
 function normName(s) {
   return normGrab(s);
+}
+
+/**
+ * จับคู่ชื่อสแกน ↔ POS — exact ก่อน แล้วค่อยพับวงเล็บ
+ * เช่น POS「นมสดเผือก (เย็น/ปั่น)」↔ LM「นมสดเผือก เย็น/ปั่น」
+ *     POS「มัทฉะครีมชีส (Matcha Cheese Tea)」↔ LM「มัทฉะครีมชีส Matcha Cheese Tea」
+ */
+function findPosForScanName(deliveryPos, usedPos, liveName) {
+  const unused = deliveryPos.filter((p) => !usedPos.has(p.id));
+  const exact = unused.find((p) => namesEqual(p.name, liveName));
+  if (exact) return exact;
+  const foldLive = foldMenuName(liveName);
+  if (!foldLive) return null;
+  const foldHits = unused.filter((p) => foldMenuName(p.name) === foldLive);
+  if (foldHits.length === 1) return foldHits[0];
+  return null;
 }
 
 function loadJson(path, fallback) {
@@ -96,7 +112,13 @@ function livePhotoId(it) {
     }
   }
   if (raw == null) {
-    if (Object.prototype.hasOwnProperty.call(it, "picture")) return "";
+    // Key present but empty = scanned, no photo (known). Missing key = not scanned (unknown).
+    if (
+      Object.prototype.hasOwnProperty.call(it, "picture") ||
+      Object.prototype.hasOwnProperty.call(it, "photoId")
+    ) {
+      return "";
+    }
     return undefined;
   }
   try {
@@ -211,7 +233,7 @@ async function ingestChannel(channel, db, posItems, posChoices, current, posCatN
       continue;
     }
     const ext = String(it[cfg.idKey] || it.dishId || it.itemId || it.id || "").trim();
-    const byName = deliveryPos.find((p) => !usedPos.has(p.id) && namesEqual(p.name, it.name));
+    const byName = findPosForScanName(deliveryPos, usedPos, it.name);
     const byIdHit = ext ? posByExt.get(ext) : null;
     const byId = byIdHit && !usedPos.has(byIdHit.id) ? byIdHit : null;
     const hit = byName || byId;

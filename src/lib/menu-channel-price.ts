@@ -24,10 +24,25 @@ export type ChannelPriceRule = {
 
 export type ChannelRules = Record<DeliveryChannel, ChannelPriceRule>;
 
+/** add ของแพลตตัวตาม จากเป้าแกน — % หรือ บาท */
+export type FollowerAddRule = {
+  mode: "percent" | "offset";
+  value: number;
+};
+
+export type FollowerAddRules = Partial<Record<DeliveryChannel, FollowerAddRule>>;
+
 export type ItemChannelOverrides = Partial<Record<DeliveryChannel, ChannelPriceRule>>;
 
 export type MenuPriceHubSettings = {
   channels: ChannelRules;
+  /**
+   * แพลตฟอร์มแกน (radio เลือกได้ 1) — เป้าจากหน้าร้าน×สูตรคอลัมน์ (เช่น GP%)
+   * ตัวตาม = เป้าแกน + followerAdd
+   */
+  mainChannel?: DeliveryChannel;
+  /** add ต่อแพลตตัวตาม (ไม่ใช้กับคอลัมน์แกน) */
+  followerAdd?: FollowerAddRules;
   /**
    * @deprecated เลิกใช้คอลัมน์ต้นแบบส่ง — เป้าแพลตฟอร์มอิงหน้าร้านตรง
    * คงไว้เพื่ออ่านเอกสารเก่าใน Firestore โดยไม่บังคับ
@@ -253,6 +268,8 @@ export type ChannelPriceCell = {
   status: ChannelMatchStatus;
   nameStatus: ChannelNameStatus;
   fromOverride: boolean;
+  /** เป้ามาจากเป้าแกน + add (ไม่ใช่สูตร GP ของคอลัมน์นี้โดยตรง) */
+  viaFollower?: boolean;
   /** เฉพาะหน้าร้าน — ไม่มีเดลิเวอรี่/ช่องทาง */
   storeOnly?: boolean;
   /** ลำดับชื่อเมนูในหมวด / ลำดับตัวเลือกในกลุ่ม */
@@ -278,15 +295,67 @@ export const DEFAULT_CHANNEL_RULES: ChannelRules = {
   lineman: { mode: "gp", value: 30 },
 };
 
+export const DEFAULT_MAIN_CHANNEL: DeliveryChannel = "shopee";
+
+export const DEFAULT_FOLLOWER_ADD: FollowerAddRules = {
+  grab: { mode: "offset", value: 0 },
+  lineman: { mode: "offset", value: 0 },
+};
+
 /** @deprecated ไม่ใช้แล้ว — คงไว้สำหรับเอกสารเก่า */
 export const DEFAULT_DELIVERY_RULE: ChannelPriceRule = { mode: "offset", value: 0 };
 
 export function defaultMenuPriceHubSettings(): MenuPriceHubSettings {
   return {
     channels: { ...DEFAULT_CHANNEL_RULES },
+    mainChannel: DEFAULT_MAIN_CHANNEL,
+    followerAdd: { ...DEFAULT_FOLLOWER_ADD },
     itemOverrides: {},
     optionOverrides: {},
   };
+}
+
+/** แพลตแกนจาก settings — fallback ช่อง GP ต่ำสุด หรือ Shopee */
+export function resolveMainChannel(settings: MenuPriceHubSettings): DeliveryChannel {
+  const m = settings.mainChannel;
+  if (m === "shopee" || m === "grab" || m === "lineman") return m;
+  let best: DeliveryChannel = "shopee";
+  let bestGp = Infinity;
+  for (const ch of DELIVERY_CHANNELS) {
+    const rule = settings.channels[ch] ?? DEFAULT_CHANNEL_RULES[ch];
+    if (rule.mode !== "gp") continue;
+    const gp = Number(rule.value) || 0;
+    if (gp < bestGp) {
+      bestGp = gp;
+      best = ch;
+    }
+  }
+  return best;
+}
+
+export function resolveFollowerAdd(
+  settings: MenuPriceHubSettings,
+  channel: DeliveryChannel,
+): FollowerAddRule {
+  const raw = settings.followerAdd?.[channel];
+  if (raw && (raw.mode === "percent" || raw.mode === "offset")) {
+    return { mode: raw.mode, value: Number(raw.value) || 0 };
+  }
+  return DEFAULT_FOLLOWER_ADD[channel] ?? { mode: "offset", value: 0 };
+}
+
+/** เป้าตัวตาม = เป้าแกน ± add */
+export function applyFollowerAdd(mainTarget: number, add: FollowerAddRule): number {
+  const base = Math.max(0, Number(mainTarget) || 0);
+  const value = Number(add.value) || 0;
+  const raw = add.mode === "percent" ? base * (1 + value / 100) : base + value;
+  return Math.max(0, Math.round(raw));
+}
+
+export function formatFollowerAddShort(add: FollowerAddRule): string {
+  if (add.mode === "percent") return `ตาม${add.value > 0 ? "+" : ""}${add.value}%`;
+  if (!add.value) return "ตามแกน";
+  return `ตาม${add.value > 0 ? "+" : ""}${add.value}฿`;
 }
 
 /** ฐานราคาแพลตฟอร์ม = ราคาหน้าร้าน */
@@ -386,14 +455,26 @@ export function resolveChannelTarget(
   item: Pick<MenuItem, "id" | "price">,
   channel: DeliveryChannel,
   settings: MenuPriceHubSettings,
-): { target: number; fromOverride: boolean } {
+): { target: number; fromOverride: boolean; viaFollower?: boolean } {
   const base = resolveStoreBase(item);
   const override = settings.itemOverrides[item.id]?.[channel];
   if (override) {
     return { target: applyChannelRule(base, override), fromOverride: true };
   }
-  const rule = settings.channels[channel] ?? DEFAULT_CHANNEL_RULES[channel];
-  return { target: applyChannelRule(base, rule), fromOverride: false };
+  const main = resolveMainChannel(settings);
+  if (channel === main) {
+    const rule = settings.channels[channel] ?? DEFAULT_CHANNEL_RULES[channel];
+    return { target: applyChannelRule(base, rule), fromOverride: false };
+  }
+  const mainOverride = settings.itemOverrides[item.id]?.[main];
+  const mainRule = settings.channels[main] ?? DEFAULT_CHANNEL_RULES[main];
+  const mainTarget = applyChannelRule(base, mainOverride || mainRule);
+  const add = resolveFollowerAdd(settings, channel);
+  return {
+    target: applyFollowerAdd(mainTarget, add),
+    fromOverride: false,
+    viaFollower: true,
+  };
 }
 
 export function resolveOptionChannelTarget(
@@ -401,15 +482,29 @@ export function resolveOptionChannelTarget(
   channel: DeliveryChannel,
   settings: MenuPriceHubSettings,
   optionKey?: string,
-): { target: number; fromOverride: boolean } {
+): { target: number; fromOverride: boolean; viaFollower?: boolean } {
   const override = optionKey
     ? settings.optionOverrides[optionKey]?.[channel]
     : undefined;
   if (override) {
     return { target: applyChannelRule(base, override), fromOverride: true };
   }
-  const rule = settings.channels[channel] ?? DEFAULT_CHANNEL_RULES[channel];
-  return { target: applyChannelRule(base, rule), fromOverride: false };
+  const main = resolveMainChannel(settings);
+  if (channel === main) {
+    const rule = settings.channels[channel] ?? DEFAULT_CHANNEL_RULES[channel];
+    return { target: applyChannelRule(base, rule), fromOverride: false };
+  }
+  const mainOverride = optionKey
+    ? settings.optionOverrides[optionKey]?.[main]
+    : undefined;
+  const mainRule = settings.channels[main] ?? DEFAULT_CHANNEL_RULES[main];
+  const mainTarget = applyChannelRule(base, mainOverride || mainRule);
+  const add = resolveFollowerAdd(settings, channel);
+  return {
+    target: applyFollowerAdd(mainTarget, add),
+    fromOverride: false,
+    viaFollower: true,
+  };
 }
 
 /** เซลล์แพลตฟอร์มของตัวเลือก — แพทเทิร์นเดียวกับเมนู (ชื่อ+ราคา) */
@@ -422,7 +517,7 @@ export function channelCellForOption(
   observation?: ChannelLiveObservation | null,
   optionKey?: string,
 ): ChannelPriceCell {
-  const { target, fromOverride } = resolveOptionChannelTarget(
+  const { target, fromOverride, viaFollower } = resolveOptionChannelTarget(
     base,
     channel,
     settings,
@@ -456,6 +551,7 @@ export function channelCellForOption(
         status: liveName ? "no_live" : "unmatched",
         nameStatus: liveName ? nameStatus : "missing",
         fromOverride,
+        viaFollower: !!viaFollower,
       };
     }
     return {
@@ -467,6 +563,7 @@ export function channelCellForOption(
       status: live === target ? "match" : "mismatch",
       nameStatus: liveName ? nameStatus : "missing",
       fromOverride,
+      viaFollower: !!viaFollower,
     };
   }
 
@@ -482,6 +579,7 @@ export function channelCellForOption(
       status: "unmatched",
       nameStatus,
       fromOverride,
+      viaFollower: !!viaFollower,
     };
   }
   const live = matched.item.listPrice;
@@ -495,6 +593,7 @@ export function channelCellForOption(
       status: "no_live",
       nameStatus,
       fromOverride,
+      viaFollower: !!viaFollower,
     };
   }
   return {
@@ -506,6 +605,7 @@ export function channelCellForOption(
     status: live === target ? "match" : "mismatch",
     nameStatus,
     fromOverride,
+    viaFollower: !!viaFollower,
   };
 }
 
@@ -537,7 +637,7 @@ export function channelCellForItem(
   /** ค่าที่บันทึกใน hub (สแกน/แก้มือ) — มีแล้วใช้ก่อนจับคู่ชื่อเป๊ะจาก snapshot */
   observation?: ChannelLiveObservation | null,
 ): ChannelPriceCell {
-  const { target, fromOverride } = resolveChannelTarget(item, channel, settings);
+  const { target, fromOverride, viaFollower } = resolveChannelTarget(item, channel, settings);
   const storeOnly = isMenuStoreOnly(item);
 
   if (storeOnly) {
@@ -550,6 +650,7 @@ export function channelCellForItem(
       status: "na",
       nameStatus: "skip",
       fromOverride: false,
+      viaFollower: false,
       storeOnly: true,
     };
   }
@@ -581,6 +682,7 @@ export function channelCellForItem(
         status: liveName ? "no_live" : "unmatched",
         nameStatus: liveName ? nameStatus : "missing",
         fromOverride,
+        viaFollower: !!viaFollower,
       };
     }
     return {
@@ -592,6 +694,7 @@ export function channelCellForItem(
       status: live === target ? "match" : "mismatch",
       nameStatus: liveName ? nameStatus : "missing",
       fromOverride,
+      viaFollower: !!viaFollower,
     };
   }
 
@@ -608,6 +711,7 @@ export function channelCellForItem(
       status: "unmatched",
       nameStatus,
       fromOverride,
+      viaFollower: !!viaFollower,
     };
   }
 
@@ -622,6 +726,7 @@ export function channelCellForItem(
       status: "no_live",
       nameStatus,
       fromOverride,
+      viaFollower: !!viaFollower,
     };
   }
 
@@ -634,6 +739,7 @@ export function channelCellForItem(
     status: live === target ? "match" : "mismatch",
     nameStatus,
     fromOverride,
+    viaFollower: !!viaFollower,
   };
 }
 
@@ -1021,8 +1127,14 @@ export function formatRuleShort(rule: ChannelPriceRule): string {
 }
 
 /** ป้ายสั้นในเซลตาราง — บอกประเภทสูตร */
-export function formatRuleCellBadge(rule: ChannelPriceRule, fromOverride = false): string {
+export function formatRuleCellBadge(
+  rule: ChannelPriceRule,
+  fromOverride = false,
+  viaFollower = false,
+  followerAdd?: FollowerAddRule | null,
+): string {
   if (fromOverride && rule.mode === "absolute") return "ระบุราคา";
+  if (viaFollower && followerAdd) return formatFollowerAddShort(followerAdd);
   const core =
     rule.mode === "absolute"
       ? `คงที่${rule.value}`

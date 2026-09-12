@@ -301,6 +301,15 @@ async function updateOne(tabIndex, item, apply, windowIndex) {
     await sleep(6000);
     result = await savePriceAndRead(tabIndex, applyPrice, true, windowIndex);
   }
+  // concurrent-edit overwrite dialog — reload edit + save again after confirming
+  for (
+    let retry = 0;
+    retry < 2 && /บันทึกแทนที่|อัปเดตไปก่อน|overwrite/i.test(result.popupText || "") && apply;
+    retry++
+  ) {
+    await sleep(1500);
+    result = await savePriceAndRead(tabIndex, applyPrice, true, windowIndex);
+  }
 
   const persisted = await verifyPersistedPrice(tabIndex, item.dishId, windowIndex);
   let listingRestore = null;

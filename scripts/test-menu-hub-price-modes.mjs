@@ -58,13 +58,19 @@ assert.doesNotMatch(hub, /ลังโทนราคา/);
 assert.doesNotMatch(hub, /uniq price/);
 assert.match(hub, /function cellSelKey/);
 assert.match(hub, /function selectAllDisplayedCells/);
-assert.match(hub, /function applySelectedTargets/);
+assert.match(hub, /function parseHubMoneyInput/);
+assert.match(hub, /settingsSavedAtRef/);
+assert.match(hub, /function requestSaveSelectedTargets/);
 assert.match(hub, /onSelectClick/);
 assert.match(hub, /if \(e\.detail > 1\) return;/);
 assert.match(hub, /mph-sel-bar/);
 assert.match(hub, /mph-th-sel/);
 assert.match(hub, /เลือกทั้งหมด/);
 assert.match(hub, /กำหนดราคา/);
+assert.match(hub, /บันทึกเป้า \$\{visibleCellSelCount\} เซลล์/);
+assert.match(hub, /บันทึกเป้าแล้ว/);
+assert.doesNotMatch(hub, /ใช้กับ \$\{cellSel\.size\} เซลล์/);
+assert.doesNotMatch(hub, /บันทึกเป้า \$\{cellSel\.size\} เซลล์/);
 assert.match(settingsLib, /export function subscribeMenuPriceHubSettings/);
 assert.match(settingsLib, /onSnapshot/);
 assert.match(settingsLib, /export async function saveChannelRule/);
@@ -76,9 +82,33 @@ assert.doesNotMatch(hub, /CHANNEL_LIVE_SCANS/);
 assert.doesNotMatch(hub, /from \"@\/data\/channel-live-prices\"/);
 assert.doesNotMatch(hub, /from '@\/data\/channel-live-prices'/);
 assert.match(settingsLib, /setManyChannelOverrides/);
+assert.match(settingsLib, /getDocFromServer/);
+assert.match(settingsLib, /loadMenuPriceHubSettingsFromServer/);
+assert.match(settingsLib, /assertOverrideWritesPersisted/);
+assert.match(settingsLib, /updateDoc\(settingsDocRef\(\), payload\)/);
+assert.match(settingsLib, /includeMetadataChanges: true/);
+assert.match(hub, /markSettingsSaved/);
+assert.match(hub, /loadMenuPriceHubSettingsFromServer/);
+assert.match(hub, /ยืนยันใน Firestore แล้ว/);
+assert.match(hub, /onMenuItemPriceSaved/);
+assert.match(hub, /function requestSaveSelectedTargets/);
+assert.match(hub, /function confirmSaveSelectedTargets/);
+assert.match(hub, /ยืนยันดันราคา/);
+assert.match(hub, /mph-dialog-wait/);
+assert.match(hub, /รอจนกว่า Firestore ยืนยัน/);
+assert.match(hub, /visibleCellSelKeys/);
+assert.match(hub, /displayedCellKeySet/);
+assert.match(hub, /isVisibleChecklistCell/);
+assert.match(hub, /requireVisibleChecklist/);
+assert.match(hub, /ติ๊กเลือกก่อน/);
+assert.match(hub, /ทิ้งเช็คที่ไม่อยู่ในตารางที่เห็น/);
+assert.doesNotMatch(hub, /loadMenuPriceHubSettings\(\)/);
+assert.doesNotMatch(hub, /async function applySelectedTargets/);
 assert.match(lib, /fromOverride && rule.mode === "absolute"\) return "ระบุราคา"/);
 assert.match(css, /\.mph-pair-t\.is-sel/);
 assert.match(css, /\.mph-sel-bar/);
+assert.match(css, /\.mph-dialog-wait/);
+assert.match(css, /\.mph-dialog-ok/);
 
 assert.match(hub, /rule: \{ mode: "absolute" as const, value:/);
 assert.match(hub, /onClearOverride/);
@@ -89,6 +119,14 @@ assert.match(hub, /const \[colFilterCat, setColFilterCat\]/);
 assert.match(hub, /const \[colFilterStore, setColFilterStore\]/);
 assert.match(hub, /const \[colFilterNote, setColFilterNote\]/);
 assert.match(hub, /function storePriceMatches/);
+assert.match(hub, /function storePriceSuggestionMatch/);
+assert.match(hub, /โชว์ราคา unique ทั้งหมดเสมอ/);
+assert.match(hub, /data-mph-store-opt/);
+assert.match(hub, /storePriceSuggestions = uniqueStorePrices/);
+assert.doesNotMatch(
+  hub,
+  /function storePriceMatches[\s\S]{0,280}menuTextIncludes/,
+);
 assert.match(hub, /function itemHubNoteText/);
 assert.match(hub, /function isNoteEmptyFilterQuery/);
 assert.match(hub, /function noteFilterMatches/);
@@ -386,7 +424,58 @@ assert.match(ingest, /e\.channel !== channel/);
 
 const lmPlan = read("scripts/lib/hub-channel-targets.mjs");
 assert.match(lmPlan, /overrideN/);
-assert.match(lmPlan, /fromOverride: !!override/);
+assert.match(lmPlan, /resolveHubItemTarget/);
+assert.match(lmPlan, /applyFollowerAdd/);
+assert.match(lmPlan, /fromOverride: resolved\.fromOverride/);
+assert.match(lib, /mainChannel/);
+assert.match(lib, /followerAdd/);
+assert.match(lib, /viaFollower/);
+assert.match(lib, /export function resolveMainChannel/);
+assert.match(lib, /export function applyFollowerAdd/);
+assert.match(settingsLib, /saveMainChannel/);
+assert.match(settingsLib, /saveFollowerAdd/);
+assert.match(hub, /mph-th-role/);
+assert.match(hub, /mph-th-add/);
+assert.match(hub, /mph-th-actions/);
+assert.match(hub, /mph-th-extra-tog/);
+assert.match(hub, /persistMainChannel/);
+assert.match(hub, /persistFollowerAdd/);
+assert.match(css, /\.mph-th-add/);
+assert.match(css, /\.mph-th-role/);
+assert.match(css, /\.mph-th-actions/);
+assert.match(css, /\.mph-th-extra-tog/);
+assert.match(hub, /CHANNEL_COL_MIN_W/);
+assert.match(hub, /telltea_mph_col_widths_v9/);
+assert.match(css, /\.mph-pair-margin \{[\s\S]*?position: static/);
+assert.doesNotMatch(hub, /mph-th-main-mark/);
+assert.doesNotMatch(css, /min-height: 5\.1rem/);
+
+// main GP 22% → follower +5฿
+function applyFollowerAdd(mainTarget, add) {
+  const base = Math.max(0, Number(mainTarget) || 0);
+  const value = Number(add?.value) || 0;
+  const raw = add?.mode === "percent" ? base * (1 + value / 100) : base + value;
+  return Math.max(0, Math.round(raw));
+}
+function applyChannelRuleLocal(base, rule) {
+  const value = Number(rule?.value) || 0;
+  if (rule.mode === "gp") {
+    const gp = Math.min(99.9, Math.max(0, value));
+    const keep = 1 - gp / 100;
+    return Math.max(0, Math.round(keep > 0 ? base / keep : base));
+  }
+  return Math.max(0, Math.round(base + value));
+}
+{
+  const store = 30;
+  const main = applyChannelRuleLocal(store, { mode: "gp", value: 22 });
+  assert.equal(main, 38);
+  assert.equal(applyFollowerAdd(main, { mode: "offset", value: 5 }), 43);
+  assert.equal(applyFollowerAdd(main, { mode: "percent", value: 10 }), 42);
+}
+
+assert.match(hub, /% จากแกน/);
+
 const lmApply = read("scripts/lineman-chrome-batch-update.mjs");
 assert.match(lmApply, /ระบุราคา/);
 assert.match(lmApply, /overrideN/);
@@ -402,4 +491,11 @@ const liveStore = read("src/lib/menu-price-hub-live.ts");
 assert.match(liveStore, /parseUnmatchedList/);
 assert.match(liveStore, /unmatched: \(current\.unmatched \|\| \[\]\)\.filter/);
 
+assert.match(hub, /data-mph-ai=\"scan-at\"/);
+assert.match(hub, /mph-ai-meta/);
+assert.match(css, /\.mph-ai-meta/);
+assert.doesNotMatch(hub, /className=\"mph-live-at is-waiting\"/);
+assert.doesNotMatch(hub, /mph-scan muted/);
+
 console.log("ok menu hub price modes");
+

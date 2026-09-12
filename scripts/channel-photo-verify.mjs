@@ -33,14 +33,14 @@ import {
 const PILOT = [
   {
     posId: "fs_item_33559286",
-    name: "โกโก้ (เย็น/ปั่น)",
+    name: "โกโก้ เย็น/ปั่น",
     dishId: "3246798564131840",
     grabId: "THITE2024040707225137437",
     lineId: "0leDVTV5lvQwH2AOlltbnXPhmz2MLE",
   },
   {
     posId: "fs_item_33559314",
-    name: "ชานมไข่มุก (เย็น/ปั่น)",
+    name: "ชานมไข่มุก เย็น/ปั่น",
     dishId: "2035915327775232",
     grabId: "THITE2024040710315731824",
     lineId: "0leDVTbnNIwwOK4o25HjFUvQRWneMh",

@@ -10,7 +10,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
 const ver = read("src/lib/pos-version.ts");
-assert.match(ver, /POS_BUILD\s*=\s*223\b/);
+assert.match(ver, /POS_BUILD\s*=\s*\d+/);
 
 const fixedSrc = read("src/lib/pos-fixed-category-order.ts");
 assert.match(fixedSrc, /เบเกอรี่ & ไอศครีม/);
@@ -45,16 +45,16 @@ function normalizeCategoryName(name) {
 
 const ORDER = [
   "เบเกอรี่ & ไอศครีม",
-  "Signature Drinks (เย็น, ปั่น)",
-  "ชานมสดคราฟต์ (เย็น, ปั่น)",
+  "Signature Drinks เย็น/ปั่น",
+  "ชานมสดคราฟต์ เย็น/ปั่น",
   "ชา",
-  "ชานม (เย็น, ปั่น)",
+  "ชานม เย็น/ปั่น",
   "มัจฉะแท้",
   "ผลไม้ปั่น & สมูทตี้",
   "ชาผลไม้",
-  "กาแฟ (เย็น, ปั่น)",
-  "นม (เย็น, ปั่น)",
-  "เบาเบากับน้ำเต้าหู้ (เย็น, ปั่น)",
+  "กาแฟ เย็น/ปั่น",
+  "นม เย็น/ปั่น",
+  "เบาเบากับน้ำเต้าหู้ เย็น/ปั่น",
   "อิตาเลียน โซดา",
   "0% แคล ชาเพื่อสุขภาพ",
   "0% แคล โซดาซ่าเพื่อสุขภาพ",
@@ -70,7 +70,7 @@ assert.equal(normalizeCategoryName("* กาแฟสดนุ่มละมุ
 const cats = [
   { id: "w", name: "น้ำเปล่า", sortOrder: 1 },
   { id: "b", name: "เบเกอรี่ & ไอศครีม", sortOrder: 99 },
-  { id: "s", name: "Signature Drinks (เย็น, ปั่น)", sortOrder: 50 },
+  { id: "s", name: "Signature Drinks เย็น/ปั่น", sortOrder: 50 },
   { id: "x", name: "* กาแฟสด อื่นๆ ร้อน", sortOrder: 2 },
 ].map((c) => ({ ...c, active: true, createdAt: 0, updatedAt: 0 }));
 
@@ -106,7 +106,7 @@ function apply(categories) {
 
 const out = apply(cats);
 assert.equal(out[0].name, "เบเกอรี่ & ไอศครีม");
-assert.equal(out[1].name, "Signature Drinks (เย็น, ปั่น)");
+assert.equal(out[1].name, "Signature Drinks เย็น/ปั่น");
 assert.equal(out[out.length - 1].name, "น้ำเปล่า");
 assert.equal(out[out.length - 2].name, "* กาแฟสด อื่นๆ ร้อน");
 

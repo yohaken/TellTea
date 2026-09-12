@@ -105,6 +105,30 @@ function fmt(n: number) {
   return formatVatMoney(n);
 }
 
+/** GP% = คชจ.÷ยอดขายแอพ — โชว์เบาๆ หลังยอด (ดูเฉยๆ) */
+function gpPctOfSales(fee: number, sales: number): string | null {
+  if (!(sales > 0) || !(fee > 0) || !Number.isFinite(fee) || !Number.isFinite(sales)) {
+    return null;
+  }
+  const pct = (fee / sales) * 100;
+  if (!Number.isFinite(pct)) return null;
+  const label = pct >= 10 ? pct.toFixed(0) : pct.toFixed(1);
+  return `${label}%`;
+}
+
+function GpPctHint({ fee, sales }: { fee: number; sales: number }) {
+  const label = gpPctOfSales(fee, sales);
+  if (!label) return null;
+  return (
+    <span
+      className="muted vat-gp-pct-hint"
+      title={`แพลตฯ คิด GP ≈ ${label} ของยอดขายแอพ`}
+    >
+      {label}
+    </span>
+  );
+}
+
 /** ภาษีขายที่สรรพากรเรียกเก็บ = ยอดขายรวม VAT × 7% */
 function vatFromInclusiveSales(gross: number, pct: number) {
   return outputVatFromSalesInclusive(gross, pct);
@@ -1259,12 +1283,18 @@ export function VatMonthBooks({ actor }: Props) {
                     />
                   </td>
                   <td className="col-num col-input">
-                    <MoneyCell
-                      value={moneyFieldValue(draft.gpFee[k])}
-                      locked={locked}
-                      ariaLabel={`คชจ.GP ${MONTH_CHANNEL_SHORT[k]}`}
-                      onChange={(v) => setSourceFee(k, v)}
-                    />
+                    <span className="vat-gp-cell">
+                      <MoneyCell
+                        value={moneyFieldValue(draft.gpFee[k])}
+                        locked={locked}
+                        ariaLabel={`คชจ.GP ${MONTH_CHANNEL_SHORT[k]}`}
+                        onChange={(v) => setSourceFee(k, v)}
+                      />
+                      <GpPctHint
+                        fee={draft.gpFee[k]}
+                        sales={draft.sales[k]}
+                      />
+                    </span>
                   </td>
                   <td className="col-num col-input">
                     <MoneyCell
@@ -1285,7 +1315,13 @@ export function VatMonthBooks({ actor }: Props) {
                   {fmt(monthSources.totals.transfer)}
                 </td>
                 <td className="col-num col-net">
-                  {fmt(monthSources.totals.fee)}
+                  <span className="vat-gp-cell">
+                    {fmt(monthSources.totals.fee)}
+                    <GpPctHint
+                      fee={monthSources.totals.fee}
+                      sales={monthSources.totals.sales}
+                    />
+                  </span>
                 </td>
                 <td className="col-num col-net">
                   {fmt(monthSources.totals.gpVat)}
@@ -1419,7 +1455,13 @@ export function VatMonthBooks({ actor }: Props) {
                       GP แพลตฯ (อ้างอิง · ไม่หักกำไร)
                     </td>
                     <td className="col-num col-net muted">
-                      {fmt(view.gpCostTotal)}
+                      <span className="vat-gp-cell">
+                        {fmt(view.gpCostTotal)}
+                        <GpPctHint
+                          fee={view.gpCostTotal}
+                          sales={monthSources.totals.sales}
+                        />
+                      </span>
                     </td>
                   </tr>
                   {MONTH_CHANNELS.map((k) => (
@@ -1428,12 +1470,18 @@ export function VatMonthBooks({ actor }: Props) {
                         {MONTH_CHANNEL_LABEL[k]}
                       </td>
                       <td className="col-num col-input">
-                        <MoneyCell
-                          value={moneyFieldValue(draft.gpFee[k])}
-                          locked={locked}
-                          ariaLabel={`คชจ. GP ${MONTH_CHANNEL_SHORT[k]}`}
-                          onChange={(v) => setGpField(k, v)}
-                        />
+                        <span className="vat-gp-cell">
+                          <MoneyCell
+                            value={moneyFieldValue(draft.gpFee[k])}
+                            locked={locked}
+                            ariaLabel={`คชจ. GP ${MONTH_CHANNEL_SHORT[k]}`}
+                            onChange={(v) => setGpField(k, v)}
+                          />
+                          <GpPctHint
+                            fee={draft.gpFee[k]}
+                            sales={draft.sales[k]}
+                          />
+                        </span>
                       </td>
                     </tr>
                   ))}
@@ -1584,7 +1632,15 @@ export function VatMonthBooks({ actor }: Props) {
                     >
                       GP แพลตฯ (อ้างอิง · ไม่หัก)
                     </td>
-                    <td className="col-num muted">{fmt(view.gpCostTotal)}</td>
+                    <td className="col-num muted">
+                      <span className="vat-gp-cell">
+                        {fmt(view.gpCostTotal)}
+                        <GpPctHint
+                          fee={view.gpCostTotal}
+                          sales={monthSources.totals.sales}
+                        />
+                      </span>
+                    </td>
                   </tr>
                   <tr className="vat-sales-totals-row">
                     <td

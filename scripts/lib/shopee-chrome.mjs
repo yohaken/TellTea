@@ -371,23 +371,51 @@ export function setPriceOnTab(tabIndex, price, apply, windowIndex) {
   );
 }
 
+/** Click confirm on overwrite / OK dialogs (Shopee concurrent-edit popup). */
+function clickShopeeConfirmDialogs(tabIndex, windowIndex) {
+  return chromeJsJsonOnTab(
+    tabIndex,
+    `(() => {
+      const clickOk = (root) => {
+        const btns = [...(root || document).querySelectorAll('button')];
+        const ok = btns.find((b) => /^(ตกลง|OK|Confirm|ยืนยัน|知道了)$/i.test((b.innerText || '').trim()));
+        if (ok) { ok.click(); return true; }
+        return false;
+      };
+      let n = 0;
+      for (const el of document.querySelectorAll('[role="dialog"], [class*="modal"], [class*="Modal"], [class*="popup"], [class*="Popup"]')) {
+        const t = (el.innerText || '').trim();
+        if (!t) continue;
+        // overwrite conflict — ต้องกดตกลง ไม่ใช่ยกเลิก
+        if (/บันทึกแทนที่|อัปเดตไปก่อน|updated previously|overwrite/i.test(t)) {
+          if (clickOk(el)) n += 1;
+          continue;
+        }
+        if (clickOk(el)) n += 1;
+      }
+      if (!n && clickOk(document)) n += 1;
+      return JSON.stringify({ clicked: n });
+    })()`,
+    { windowIndex },
+  );
+}
+
 /** Save price and read popup + field after brief wait. */
 export async function savePriceAndRead(tabIndex, price, apply, windowIndex) {
   const attempt = setPriceOnTab(tabIndex, price, apply, windowIndex);
   if (!apply) return attempt;
-  await sleep(1500);
-  chromeJsJsonOnTab(
-    tabIndex,
-    `(() => {
-      for (const btn of document.querySelectorAll('button')) {
-        const t = (btn.innerText||'').trim();
-        if (/^(ตกลง|OK|Confirm|ยืนยัน|知道了)$/i.test(t)) { btn.click(); return 'ok'; }
-      }
-      return 'none';
-    })()`,
-    { windowIndex },
-  );
-  await sleep(2500);
+
+  // Poll for overwrite/OK dialogs right after save (ขึ้นช้าได้)
+  for (let i = 0; i < 8; i++) {
+    await sleep(500);
+    const hit = clickShopeeConfirmDialogs(tabIndex, windowIndex);
+    if (hit?.clicked > 0) {
+      await sleep(800);
+      clickShopeeConfirmDialogs(tabIndex, windowIndex);
+      break;
+    }
+  }
+  await sleep(2000);
   const after = chromeJsJsonOnTab(
     tabIndex,
     `(() => {
@@ -399,12 +427,15 @@ export async function savePriceAndRead(tabIndex, price, apply, windowIndex) {
         if (t && t.length < 800) popupBits.push(t);
       }
       const popupText = popupBits.join(' | ').slice(0, 500);
-      const blocked = /15%|15 %|เกิน|ไม่สามารถ|ไม่สามาร|ปรับราคา|price change|too (large|much)|โปรโมชัน|promotion/i.test(body + popupText);
+      // อย่านับป๊อปอัป "บันทึกแทนที่" เป็น blocked — กดตกลงแล้วต้องถือว่าผ่าน
+      const overwriteOnly = popupBits.length > 0 && popupBits.every((t) => /บันทึกแทนที่|อัปเดตไปก่อน|updated previously|overwrite/i.test(t));
+      const blocked = !overwriteOnly && /15%|15 %|เกิน|ไม่สามารถ|ไม่สามาร|ปรับราคา|price change|too (large|much)|โปรโมชัน|promotion/i.test(body + popupText);
       return JSON.stringify({
         afterInput: priceInput ? Number(priceInput.value) : null,
         onEdit: location.href.includes('/edit'),
         popupText,
         blocked,
+        overwriteOnly,
       });
     })()`,
     { windowIndex },

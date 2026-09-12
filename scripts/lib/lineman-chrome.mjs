@@ -213,6 +213,21 @@ export async function wongnaiGql(operationName, sha256Hash, variables = {}, time
   throw new Error(`wongnai gql timeout ${operationName}`);
 }
 
+function lineListPhotoId(image) {
+  const raw = String(image?.smallUrl || image?.largeUrl || image?.url || image?.thumbnailUrl || "").trim();
+  if (!raw) return "";
+  const abs = raw.startsWith("//") ? `https:${raw}` : raw;
+  try {
+    if (/^https?:\/\//i.test(abs)) {
+      return decodeURIComponent(new URL(abs).pathname.split("/").filter(Boolean).pop() || abs);
+    }
+  } catch {
+    /* fall through */
+  }
+  const m = abs.match(/\/([^/?#]+)(?:\?|#|$)/);
+  return m ? decodeURIComponent(m[1]) : abs;
+}
+
 export async function listWongnaiMenuItems() {
   const json = await wongnaiGql("menuItems", WONGNAI_GQL.menuItems, { businessId: BUSINESS });
   const data = json?.data?.my?.menu?.items?.data || [];
@@ -228,6 +243,8 @@ export async function listWongnaiMenuItems() {
     selfPickupAvailable: it.selfPickupAvailable === true,
     offlineAvailable: it.offlineAvailable === true,
     categoryIds: it.menuGroupIds || [],
+    /** Basename of CDN URL — hub photo chip needs this field (empty = known no photo). */
+    photoId: lineListPhotoId(it.image),
     href: editUrl(it.id),
   }));
 }
@@ -289,22 +306,32 @@ export function readEditPage(tabIndex, windowIndex) {
     `(() => {
       const m = location.href.match(/menu\\/(0[a-zA-Z0-9]+)\\/edit/);
       const nameInput = document.querySelector('input[name="name"], input[name="nameTh"]');
+      const parseBaht = (raw) => {
+        const n = Number(String(raw || "").replace(/[฿,\\s]/g, ""));
+        return Number.isFinite(n) ? n : null;
+      };
+      // Prefer explicit Wongnai fields — placeholder="ราคา" alone can still be empty/0 while loading.
+      const onlineEl = document.querySelector('#onlinePrice');
+      const pickupEl = document.querySelector('#selfPickUpPrice');
+      const offlineEl = document.querySelector('#offlinePrice');
+      const online = onlineEl ? parseBaht(onlineEl.value) : null;
+      const pickup = pickupEl ? parseBaht(pickupEl.value) : null;
+      const offline = offlineEl ? parseBaht(offlineEl.value) : null;
       const priceInputs = [...document.querySelectorAll('input[placeholder="ราคา"]')];
-      const prices = priceInputs.map((i) =>
-        Number(String(i.value || "").replace(/[฿,\\s]/g, "")),
-      ).filter((n) => Number.isFinite(n));
-      let listPrice = null;
-      if (prices.length >= 3) listPrice = prices[0];
-      else if (prices.length) listPrice = prices[0];
-      const offline = prices.length >= 3 ? prices[2] : null;
+      const prices = priceInputs.map((i) => parseBaht(i.value)).filter((n) => n != null);
+      const listPrice = online != null ? online : prices.length ? prices[0] : null;
+      const pricesReady = !!(onlineEl && String(onlineEl.value || "").trim());
       const text = document.body.innerText || '';
       const nameLocked = !!(nameInput && (nameInput.disabled || nameInput.readOnly));
       return JSON.stringify({
         onEdit: location.href.includes('/menu/') && location.href.includes('/edit'),
         name: nameInput?.value || '',
         listPrice,
-        offlinePrice: offline,
+        onlinePrice: online,
+        selfPickUpPrice: pickup,
+        offlinePrice: offline != null ? offline : (prices.length >= 3 ? prices[2] : null),
         prices,
+        pricesReady,
         id: m ? m[1] : null,
         url: location.href,
         nameLocked,
@@ -323,11 +350,12 @@ export async function openEditItem(tabIndex, id, _name, windowIndex, href) {
     `(() => { location.href=${JSON.stringify(url)}; return 'ok'; })()`,
     { windowIndex },
   );
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 12; i++) {
     await sleep(i === 0 ? 1600 : 700);
     const page = readEditPage(tabIndex, windowIndex);
-    if (page?.onEdit && page.listPrice != null) return page;
-    if (page?.onEdit && i >= 2) return page;
+    // Wait until #onlinePrice has a real value — 0 during load used to be accepted as done.
+    if (page?.onEdit && page.pricesReady && page.listPrice != null) return page;
+    if (page?.onEdit && i >= 8 && page.listPrice != null && page.listPrice > 0) return page;
   }
   return readEditPage(tabIndex, windowIndex);
 }

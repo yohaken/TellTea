@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 import { collection, getDocs } from "firebase/firestore";
 import { getSeedDb } from "./lib/pos-firebase-seed.mjs";
 import { applyChannelRule, loadHubChannelContext } from "./lib/hub-channel-targets.mjs";
-import { namesEqual } from "./lib/grab-csv.mjs";
+import { namesEqual, foldMenuName } from "./lib/grab-csv.mjs";
 import { writeHubChannelLiveRow } from "./lib/hub-live-write.mjs";
 import { findShopeeTab, chromeJsJsonOnTab as shopeeJs } from "./lib/shopee-chrome.mjs";
 import {
@@ -41,7 +41,7 @@ const SHOPEE_API = "https://foody.shopee.co.th/api/seller/store/option-groups";
 const args = process.argv.slice(2);
 const apply = args.includes("--apply");
 const channelArg = (args.find((a) => a.startsWith("--channel=")) || "--channel=all").slice(10);
-const workers = Math.min(6, Math.max(1, Number((args.find((a) => a.startsWith("--workers=")) || "").slice(10)) || 4));
+const workers = Math.min(4, Math.max(1, Number((args.find((a) => a.startsWith("--workers=")) || "").slice(10)) || 4));
 const channels = channelArg === "all" ? ["shopee", "grab", "lineman"] : channelArg.split(",").map((s) => s.trim());
 
 function wsNorm(s) {
@@ -95,9 +95,16 @@ function pairGroups(posGroups, liveGroups) {
     let best = null;
     for (const lg of liveGroups) {
       if (used.has(lg.key)) continue;
-      if (!namesEqual(pg.name, lg.name)) continue;
+      if (!namesEqual(pg.name, lg.name) && foldMenuName(pg.name) !== foldMenuName(lg.name)) continue;
       const related = Number(lg.related) || 0;
       if (!best || related > (Number(best.related) || 0)) best = lg;
+    }
+    // unique fold fallback if no exact
+    if (!best) {
+      const hits = liveGroups.filter(
+        (lg) => !used.has(lg.key) && foldMenuName(pg.name) === foldMenuName(lg.name),
+      );
+      if (hits.length === 1) best = hits[0];
     }
     if (!best) {
       leftover.push({ pos: pg.name });
@@ -108,7 +115,11 @@ function pairGroups(posGroups, liveGroups) {
   }
   for (const lg of liveGroups) {
     if (used.has(lg.key)) continue;
-    const pos = posGroups.find((p) => namesEqual(p.name, lg.name));
+    let pos = posGroups.find((p) => namesEqual(p.name, lg.name));
+    if (!pos) {
+      const hits = posGroups.filter((p) => foldMenuName(p.name) === foldMenuName(lg.name));
+      if (hits.length === 1) pos = hits[0];
+    }
     if (pos) {
       used.add(lg.key);
       scored.push({ pos, live: lg, extraClone: true });
@@ -123,7 +134,13 @@ function planFromPair(pos, live) {
   const choiceRenames = [];
   const missing = [];
   for (const c of pos.choices) {
-    const hit = (live.choices || []).find((o) => !used.has(o.id || o.name) && namesEqual(o.name, c.name));
+    let hit = (live.choices || []).find((o) => !used.has(o.id || o.name) && namesEqual(o.name, c.name));
+    if (!hit) {
+      const hits = (live.choices || []).filter(
+        (o) => !used.has(o.id || o.name) && foldMenuName(o.name) === foldMenuName(c.name),
+      );
+      if (hits.length === 1) hit = hits[0];
+    }
     if (!hit) {
       missing.push(c);
       continue;

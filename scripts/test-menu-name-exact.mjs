@@ -33,7 +33,7 @@ assert.doesNotMatch(hub, /foldMenuName/);
 assert.doesNotMatch(hub, /scoreNames/);
 
 const ingest = read("scripts/channel-scan-to-hub.mjs");
-assert.match(ingest, /namesEqual\(p\.name, it\.name\)/);
+assert.match(ingest, /namesEqual\(p\.name, liveName\)|namesEqual\(p\.name, it\.name\)/);
 assert.match(
   ingest,
   /namesEqual\(liveName, c\.name\) && namesEqual\(liveGroup, c\.groupName\)/,
@@ -41,19 +41,24 @@ assert.match(
 assert.match(ingest, /unmatchedEntries/);
 assert.match(ingest, /classifyItemReason/);
 assert.match(ingest, /ลบไม่ได้/);
+assert.match(ingest, /foldMenuName/); // unique-fold fallback after exact
 assert.doesNotMatch(ingest, /minScore/);
-assert.doesNotMatch(ingest, /foldMenuName/);
 assert.doesNotMatch(ingest, /scoreGrabToPos/);
 
 const targets = read("scripts/lib/hub-channel-targets.mjs");
-assert.match(targets, /posByName\.get\(normName\(it\.name\)\)/);
+assert.match(targets, /foldMenuName|posByName\.get\(normName\(it\.name\)\)/);
 assert.doesNotMatch(targets, /bestPosForGrab/);
 
 assert.match(read("scripts/channel-rename-to-pos.mjs"), /namesEqual\(p\.name, name\)/);
-assert.match(read("scripts/channel-rename-options-to-pos.mjs"), /if \(!namesEqual\(pg\.name, lg\.name\)\) continue/);
+assert.match(read("scripts/channel-rename-to-pos.mjs"), /foldMenuName/);
+assert.match(read("scripts/channel-rename-options-to-pos.mjs"), /foldMenuName/);
 assert.doesNotMatch(read("scripts/channel-rename-options-to-pos.mjs"), /choiceScore/);
 
 assert.match(read("scripts/channel-rename-categories-to-pos.mjs"), /namesEqual\(p, name\)/);
+assert.match(read("scripts/channel-rename-categories-to-pos.mjs"), /foldMenuName/);
 assert.match(read("scripts/channel-rename-categories-to-pos.mjs"), /store\/catalogs\//);
+
+assert.match(read("scripts/pos-strip-parens-rename.mjs"), /bumpMenuVersion/);
+assert.match(read("scripts/pos-strip-parens-rename.mjs"), /storeOnly/);
 
 console.log("ok menu name exact");

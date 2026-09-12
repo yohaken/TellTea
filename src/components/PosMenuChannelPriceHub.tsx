@@ -11,6 +11,9 @@ import {
   emptyChannelLiveStore,
   formatRuleShort,
   formatRuleCellBadge,
+  formatFollowerAddShort,
+  resolveMainChannel,
+  resolveFollowerAdd,
   ruleModeLabelTh,
   nameStatusLabel,
   orderStatusLabel,
@@ -26,6 +29,8 @@ import {
   priceInputCh,
   resolveStoreBase,
   resolveOptionStoreBase,
+  resolveChannelTarget,
+  resolveOptionChannelTarget,
   marginFromBase,
   formatMarginShort,
   applyChannelRule,
@@ -50,6 +55,7 @@ import {
   type ChannelPriceRule,
   type ChannelRules,
   type DeliveryChannel,
+  type FollowerAddRule,
   type HubStatusFilter,
   type LiveChannelItem,
   type MenuPriceHubSettings,
@@ -72,9 +78,11 @@ import {
 } from "@/lib/menu-price-hub-live";
 import { applyShopeeExportToLiveStore, parseShopeeExportFiles } from "@/lib/shopee-export";
 import {
-  loadMenuPriceHubSettings,
+  loadMenuPriceHubSettingsFromServer,
   saveChannelRule,
   saveChannelRules,
+  saveFollowerAdd,
+  saveMainChannel,
   saveMenuPriceHubSettings,
   setItemChannelOverride,
   setOptionChannelOverride,
@@ -100,6 +108,19 @@ import type { MenuCategory, MenuItem, MenuOptionChoice, MenuOptionGroup } from "
 
 type PriceDraft = { store: string };
 type LiveDraft = { name: string; price: string };
+
+/** แปลงช่องกำหนดราคา — ตัด ฿/คอมมา/ช่องว่างพิเศษ กัน NaN แล้วขึ้น error ปลอม */
+function parseHubMoneyInput(raw: string): number | null {
+  const cleaned = String(raw || "")
+    .normalize("NFKC")
+    .replace(/[฿บาท]/gi, "")
+    .replace(/[\s\u00a0\u200b,]/g, "")
+    .trim();
+  if (!cleaned || cleaned === "-" || cleaned === "." || cleaned === "-.") return null;
+  const n = Number(cleaned);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.round(n);
+}
 
 /** draft ว่างไม่ทับค่าสแกนใน hub — กันช่อง L เป็น ∅ ทั้งที่มีราคา */
 function observationFromDraftOrStored(
@@ -302,6 +323,8 @@ function NetToShopBadge({
 function RuleKindBadge({
   rule,
   fromOverride,
+  viaFollower,
+  followerAdd,
   store,
   target,
   onClick,
@@ -309,26 +332,32 @@ function RuleKindBadge({
 }: {
   rule: ChannelPriceRule;
   fromOverride?: boolean;
+  viaFollower?: boolean;
+  followerAdd?: FollowerAddRule | null;
   store: number;
   target: number;
   onClick?: () => void;
   onClearOverride?: () => void;
 }) {
-  const expected = applyChannelRule(store, rule);
+  const expected =
+    viaFollower && !fromOverride ? target : applyChannelRule(store, rule);
   const synced = expected === target;
   const net = netToShopFromSell(target, rule);
   let calc: "ok" | "round" | "miss" | "fixed";
-  if (rule.mode === "absolute") calc = synced ? "fixed" : "miss";
+  if (fromOverride && rule.mode === "absolute") calc = synced ? "fixed" : "miss";
+  else if (viaFollower && !fromOverride) calc = "ok";
   else if (!synced) calc = "miss";
   else if (net === store) calc = "ok";
   else if (Math.abs(net - store) <= 1) calc = "round";
   else calc = "miss";
 
   const mark = calc === "ok" || calc === "fixed" ? "✓" : calc === "round" ? "≈" : "!";
-  const label = formatRuleCellBadge(rule, !!fromOverride);
+  const label = formatRuleCellBadge(rule, !!fromOverride, !!viaFollower, followerAdd);
   const calcText =
     calc === "ok"
-      ? "คำนวณแล้ว · เหลือถึงร้าน = หน้าร้าน"
+      ? viaFollower && !fromOverride
+        ? "คำนวณแล้ว · ตามเป้าแกน + add"
+        : "คำนวณแล้ว · เหลือถึงร้าน = หน้าร้าน"
       : calc === "fixed"
         ? "คำนวณแล้ว · ราคาคงที่ที่ระบุ"
         : calc === "round"
@@ -336,13 +365,15 @@ function RuleKindBadge({
           : "เป้าไม่ตรงสูตรเซลนี้ — กดคำนวณใหม่หรือแก้ override";
   const title = fromOverride
     ? `ระบุเอง · ${ruleModeLabelTh(rule)} · ${formatRuleShort(rule)} · ${calcText} · คลิกแก้สูตร`
-    : `สูตรคอลัมน์ · ${ruleModeLabelTh(rule)} · ${formatRuleShort(rule)} · ${calcText} · คลิกแก้สูตร · ดับเบิลคลิกตัวเลขเป้า = ราคาคงที่แถวนี้`;
+    : viaFollower && followerAdd
+      ? `ตามแกน · ${formatFollowerAddShort(followerAdd)} · ${calcText} · คลิกแก้สูตร · ดับเบิลคลิกตัวเลขเป้า = ราคาคงที่แถวนี้`
+      : `สูตรคอลัมน์ · ${ruleModeLabelTh(rule)} · ${formatRuleShort(rule)} · ${calcText} · คลิกแก้สูตร · ดับเบิลคลิกตัวเลขเป้า = ราคาคงที่แถวนี้`;
 
   return (
     <span className="mph-rule-row">
       <button
         type="button"
-        className={`mph-rule-kind${fromOverride ? " is-ov" : ""} is-${rule.mode} is-calc-${calc}`}
+        className={`mph-rule-kind${fromOverride ? " is-ov" : ""}${viaFollower && !fromOverride ? " is-follow" : ""} is-${rule.mode} is-calc-${calc}`}
         title={title}
         onClick={onClick}
       >
@@ -383,6 +414,34 @@ type NameConfirm = {
 
 type ClearConfirm = {
   channels: DeliveryChannel[];
+};
+
+type FillTargetConfirm = {
+  channel: DeliveryChannel;
+  changeCount: number;
+  sameCount: number;
+  ruleLabel: string;
+  selectedCount: number;
+  writes: {
+    scope: "item" | "option";
+    id: string;
+    channel: DeliveryChannel;
+    rule: ChannelPriceRule;
+  }[];
+};
+
+/** ยืนยันดันเป้ากลุ่ม — ค้าง popup จน Firestore ยืนยัน */
+type SaveTargetsConfirm = {
+  price: number;
+  writes: {
+    scope: "item" | "option";
+    id: string;
+    channel: DeliveryChannel;
+    rule: ChannelPriceRule;
+  }[];
+  chSummary: string;
+  phase: "confirm" | "saving" | "done";
+  error?: string;
 };
 
 type CellSel = {
@@ -470,9 +529,9 @@ const DEFAULT_COL_W: Record<ColKey, number> = {
   note: 120,
   cat: 138,
   store: 64,
-  shopee: 100,
-  grab: 100,
-  lineman: 100,
+  shopee: 156,
+  grab: 156,
+  lineman: 156,
   sales_store: 76,
   sales_grab: 76,
   sales_lineman: 76,
@@ -481,10 +540,13 @@ const DEFAULT_COL_W: Record<ColKey, number> = {
 };
 
 const COLLAPSED_W = 22;
+/** คอลัมน์แพลต — กว้างพอโชว์หัวสูตร + ป้ายเหลือถึงร้าน ไม่หดจนซ่อน */
+const CHANNEL_COL_MIN_W = 148;
+const CHANNEL_COL_W = 156;
 /** คอลัมน์ติ๊กแถว — แยกจากคอลัมน์ชื่อ เพื่อให้คลิกตรงทั้งความสูงแถว ไม่ทับหัวตาราง */
 const SEL_COL_W = 28;
-/** v7: ไม่มีคอลัมน์ต้นแบบส่ง — เป้าแพลตฟอร์มอิงหน้าร้าน */
-const COL_STORAGE_KEY = "telltea_mph_col_widths_v8";
+/** v9: คอลัมน์ S/G/L กว้างขึ้น — ป้ายเหลือถึงร้าน + หัวแกน/ตาม */
+const COL_STORAGE_KEY = "telltea_mph_col_widths_v9";
 const SHOW_OPTS_KEY = "telltea_mph_show_options";
 const HIDDEN_OPTS_KEY = "telltea_mph_hidden_opt_groups";
 const CLEARED_LIVE_KEY = "telltea_mph_cleared_live";
@@ -550,16 +612,28 @@ function isChannelCol(key: ColKey): key is DeliveryChannel {
 }
 
 function channelChipLetter(ch: DeliveryChannel): string {
-  if (ch === "shopee") return "S";
-  if (ch === "grab") return "G";
-  return "L";
+  if (ch === "shopee") return "ชป";
+  if (ch === "grab") return "กบ";
+  return "ลม";
+}
+
+function channelChipIconSrc(ch: DeliveryChannel): string {
+  if (ch === "shopee") return "/icons/channels/shopee.svg";
+  if (ch === "grab") return "/icons/channels/grab.svg";
+  return "/icons/channels/lineman.svg";
 }
 
 function nameMarkGlyph(status: ChannelPriceCell["nameStatus"]): string {
-  if (status === "exact") return "✓";
-  if (status === "near") return "~";
-  if (status === "missing") return "∅";
-  return "·";
+  if (status === "exact") return "ตรง";
+  if (status === "near") return "ใกล้";
+  if (status === "missing") return "ไม่มี";
+  return "–";
+}
+
+function orderRankGlyph(liveRank: number | null | undefined, wrong: boolean): string {
+  if (liveRank == null) return "–";
+  const rankText = String(liveRank);
+  return wrong ? `${rankText}⇅` : rankText;
 }
 
 function HubChMark({
@@ -577,8 +651,17 @@ function HubChMark({
 }) {
   const inner = (
     <>
-      <span className="mph-ch-mark-ch">{channelChipLetter(ch)}</span>
+      <img
+        className="mph-ch-mark-logo"
+        src={channelChipIconSrc(ch)}
+        alt=""
+        width={10}
+        height={10}
+        decoding="async"
+        draggable={false}
+      />
       <span className="mph-ch-mark-g">{glyph}</span>
+      <span className="sr-only">{channelChipLetter(ch)}</span>
     </>
   );
   if (onClick) {
@@ -620,6 +703,10 @@ function HubNameMarks({
   if (visible.every((ch) => channels[ch].nameStatus === "skip")) return null;
   return (
     <span className="mph-ch-marks is-name" aria-label="ชื่อบนแพลตฟอร์ม">
+      <span className="mph-ch-marks-paren" aria-hidden>
+        (
+      </span>
+      <span className="mph-ch-marks-label">ชื่อ</span>
       {visible.map((ch) => {
         const st = channels[ch].nameStatus;
         return (
@@ -639,6 +726,9 @@ function HubNameMarks({
           />
         );
       })}
+      <span className="mph-ch-marks-paren" aria-hidden>
+        )
+      </span>
     </span>
   );
 }
@@ -656,21 +746,24 @@ function HubItemOrderMarks({
 }) {
   if (collapsed) return null;
   if (visible.every((ch) => channels[ch].nameStatus === "skip")) return null;
-  const posLabel = posRank && posRank > 0 ? String(posRank) : "·";
+  const posLabel = posRank && posRank > 0 ? String(posRank) : "–";
   return (
     <span className="mph-ch-marks is-item-order" aria-label="ลำดับเมนูในหมวดบนแพลตฟอร์ม">
+      <span className="mph-ch-marks-paren" aria-hidden>
+        (
+      </span>
+      <span className="mph-ch-marks-label">ลำดับ</span>
       {visible.map((ch) => {
         const cell = channels[ch];
         const itemOrder = cell.orderStatus || "unknown";
         const liveRank = cell.liveItemRank;
-        const rankText = liveRank != null ? String(liveRank) : "?";
-        const glyph = itemOrder === "wrong" ? `${rankText}⇅` : rankText;
-        const tone =
-          itemOrder === "wrong" ? "wrong" : liveRank == null ? "unknown" : "ok";
+        const wrong = itemOrder === "wrong";
+        const glyph = orderRankGlyph(liveRank, wrong);
+        const tone = wrong ? "wrong" : liveRank == null ? "unknown" : "ok";
         const bits = [
           `${channelLabel(ch)}`,
           `ลำดับในหมวด POS ${posLabel}`,
-          `ลำดับบนแพลตฟอร์ม ${rankText}`,
+          `ลำดับบนแพลตฟอร์ม ${liveRank != null ? liveRank : "–"}`,
           `ลำดับเมนูในหมวด ${orderStatusLabel(itemOrder)}`,
         ];
         return (
@@ -683,6 +776,9 @@ function HubItemOrderMarks({
           />
         );
       })}
+      <span className="mph-ch-marks-paren" aria-hidden>
+        )
+      </span>
     </span>
   );
 }
@@ -699,9 +795,13 @@ function HubCatMarks({
   posRank?: number;
 }) {
   if (collapsed) return null;
-  const posLabel = posRank && posRank > 0 ? String(posRank) : "·";
+  const posLabel = posRank && posRank > 0 ? String(posRank) : "–";
   return (
     <span className="mph-ch-marks is-cat" aria-label="ลำดับหมวดบนแพลตฟอร์ม">
+      <span className="mph-ch-marks-paren" aria-hidden>
+        (
+      </span>
+      <span className="mph-ch-marks-label">หมวด</span>
       {visible.map((ch) => {
         const cell = channels[ch];
         const cat = cell.categoryNameStatus || "missing";
@@ -711,8 +811,7 @@ function HubCatMarks({
         const itemOrderFallback = catOrder === "unknown" && itemOrder === "wrong";
         const rankWrong = catOrderWrong || itemOrderFallback;
         const liveRank = cell.liveSortRank;
-        const rankText = liveRank != null ? String(liveRank) : "?";
-        const glyph = rankWrong ? `${rankText}⇅` : rankText;
+        const glyph = orderRankGlyph(liveRank, rankWrong);
         const tone = rankWrong
           ? "wrong"
           : liveRank == null
@@ -723,7 +822,7 @@ function HubCatMarks({
         const bits = [
           `${channelLabel(ch)}`,
           `ลำดับ POS ${posLabel}`,
-          `ลำดับบนแพลตฟอร์ม ${rankText}`,
+          `ลำดับบนแพลตฟอร์ม ${liveRank != null ? liveRank : "–"}`,
           `ชื่อหมวด${nameStatusLabel(cat)}`,
           `ลำดับหมวด ${orderStatusLabel(catOrder)}`,
           `ลำดับเมนูในหมวด ${orderStatusLabel(itemOrder)}`,
@@ -738,17 +837,20 @@ function HubCatMarks({
           />
         );
       })}
+      <span className="mph-ch-marks-paren" aria-hidden>
+        )
+      </span>
     </span>
   );
 }
 
 function photoMarkGlyph(status: ChannelPhotoStatus): string {
-  if (status === "match") return "✓";
-  if (status === "stale") return "≠";
-  if (status === "missing") return "∅";
-  if (status === "pending") return "~";
-  if (status === "none") return "·";
-  return "?";
+  if (status === "match") return "ตรง";
+  if (status === "stale") return "เพี้ยน";
+  if (status === "missing") return "ไม่มี";
+  if (status === "pending") return "ใกล้";
+  if (status === "none") return "–";
+  return "ไม่รู้";
 }
 
 function photoMarkTone(
@@ -774,6 +876,10 @@ function HubPhotoMarks({
   if (visible.every((ch) => (channels[ch].photoStatus || "unknown") === "skip")) return null;
   return (
     <span className="mph-ch-marks is-photo" aria-label="รูปหลักบนแพลตฟอร์ม">
+      <span className="mph-ch-marks-paren" aria-hidden>
+        (
+      </span>
+      <span className="mph-ch-marks-label">รูป</span>
       {visible.map((ch) => {
         const st = channels[ch].photoStatus || "unknown";
         const liveId = channels[ch].livePhotoId;
@@ -791,6 +897,9 @@ function HubPhotoMarks({
           />
         );
       })}
+      <span className="mph-ch-marks-paren" aria-hidden>
+        )
+      </span>
     </span>
   );
 }
@@ -840,13 +949,24 @@ function parseOptRowKey(key: string): { groupId: string; choiceId: string } | nu
   return { groupId, choiceId };
 }
 
+/** กรองหน้าร้านแบบเลือกราคา unique — ตรงตัวเลขเท่านั้น (3 ≠ 13) */
 function storePriceMatches(price: number, needle: string): boolean {
-  const q = needle.trim();
+  const q = needle.trim().replace(/,/g, "");
   if (!q) return true;
-  const n = Math.round(Number(price) || 0);
-  if (menuTextIncludes(String(n), q)) return true;
-  const parsed = Number(q.replace(/,/g, ""));
-  return Number.isFinite(parsed) && n === Math.round(parsed);
+  const parsed = Number(q);
+  if (!Number.isFinite(parsed)) return false;
+  return Math.round(Number(price) || 0) === Math.round(parsed);
+}
+
+/** แคบรายการ combobox ตอนพิมพ์ — ขึ้นต้นด้วยตัวเลขที่พิมพ์ ไม่ค้นกลางสตริง */
+function storePriceSuggestionMatch(price: number, needle: string): boolean {
+  const q = needle.trim().replace(/,/g, "");
+  if (!q) return true;
+  if (!/^\d+$/.test(q)) {
+    const parsed = Number(q);
+    return Number.isFinite(parsed) && Math.round(price) === Math.round(parsed);
+  }
+  return String(Math.round(price)).startsWith(q);
 }
 
 function channelLetter(ch: DeliveryChannel): string {
@@ -973,7 +1093,10 @@ function measureColWidth(
   if (key === "store") {
     return 64;
   }
-  return 108;
+  if (key === "shopee" || key === "grab" || key === "lineman") {
+    return CHANNEL_COL_W;
+  }
+  return CHANNEL_COL_W;
 }
 function formatScanAt(iso: string | null): string {
   if (!iso) return "—";
@@ -1030,6 +1153,7 @@ function latestChannelScanAt(
   return best;
 }
 
+/** เวลาสแกน/อัปเดต — ซ่อนจากจอ เก็บในกล่อง meta ให้ AI อ่านจาก DOM */
 function LiveAtLine({
   iso,
   waiting,
@@ -1039,29 +1163,25 @@ function LiveAtLine({
   waiting?: boolean;
   detail?: string | null;
 }) {
-  if (waiting) {
-    return (
-      <div className="mph-live-at is-waiting" title="รอสแกนช่องนี้">
-        รอสแกน
-      </div>
-    );
-  }
-  const short = formatLiveAt(iso);
-  if (!short) {
-    return (
-      <div className="mph-live-at is-empty" title="ยังไม่มีเวลาอัปเดตจากสแกน/บันทึก">
-        —
-      </div>
-    );
-  }
-  const base = `อัปเดตล่าสุด ${formatScanAt(iso || null)}`;
-  const title = detail?.trim() ? `${base}\n${detail.trim()}` : base;
+  const short = waiting ? "" : formatLiveAt(iso);
+  const full = waiting ? "" : formatScanAt(iso || null);
+  const note = detail?.trim() || "";
+  let text = "ยังไม่มีเวลาสแกน";
+  if (waiting) text = "รอสแกน";
+  else if (full) text = note ? `อัปเดต ${full} · ${note}` : `อัปเดต ${full}`;
   return (
-    <div className="mph-live-at" title={title}>
-      <span className="mph-live-at-time">{short}</span>
-      {detail?.trim() ? (
-        <span className="mph-live-at-note">{detail.trim()}</span>
-      ) : null}
+    <div
+      className="mph-ai-meta mph-live-at"
+      hidden
+      aria-hidden="true"
+      data-mph-ai="scan-at"
+      data-waiting={waiting ? "1" : "0"}
+      data-scanned-at={typeof iso === "string" ? iso : ""}
+      data-scanned-at-short={short}
+      data-scanned-at-full={full || ""}
+      data-detail={note}
+    >
+      {text}
     </div>
   );
 }
@@ -1123,11 +1243,16 @@ export function PosMenuChannelPriceHub({
   categories,
   optionGroups = [],
   onSaved,
+  onMenuItemPriceSaved,
+  onOptionGroupSaved,
 }: {
   items: MenuItem[];
   categories: MenuCategory[];
   optionGroups?: MenuOptionGroup[];
   onSaved?: () => void;
+  /** แพตช์ราคาหน้าร้านใน parent ทันทีหลังยืนยัน Firestore — กัน snapshot แคชโชว์ค่าเก่า */
+  onMenuItemPriceSaved?: (itemId: string, price: number) => void;
+  onOptionGroupSaved?: (groupId: string, options: MenuOptionGroup["options"]) => void;
 }) {
   const catName = useMemo(() => {
     const map = new Map<string, string>();
@@ -1189,6 +1314,8 @@ export function PosMenuChannelPriceHub({
   const [colFilterCat, setColFilterCat] = useState("");
   const [colFilterStore, setColFilterStore] = useState("");
   const [colFilterNote, setColFilterNote] = useState("");
+  /** เปิดรายการราคาหน้าร้าน unique ใต้ช่องกรอง (combobox) */
+  const [storeFilterOpen, setStoreFilterOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<HubStatusFilter>("all");
   const [draft, setDraft] = useState<Record<string, PriceDraft>>({});
   const [liveDraft, setLiveDraft] = useState<Record<string, LiveDraft>>({});
@@ -1197,12 +1324,28 @@ export function PosMenuChannelPriceHub({
   const [ruleValueText, setRuleValueText] = useState<Partial<Record<DeliveryChannel, string>>>(
     {},
   );
+  /** ค่า add ตัวตามระหว่างพิมพ์ */
+  const [addValueText, setAddValueText] = useState<Partial<Record<DeliveryChannel, string>>>({});
+  /** เปิดหมวดย่อยหัวคอลัมน์ (เช่น หัก GP ของตัวตาม) — ค่าเริ่มปิด */
+  const [chHeadExtraOpen, setChHeadExtraOpen] = useState<Partial<Record<DeliveryChannel, boolean>>>(
+    {},
+  );
   const settingsRef = useRef<MenuPriceHubSettings | null>(null);
   const ruleValueTextRef = useRef(ruleValueText);
+  const addValueTextRef = useRef(addValueText);
+  /** กัน snapshot เก่าทับหลังบันทึกเป้า/สูตรจากเครื่องนี้ */
+  const settingsSavedAtRef = useRef(0);
+  const selPriceRef = useRef("");
   settingsRef.current = settings;
   ruleValueTextRef.current = ruleValueText;
+  addValueTextRef.current = addValueText;
 
   const applyHubSettings = useCallback((next: MenuPriceHubSettings) => {
+    const incoming = typeof next.updatedAt === "number" ? next.updatedAt : 0;
+    // หลังเซฟจากเครื่องนี้ — ปฏิเสธ snapshot ที่ไม่มี updatedAt หรือเก่ากว่า (กันทับกลับเป็นค่าเดิม)
+    if (settingsSavedAtRef.current > 0 && (!incoming || incoming < settingsSavedAtRef.current)) {
+      return;
+    }
     settingsRef.current = next;
     setSettings(next);
     const typingKeys = Object.keys(ruleValueTextRef.current);
@@ -1219,6 +1362,17 @@ export function PosMenuChannelPriceHub({
       return merged;
     });
   }, []);
+
+  const markSettingsSaved = useCallback(
+    (next: MenuPriceHubSettings) => {
+      settingsSavedAtRef.current = Math.max(
+        settingsSavedAtRef.current,
+        typeof next.updatedAt === "number" ? next.updatedAt : Date.now(),
+      );
+      applyHubSettings(next);
+    },
+    [applyHubSettings],
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
@@ -1228,6 +1382,10 @@ export function PosMenuChannelPriceHub({
   const [nameDetail, setNameDetail] = useState<NameDetail | null>(null);
   const [nameConfirm, setNameConfirm] = useState<NameConfirm | null>(null);
   const [clearConfirm, setClearConfirm] = useState<ClearConfirm | null>(null);
+  const [fillTargetConfirm, setFillTargetConfirm] = useState<FillTargetConfirm | null>(null);
+  const [saveTargetsConfirm, setSaveTargetsConfirm] = useState<SaveTargetsConfirm | null>(null);
+  const [fillTargetPhase, setFillTargetPhase] = useState<"confirm" | "saving" | "done">("confirm");
+  const [overrideSavePhase, setOverrideSavePhase] = useState<"idle" | "saving" | "done">("idle");
   const [noteClearConfirm, setNoteClearConfirm] = useState(false);
   const [showHubInfo, setShowHubInfo] = useState(false);
   const [showTableNote, setShowTableNote] = useState(false);
@@ -1288,6 +1446,46 @@ export function PosMenuChannelPriceHub({
         ),
     [optionGroups],
   );
+
+  /** หลังเซฟราคา — เคลียร์ draft เมื่อ props ตาม Firestore แล้วเท่านั้น */
+  useEffect(() => {
+    setDraft((prev) => {
+      if (!Object.keys(prev).length) return prev;
+      let changed = false;
+      const next = { ...prev };
+      for (const id of Object.keys(next)) {
+        const item = items.find((i) => i.id === id);
+        if (!item) continue;
+        const store = Math.max(0, Number(next[id]!.store) || 0);
+        if (store === (item.price ?? 0)) {
+          delete next[id];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [items]);
+
+  useEffect(() => {
+    setOptDraft((prev) => {
+      if (!Object.keys(prev).length) return prev;
+      let changed = false;
+      const next = { ...prev };
+      for (const key of Object.keys(next)) {
+        const [groupId, choiceId] = key.split("::");
+        const group = optionGroups.find((g) => g.id === groupId);
+        const choice = group?.options.find((c) => c.id === choiceId);
+        if (!choice) continue;
+        const store = Math.max(0, Number(next[key]!.store) || 0);
+        if (store === (choice.priceDelta ?? 0)) {
+          delete next[key];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [optionGroups]);
+
   const noteRowCount = useMemo(() => {
     let n = 0;
     for (const item of activeItems) {
@@ -1334,14 +1532,14 @@ export function PosMenuChannelPriceHub({
               key === "store"
                 ? 52
                 : key === "shopee" || key === "grab" || key === "lineman"
-                  ? 72
+                  ? CHANNEL_COL_MIN_W
                   : isSalesCol(key)
                     ? 56
                     : COLLAPSED_W;
             next[key] = Math.max(n, key === "name" || key === "cat" ? n : floor);
             if (key === "store") next[key] = Math.max(n, 52);
             if (key === "shopee" || key === "grab" || key === "lineman") {
-              next[key] = Math.max(n, 72);
+              next[key] = Math.max(n, CHANNEL_COL_MIN_W);
             }
           }
         }
@@ -1713,7 +1911,11 @@ export function PosMenuChannelPriceHub({
       const drag = dragRef.current;
       if (!drag) return;
       const dx = e.clientX - drag.startX;
-      const w = Math.max(COLLAPSED_W, drag.startW + dx);
+      const floor =
+        drag.key === "shopee" || drag.key === "grab" || drag.key === "lineman"
+          ? CHANNEL_COL_MIN_W
+          : COLLAPSED_W;
+      const w = Math.max(floor, drag.startW + dx);
       setColW((prev) => ({ ...prev, [drag.key]: w }));
     }
     function onUp() {
@@ -1751,11 +1953,10 @@ export function PosMenuChannelPriceHub({
     setOk(null);
     try {
       const [freshSettings, freshLive] = await Promise.all([
-        loadMenuPriceHubSettings(),
+        loadMenuPriceHubSettingsFromServer(),
         loadChannelLiveStoreFromServer(),
       ]);
-      setSettings(freshSettings);
-      setRuleDraft(freshSettings.channels);
+      markSettingsSaved(freshSettings);
       setChannelLive(freshLive);
       setLiveDraft({});
       setCalcTick((t) => t + 1);
@@ -1984,7 +2185,15 @@ export function PosMenuChannelPriceHub({
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key !== "Escape") return;
-      if (targetEdit || overrideEdit || nameConfirm || clearConfirm) return;
+      if (
+        targetEdit ||
+        overrideEdit ||
+        nameConfirm ||
+        clearConfirm ||
+        fillTargetConfirm ||
+        saveTargetsConfirm
+      )
+        return;
       if (!cellSel.size && !storeOnlySel.size) return;
       e.preventDefault();
       setCellSel(new Set());
@@ -1994,7 +2203,7 @@ export function PosMenuChannelPriceHub({
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [cellSel.size, storeOnlySel.size, targetEdit, overrideEdit, nameConfirm, clearConfirm]);
+  }, [cellSel.size, storeOnlySel.size, targetEdit, overrideEdit, nameConfirm, clearConfirm, fillTargetConfirm, saveTargetsConfirm]);
 
   const filtered = useMemo(() => {
     const q = query.trim();
@@ -2261,6 +2470,42 @@ export function PosMenuChannelPriceHub({
     });
   }, [optionRowsAll, statusFilter, query, colFilterName, colFilterCat, colFilterStore, colFilterNote, optDraft, noteDraft, channelLive, sortKey, sortDir, liveSettings, visibleChannels, optGroupRank, hideStoreOnlyOptions]);
 
+  /** ราคาหน้าร้าน unique จากเมนู+ตัวเลือก — ใช้เป็นรายการ combobox กรองคอลัมน์หน้าร้าน */
+  const uniqueStorePrices = useMemo(() => {
+    const set = new Set<number>();
+    for (const { item } of rows) {
+      const raw =
+        draft[item.id]?.store !== undefined
+          ? Number(draft[item.id]!.store) || 0
+          : Number(item.price) || 0;
+      set.add(Math.round(Math.max(0, raw)));
+    }
+    for (const r of optionRowsAll) {
+      const raw =
+        optDraft[r.key]?.store !== undefined
+          ? Number(optDraft[r.key]!.store) || 0
+          : Number(r.choice.priceDelta) || 0;
+      set.add(Math.round(Math.max(0, raw)));
+    }
+    return [...set].sort((a, b) => a - b);
+  }, [rows, optionRowsAll, draft, optDraft]);
+
+  /** combobox หน้าร้าน — โชว์ราคา unique ทั้งหมดเสมอ ไม่ซ่อนเมื่อมีค่าเลือกอยู่ (ไม่ต้องกด × ก่อน) */
+  const storePriceSuggestions = uniqueStorePrices;
+
+  useEffect(() => {
+    if (!storeFilterOpen || !storePriceSuggestions.length) return;
+    const q = colFilterStore.trim().replace(/,/g, "");
+    const target =
+      (q
+        ? storePriceSuggestions.find((p) => String(p) === q) ??
+          storePriceSuggestions.find((p) => storePriceSuggestionMatch(p, q))
+        : null) ?? null;
+    if (target == null) return;
+    const el = document.querySelector<HTMLElement>(`[data-mph-store-opt="${target}"]`);
+    el?.scrollIntoView({ block: "nearest" });
+  }, [storeFilterOpen, colFilterStore, storePriceSuggestions]);
+
   const unmatchedRows = useMemo((): UnmatchedLiveEntry[] => {
     if (statusFilter !== "extras") return [];
     const q = query.trim();
@@ -2398,6 +2643,15 @@ export function PosMenuChannelPriceHub({
     return keys;
   }, [displayed, optionRows, visibleChannels, hideMenus]);
 
+  const displayedCellKeySet = useMemo(() => new Set(displayedCellKeys), [displayedCellKeys]);
+
+  /** เช็คลิสต์ที่เห็นในตารางตอนนี้เท่านั้น — ไม่นับแถวที่ถูกกรอง/ซ่อน */
+  const visibleCellSelKeys = useMemo(
+    () => [...cellSel].filter((k) => displayedCellKeySet.has(k)),
+    [cellSel, displayedCellKeySet],
+  );
+  const visibleCellSelCount = visibleCellSelKeys.length;
+
   const displayedRows = useMemo((): RowSel[] => {
     const out: RowSel[] = [];
     if (!hideMenus) {
@@ -2415,6 +2669,30 @@ export function PosMenuChannelPriceHub({
     () => new Set(hideMenus ? [] : displayed.filter((r) => r.storeOnly).map((r) => r.item.id)),
     [displayed, hideMenus],
   );
+
+  /** ทิ้งเช็คที่ไม่อยู่ในตารางที่เห็น — กันดันราคาแถวที่กรองออกแล้ว */
+  useEffect(() => {
+    setCellSel((prev) => {
+      if (!prev.size) return prev;
+      let changed = false;
+      const next = new Set<string>();
+      for (const k of prev) {
+        if (displayedCellKeySet.has(k)) next.add(k);
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+    setStoreOnlySel((prev) => {
+      if (!prev.size) return prev;
+      let changed = false;
+      const next = new Set<string>();
+      for (const id of prev) {
+        if (displayedStoreOnlyIds.has(id)) next.add(id);
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [displayedCellKeySet, displayedStoreOnlyIds]);
 
   const selectedMenuNoteIds = useMemo(
     () => (hideMenus ? [] : selectedMenuItemIdsFromSel(cellSel, storeOnlySel)),
@@ -2441,13 +2719,26 @@ export function PosMenuChannelPriceHub({
 
   const cellSelCountByChannel = useMemo(() => {
     const counts: Partial<Record<DeliveryChannel, number>> = {};
-    for (const key of cellSel) {
+    for (const key of visibleCellSelKeys) {
       const parsed = parseCellSelKey(key);
       if (!parsed) continue;
       counts[parsed.channel] = (counts[parsed.channel] || 0) + 1;
     }
     return counts;
-  }, [cellSel]);
+  }, [visibleCellSelKeys]);
+
+  function isVisibleChecklistCell(sel: CellSel): boolean {
+    const key = cellSelKey(sel);
+    return cellSel.has(key) && displayedCellKeySet.has(key);
+  }
+
+  function requireVisibleChecklist(sel: CellSel, action: string): boolean {
+    if (isVisibleChecklistCell(sel)) return true;
+    setError(
+      `${action}ได้เฉพาะเซลล์ที่ติ๊กเช็คในตารางที่เห็นอยู่ — ติ๊กเลือกก่อน (คลิกเป้า / ติ๊กแถว / ติ๊กหัวคอลัมน์)`,
+    );
+    return false;
+  }
 
   function getDraft(item: MenuItem): PriceDraft {
     return draft[item.id] || { store: String(item.price ?? 0) };
@@ -2733,12 +3024,9 @@ export function PosMenuChannelPriceHub({
     setError(null);
     try {
       await updateMenuItem(itemId, { price: store });
-      setDraft((prev) => {
-        const next = { ...prev };
-        delete next[itemId];
-        return next;
-      });
-      setOk("บันทึกราคาหน้าร้านแล้ว");
+      onMenuItemPriceSaved?.(itemId, store);
+      // คง draft ไว้จนกว่า items จาก subscribe จะตาม — กัน UI กระพริบกลับเป็นค่าเก่าจากแคช
+      setOk("บันทึกราคาหน้าร้านแล้ว · ยืนยันใน Firestore แล้ว");
       onSaved?.();
     } catch (err) {
       setError((err as Error).message);
@@ -2961,12 +3249,8 @@ export function PosMenuChannelPriceHub({
         maxSelect: group.maxSelect,
         options,
       });
-      setOptDraft((prev) => {
-        const next = { ...prev };
-        delete next[key];
-        return next;
-      });
-      setOk("บันทึกราคาตัวเลือกแล้ว");
+      onOptionGroupSaved?.(r.groupId, options);
+      setOk("บันทึกราคาตัวเลือกแล้ว · ยืนยันใน Firestore แล้ว");
       onSaved?.();
     } catch (err) {
       setError((err as Error).message);
@@ -2978,8 +3262,30 @@ export function PosMenuChannelPriceHub({
   async function persistChannelRule(channel: DeliveryChannel, rule: ChannelPriceRule) {
     try {
       const next = await saveChannelRule(channel, rule);
-      applyHubSettings(next);
-      setOk("ซิงก์สูตรแล้ว");
+      markSettingsSaved(next);
+      setOk("ซิงก์สูตรแล้ว · ยืนยันใน Firestore แล้ว");
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  async function persistMainChannel(channel: DeliveryChannel) {
+    try {
+      const next = await saveMainChannel(channel);
+      markSettingsSaved(next);
+      setCalcTick((t) => t + 1);
+      setOk(`แกนราคา = ${channelLabel(channel)} · ยืนยันใน Firestore แล้ว`);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  async function persistFollowerAdd(channel: DeliveryChannel, add: FollowerAddRule) {
+    try {
+      const next = await saveFollowerAdd(channel, add);
+      markSettingsSaved(next);
+      setCalcTick((t) => t + 1);
+      setOk(`${channelLabel(channel)} · ${formatFollowerAddShort(add)} · ยืนยันใน Firestore แล้ว`);
     } catch (err) {
       setError((err as Error).message);
     }
@@ -3021,6 +3327,33 @@ export function PosMenuChannelPriceHub({
     void persistChannelRule(ch, channels[ch]);
   }
 
+  function onAddValueTyping(ch: DeliveryChannel, raw: string) {
+    setAddValueText((prev) => ({ ...prev, [ch]: raw }));
+  }
+
+  function commitAddValue(ch: DeliveryChannel) {
+    if (!settingsRef.current) return;
+    const current = resolveFollowerAdd(settingsRef.current, ch);
+    const raw = addValueText[ch];
+    const n =
+      raw === undefined
+        ? current.value
+        : raw.trim() === "" || raw === "-" || raw === "." || raw === "-."
+          ? 0
+          : Number(raw);
+    const nextAdd: FollowerAddRule = {
+      mode: current.mode,
+      value: Number.isFinite(n) ? n : 0,
+    };
+    setAddValueText((p) => {
+      const next = { ...p };
+      delete next[ch];
+      return next;
+    });
+    if (nextAdd.mode === current.mode && nextAdd.value === current.value) return;
+    void persistFollowerAdd(ch, nextAdd);
+  }
+
   function startResize(key: ColKey, e: React.MouseEvent) {
     // คลิกครั้งที่ 2 ของดับเบิลคลิก — อย่าเริ่มลาก (กันย่อขยายมั่ว)
     if (e.detail > 1) return;
@@ -3051,9 +3384,10 @@ export function PosMenuChannelPriceHub({
       w = 56;
     } else if (isSalesCol(key)) {
       w = key === "sales_total" ? 84 : 76;
+    } else if (key === "shopee" || key === "grab" || key === "lineman") {
+      w = CHANNEL_COL_W;
     } else {
-      // ช่องทาง: เป้า + สถานะ
-      w = 92;
+      w = CHANNEL_COL_W;
     }
     setColW((prev) => {
       if (prev[key] === w) return prev;
@@ -3087,8 +3421,9 @@ export function PosMenuChannelPriceHub({
         ids.map((id) => {
           const d = draft[id];
           if (!d) return Promise.resolve();
-          return updateMenuItem(id, {
-            price: Math.max(0, Number(d.store) || 0),
+          const price = Math.max(0, Number(d.store) || 0);
+          return updateMenuItem(id, { price }).then(() => {
+            onMenuItemPriceSaved?.(id, price);
           });
         }),
       );
@@ -3113,10 +3448,12 @@ export function PosMenuChannelPriceHub({
           maxSelect: group.maxSelect,
           options,
         });
+        onOptionGroupSaved?.(groupId, options);
       }
-      setDraft({});
-      setOptDraft({});
-      setOk(`บันทึก ${ids.length + dirtyGroupIds.size}`);
+      // คง draft จนกว่า subscribe ตาม — กันกระพริบค่าเก่า
+      setOk(
+        `บันทึก ${ids.length + dirtyGroupIds.size} รายการ · ยืนยันใน Firestore แล้ว`,
+      );
       onSaved?.();
     } catch (err) {
       setError((err as Error).message);
@@ -3145,8 +3482,8 @@ export function PosMenuChannelPriceHub({
       const next = await saveChannelRules(channels);
       setRuleValueText({});
       ruleValueTextRef.current = {};
-      applyHubSettings(next);
-      setOk("ซิงก์สูตรแล้ว");
+      markSettingsSaved(next);
+      setOk("ซิงก์สูตรแล้ว · ยืนยันใน Firestore แล้ว");
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -3167,14 +3504,14 @@ export function PosMenuChannelPriceHub({
     setOk(null);
     try {
       const raw = tableNoteDraft.trim();
-      const current = await loadMenuPriceHubSettings();
+      const current = await loadMenuPriceHubSettingsFromServer();
       const next = await saveMenuPriceHubSettings({
         ...current,
         tableNote: raw || undefined,
       });
-      applyHubSettings(next);
+      markSettingsSaved(next);
       setShowTableNote(false);
-      setOk(raw ? "บันทึกโน้ตรวมแล้ว" : "ล้างโน้ตรวมแล้ว");
+      setOk(raw ? "บันทึกโน้ตรวมแล้ว · ยืนยันใน Firestore แล้ว" : "ล้างโน้ตรวมแล้ว · ยืนยันใน Firestore แล้ว");
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -3185,6 +3522,13 @@ export function PosMenuChannelPriceHub({
   const openOverride = useCallback(
     (item: MenuItem, channel: DeliveryChannel) => {
       if (!liveSettings) return;
+      const sel = { scope: "item" as const, id: item.id, channel };
+      if (!cellSel.has(cellSelKey(sel)) || !displayedCellKeySet.has(cellSelKey(sel))) {
+        setError(
+          "แก้สูตรเป้าได้เฉพาะเซลล์ที่ติ๊กเช็คในตารางที่เห็น — ติ๊กเลือกก่อน",
+        );
+        return;
+      }
       const priced = withPriceDraft(item, draft[item.id]);
       const base = resolveStoreBase(priced);
       const existing = liveSettings.itemOverrides[item.id]?.[channel];
@@ -3193,6 +3537,7 @@ export function PosMenuChannelPriceHub({
         ? applyChannelRule(base, existing)
         : applyChannelRule(base, channelRule);
       const defaults = overrideEditorDefaults(existing, channelRule, currentTarget);
+      setOverrideSavePhase("idle");
       setOverrideEdit({
         scope: "item",
         id: item.id,
@@ -3203,13 +3548,20 @@ export function PosMenuChannelPriceHub({
         base,
       });
     },
-    [liveSettings, draft],
+    [liveSettings, draft, cellSel, displayedCellKeySet],
   );
 
   const openOptionOverride = useCallback(
     (r: OptRow, channel: DeliveryChannel) => {
       if (!liveSettings) return;
       const key = optRowKey(r.groupId, r.choice.id);
+      const sel = { scope: "option" as const, id: key, channel };
+      if (!cellSel.has(cellSelKey(sel)) || !displayedCellKeySet.has(cellSelKey(sel))) {
+        setError(
+          "แก้สูตรเป้าได้เฉพาะเซลล์ที่ติ๊กเช็คในตารางที่เห็น — ติ๊กเลือกก่อน",
+        );
+        return;
+      }
       const existing = liveSettings.optionOverrides[key]?.[channel];
       const d = optDraft[key];
       const storeDelta = d ? Math.max(0, Number(d.store) || 0) : r.choice.priceDelta ?? 0;
@@ -3219,6 +3571,7 @@ export function PosMenuChannelPriceHub({
         ? applyChannelRule(base, existing)
         : applyChannelRule(base, channelRule);
       const defaults = overrideEditorDefaults(existing, channelRule, currentTarget);
+      setOverrideSavePhase("idle");
       setOverrideEdit({
         scope: "option",
         id: key,
@@ -3229,7 +3582,7 @@ export function PosMenuChannelPriceHub({
         base,
       });
     },
-    [liveSettings, optDraft],
+    [liveSettings, optDraft, cellSel, displayedCellKeySet],
   );
 
   function onTargetSelect(e: MouseEvent, sel: CellSel) {
@@ -3445,6 +3798,13 @@ export function PosMenuChannelPriceHub({
 
   const clearCellOverride = useCallback(
     async (scope: "item" | "option", id: string, channel: DeliveryChannel) => {
+      const key = cellSelKey({ scope, id, channel });
+      if (!cellSel.has(key) || !displayedCellKeySet.has(key)) {
+        setError(
+          "ล้างเป้าได้เฉพาะเซลล์ที่ติ๊กเช็คในตารางที่เห็น — ติ๊กเลือกก่อน",
+        );
+        return;
+      }
       setBusy(true);
       setError(null);
       try {
@@ -3452,48 +3812,283 @@ export function PosMenuChannelPriceHub({
           scope === "option"
             ? await setOptionChannelOverride(id, channel, null)
             : await setItemChannelOverride(id, channel, null);
-        setSettings(next);
-        setRuleDraft(next.channels);
-        setOk("กลับสูตรคอลัมน์");
+        markSettingsSaved(next);
+        setOk("กลับสูตรคอลัมน์ · ยืนยันใน Firestore แล้ว");
       } catch (err) {
         setError((err as Error).message);
       } finally {
         setBusy(false);
       }
     },
-    [],
+    [markSettingsSaved, cellSel, displayedCellKeySet],
   );
 
-  async function applySelectedTargets() {
-    const raw = selPrice.trim();
-    const parsed = Number(raw);
-    if (raw === "" || !Number.isFinite(parsed)) {
-      setError("ใส่ราคาเป้าที่จะใช้กับเซลล์ที่เลือก");
+  function requestSaveSelectedTargets() {
+    if (!visibleCellSelCount) {
+      setError("ยังไม่ได้ติ๊กเช็คเซลล์เป้าในตารางที่เห็น — เลือกก่อนแล้วค่อยดันราคา");
       return;
     }
-    const writes = [...cellSel]
+    const raw = (selPriceRef.current || selPrice).trim();
+    const parsed = parseHubMoneyInput(raw);
+    if (parsed == null) {
+      setError("ใส่ราคาเป้าที่จะบันทึกกับเซลล์ที่เลือก");
+      return;
+    }
+    const writes = visibleCellSelKeys
       .map(parseCellSelKey)
       .filter((x): x is CellSel => !!x)
       .map((sel) => ({
         scope: sel.scope,
         id: sel.id,
         channel: sel.channel,
-        rule: { mode: "absolute" as const, value: Math.max(0, Math.round(parsed)) },
+        rule: { mode: "absolute" as const, value: parsed },
       }));
     if (!writes.length) {
-      setError("ยังไม่ได้เลือกเซลล์เป้า");
+      setError("ยังไม่ได้เลือกเซลล์เป้าที่เห็นในตาราง");
+      return;
+    }
+    const byCh: Partial<Record<DeliveryChannel, number>> = {};
+    for (const w of writes) {
+      byCh[w.channel] = (byCh[w.channel] || 0) + 1;
+    }
+    const chSummary = DELIVERY_CHANNELS.filter((ch) => byCh[ch])
+      .map((ch) => `${channelChipLetter(ch)}${byCh[ch]}`)
+      .join(" · ");
+    setError(null);
+    setOk(null);
+    setSaveTargetsConfirm({
+      price: parsed,
+      writes,
+      chSummary,
+      phase: "confirm",
+    });
+  }
+
+  async function confirmSaveSelectedTargets() {
+    if (!saveTargetsConfirm?.writes.length) return;
+    if (saveTargetsConfirm.phase === "saving") return;
+    // ยืนยันอีกครั้งตอนกด — ใช้เฉพาะที่ยังติ๊ก+เห็นอยู่ กันกรองตารางระหว่างเปิด popup
+    const writes = saveTargetsConfirm.writes.filter((w) =>
+      isVisibleChecklistCell({ scope: w.scope, id: w.id, channel: w.channel }),
+    );
+    if (!writes.length) {
+      const message =
+        "ไม่มีเซลล์ที่ติ๊กเช็คในตารางที่เห็นแล้ว — ยกเลิกแล้วติ๊กเลือกใหม่ก่อนดันราคา";
+      setError(message);
+      setSaveTargetsConfirm((prev) =>
+        prev ? { ...prev, phase: "confirm", error: message } : prev,
+      );
+      return;
+    }
+    const { price } = saveTargetsConfirm;
+    const byCh: Partial<Record<DeliveryChannel, number>> = {};
+    for (const w of writes) {
+      byCh[w.channel] = (byCh[w.channel] || 0) + 1;
+    }
+    const chSummary = DELIVERY_CHANNELS.filter((ch) => byCh[ch])
+      .map((ch) => `${channelChipLetter(ch)}${byCh[ch]}`)
+      .join(" · ");
+    setBusy(true);
+    setError(null);
+    setOk(null);
+    setSaveTargetsConfirm((prev) =>
+      prev ? { ...prev, writes, chSummary, phase: "saving", error: undefined } : prev,
+    );
+    try {
+      const next = await setManyChannelOverrides(writes);
+      markSettingsSaved(next);
+      setCalcTick((t) => t + 1);
+      const msg = `บันทึกเป้าแล้ว ${writes.length} เซลล์ → ${price}฿${chSummary ? ` (${chSummary})` : ""} · ยืนยันใน Firestore แล้ว`;
+      setOk(msg);
+      setSaveTargetsConfirm((prev) => (prev ? { ...prev, phase: "done" } : prev));
+      await new Promise((r) => window.setTimeout(r, 700));
+      setSaveTargetsConfirm(null);
+    } catch (err) {
+      const message = (err as Error).message;
+      setError(message);
+      setSaveTargetsConfirm((prev) =>
+        prev ? { ...prev, phase: "confirm", error: message } : prev,
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** คำนวณเป้าฝั่งซ้ายจากสูตรคอลัมน์ / แกน+add — เฉพาะเซลล์ที่เลือกในคอลัมน์นั้น */
+  function planFillTargetsFromColumn(channel: DeliveryChannel): {
+    writes: {
+      scope: "item" | "option";
+      id: string;
+      channel: DeliveryChannel;
+      rule: ChannelPriceRule;
+    }[];
+    changeCount: number;
+    sameCount: number;
+    ruleLabel: string;
+    selectedCount: number;
+  } | null {
+    if (!liveSettings) return null;
+    const main = resolveMainChannel(liveSettings);
+    const isFollower = channel !== main;
+    const followerAdd = isFollower ? resolveFollowerAdd(liveSettings, channel) : null;
+    const ruleLabel =
+      isFollower && followerAdd
+        ? `${formatFollowerAddShort(followerAdd)} ← ${channelLabel(main)}`
+        : formatRuleShort(liveSettings.channels[channel]);
+    const selected: CellSel[] = [];
+    for (const key of visibleCellSelKeys) {
+      const sel = parseCellSelKey(key);
+      if (sel && sel.channel === channel) selected.push(sel);
+    }
+    if (!selected.length) {
+      return { writes: [], changeCount: 0, sameCount: 0, ruleLabel, selectedCount: 0 };
+    }
+
+    const itemById = new Map(activeItems.map((it) => [it.id, it]));
+    const choiceByKey = new Map<string, { name: string; choice: MenuOptionChoice; groupName: string }>();
+    for (const g of activeOptionGroups) {
+      for (const c of g.options || []) {
+        if (c.active === false) continue;
+        choiceByKey.set(optRowKey(g.id, c.id), { name: c.name, choice: c, groupName: g.name });
+      }
+    }
+
+    const writes: {
+      scope: "item" | "option";
+      id: string;
+      channel: DeliveryChannel;
+      rule: ChannelPriceRule;
+    }[] = [];
+    let changeCount = 0;
+    let sameCount = 0;
+
+    for (const sel of selected) {
+      if (sel.scope === "item") {
+        const item = itemById.get(sel.id);
+        if (!item || isMenuStoreOnly(item)) continue;
+        const itemOverrides = { ...liveSettings.itemOverrides };
+        const row = { ...(itemOverrides[item.id] || {}) };
+        delete row[channel];
+        itemOverrides[item.id] = row;
+        const formulaSettings = { ...liveSettings, itemOverrides };
+        const nextTarget = resolveChannelTarget(item, channel, formulaSettings).target;
+        const { target: currentTarget } = resolveChannelTarget(item, channel, liveSettings);
+        if (currentTarget === nextTarget) sameCount += 1;
+        else changeCount += 1;
+        writes.push({
+          scope: "item",
+          id: item.id,
+          channel,
+          rule: { mode: "absolute", value: nextTarget },
+        });
+      } else {
+        const row = choiceByKey.get(sel.id);
+        if (!row) continue;
+        if (isMenuStoreOnly({ name: row.name }) || isMenuStoreOnly({ name: row.groupName })) {
+          continue;
+        }
+        const base = resolveOptionStoreBase(row.choice);
+        const optionOverrides = { ...liveSettings.optionOverrides };
+        const oRow = { ...(optionOverrides[sel.id] || {}) };
+        delete oRow[channel];
+        optionOverrides[sel.id] = oRow;
+        const formulaSettings = { ...liveSettings, optionOverrides };
+        const nextTarget = resolveOptionChannelTarget(
+          base,
+          channel,
+          formulaSettings,
+          sel.id,
+        ).target;
+        const { target: currentTarget } = resolveOptionChannelTarget(
+          base,
+          channel,
+          liveSettings,
+          sel.id,
+        );
+        if (currentTarget === nextTarget) sameCount += 1;
+        else changeCount += 1;
+        writes.push({
+          scope: "option",
+          id: sel.id,
+          channel,
+          rule: { mode: "absolute", value: nextTarget },
+        });
+      }
+    }
+
+    return {
+      writes,
+      changeCount,
+      sameCount,
+      ruleLabel,
+      selectedCount: selected.length,
+    };
+  }
+
+  function requestFillTargetsFromColumn(channel: DeliveryChannel) {
+    const plan = planFillTargetsFromColumn(channel);
+    if (!plan) return;
+    if (!plan.selectedCount) {
+      setError(
+        `เลือกเป้าในคอลัมน์ ${channelLabel(channel)} ก่อน แล้วกดคำนวณเป้า — มีผลเฉพาะที่เลือก`,
+      );
+      return;
+    }
+    if (!plan.writes.length) {
+      setError(`เซลล์ที่เลือกใน ${channelLabel(channel)} ยังตั้งเป้าไม่ได้`);
+      return;
+    }
+    if (plan.changeCount === 0) {
+      setOk(
+        `${channelLabel(channel)} · เป้าตรงสูตรแล้ว ${plan.sameCount}/${plan.selectedCount} เซลล์ที่เลือก · ${plan.ruleLabel}`,
+      );
+      return;
+    }
+    setFillTargetPhase("confirm");
+    setFillTargetConfirm({
+      channel,
+      changeCount: plan.changeCount,
+      sameCount: plan.sameCount,
+      ruleLabel: plan.ruleLabel,
+      selectedCount: plan.selectedCount,
+      writes: plan.writes,
+    });
+  }
+
+  async function confirmFillTargetsFromColumn() {
+    if (!fillTargetConfirm?.writes.length) return;
+    if (fillTargetPhase === "saving") return;
+    const writes = fillTargetConfirm.writes.filter((w) =>
+      isVisibleChecklistCell({ scope: w.scope, id: w.id, channel: w.channel }),
+    );
+    if (!writes.length) {
+      setError(
+        "ไม่มีเซลล์ที่ติ๊กเช็คในตารางที่เห็นแล้ว — ยกเลิกแล้วติ๊กเลือกใหม่ก่อนดันราคา",
+      );
+      setFillTargetConfirm(null);
+      setFillTargetPhase("confirm");
       return;
     }
     setBusy(true);
     setError(null);
     setOk(null);
+    setFillTargetPhase("saving");
     try {
       const next = await setManyChannelOverrides(writes);
-      setSettings(next);
-      setRuleDraft(next.channels);
-      setOk(`ระบุราคา ${writes.length} เซลล์ → ${Math.max(0, Math.round(parsed))}฿`);
+      markSettingsSaved(next);
+      setCalcTick((t) => t + 1);
+      const ch = fillTargetConfirm.channel;
+      const { sameCount, ruleLabel } = fillTargetConfirm;
+      setOk(
+        `ตั้งเป้า ${channelLabel(ch)} จาก ${ruleLabel} · เลือก ${writes.length} · เปลี่ยน ${writes.length} · เท่าเดิม ${sameCount} · ระบุราคา · ยืนยันใน Firestore แล้ว`,
+      );
+      setFillTargetPhase("done");
+      await new Promise((r) => window.setTimeout(r, 700));
+      setFillTargetConfirm(null);
+      setFillTargetPhase("confirm");
     } catch (err) {
       setError((err as Error).message);
+      setFillTargetPhase("confirm");
     } finally {
       setBusy(false);
     }
@@ -3501,9 +4096,25 @@ export function PosMenuChannelPriceHub({
 
   async function applyOverride(clear = false) {
     if (!overrideEdit) return;
+    if (overrideSavePhase === "saving") return;
+    if (
+      !requireVisibleChecklist(
+        {
+          scope: overrideEdit.scope,
+          id: overrideEdit.id,
+          channel: overrideEdit.channel,
+        },
+        "ดันราคาเป้า",
+      )
+    ) {
+      setOverrideEdit(null);
+      setOverrideSavePhase("idle");
+      return;
+    }
     setBusy(true);
     setError(null);
     setOk(null);
+    setOverrideSavePhase("saving");
     try {
       const rawVal = overrideEdit.value.trim();
       const parsed =
@@ -3520,12 +4131,16 @@ export function PosMenuChannelPriceHub({
         overrideEdit.scope === "option"
           ? await setOptionChannelOverride(overrideEdit.id, overrideEdit.channel, rule)
           : await setItemChannelOverride(overrideEdit.id, overrideEdit.channel, rule);
-      setSettings(next);
-      setRuleDraft(next.channels);
+      markSettingsSaved(next);
+      setCalcTick((t) => t + 1);
+      setOk(clear ? "ล้าง override · ยืนยันใน Firestore แล้ว" : "ตั้ง override · ยืนยันใน Firestore แล้ว");
+      setOverrideSavePhase("done");
+      await new Promise((r) => window.setTimeout(r, 700));
       setOverrideEdit(null);
-      setOk(clear ? "ล้าง override" : "ตั้ง override");
+      setOverrideSavePhase("idle");
     } catch (err) {
       setError((err as Error).message);
+      setOverrideSavePhase("idle");
     } finally {
       setBusy(false);
     }
@@ -3538,6 +4153,20 @@ export function PosMenuChannelPriceHub({
     current: number,
   ) {
     if (busy) return;
+    const key = cellSelKey({ scope, id, channel });
+    // อัปเดตได้เฉพาะเซลล์ที่เห็นในตาราง — ดับเบิลคลิก = ติ๊กเซลล์นี้แล้วแก้ (ไม่แตะแถวอื่น)
+    if (!displayedCellKeySet.has(key)) {
+      setError("แก้เป้าได้เฉพาะเซลล์ที่เห็นในตารางตอนนี้");
+      return;
+    }
+    if (!cellSel.has(key)) {
+      setCellSel((prev) => {
+        const next = new Set(prev);
+        next.add(key);
+        return next;
+      });
+    }
+    setError(null);
     setOverrideEdit(null);
     setTargetEdit({
       scope,
@@ -3564,6 +4193,20 @@ export function PosMenuChannelPriceHub({
       setTargetEdit((prev) => (sameTargetEdit(prev, from) ? null : prev));
       return;
     }
+    const key = cellSelKey(from);
+    if (!displayedCellKeySet.has(key)) {
+      setError("ดันราคาเป้าได้เฉพาะเซลล์ที่เห็นในตารางตอนนี้");
+      setTargetEdit((prev) => (sameTargetEdit(prev, from) ? null : prev));
+      return;
+    }
+    // บังคับอยู่ในเช็คลิสต์ของเซลล์นี้เท่านั้น
+    if (!cellSel.has(key)) {
+      setCellSel((prev) => {
+        const next = new Set(prev);
+        next.add(key);
+        return next;
+      });
+    }
     setBusy(true);
     setError(null);
     setOk(null);
@@ -3573,10 +4216,10 @@ export function PosMenuChannelPriceHub({
         from.scope === "option"
           ? await setOptionChannelOverride(from.id, from.channel, rule)
           : await setItemChannelOverride(from.id, from.channel, rule);
-      setSettings(next);
-      setRuleDraft(next.channels);
+      markSettingsSaved(next);
+      setCalcTick((t) => t + 1);
       setTargetEdit((prev) => (sameTargetEdit(prev, from) ? null : prev));
-      setOk(`ตั้งเป้าคงที่ ${price}`);
+      setOk(`ตั้งเป้าคงที่ ${price} · ยืนยันใน Firestore แล้ว`);
     } catch (err) {
       setError((err as Error).message);
       setTargetEdit((prev) => (sameTargetEdit(prev, from) ? null : prev));
@@ -3742,9 +4385,9 @@ export function PosMenuChannelPriceHub({
       ? key === "note"
         ? "คลิกชื่อคอลัมน์ = เรียง note · พิมพ์กรอง · กดหรือพิมพ์ «ว่าง» = เฉพาะแถวไม่มี note"
         : key === "cat"
-          ? "ป้าย S/G/L ในคอลัมน์นี้ = เลขลำดับหมวดบนแพลตฟอร์ม · เขียว = ลำดับหมวดตรง POS · ส้ม⇅ = ลำดับหมวดเพี้ยน"
+          ? "ป้ายหมวด = โลโก้ช่องทาง + เลขลำดับหมวด · เขียวตรง POS · ส้ม⇅เพี้ยน"
           : key === "name"
-            ? "ป้ายแถวบน = ชื่อ S✓/~ /∅ · ป้ายแถวล่าง = ลำดับเมนูในหมวด S3 G5 L3 · เขียวตรง POS · ส้ม⇅เพี้ยน"
+            ? "ป้ายชื่อ = (ชื่อ โลโก้+ตรง/ใกล้/ไม่มี) · ลำดับ/รูป/หมวด ในวงเล็บ · เขียวตรง · ส้ม⇅เพี้ยน"
             : `คลิกชื่อคอลัมน์ = เรียง${colTitle(key)} · พิมพ์ด้านล่าง = กรองทันที`
       : isSales
         ? `คลิกเรียง${colTitle(key)} (${SALES_PERIOD_LABELS[selectedPeriod]}) · คลิกซ้ำสลับ ↑↓ · ลากขอบ = ปรับความกว้าง`
@@ -3789,133 +4432,262 @@ export function PosMenuChannelPriceHub({
             </span>
           </button>
         ) : isChannel && ruleDraft ? (
-          <div className="mph-th-ch">
-            <div className="mph-th-ch-top">
-              {(() => {
-                const colKeys = displayedCellKeysByChannel.get(key) || [];
-                const n = colKeys.filter((k) => cellSel.has(k)).length;
-                const allOn = colKeys.length > 0 && n === colKeys.length;
-                const some = n > 0 && n < colKeys.length;
-                return (
-                  <input
-                    type="checkbox"
-                    className="mph-th-sel"
-                    checked={allOn}
-                    ref={(el) => {
-                      if (el) el.indeterminate = some;
-                    }}
-                    disabled={!colKeys.length}
-                    aria-label={`เลือกเป้า ${channelLabel(key)} ทุกแถวที่แสดง`}
-                    title={`เลือกเป้า ${channelLabel(key)} ที่แสดงอยู่ — ไม่รวมหน้าร้าน ไม่รวมโหมด ร`}
-                    onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      selectAllInChannel(key);
-                    }}
-                  />
-                );
-              })()}
+          (() => {
+            const isMainCol = !!liveSettings && resolveMainChannel(liveSettings) === key;
+            const extraOpen = !!chHeadExtraOpen[key];
+            const clearBtn = waiting ? (
               <button
                 type="button"
-                className={`mph-th-sort${active ? " is-on" : ""}`}
-                onClick={() => toggleSort(key)}
-              >
-                {channelLabel(key)}
-                {sortMark(key)}
-              </button>
-              <button
-                type="button"
-                className="mph-th-info"
-                aria-label={`อธิบายคอลัมน์ ${channelLabel(key)}`}
-                title="แตะดูว่าช่องนี้หมายความว่าอะไร"
+                className="mph-th-clear is-restore"
+                title={`คืนค่าสแกน ${channelLabel(key)}`}
                 onClick={(e) => {
                   e.stopPropagation();
-                  setShowHubInfo(true);
+                  restoreLive([key]);
                 }}
               >
-                <Info size={10} strokeWidth={2.25} aria-hidden />
+                คืน
               </button>
-            </div>
-            <span className="mph-th-rule">
-              <select
-                value={ruleDraft[key].mode}
-                aria-label={`โหมด ${channelLabel(key)}`}
-                title="GP% = ตั้งขายให้หลังหักจีพีเหลือเท่าหน้าร้าน · คงที่ = ราคาเดียวกันทุกแถว · ดับเบิลคลิกช่องเป้าเพื่อใส่ราคาคงที่แถวนั้น (บันทึกทันที)"
-                onChange={(e) => {
-                  const mode = e.target.value as ChannelPriceMode;
-                  setRuleValueText((prev) => {
-                    const next = { ...prev };
-                    delete next[key];
-                    return next;
-                  });
-                  setRuleDraft((prev) => {
-                    if (!prev) return prev;
-                    const rule = { ...prev[key], mode };
-                    void persistChannelRule(key, rule);
-                    return { ...prev, [key]: rule };
-                  });
+            ) : (
+              <button
+                type="button"
+                className="mph-th-clear"
+                title={`เคลียร์ราคาจริง ${channelLabel(key)} · รอสแกนก่อนซิงค์`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setClearConfirm({ channels: [key] });
                 }}
-                onClick={(e) => e.stopPropagation()}
               >
-                <HubPriceModeOptions current={ruleDraft[key].mode} />
-              </select>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={
-                  ruleValueText[key] !== undefined
-                    ? ruleValueText[key]!
-                    : String(ruleDraft[key].value)
-                }
-                style={{
-                  width: `${priceInputCh(ruleValueText[key] ?? ruleDraft[key].value) + 1}ch`,
-                }}
-                aria-label={`ค่า ${channelLabel(key)}`}
+                ล้าง
+              </button>
+            );
+            const fillBtn = (
+              <button
+                type="button"
+                className="mph-th-fill"
+                disabled={busy || !liveSettings || !(cellSelCountByChannel[key] || 0)}
                 title={
-                  ruleDraft[key].mode === "gp"
-                    ? "จีพีแพลตฟอร์ม % — เป้า = หน้าร้าน ÷ (1 − GP/100)"
-                    : ruleDraft[key].mode === "absolute"
-                      ? "ราคาคงที่ทุกแถว (บาท) — แถวที่ต่างให้ดับเบิลคลิกช่องเป้า"
-                      : undefined
+                  cellSelCountByChannel[key]
+                    ? liveSettings && !isMainCol
+                      ? `คำนวณเป้าฝั่งซ้ายจาก ${formatFollowerAddShort(resolveFollowerAdd(liveSettings, key))} ← ${channelLabel(resolveMainChannel(liveSettings))} เฉพาะ ${cellSelCountByChannel[key]} เซลล์ที่เลือก — ระบุราคา · ไม่แตะช่องจริง · มีคอนเฟิร์ม`
+                      : `คำนวณเป้าฝั่งซ้ายจาก ${ruleDraft[key].mode === "gp" ? `GP ${ruleDraft[key].value}%` : formatRuleShort(ruleDraft[key])} เฉพาะ ${cellSelCountByChannel[key]} เซลล์ที่เลือกใน ${channelLabel(key)} — ระบุราคา · ไม่แตะช่องจริง · มีคอนเฟิร์ม`
+                    : `เลือกเป้าในคอลัมน์ ${channelLabel(key)} ก่อน (คลิกเป้า / ติ๊กหัวคอลัมน์ / ติ๊กแถว) แล้วกดคำนวณเป้า`
                 }
-                onChange={(e) => onRuleValueTyping(key, e.target.value)}
-                onBlur={() => commitRuleValue(key)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                onClick={(e) => {
+                  e.stopPropagation();
+                  requestFillTargetsFromColumn(key);
                 }}
-                onClick={(e) => e.stopPropagation()}
-              />
-              {waiting ? (
-                <button
-                  type="button"
-                  className="mph-th-clear is-restore"
-                  title={`คืนค่าสแกน ${channelLabel(key)}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    restoreLive([key]);
+              >
+                คำนวณเป้า
+                {cellSelCountByChannel[key] ? ` ${cellSelCountByChannel[key]}` : ""}
+              </button>
+            );
+            const ruleControls = (
+              <span className="mph-th-rule">
+                <select
+                  value={ruleDraft[key].mode}
+                  aria-label={isMainCol ? `โหมด ${channelLabel(key)}` : `GP หัก ${channelLabel(key)}`}
+                  title={
+                    isMainCol
+                      ? "GP% = ตั้งขายให้หลังหักจีพีเหลือเท่าหน้าร้าน · คงที่ = ราคาเดียวกันทุกแถว"
+                      : "GP% สำหรับป้ายเหลือถึงร้าน / ใช้เมื่อสลับเป็นแกน — ไม่ใช่สูตรเป้าตัวตาม"
+                  }
+                  onChange={(e) => {
+                    const mode = e.target.value as ChannelPriceMode;
+                    setRuleValueText((prev) => {
+                      const next = { ...prev };
+                      delete next[key];
+                      return next;
+                    });
+                    setRuleDraft((prev) => {
+                      if (!prev) return prev;
+                      const rule = { ...prev[key], mode };
+                      void persistChannelRule(key, rule);
+                      return { ...prev, [key]: rule };
+                    });
                   }}
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  คืน
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="mph-th-clear"
-                  title={`เคลียร์ราคาจริง ${channelLabel(key)} · รอสแกนก่อนซิงค์`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setClearConfirm({ channels: [key] });
+                  <HubPriceModeOptions current={ruleDraft[key].mode} />
+                </select>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={
+                    ruleValueText[key] !== undefined
+                      ? ruleValueText[key]!
+                      : String(ruleDraft[key].value)
+                  }
+                  style={{
+                    width: `${priceInputCh(ruleValueText[key] ?? ruleDraft[key].value) + 1}ch`,
                   }}
-                >
-                  ล้าง
-                </button>
-              )}
-            </span>
-            <LiveAtLine
-              waiting={waiting}
-              iso={waiting ? null : latestChannelScanAt(channelLive, key)}
-            />
-          </div>
+                  aria-label={`ค่า ${channelLabel(key)}`}
+                  title={
+                    ruleDraft[key].mode === "gp"
+                      ? "จีพีแพลตฟอร์ม %"
+                      : ruleDraft[key].mode === "absolute"
+                        ? "ราคาคงที่ทุกแถว (บาท)"
+                        : undefined
+                  }
+                  onChange={(e) => onRuleValueTyping(key, e.target.value)}
+                  onBlur={() => commitRuleValue(key)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </span>
+            );
+            return (
+              <div className={`mph-th-ch${isMainCol ? " is-main" : " is-follow"}${!isMainCol && extraOpen ? " is-extra-open" : ""}`}>
+                <div className="mph-th-ch-top">
+                  {(() => {
+                    const colKeys = displayedCellKeysByChannel.get(key) || [];
+                    const n = colKeys.filter((k) => cellSel.has(k)).length;
+                    const allOn = colKeys.length > 0 && n === colKeys.length;
+                    const some = n > 0 && n < colKeys.length;
+                    return (
+                      <input
+                        type="checkbox"
+                        className="mph-th-sel"
+                        checked={allOn}
+                        ref={(el) => {
+                          if (el) el.indeterminate = some;
+                        }}
+                        disabled={!colKeys.length}
+                        aria-label={`เลือกเป้า ${channelLabel(key)} ทุกแถวที่แสดง`}
+                        title={`เลือกเป้า ${channelLabel(key)} ที่แสดงอยู่`}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          selectAllInChannel(key);
+                        }}
+                      />
+                    );
+                  })()}
+                  <label
+                    className={`mph-th-role${isMainCol ? " is-main" : " is-follow"}`}
+                    title="เลือกเป็นแพลตแกน — เป้าจาก GP · แพลตอื่น = เป้าแกน + add"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <input
+                      type="radio"
+                      name="mph-main-channel"
+                      checked={isMainCol}
+                      disabled={busy || !liveSettings}
+                      aria-label={`${channelLabel(key)} เป็นแกนราคา`}
+                      onChange={() => {
+                        setChHeadExtraOpen({});
+                        void persistMainChannel(key);
+                      }}
+                    />
+                    <span className="mph-th-role-mark">{isMainCol ? "แกน" : "ตาม"}</span>
+                  </label>
+                  <button
+                    type="button"
+                    className={`mph-th-sort${active ? " is-on" : ""}`}
+                    onClick={() => toggleSort(key)}
+                  >
+                    {channelLabel(key)}
+                    {sortMark(key)}
+                  </button>
+                  <button
+                    type="button"
+                    className="mph-th-info"
+                    aria-label={`อธิบายคอลัมน์ ${channelLabel(key)}`}
+                    title="แตะดูว่าช่องนี้หมายความว่าอะไร"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowHubInfo(true);
+                    }}
+                  >
+                    <Info size={10} strokeWidth={2.25} aria-hidden />
+                  </button>
+                  {!isMainCol ? (
+                    <button
+                      type="button"
+                      className={`mph-th-extra-tog${extraOpen ? " is-on" : ""}`}
+                      aria-expanded={extraOpen}
+                      aria-label={extraOpen ? "ปิดหมวดหัก GP" : "เปิดหมวดหัก GP"}
+                      title={
+                        extraOpen
+                          ? "ปิดหมวดหัก GP (คำนวณแยกจาก add)"
+                          : "เปิดหมวดหัก GP สำหรับป้ายเหลือถึงร้าน — ไม่กระทบเป้าตามแกน"
+                      }
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setChHeadExtraOpen((prev) => ({ ...prev, [key]: !prev[key] }));
+                      }}
+                    >
+                      {extraOpen ? "▾ หัก" : "▸ หัก"}
+                    </button>
+                  ) : null}
+                </div>
+                {isMainCol ? (
+                  <div className="mph-th-sec" data-sec="formula">
+                    <span className="mph-th-sec-lab">สูตร</span>
+                    {ruleControls}
+                  </div>
+                ) : liveSettings ? (
+                  <div className="mph-th-sec" data-sec="add">
+                    <span className="mph-th-sec-lab">add</span>
+                    <span
+                      className="mph-th-add"
+                      title={`เป้า = เป้า${channelLabel(resolveMainChannel(liveSettings))} + add`}
+                    >
+                      <select
+                        value={resolveFollowerAdd(liveSettings, key).mode}
+                        aria-label={`โหมด add ${channelLabel(key)}`}
+                        title="บวกจากเป้าแกน — บาท หรือ %"
+                        onChange={(e) => {
+                          const mode = e.target.value === "percent" ? "percent" : "offset";
+                          const cur = resolveFollowerAdd(liveSettings, key);
+                          void persistFollowerAdd(key, { mode, value: cur.value });
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <option value="offset">฿</option>
+                        <option value="percent">% จากแกน</option>
+                      </select>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={
+                          addValueText[key] !== undefined
+                            ? addValueText[key]!
+                            : String(resolveFollowerAdd(liveSettings, key).value)
+                        }
+                        style={{
+                          width: `${priceInputCh(addValueText[key] ?? resolveFollowerAdd(liveSettings, key).value) + 1}ch`,
+                        }}
+                        aria-label={`ค่า add ${channelLabel(key)}`}
+                        title="ค่าบวกจากเป้าแกน (ติดลบได้)"
+                        onChange={(e) => onAddValueTyping(key, e.target.value)}
+                        onBlur={() => commitAddValue(key)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </span>
+                  </div>
+                ) : null}
+                {!isMainCol && extraOpen ? (
+                  <div className="mph-th-sec is-extra" data-sec="net-gp">
+                    <span className="mph-th-sec-lab">หัก GP</span>
+                    {ruleControls}
+                  </div>
+                ) : null}
+                <div className="mph-th-actions">
+                  {clearBtn}
+                  {fillBtn}
+                </div>
+                <LiveAtLine
+                  waiting={waiting}
+                  iso={waiting ? null : latestChannelScanAt(channelLive, key)}
+                />
+              </div>
+            );
+          })()
         ) : filterable ? (
           <div className="mph-th-filter-wrap">
             <div className="mph-th-filter-top">
@@ -3959,36 +4731,113 @@ export function PosMenuChannelPriceHub({
                 </button>
               ) : null}
             </div>
-            <input
-              type="search"
-              inputMode={key === "store" ? "numeric" : "search"}
-              className="mph-th-filter-input"
-              value={filterValue}
-              placeholder={key === "store" ? "฿" : key === "note" ? "กรอง / ว่าง" : "กรอง"}
-              aria-label={`กรอง${colTitle(key)}`}
-              title={
-                key === "note"
-                  ? "พิมพ์กรอง Note · กดหรือพิมพ์ «ว่าง» = เฉพาะแถวไม่มี note"
-                  : `พิมพ์กรองคอลัมน์${colTitle(key)} ทันที`
-              }
-              onClick={(e) => e.stopPropagation()}
-              onChange={(e) => {
-                if (key === "name") setColFilterName(e.target.value);
-                else if (key === "cat") setColFilterCat(e.target.value);
-                else if (key === "store") setColFilterStore(e.target.value);
-                else if (key === "note") setColFilterNote(e.target.value);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  if (key === "name") setColFilterName("");
-                  else if (key === "cat") setColFilterCat("");
-                  else if (key === "store") setColFilterStore("");
-                  else if (key === "note") setColFilterNote("");
+            {key === "store" ? (
+              <div className="mph-th-filter-combo">
+                <input
+                  type="search"
+                  inputMode="numeric"
+                  className="mph-th-filter-input"
+                  value={filterValue}
+                  placeholder="฿"
+                  role="combobox"
+                  aria-expanded={storeFilterOpen}
+                  aria-controls="mph-store-price-list"
+                  aria-autocomplete="list"
+                  aria-label="เลือกราคาหน้าร้านที่ไม่ซ้ำ — เปิดแล้วเห็นทุกราคา ไม่ต้องล้างก่อน"
+                  title="เปิดรายการราคา unique ทั้งหมด · กดข้ามไปราคาอื่นได้เลยโดยไม่ต้องกด × · กรองแถวตรงตัวเลขที่เลือก"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setStoreFilterOpen(true);
+                  }}
+                  onFocus={(e) => {
+                    e.stopPropagation();
+                    setStoreFilterOpen(true);
+                  }}
+                  onBlur={() => {
+                    window.setTimeout(() => setStoreFilterOpen(false), 120);
+                  }}
+                  onChange={(e) => {
+                    setColFilterStore(e.target.value);
+                    setStoreFilterOpen(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (storeFilterOpen) setStoreFilterOpen(false);
+                      else setColFilterStore("");
+                    } else if (e.key === "ArrowDown") {
+                      e.preventDefault();
+                      setStoreFilterOpen(true);
+                    }
+                  }}
+                />
+                {storeFilterOpen && storePriceSuggestions.length > 0 ? (
+                  <ul
+                    id="mph-store-price-list"
+                    className="mph-th-filter-list"
+                    role="listbox"
+                    aria-label="ราคาหน้าร้านที่ไม่ซ้ำทั้งหมด"
+                  >
+                    {storePriceSuggestions.map((p) => {
+                      const selected = colFilterStore.trim() === String(p);
+                      const jumpHint =
+                        !selected &&
+                        !!colFilterStore.trim() &&
+                        storePriceSuggestionMatch(p, colFilterStore);
+                      return (
+                        <li key={p} role="presentation">
+                          <button
+                            type="button"
+                            role="option"
+                            data-mph-store-opt={p}
+                            aria-selected={selected}
+                            className={`mph-th-filter-opt${selected ? " is-on" : ""}${jumpHint ? " is-jump" : ""}`}
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setColFilterStore(String(p));
+                              setStoreFilterOpen(false);
+                            }}
+                          >
+                            ฿{p}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : null}
+              </div>
+            ) : (
+              <input
+                type="search"
+                inputMode={key === "store" ? "numeric" : "search"}
+                className="mph-th-filter-input"
+                value={filterValue}
+                placeholder={key === "store" ? "฿" : key === "note" ? "กรอง / ว่าง" : "กรอง"}
+                aria-label={`กรอง${colTitle(key)}`}
+                title={
+                  key === "note"
+                    ? "พิมพ์กรอง Note · กดหรือพิมพ์ «ว่าง» = เฉพาะแถวไม่มี note"
+                    : `พิมพ์กรองคอลัมน์${colTitle(key)} ทันที`
                 }
-              }}
-            />
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => {
+                  if (key === "name") setColFilterName(e.target.value);
+                  else if (key === "cat") setColFilterCat(e.target.value);
+                  else if (key === "note") setColFilterNote(e.target.value);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (key === "name") setColFilterName("");
+                    else if (key === "cat") setColFilterCat("");
+                    else if (key === "note") setColFilterNote("");
+                  }
+                }}
+              />
+            )}
           </div>
         ) : (
           <button
@@ -4217,7 +5066,7 @@ export function PosMenuChannelPriceHub({
           </button>
           <button
             type="button"
-            className={`mph-chip${cellSel.size || storeOnlySel.size ? " is-on" : ""}`}
+            className={`mph-chip${visibleCellSelCount || storeOnlySel.size ? " is-on" : ""}`}
             title="เลือกเป้าแพลตฟอร์มทุกเซลล์ที่แสดง (เมนู+ตัวเลือก) และแถวเฉพาะหน้าร้านสำหรับใส่ note"
             disabled={!displayedCellKeys.length && !displayedStoreOnlyIds.size}
             onClick={selectAllDisplayedCells}
@@ -4328,18 +5177,29 @@ export function PosMenuChannelPriceHub({
         >
           {rulesDirty ? "ซิงก์สูตร*" : "สูตร"}
         </button>
-        <span className="mph-scan muted" title="เวลาอัปเดตล่าสุดแยกตามช่องทางที่แสดง (จาก hub)">
-          {visibleChannels.map((ch, i) => (
-            <span key={ch}>
-              {i ? " · " : ""}
-              {channelChipLetter(ch)}{" "}
-              {clearedLive.has(ch) ? (
-                <em className="mph-waiting-label">รอสแกน</em>
-              ) : (
-                formatLiveAt(latestChannelScanAt(channelLive, ch)) || "—"
-              )}
-            </span>
-          ))}
+        <span
+          className="mph-scan mph-ai-meta"
+          hidden
+          aria-hidden="true"
+          data-mph-ai="scan-at-toolbar"
+          title="เวลาอัปเดตล่าสุดแยกตามช่องทาง (ซ่อนจากจอ — ให้ AI อ่าน)"
+        >
+          {visibleChannels.map((ch, i) => {
+            const waiting = clearedLive.has(ch);
+            const iso = waiting ? null : latestChannelScanAt(channelLive, ch);
+            const short = waiting ? "รอสแกน" : formatLiveAt(iso) || "—";
+            return (
+              <span
+                key={ch}
+                data-channel={ch}
+                data-waiting={waiting ? "1" : "0"}
+                data-scanned-at={iso || ""}
+              >
+                {i ? " · " : ""}
+                {channelChipLetter(ch)} {short}
+              </span>
+            );
+          })}
         </span>
       </div>
 
@@ -4380,10 +5240,10 @@ export function PosMenuChannelPriceHub({
         </div>
       ) : null}
 
-      <div className="mph-sel-bar" aria-label="กำหนดเป้าเซลล์ที่เลือก">
+      <div className="mph-sel-bar" aria-label="กำหนดเป้าเซลล์ที่ติ๊กในตารางที่เห็น">
         <span className="mph-sel-count">
-          เลือก {displayedRows.filter((r) => rowSelMark(r) !== "off").length} แถว · {cellSel.size}{" "}
-          เซลล์
+          เลือก {displayedRows.filter((r) => rowSelMark(r) !== "off").length} แถว · {visibleCellSelCount}{" "}
+          เซลล์ที่เห็น
           {visibleChannels.map((ch) =>
             cellSelCountByChannel[ch] ? ` · ${channelChipLetter(ch)} ${cellSelCountByChannel[ch]}` : "",
           ).join("")}
@@ -4391,7 +5251,7 @@ export function PosMenuChannelPriceHub({
         <button
           type="button"
           className="mph-chip mph-chip-sm"
-          disabled={!cellSel.size && !storeOnlySel.size}
+          disabled={!visibleCellSelCount && !storeOnlySel.size}
           onClick={clearCellSel}
         >
           ยกเลิกเลือก
@@ -4404,14 +5264,20 @@ export function PosMenuChannelPriceHub({
             className="mph-sel-price"
             value={selPrice}
             placeholder="฿"
-            disabled={!cellSel.size || busy}
-            aria-label="ราคาเป้าของเซลล์ที่เลือก"
-            title="ตั้งเป้าคงที่เฉพาะเซลล์ที่เลือก — ป้ายระบุราคา · ไม่แตะหน้าร้าน ไม่เขียนราคาจริง"
-            onChange={(e) => setSelPrice(e.target.value)}
+            disabled={!visibleCellSelCount || busy}
+            aria-label="ราคาเป้าของเซลล์ที่ติ๊กเช็คในตารางที่เห็น"
+            title="ตั้งเป้าคงที่เฉพาะเซลล์ที่ติ๊กและเห็นในตาราง — ไม่แตะแถวที่ถูกกรอง/ไม่ได้เลือก"
+            onChange={(e) => {
+              const v = e.target.value;
+              selPriceRef.current = v;
+              setSelPrice(v);
+              setError(null);
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
-                void applySelectedTargets();
+                selPriceRef.current = (e.target as HTMLInputElement).value;
+                requestSaveSelectedTargets();
               }
             }}
           />
@@ -4419,11 +5285,21 @@ export function PosMenuChannelPriceHub({
         <button
           type="button"
           className="mph-btn mph-btn-primary"
-          disabled={!cellSel.size || busy || selPrice.trim() === ""}
-          title="เขียนเป้าเฉพาะเซลล์ที่เลือก เป็นระบุราคา — สูตรคอลัมน์ของช่องอื่นไม่เปลี่ยน"
-          onClick={() => void applySelectedTargets()}
+          disabled={
+            !visibleCellSelCount || busy || parseHubMoneyInput(selPrice) == null
+          }
+          title={
+            visibleCellSelCount
+              ? "เปิดยืนยันดันราคาเฉพาะเซลล์ที่ติ๊กและเห็นในตาราง"
+              : "ต้องติ๊กเช็คเซลล์ในตารางที่เห็นก่อน"
+          }
+          onClick={() => requestSaveSelectedTargets()}
         >
-          {busy ? "..." : `ใช้กับ ${cellSel.size} เซลล์`}
+          {busy
+            ? "กำลังบันทึก…"
+            : visibleCellSelCount
+              ? `บันทึกเป้า ${visibleCellSelCount} เซลล์`
+              : "ติ๊กเลือกก่อน"}
         </button>
         <label className="mph-sel-price-label">
           ใส่ note
@@ -4775,6 +5651,12 @@ export function PosMenuChannelPriceHub({
                             <RuleKindBadge
                               rule={rule}
                               fromOverride={cell.fromOverride}
+                              viaFollower={!!cell.viaFollower && !cell.fromOverride}
+                              followerAdd={
+                                cell.viaFollower && !cell.fromOverride && liveSettings
+                                  ? resolveFollowerAdd(liveSettings, ch)
+                                  : null
+                              }
                               store={storeBase}
                               target={cell.target}
                               onClick={() => openOverride(item, ch)}
@@ -5089,6 +5971,12 @@ export function PosMenuChannelPriceHub({
                               <RuleKindBadge
                                 rule={rule}
                                 fromOverride={cell.fromOverride}
+                                viaFollower={!!cell.viaFollower && !cell.fromOverride}
+                                followerAdd={
+                                  cell.viaFollower && !cell.fromOverride && liveSettings
+                                    ? resolveFollowerAdd(liveSettings, ch)
+                                    : null
+                                }
                                 store={storeBase}
                                 target={cell.target}
                                 onClick={() => openOptionOverride(r, ch)}
@@ -5511,10 +6399,17 @@ export function PosMenuChannelPriceHub({
                 </dd>
               </div>
               <div>
-                <dt>เวลาอัปเดต (ใต้ S/G/L)</dt>
+                <dt>คำนวณเป้า</dt>
                 <dd>
-                  ไม่มีคอลัมน์ lastUpdate รวม — เวลาอยู่ใต้แต่ละช่องทาง · หัวคอลัมน์ = ล่าสุดของช่องนั้น ·
-                  ในเซล = เวลาของแถวนั้นหลังสแกน/บันทึก · วันนี้โชว์แค่ HH:mm
+                  ปุ่มที่หัวคอลัมน์ S/G/L — ต้องเลือกเป้าในคอลัมน์นั้นก่อน แล้วกดคำนวณเป้า จะคิดจาก
+                  สูตรแกน (GP%) หรือตามแกน+add ของคอลัมน์ตัวตาม แล้วบันทึกเป็น「ระบุราคา」เฉพาะเซลล์ที่เลือก · ไม่แตะช่องจริง · ไม่กระทบแถวที่ไม่ได้เลือก
+                </dd>
+              </div>
+              <div>
+                <dt>เวลาอัปเดต / สแกน</dt>
+                <dd>
+                  ซ่อนจากจอแล้ว — เก็บในกล่อง meta (`data-mph-ai=&quot;scan-at&quot;`) ให้ AI อ่านจาก DOM
+                  ไม่แสดงใต้คอลัมน์ S/G/L หรือแถบเครื่องมือ
                 </dd>
               </div>
               <div>
@@ -5702,6 +6597,127 @@ export function PosMenuChannelPriceHub({
         </div>
       ) : null}
 
+      {saveTargetsConfirm ? (
+        <div
+          className="mph-mask"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="mph-save-targets-title"
+          aria-busy={saveTargetsConfirm.phase === "saving"}
+        >
+          <div className="mph-dialog">
+            <h3 id="mph-save-targets-title">ยืนยันดันราคาเป้า?</h3>
+            <p className="muted">
+              จะตั้งเป้าคงที่ <strong>{saveTargetsConfirm.price}฿</strong> ให้{" "}
+              {saveTargetsConfirm.writes.length} เซลล์ที่เลือก
+              {saveTargetsConfirm.chSummary ? ` (${saveTargetsConfirm.chSummary})` : ""} — เขียนลง
+              Firestore · ไม่แตะหน้าร้าน · ไม่แตะราคาจริงบนแพลตฟอร์ม
+            </p>
+            {saveTargetsConfirm.phase === "saving" ? (
+              <p className="mph-dialog-wait" role="status">
+                กำลังเขียนลงฐานข้อมูลจริง… รอจนกว่า Firestore ยืนยัน — ยังไม่ปิดหน้าต่างนี้
+              </p>
+            ) : null}
+            {saveTargetsConfirm.phase === "done" ? (
+              <p className="mph-dialog-ok" role="status">
+                เข้า Firestore แล้ว · ปิดอัตโนมัติ
+              </p>
+            ) : null}
+            {saveTargetsConfirm.error ? (
+              <p className="mph-dialog-err" role="alert">
+                {saveTargetsConfirm.error}
+              </p>
+            ) : null}
+            <div className="mph-dialog-actions">
+              <button
+                type="button"
+                className="mph-btn"
+                disabled={
+                  saveTargetsConfirm.phase === "saving" || saveTargetsConfirm.phase === "done"
+                }
+                onClick={() => setSaveTargetsConfirm(null)}
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                className="mph-btn mph-btn-primary"
+                disabled={
+                  saveTargetsConfirm.phase === "saving" || saveTargetsConfirm.phase === "done"
+                }
+                onClick={() => void confirmSaveSelectedTargets()}
+              >
+                {saveTargetsConfirm.phase === "saving"
+                  ? "รอ Firestore…"
+                  : saveTargetsConfirm.phase === "done"
+                    ? "เสร็จแล้ว"
+                    : `ยืนยันดันราคา · ${saveTargetsConfirm.writes.length} เซลล์`}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {fillTargetConfirm ? (
+        <div
+          className="mph-mask"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="mph-fill-target-title"
+          aria-busy={fillTargetPhase === "saving"}
+        >
+          <div className="mph-dialog">
+            <h3 id="mph-fill-target-title">
+              คำนวณเป้า {channelLabel(fillTargetConfirm.channel)}?
+            </h3>
+            <p className="muted">
+              จะตั้งเป้าฝั่งซ้ายตามสูตรคอลัมน์ ({fillTargetConfirm.ruleLabel}) เป็น「ระบุราคา」เฉพาะ{" "}
+              {fillTargetConfirm.selectedCount} เซลล์ที่เลือกในคอลัมน์นี้ — เปลี่ยน{" "}
+              {fillTargetConfirm.changeCount} เซลล์
+              {fillTargetConfirm.sameCount
+                ? ` · เท่าเดิม ${fillTargetConfirm.sameCount}`
+                : ""}{" "}
+              · ไม่แตะแถวที่ไม่ได้เลือก · ไม่แตะช่องจริง (สแกน) · ไม่แตะหน้าร้าน
+            </p>
+            {fillTargetPhase === "saving" ? (
+              <p className="mph-dialog-wait" role="status">
+                กำลังเขียนลงฐานข้อมูลจริง… รอจนกว่า Firestore ยืนยัน — ยังไม่ปิดหน้าต่างนี้
+              </p>
+            ) : null}
+            {fillTargetPhase === "done" ? (
+              <p className="mph-dialog-ok" role="status">
+                เข้า Firestore แล้ว · ปิดอัตโนมัติ
+              </p>
+            ) : null}
+            <div className="mph-dialog-actions">
+              <button
+                type="button"
+                className="mph-btn"
+                disabled={fillTargetPhase === "saving" || fillTargetPhase === "done"}
+                onClick={() => {
+                  setFillTargetConfirm(null);
+                  setFillTargetPhase("confirm");
+                }}
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                className="mph-btn mph-btn-primary"
+                disabled={fillTargetPhase === "saving" || fillTargetPhase === "done"}
+                onClick={() => void confirmFillTargetsFromColumn()}
+              >
+                {fillTargetPhase === "saving"
+                  ? "รอ Firestore…"
+                  : fillTargetPhase === "done"
+                    ? "เสร็จแล้ว"
+                    : `ยืนยันดันราคา · เปลี่ยน ${fillTargetConfirm.changeCount}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {noteClearConfirm ? (
         <div
           className="mph-mask"
@@ -5738,7 +6754,12 @@ export function PosMenuChannelPriceHub({
       ) : null}
 
       {overrideEdit ? (
-        <div className="mph-mask" role="dialog" aria-modal="true">
+        <div
+          className="mph-mask"
+          role="dialog"
+          aria-modal="true"
+          aria-busy={overrideSavePhase === "saving"}
+        >
           <div className="mph-dialog">
             <h3>
               เป้า {channelLabel(overrideEdit.channel)}
@@ -5773,10 +6794,21 @@ export function PosMenuChannelPriceHub({
                 </>
               )}
             </p>
+            {overrideSavePhase === "saving" ? (
+              <p className="mph-dialog-wait" role="status">
+                กำลังเขียนลงฐานข้อมูลจริง… รอจนกว่า Firestore ยืนยัน — ยังไม่ปิดหน้าต่างนี้
+              </p>
+            ) : null}
+            {overrideSavePhase === "done" ? (
+              <p className="mph-dialog-ok" role="status">
+                เข้า Firestore แล้ว · ปิดอัตโนมัติ
+              </p>
+            ) : null}
             <label>
               โหมดใส่ราคา
               <select
                 value={overrideEdit.mode}
+                disabled={overrideSavePhase === "saving" || overrideSavePhase === "done"}
                 onChange={(e) =>
                   setOverrideEdit((prev) =>
                     prev ? { ...prev, mode: e.target.value as ChannelPriceMode } : prev,
@@ -5792,6 +6824,7 @@ export function PosMenuChannelPriceHub({
                 type="text"
                 inputMode="decimal"
                 value={overrideEdit.value}
+                disabled={overrideSavePhase === "saving" || overrideSavePhase === "done"}
                 onChange={(e) =>
                   setOverrideEdit((prev) =>
                     prev ? { ...prev, value: e.target.value } : prev,
@@ -5800,13 +6833,21 @@ export function PosMenuChannelPriceHub({
               />
             </label>
             <div className="mph-dialog-actions">
-              <button type="button" className="mph-btn" onClick={() => setOverrideEdit(null)}>
+              <button
+                type="button"
+                className="mph-btn"
+                disabled={overrideSavePhase === "saving" || overrideSavePhase === "done"}
+                onClick={() => {
+                  setOverrideEdit(null);
+                  setOverrideSavePhase("idle");
+                }}
+              >
                 ยกเลิก
               </button>
               <button
                 type="button"
                 className="mph-btn"
-                disabled={busy}
+                disabled={overrideSavePhase === "saving" || overrideSavePhase === "done"}
                 onClick={() => void applyOverride(true)}
               >
                 ล้าง
@@ -5814,10 +6855,14 @@ export function PosMenuChannelPriceHub({
               <button
                 type="button"
                 className="mph-btn mph-btn-primary"
-                disabled={busy}
+                disabled={overrideSavePhase === "saving" || overrideSavePhase === "done"}
                 onClick={() => void applyOverride(false)}
               >
-                บันทึก
+                {overrideSavePhase === "saving"
+                  ? "รอ Firestore…"
+                  : overrideSavePhase === "done"
+                    ? "เสร็จแล้ว"
+                    : "ยืนยันดันราคา"}
               </button>
             </div>
           </div>

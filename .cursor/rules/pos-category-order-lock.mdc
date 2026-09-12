@@ -1,0 +1,34 @@
+---
+description: Never change POS (หลังร้าน) category/group sort order unless user explicitly orders it
+alwaysApply: true
+---
+
+# ล็อกลำดับหมวดหลังร้าน — agent ห้ามจัดเอง
+
+TellTea: **ลำดับกลุ่ม/หมวดหลังร้าน (POS)** เป็นของเจ้าของร้าน — แก้ได้เฉพาะเมื่อผู้ใช้**สั่งชัดในข้อความรอบนั้น**
+
+แหล่งความจริง: Firestore `menuCategories[].sortOrder` (หน้าเมนูหลังร้าน ↑↓)  
+`POS_FIXED_CATEGORY_ORDER` / `applyFixedCategorySortOrder` = อ้างอิงสคริปต์เท่านั้น **ห้ามซิงค์ทับหลังร้าน**
+
+## ห้ามทำเอง (แม้คิดว่า “ให้ตรงลิสต์คงที่ / เบเกอรี่บนสุด / bakery-last”)
+
+- เขียน/อัปเดต `menuCategories` · `sortOrder` ใน Firestore
+- รันสคริปต์หรือโค้ดที่เรียง/ซิงค์ลำดับหมวด**เข้า POS**
+- เรียก `applyFixedCategorySortOrder` / `maybeSyncFixedOrderToFirebase` แล้วบันทึกลงหลังร้าน
+- ใช้ UI/API หลังร้านเลื่อนหมวดแทนผู้ใช้
+- “จัดให้สวย” หรือจัดลำดับหมวด POS เพราะกำลังจัดช่องทาง
+
+## ทำได้โดยไม่ต้องรอ (เมื่อผู้ใช้ขอจัดช่องทาง)
+
+- `channel-reorder-categories-to-pos.mjs` — **ดึงลำดับจาก POS ไปแพลตฟอร์ม** เท่านั้น (Shopee / Grab / LINE MAN)
+- สแกนช่องทาง + ingest hub
+- อ่าน/รายงานลำดับ POS ปัจจุบัน (read-only)
+
+อย่าใส่ `--bakery-last` หรือ flag ที่บิดลำดับออกจาก POS ถ้าผู้ใช้ไม่ได้สั่ง
+
+## เมื่อได้รับคำสั่งชัด
+
+ถือว่าชัดเมื่อพูดถึง**หลังร้าน / POS / เมนูหลังร้าน** เช่น  
+“เลื่อนเบเกอรี่ขึ้นบนสุดหลังร้าน” · “แก้ sortOrder หมวด POS” · “ซิงค์ลิสต์คงที่ลง Firestore”
+
+คำว่า “จัดลำดับกลุ่ม / หมวด” **โดยไม่บอกหลังร้าน** = หมายถึงช่องทาง ตาม POS — **ห้ามแตะ POS**

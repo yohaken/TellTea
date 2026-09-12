@@ -25,7 +25,7 @@ import { parse } from "csv-parse/sync";
 import archiver from "archiver";
 import { loadHubChannelContext } from "./lib/hub-channel-targets.mjs";
 import { isStoreOnlyName } from "./lib/name-sync-match.mjs";
-import { namesEqual } from "./lib/grab-csv.mjs";
+import { namesEqual, foldMenuName } from "./lib/grab-csv.mjs";
 import { writeHubChannelLiveRow } from "./lib/hub-live-write.mjs";
 import {
   findShopeeTab,
@@ -60,7 +60,7 @@ const MICROS = 100_000;
 const args = process.argv.slice(2);
 const apply = args.includes("--apply");
 const channelArg = (args.find((a) => a.startsWith("--channel=")) || "--channel=all").slice(10);
-const workers = Math.min(6, Math.max(1, Number((args.find((a) => a.startsWith("--workers=")) || "").slice(10)) || 4));
+const workers = Math.min(4, Math.max(1, Number((args.find((a) => a.startsWith("--workers=")) || "").slice(10)) || 4));
 const limit = Math.max(0, Number((args.find((a) => a.startsWith("--limit=")) || "").slice(8)) || 0);
 const channels = channelArg === "all" ? ["shopee", "grab", "lineman"] : channelArg.split(",").map((s) => s.trim());
 
@@ -76,17 +76,30 @@ function pairLiveToPos(liveItems, posItems, { idKey }) {
   const todo = [];
   const exact = [];
   const unmatched = [];
+
+  const byFold = new Map();
+  for (const p of delivery) {
+    const f = foldMenuName(p.name || "");
+    if (!f) continue;
+    if (!byFold.has(f)) byFold.set(f, []);
+    byFold.get(f).push(p);
+  }
+
   for (const live of liveItems || []) {
     const name = String(live.name || "");
     const id = String(live[idKey] || live.id || "");
     if (!name || /^ลบไม่ได้/.test(name)) continue;
     let pos = delivery.find((p) => !used.has(p.id) && namesEqual(p.name, name));
     if (!pos) {
+      const hits = (byFold.get(foldMenuName(name)) || []).filter((p) => !used.has(p.id));
+      if (hits.length === 1) pos = hits[0];
+    }
+    if (!pos) {
       unmatched.push({ id, name });
       continue;
     }
     used.add(pos.id);
-    if (name === pos.name) exact.push({ id, name, posId: pos.id });
+    if (namesEqual(name, pos.name)) exact.push({ id, name, posId: pos.id });
     else
       todo.push({
         id,

@@ -1,18 +1,35 @@
-import { doc, getDoc, onSnapshot, setDoc, type Unsubscribe } from "firebase/firestore";
+import {
+  deleteField,
+  doc,
+  getDoc,
+  getDocFromServer,
+  onSnapshot,
+  setDoc,
+  updateDoc,
+  type Unsubscribe,
+} from "firebase/firestore";
 import { getMenuDb } from "@/lib/pos-menu-db";
 import {
   DEFAULT_CHANNEL_RULES,
   DEFAULT_DELIVERY_RULE,
+  DEFAULT_FOLLOWER_ADD,
+  DEFAULT_MAIN_CHANNEL,
   defaultMenuPriceHubSettings,
   type ChannelPriceRule,
   type ChannelRules,
   type DeliveryChannel,
+  type FollowerAddRule,
+  type FollowerAddRules,
   type ItemChannelOverrides,
   type MenuPriceHubSettings,
 } from "@/lib/menu-channel-price";
 
 const COL = "menuPriceHub";
 const DOC_ID = "settings";
+
+function settingsDocRef() {
+  return doc(getMenuDb(), COL, DOC_ID);
+}
 
 function parseRule(raw: unknown, fallback: ChannelPriceRule): ChannelPriceRule {
   if (!raw || typeof raw !== "object") return { ...fallback };
@@ -54,6 +71,33 @@ function parseKeyedOverrides(raw: unknown): Record<string, ItemChannelOverrides>
   return out;
 }
 
+function parseFollowerAdd(raw: unknown): FollowerAddRules {
+  if (!raw || typeof raw !== "object") return { ...DEFAULT_FOLLOWER_ADD };
+  const src = raw as Record<string, unknown>;
+  const out: FollowerAddRules = { ...DEFAULT_FOLLOWER_ADD };
+  for (const channel of ["shopee", "grab", "lineman"] as DeliveryChannel[]) {
+    const cell = src[channel];
+    if (!cell || typeof cell !== "object") continue;
+    const o = cell as Record<string, unknown>;
+    const mode = o.mode === "percent" || o.mode === "offset" ? o.mode : "offset";
+    const value = typeof o.value === "number" && Number.isFinite(o.value) ? o.value : 0;
+    out[channel] = { mode, value };
+  }
+  return out;
+}
+
+function parseMainChannel(raw: unknown): DeliveryChannel {
+  if (raw === "shopee" || raw === "grab" || raw === "lineman") return raw;
+  return DEFAULT_MAIN_CHANNEL;
+}
+
+export type ChannelOverrideWrite = {
+  scope: "item" | "option";
+  id: string;
+  channel: DeliveryChannel;
+  rule: ChannelPriceRule | null;
+};
+
 export function normalizeMenuPriceHubSettings(data: unknown): MenuPriceHubSettings {
   if (!data || typeof data !== "object") return defaultMenuPriceHubSettings();
   const o = data as Record<string, unknown>;
@@ -65,6 +109,8 @@ export function normalizeMenuPriceHubSettings(data: unknown): MenuPriceHubSettin
       : undefined;
   return {
     channels: parseChannels(o.channels),
+    mainChannel: parseMainChannel(o.mainChannel),
+    followerAdd: parseFollowerAdd(o.followerAdd),
     ...(deliveryRule ? { deliveryRule } : {}),
     itemOverrides: parseKeyedOverrides(o.itemOverrides),
     optionOverrides: parseKeyedOverrides(o.optionOverrides),
@@ -74,9 +120,40 @@ export function normalizeMenuPriceHubSettings(data: unknown): MenuPriceHubSettin
 }
 
 export async function loadMenuPriceHubSettings(): Promise<MenuPriceHubSettings> {
-  const snap = await getDoc(doc(getMenuDb(), COL, DOC_ID));
+  const snap = await getDoc(settingsDocRef());
   if (!snap.exists()) return defaultMenuPriceHubSettings();
   return normalizeMenuPriceHubSettings(snap.data());
+}
+
+/** อ่าน settings จากเซิร์ฟเวอร์ตรง ๆ — ใช้ก่อนเขียน/หลังเซฟ กันแคชเก่า */
+export async function loadMenuPriceHubSettingsFromServer(): Promise<MenuPriceHubSettings> {
+  const snap = await getDocFromServer(settingsDocRef());
+  if (!snap.exists()) return defaultMenuPriceHubSettings();
+  return normalizeMenuPriceHubSettings(snap.data());
+}
+
+function rulesEqual(a: ChannelPriceRule | null | undefined, b: ChannelPriceRule | null | undefined) {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  return a.mode === b.mode && Number(a.value) === Number(b.value);
+}
+
+function assertOverrideWritesPersisted(
+  settings: MenuPriceHubSettings,
+  writes: ChannelOverrideWrite[],
+) {
+  for (const w of writes) {
+    const got =
+      w.scope === "option"
+        ? settings.optionOverrides[w.id]?.[w.channel]
+        : settings.itemOverrides[w.id]?.[w.channel];
+    if (!rulesEqual(got, w.rule ?? null)) {
+      const label = w.scope === "option" ? `ตัวเลือก ${w.id}` : `เมนู ${w.id}`;
+      throw new Error(
+        `เซฟเป้าแล้วแต่ Firestore ยังไม่ตรง · ${label} · ${w.channel} — ลองอีกครั้ง`,
+      );
+    }
+  }
 }
 
 /** Realtime สูตร/เป้าในตาราง — แก้ที่เครื่องอื่นหรือสคริปต์แล้วโผล่ทันที */
@@ -85,8 +162,10 @@ export function subscribeMenuPriceHubSettings(
   onError?: (err: Error) => void,
 ): Unsubscribe {
   return onSnapshot(
-    doc(getMenuDb(), COL, DOC_ID),
+    settingsDocRef(),
+    { includeMetadataChanges: true },
     (snap) => {
+      // จากแคชก็ส่งได้ — ฝั่ง UI กันด้วย updatedAt / settingsSavedAtRef
       onNext(
         snap.exists()
           ? normalizeMenuPriceHubSettings(snap.data())
@@ -108,24 +187,53 @@ export async function saveMenuPriceHubSettings(
     settings.deliveryRule && typeof settings.deliveryRule === "object"
       ? parseRule(settings.deliveryRule, DEFAULT_DELIVERY_RULE)
       : undefined;
+  const wroteAt = Date.now();
   const next: MenuPriceHubSettings = {
     channels: parseChannels(settings.channels),
+    mainChannel: parseMainChannel(settings.mainChannel),
+    followerAdd: parseFollowerAdd(settings.followerAdd),
     ...(deliveryRule ? { deliveryRule } : {}),
     itemOverrides: parseKeyedOverrides(settings.itemOverrides),
     optionOverrides: parseKeyedOverrides(settings.optionOverrides),
     ...(tableNote ? { tableNote } : {}),
-    updatedAt: Date.now(),
+    updatedAt: wroteAt,
   };
-  await setDoc(
-    doc(getMenuDb(), COL, DOC_ID),
-    { ...next, tableNote },
-    { merge: true },
-  );
-  return next;
+  // updateDoc แทน setDoc(merge) — ทับ itemOverrides/optionOverrides ทั้งก้อน
+  // (merge:true จะ deep-merge map ทำให้ลบ override ไม่หาย / ค่าเก่าปนใหม่ได้)
+  const payload: Record<string, unknown> = {
+    channels: next.channels,
+    mainChannel: next.mainChannel,
+    followerAdd: next.followerAdd,
+    itemOverrides: next.itemOverrides,
+    optionOverrides: next.optionOverrides,
+    updatedAt: wroteAt,
+  };
+  if (deliveryRule) payload.deliveryRule = deliveryRule;
+  if (tableNote) payload.tableNote = tableNote;
+  else payload.tableNote = deleteField();
+
+  const existing = await getDocFromServer(settingsDocRef());
+  if (existing.exists()) {
+    await updateDoc(settingsDocRef(), payload);
+  } else {
+    const createPayload = { ...payload };
+    if (!tableNote) delete createPayload.tableNote;
+    await setDoc(settingsDocRef(), createPayload);
+  }
+
+  // ยืนยันจากเซิร์ฟเวอร์ก่อนบอกว่าเซฟแล้ว — กันแคช/ snapshot เก่า
+  const verified = await loadMenuPriceHubSettingsFromServer();
+  const verifiedAt = typeof verified.updatedAt === "number" ? verified.updatedAt : 0;
+  if (verifiedAt < wroteAt) {
+    throw new Error(
+      `เซฟ settings แล้วยังไม่อ่านกลับจาก Firestore (updatedAt ${verifiedAt} < ${wroteAt}) — ลองอีกครั้ง`,
+    );
+  }
+  return verified;
 }
 
 export async function saveChannelRules(channels: ChannelRules): Promise<MenuPriceHubSettings> {
-  const current = await loadMenuPriceHubSettings();
+  const current = await loadMenuPriceHubSettingsFromServer();
   return saveMenuPriceHubSettings({ ...current, channels });
 }
 
@@ -134,19 +242,31 @@ export async function saveChannelRule(
   channel: DeliveryChannel,
   rule: ChannelPriceRule,
 ): Promise<MenuPriceHubSettings> {
-  const current = await loadMenuPriceHubSettings();
+  const current = await loadMenuPriceHubSettingsFromServer();
   return saveMenuPriceHubSettings({
     ...current,
     channels: { ...current.channels, [channel]: rule },
   });
 }
 
-export type ChannelOverrideWrite = {
-  scope: "item" | "option";
-  id: string;
-  channel: DeliveryChannel;
-  rule: ChannelPriceRule | null;
-};
+export async function saveMainChannel(
+  mainChannel: DeliveryChannel,
+): Promise<MenuPriceHubSettings> {
+  const current = await loadMenuPriceHubSettingsFromServer();
+  return saveMenuPriceHubSettings({ ...current, mainChannel });
+}
+
+export async function saveFollowerAdd(
+  channel: DeliveryChannel,
+  add: FollowerAddRule,
+): Promise<MenuPriceHubSettings> {
+  const current = await loadMenuPriceHubSettingsFromServer();
+  const followerAdd: FollowerAddRules = {
+    ...(current.followerAdd || DEFAULT_FOLLOWER_ADD),
+    [channel]: { mode: add.mode, value: Number(add.value) || 0 },
+  };
+  return saveMenuPriceHubSettings({ ...current, followerAdd });
+}
 
 function writeKeyedOverride(
   map: Record<string, ItemChannelOverrides>,
@@ -188,11 +308,14 @@ export async function setItemChannelOverride(
   channel: DeliveryChannel,
   rule: ChannelPriceRule | null,
 ): Promise<MenuPriceHubSettings> {
-  const current = await loadMenuPriceHubSettings();
-  return saveMenuPriceHubSettings({
+  const write: ChannelOverrideWrite = { scope: "item", id: itemId, channel, rule };
+  const current = await loadMenuPriceHubSettingsFromServer();
+  const verified = await saveMenuPriceHubSettings({
     ...current,
     itemOverrides: writeKeyedOverride(current.itemOverrides, itemId, channel, rule),
   });
+  assertOverrideWritesPersisted(verified, [write]);
+  return verified;
 }
 
 export async function setOptionChannelOverride(
@@ -200,17 +323,24 @@ export async function setOptionChannelOverride(
   channel: DeliveryChannel,
   rule: ChannelPriceRule | null,
 ): Promise<MenuPriceHubSettings> {
-  const current = await loadMenuPriceHubSettings();
-  return saveMenuPriceHubSettings({
+  const write: ChannelOverrideWrite = { scope: "option", id: optionKey, channel, rule };
+  const current = await loadMenuPriceHubSettingsFromServer();
+  const verified = await saveMenuPriceHubSettings({
     ...current,
     optionOverrides: writeKeyedOverride(current.optionOverrides, optionKey, channel, rule),
   });
+  assertOverrideWritesPersisted(verified, [write]);
+  return verified;
 }
 
 /** เขียน override หลายเซลล์ในเอกสารเดียว — ไม่แตะราคาหน้าร้าน */
 export async function setManyChannelOverrides(
   writes: ChannelOverrideWrite[],
 ): Promise<MenuPriceHubSettings> {
-  const current = await loadMenuPriceHubSettings();
-  return saveMenuPriceHubSettings(applyManyChannelOverrideWrites(current, writes));
+  const current = await loadMenuPriceHubSettingsFromServer();
+  const verified = await saveMenuPriceHubSettings(
+    applyManyChannelOverrideWrites(current, writes),
+  );
+  assertOverrideWritesPersisted(verified, writes);
+  return verified;
 }

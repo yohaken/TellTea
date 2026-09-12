@@ -360,7 +360,7 @@ async function main() {
       const byId = new Map(
         (menu.modifierGroups || []).map((g) => [g.modifierGroupID, g.modifierGroupName]),
       );
-      const check = ["โกปี๊ ยกล้อ (ใส่นม) (เย็น/ปั่น)", "ชาเขียวมะลิ"];
+      const check = ["โกปี๊ ยกล้อ ใส่นม เย็น/ปั่น", "ชาเขียวมะลิ"];
       for (const c of menu.categories || []) {
         for (const it of c.items || []) {
           if (!check.includes(it.itemName)) continue;

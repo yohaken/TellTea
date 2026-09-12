@@ -4,22 +4,22 @@
 import { collection, getDocs } from "firebase/firestore";
 import { loadHubChannelLiveItems } from "./hub-live-write.mjs";
 
-export const SIGNATURE_DRINKS_CAT = "Signature Drinks (เย็น, ปั่น)";
+export const SIGNATURE_DRINKS_CAT = "Signature Drinks เย็น/ปั่น";
 
 export const TEA_WAVE_CATS = [
-  "ชานมสดคราฟต์ (เย็น, ปั่น)",
+  "ชานมสดคราฟต์ เย็น/ปั่น",
   "ชา",
-  "ชานม (เย็น, ปั่น)",
+  "ชานม เย็น/ปั่น",
 ];
 
-export const FRUIT_COFFEE_CATS = ["ชาผลไม้", "กาแฟ (เย็น, ปั่น)"];
+export const FRUIT_COFFEE_CATS = ["ชาผลไม้", "กาแฟ เย็น/ปั่น"];
 
-export const MILK_CATS = ["นม (เย็น, ปั่น)"];
+export const MILK_CATS = ["นม เย็น/ปั่น"];
 
 export const SMOOTHIE_CATS = ["ผลไม้ปั่น & สมูทตี้"];
 
 export const LIGHT_WAVE_CATS = [
-  "เบาเบากับน้ำเต้าหู้ (เย็น, ปั่น)",
+  "เบาเบากับน้ำเต้าหู้ เย็น/ปั่น",
   "อิตาเลียน โซดา",
   "0% แคล ชาเพื่อสุขภาพ",
   "0% แคล โซดาซ่าเพื่อสุขภาพ",

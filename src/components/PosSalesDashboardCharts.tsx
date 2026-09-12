@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import type {
   PosDashDayPoint,
   PosDashHourPoint,
@@ -11,7 +11,7 @@ import { weatherCellTitle } from "@/lib/pos-weather";
 import { formatPlainNumber } from "@/lib/utils";
 
 function niceMax(raw: number): number {
-  if (!(raw > 0)) return 1000;
+  if (!(raw > 0)) return 1;
   const pad = raw * 1.08;
   const mag = 10 ** Math.floor(Math.log10(pad));
   const norm = pad / mag;
@@ -21,7 +21,11 @@ function niceMax(raw: number): number {
 
 function yTicks(max: number, count = 5): number[] {
   const out: number[] = [];
-  for (let i = 0; i <= count; i++) out.push(Math.round((max * i) / count));
+  for (let i = 0; i <= count; i++) {
+    const v = Math.round((max * i) / count);
+    if (out.length === 0 || out[out.length - 1] !== v) out.push(v);
+  }
+  if (out[out.length - 1] !== Math.round(max)) out.push(Math.round(max));
   return out;
 }
 
@@ -120,59 +124,149 @@ export function PosDashDailyTotalsTable({
   );
 }
 
+/**
+ * Daily sales line — same interaction as ops correlation single-series mode:
+ * absolute Y, value labels on points, pointer crosshair + clamped tooltip.
+ */
 export function PosDashDailyAreaChart({ points }: { points: PosDashDayPoint[] }) {
-  const W = 720;
-  const H = 220;
-  const pad = { top: 16, right: 12, bottom: 48, left: 44 };
+  const W = 960;
+  const H = 320;
+  const pad = { top: 28, right: 28, bottom: 78, left: 64 };
   const innerW = W - pad.left - pad.right;
   const innerH = H - pad.top - pad.bottom;
 
-  const { max, ticks, areaPath, linePath, dots, xLabels } = useMemo(() => {
-    const maxVal = niceMax(Math.max(...points.map((p) => p.total), 0));
-    const ticksY = yTicks(maxVal);
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const tipRef = useRef<HTMLDivElement | null>(null);
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+  const [tipLeftPx, setTipLeftPx] = useState(0);
+
+  const { yMax, ticks, areaPath, lineD, coords, xs, xLabels, labelStep } = useMemo(() => {
+    const maxVal = niceMax(Math.max(0, ...points.map((p) => p.total)));
+    const ticksY = yTicks(maxVal, 4);
     const n = Math.max(points.length, 1);
-    const xAt = (i: number) => pad.left + (n === 1 ? innerW / 2 : (i / (n - 1)) * innerW);
+    const xAt = (i: number) =>
+      pad.left + (n === 1 ? innerW / 2 : (i / (n - 1)) * innerW);
     const yAt = (v: number) => pad.top + innerH - (v / maxVal) * innerH;
-    const coords = points.map((p, i) => ({ x: xAt(i), y: yAt(p.total), p }));
-    let line = "";
-    coords.forEach((c, i) => {
-      line += i === 0 ? `M ${c.x} ${c.y}` : ` L ${c.x} ${c.y}`;
-    });
-    const first = coords[0];
-    const last = coords[coords.length - 1];
+    const pts = points.map((p, i) => ({
+      x: xAt(i),
+      y: yAt(p.total),
+      value: p.total,
+      p,
+    }));
+    const line = pts
+      .map((c, i) => `${i === 0 ? "M" : "L"} ${c.x} ${c.y}`)
+      .join(" ");
+    const first = pts[0];
+    const last = pts[pts.length - 1];
     const area =
-      coords.length === 0
+      pts.length === 0
         ? ""
         : `${line} L ${last?.x ?? pad.left} ${pad.top + innerH} L ${first?.x ?? pad.left} ${pad.top + innerH} Z`;
-    const labelStep = n > 20 ? 2 : 1;
+    const step = n > 120 ? 14 : n > 60 ? 7 : n > 31 ? 3 : n > 14 ? 2 : 1;
     const labels = points
       .map((p, i) => ({ i, label: p.label, x: xAt(i) }))
-      .filter((row) => row.i % labelStep === 0);
+      .filter((row) => row.i % step === 0 || row.i === n - 1);
     return {
-      max: maxVal,
+      yMax: maxVal,
       ticks: ticksY,
       areaPath: area,
-      linePath: line,
-      dots: coords,
+      lineD: line,
+      coords: pts,
+      xs: pts.map((c) => c.x),
       xLabels: labels,
+      labelStep: step,
     };
   }, [points, innerH, innerW, pad.left, pad.top]);
+
+  function indexFromClientX(clientX: number): number | null {
+    const svg = svgRef.current;
+    if (!svg || !points.length) return null;
+    const rect = svg.getBoundingClientRect();
+    if (!(rect.width > 0)) return null;
+    const xSvg = ((clientX - rect.left) / rect.width) * W;
+    if (xSvg < pad.left || xSvg > W - pad.right) return null;
+    let best = 0;
+    let bestDist = Infinity;
+    for (let i = 0; i < xs.length; i++) {
+      const d = Math.abs(xs[i] - xSvg);
+      if (d < bestDist) {
+        bestDist = d;
+        best = i;
+      }
+    }
+    return best;
+  }
+
+  function onPointerMove(e: React.PointerEvent<SVGSVGElement>) {
+    setHoverIdx(indexFromClientX(e.clientX));
+  }
+
+  function onPointerLeave() {
+    setHoverIdx(null);
+  }
+
+  const hoverPoint = hoverIdx != null ? points[hoverIdx] : null;
+  const hoverX = hoverIdx != null ? xs[hoverIdx] : null;
+  const hoverY = hoverIdx != null ? coords[hoverIdx]?.y : null;
+
+  useLayoutEffect(() => {
+    if (hoverIdx == null || hoverX == null || !hoverPoint) return;
+    const wrap = wrapRef.current;
+    const tip = tipRef.current;
+    if (!wrap || !tip) return;
+    const margin = 4;
+    const wrapW = wrap.clientWidth;
+    const tipW = tip.offsetWidth;
+    const anchor = (hoverX / W) * wrapW;
+    const maxLeft = Math.max(margin, wrapW - tipW - margin);
+    setTipLeftPx(Math.min(maxLeft, Math.max(margin, anchor - tipW / 2)));
+  }, [hoverIdx, hoverX, hoverPoint]);
 
   return (
     <div className="pos-dash-chart-card">
       <h3 className="pos-dash-card-title">กราฟรายวัน</h3>
-      <div className="pos-dash-chart-svg-wrap">
+      <p className="muted pos-ops-corr-note">
+        แกน Y = ยอดขายจริง · ตัวเลขบนเส้น · ชี้หรือลากบนกราฟดูค่ารายวัน
+      </p>
+      <div className="pos-dash-chart-svg-wrap pos-ops-corr-svg-wrap" ref={wrapRef}>
+        {hoverPoint ? (
+          <div
+            ref={tipRef}
+            className="pos-ops-corr-tooltip"
+            style={{ left: tipLeftPx }}
+            role="status"
+          >
+            <div className="pos-ops-corr-tooltip-date">{hoverPoint.label}</div>
+            <ul>
+              <li>
+                <span className="pos-ops-swatch pos-ops-swatch--sales" />
+                <span className="pos-ops-corr-tooltip-label">ยอดขาย</span>
+                <strong>{formatPlainNumber(hoverPoint.total)} บาท</strong>
+              </li>
+              <li>
+                <span className="pos-ops-swatch pos-ops-swatch--sales" style={{ opacity: 0.35 }} />
+                <span className="pos-ops-corr-tooltip-label">บิล</span>
+                <strong>{hoverPoint.count.toLocaleString("th-TH")}</strong>
+              </li>
+            </ul>
+          </div>
+        ) : null}
         <svg
+          ref={svgRef}
           viewBox={`0 0 ${W} ${H}`}
           preserveAspectRatio="xMidYMid meet"
-          className="pos-dash-chart-svg"
+          className="pos-dash-chart-svg pos-ops-corr-svg"
           role="img"
-          aria-label="กราฟยอดขายรายวัน"
+          aria-label="กราฟยอดขายรายวัน แกนค่าจริง"
+          onPointerMove={onPointerMove}
+          onPointerDown={onPointerMove}
+          onPointerLeave={onPointerLeave}
         >
-          {ticks.map((t) => {
-            const y = pad.top + innerH - (t / max) * innerH;
+          {ticks.map((t, i) => {
+            const y = pad.top + innerH - (t / yMax) * innerH;
             return (
-              <g key={t}>
+              <g key={`grid-${i}-${t}`}>
                 <line
                   x1={pad.left}
                   x2={W - pad.right}
@@ -180,29 +274,86 @@ export function PosDashDailyAreaChart({ points }: { points: PosDashDayPoint[] })
                   y2={y}
                   className="pos-dash-chart-grid"
                 />
-                <text x={pad.left - 6} y={y + 3} textAnchor="end" className="pos-dash-chart-axis">
-                  {formatAxisBaht(t)}
-                </text>
               </g>
             );
           })}
           {areaPath ? <path d={areaPath} className="pos-dash-area-fill" /> : null}
-          {linePath ? <path d={linePath} className="pos-dash-area-line" fill="none" /> : null}
-          {dots.map((c) => (
-            <circle key={c.p.dateKey} cx={c.x} cy={c.y} r={3.2} className="pos-dash-area-dot">
-              <title>
-                {c.p.label}: {formatPlainNumber(c.p.total)} บาท ({c.p.count} บิล)
-              </title>
-            </circle>
-          ))}
+          {lineD ? (
+            <path d={lineD} className="pos-dash-area-line pos-ops-line--sales" fill="none" />
+          ) : null}
+
+          {coords.map((pt, i) => {
+            if (i % labelStep !== 0 && i !== points.length - 1) return null;
+            return (
+              <g key={pt.p.dateKey} className="pos-ops-corr-point-label" pointerEvents="none">
+                <circle
+                  cx={pt.x}
+                  cy={pt.y}
+                  r={2.75}
+                  className="pos-ops-corr-dot pos-ops-line--sales"
+                />
+                <text
+                  x={pt.x}
+                  y={pt.y - 8}
+                  textAnchor="middle"
+                  className="pos-ops-corr-value-label"
+                >
+                  {formatPlainNumber(pt.value)}
+                </text>
+              </g>
+            );
+          })}
+
+          {hoverX != null && hoverY != null ? (
+            <g className="pos-ops-corr-crosshair" pointerEvents="none">
+              <line
+                x1={hoverX}
+                x2={hoverX}
+                y1={pad.top}
+                y2={pad.top + innerH}
+                className="pos-ops-corr-crosshair-line"
+              />
+              <circle
+                cx={hoverX}
+                cy={hoverY}
+                r={3.5}
+                className="pos-ops-corr-dot pos-ops-line--sales"
+              />
+            </g>
+          ) : null}
+
+          <rect
+            x={pad.left}
+            y={pad.top}
+            width={innerW}
+            height={innerH}
+            fill="transparent"
+            className="pos-ops-corr-hit"
+          />
+
+          {ticks.map((t, i) => {
+            const y = pad.top + innerH - (t / yMax) * innerH;
+            return (
+              <text
+                key={`y-${i}-${t}`}
+                x={pad.left - 8}
+                y={y + 3}
+                textAnchor="end"
+                className="pos-dash-chart-axis pos-ops-corr-axis-y"
+              >
+                {formatPlainNumber(t)}
+              </text>
+            );
+          })}
+
           {xLabels.map((row) => (
             <text
               key={row.i}
               x={row.x}
-              y={H - 10}
+              y={H - 14}
               textAnchor="end"
-              transform={`rotate(-40 ${row.x} ${H - 10})`}
-              className="pos-dash-chart-axis"
+              transform={`rotate(-40 ${row.x} ${H - 14})`}
+              className="pos-dash-chart-axis pos-ops-corr-axis-x"
             >
               {row.label}
             </text>
