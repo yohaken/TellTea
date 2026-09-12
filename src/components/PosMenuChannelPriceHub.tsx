@@ -2481,9 +2481,10 @@ export function PosMenuChannelPriceHub({
       set.add(Math.round(Math.max(0, raw)));
     }
     for (const r of optionRowsAll) {
+      const key = optRowKey(r.groupId, r.choice.id);
       const raw =
-        optDraft[r.key]?.store !== undefined
-          ? Number(optDraft[r.key]!.store) || 0
+        optDraft[key]?.store !== undefined
+          ? Number(optDraft[key]!.store) || 0
           : Number(r.choice.priceDelta) || 0;
       set.add(Math.round(Math.max(0, raw)));
     }
@@ -4811,10 +4812,10 @@ export function PosMenuChannelPriceHub({
             ) : (
               <input
                 type="search"
-                inputMode={key === "store" ? "numeric" : "search"}
+                inputMode="search"
                 className="mph-th-filter-input"
                 value={filterValue}
-                placeholder={key === "store" ? "฿" : key === "note" ? "กรอง / ว่าง" : "กรอง"}
+                placeholder={key === "note" ? "กรอง / ว่าง" : "กรอง"}
                 aria-label={`กรอง${colTitle(key)}`}
                 title={
                   key === "note"
