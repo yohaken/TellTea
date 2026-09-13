@@ -105,7 +105,18 @@ export function StaffTaskNudge() {
     setSoftPopupOpen(true);
   }, [softItems.length, softFp, workPopupOpen]);
 
-  if (!ready || (!workItems.length && !softItems.length)) return null;
+  const showNudge = ready && (workItems.length > 0 || softItems.length > 0);
+
+  useEffect(() => {
+    if (!showNudge) {
+      document.body.classList.remove("has-staff-task-nudge");
+      return;
+    }
+    document.body.classList.add("has-staff-task-nudge");
+    return () => document.body.classList.remove("has-staff-task-nudge");
+  }, [showNudge]);
+
+  if (!showNudge) return null;
 
   function dismissWorkPopup() {
     writeKey(STAFF_WORK_NUDGE_DISMISS_KEY, workFp);
@@ -160,11 +171,6 @@ export function StaffTaskNudge() {
   const stripMode = workItems.length ? "work" : "soft";
   const stripCount = workItems.length ? workSummary.total : softSummary.total;
   const stripHeadline = workItems.length ? workSummary.headline : softSummary.headline;
-
-  useEffect(() => {
-    document.body.classList.add("has-staff-task-nudge");
-    return () => document.body.classList.remove("has-staff-task-nudge");
-  }, []);
 
   return (
     <>
