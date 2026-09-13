@@ -5612,6 +5612,19 @@ body.modal-open .main-panel {
   z-index: 11;
 }
 
+/**
+ * มีแถบงานค้างส่ง/แจ้งเตือน — ยก + กรอกขึ้นเหนือแถบ (กันถูกบังจนกดไม่ได้)
+ * ความสูงแถบพับ ≈ 2.45rem
+ */
+body.has-staff-task-nudge .module-tab-dock.is-single {
+  bottom: calc(var(--nav-h) + var(--safe-bottom) + 0.35rem + 2.55rem);
+  z-index: 48;
+}
+
+body.has-staff-task-nudge .module-page {
+  --module-dock-h: 5.2rem;
+}
+
 .module-tab {
   border: none;
   background: transparent;

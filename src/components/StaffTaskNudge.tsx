@@ -161,6 +161,11 @@ export function StaffTaskNudge() {
   const stripCount = workItems.length ? workSummary.total : softSummary.total;
   const stripHeadline = workItems.length ? workSummary.headline : softSummary.headline;
 
+  useEffect(() => {
+    document.body.classList.add("has-staff-task-nudge");
+    return () => document.body.classList.remove("has-staff-task-nudge");
+  }, []);
+
   return (
     <>
       {workPopupOpen ? (

@@ -38,6 +38,7 @@ assert.match(occSrc, /notifyAcks\.\$\{employeeId\}/);
 assert.match(nudgeLib, /actionableStaffWorkItems/);
 assert.match(nudgeLib, /STAFF_WORK_NUDGE_DISMISS_KEY/);
 assert.match(nudgeLib, /summarizeStaffWorkNudges/);
+assert.match(uiSrc, /has-staff-task-nudge/);
 assert.match(uiSrc, /staff-work-modal/);
 assert.match(uiSrc, /งานค้างส่ง/);
 assert.match(uiSrc, /ไปส่งงาน/);
@@ -50,6 +51,10 @@ assert.match(uiSrc, /reportTaskNotifyAck/);
 assert.match(uiSrc, /isPermPreview/);
 assert.doesNotMatch(uiSrc, /completeTaskOccurrence/);
 assert.match(shellSrc, /StaffTaskNudge/);
+
+const cssSrc = readFileSync(join(root, "src/app/globals.css"), "utf8");
+assert.match(cssSrc, /body\.has-staff-task-nudge \.module-tab-dock\.is-single/);
+assert.match(cssSrc, /z-index: 48/);
 assert.match(tasksSrc, /OwnerHomeTasks/);
 assert.match(tasksSrc, /StaffMyTasks/);
 assert.match(tasksSrc, /tasks-news-person/);
