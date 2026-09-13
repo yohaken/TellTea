@@ -12,9 +12,9 @@ export const BRAND_LOGO_LEGACY_STORAGE_KEY = "telltea-brand-logo-v1";
 
 /**
  * Bump when knockout rules change so loadBrandLogo re-punches stored PNGs
- * (v2: also clear enclosed center pad inside ink rings).
+ * (v2: enclosed center pad · v3: dark plate + soft light fringe).
  */
-export const BRAND_LOGO_KNOCKOUT_VERSION = 2;
+export const BRAND_LOGO_KNOCKOUT_VERSION = 3;
 
 type BrandLogoDoc = {
   dataUrl: string;

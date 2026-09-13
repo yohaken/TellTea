@@ -1,5 +1,6 @@
 /**
- * Staff login must show uploaded brandLogo — not flash stock TellTea SVG.
+ * Staff login must show uploaded brandLogo — not flash stock TellTea SVG,
+ * not show opaque pad / boxed logo on the green hero.
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -19,13 +20,24 @@ assert.match(appBrand, /loadBrandLogo/);
 assert.match(appBrand, /logoResolved/);
 assert.match(appBrand, /brand-logo-slot/);
 assert.match(appBrand, /logo-telltea\.svg/);
+assert.match(appBrand, /purgeLegacyBrandLogoStorage/);
 
 const brand = read("src/lib/brand-logo.ts");
-assert.match(brand, /BRAND_LOGO_KNOCKOUT_VERSION = 2/);
+assert.match(brand, /BRAND_LOGO_KNOCKOUT_VERSION = 3/);
 assert.match(brand, /needsKnockoutUpgrade/);
+assert.match(brand, /forceKnockout/);
+
+const css = read("src/app/globals.css");
+assert.match(css, /\.hero-brand \.brand-logo-custom/);
+assert.match(css, /brightness\(0\) invert\(1\)/);
+assert.match(css, /brand-logo-slot/);
+assert.doesNotMatch(css, /brand-logo-dark-pad/);
+assert.match(css, /object-position:\s*center 16%/);
 
 const rules = read("firestore.rules");
 assert.match(rules, /docId == 'brandLogo'/);
+assert.match(rules, /docId == 'businessProfile'/);
+assert.match(rules, /allow get:\s*if docId == 'brandLogo'/);
 
 const version = read("src/lib/version.ts");
 assert.ok(Number(version.match(/APP_BUILD\s*=\s*(\d+)/)?.[1] || 0) >= 771);

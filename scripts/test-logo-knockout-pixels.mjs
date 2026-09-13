@@ -1,6 +1,6 @@
 /**
  * Pixel-level proof: baked #fff/#ccc checkerboard clears (outer + enclosed hole);
- * navy Tell Tea ink stays.
+ * soft light fringe clears; near-black plate clears; navy Tell Tea ink stays.
  * Mirrors knockOutLogoLightBackground without DOM canvas.
  */
 import assert from "node:assert/strict";
@@ -10,8 +10,9 @@ function isLogoKnockoutRgb(r, g, b) {
   const min = Math.min(r, g, b);
   const avg = (r + g + b) / 3;
   const chroma = max - min;
-  if (avg >= 205 && chroma <= 60) return true;
-  if (avg >= 150 && avg <= 245 && chroma <= 28) return true;
+  if (avg <= 22 && chroma <= 18) return true;
+  if (avg >= 185 && chroma <= 60) return true;
+  if (avg >= 145 && avg <= 245 && chroma <= 32) return true;
   return false;
 }
 
@@ -62,6 +63,35 @@ function knockOut(data, w, h) {
     if (!isLogoKnockoutRgb(data[o], data[o + 1], data[o + 2])) continue;
     data[o + 3] = 0;
     cleared += 1;
+  }
+  // Soft fringe (v3)
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const o = (y * w + x) * 4;
+      if (data[o + 3] < 12) continue;
+      const avg = (data[o] + data[o + 1] + data[o + 2]) / 3;
+      const chroma =
+        Math.max(data[o], data[o + 1], data[o + 2]) -
+        Math.min(data[o], data[o + 1], data[o + 2]);
+      if (avg < 120 || chroma > 55) continue;
+      let touchesClear = x === 0 || y === 0 || x === w - 1 || y === h - 1;
+      if (!touchesClear) {
+        for (const [dx, dy] of [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ]) {
+          if (data[((y + dy) * w + (x + dx)) * 4 + 3] < 12) {
+            touchesClear = true;
+            break;
+          }
+        }
+      }
+      if (!touchesClear) continue;
+      data[o + 3] = 0;
+      cleared += 1;
+    }
   }
   return cleared;
 }
@@ -117,10 +147,6 @@ assert.equal(getA(data, W, 12, 4), 0); // white tile
 assert.equal(getA(data, W, 32, 32), 0, "enclosed center pad must clear");
 
 // Navy ring stays opaque
-assert.equal(getA(data, W, 32, 16 + 2), 255); // near top of ring approx
-assert.equal(getA(data, W, 16 + 2, 32), 255);
-
-// Sample a known ring pixel
 let ringOk = false;
 for (let y = 16; y < 48 && !ringOk; y++) {
   for (let x = 16; x < 48; x++) {
@@ -136,5 +162,36 @@ for (let y = 16; y < 48 && !ringOk; y++) {
   }
 }
 assert.ok(ringOk, "expected to sample ring ink");
+
+// --- Dark plate regression (opaque #000 behind mark) ---
+const dark = new Uint8ClampedArray(W * H * 4);
+for (let y = 0; y < H; y++) {
+  for (let x = 0; x < W; x++) setPx(dark, W, x, y, 0, 0, 0);
+}
+for (let y = 20; y < 44; y++) {
+  for (let x = 20; x < 44; x++) setPx(dark, W, x, y, 8, 62, 93);
+}
+knockOut(dark, W, H);
+assert.equal(getA(dark, W, 0, 0), 0, "black plate corner must clear");
+assert.equal(getA(dark, W, 63, 63), 0);
+assert.equal(getA(dark, W, 30, 30), 255, "navy ink must stay");
+
+// --- Soft cream fringe next to transparent (old login box halo) ---
+const fringe = new Uint8ClampedArray(W * H * 4);
+for (let y = 20; y < 44; y++) {
+  for (let x = 20; x < 44; x++) setPx(fringe, W, x, y, 8, 62, 93);
+}
+// 1px cream halo around the block
+for (let x = 19; x <= 44; x++) {
+  setPx(fringe, W, x, 19, 210, 215, 200);
+  setPx(fringe, W, x, 44, 210, 215, 200);
+}
+for (let y = 19; y <= 44; y++) {
+  setPx(fringe, W, 19, y, 210, 215, 200);
+  setPx(fringe, W, 44, y, 210, 215, 200);
+}
+knockOut(fringe, W, H);
+assert.equal(getA(fringe, W, 19, 19), 0, "cream fringe must clear");
+assert.equal(getA(fringe, W, 30, 30), 255, "navy core must stay");
 
 console.log("OK test-logo-knockout-pixels", { cleared });

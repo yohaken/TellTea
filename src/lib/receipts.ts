@@ -156,21 +156,24 @@ export function isLogoKnockoutRgb(r: number, g: number, b: number): boolean {
   const min = Math.min(r, g, b);
   const avg = (r + g + b) / 3;
   const chroma = max - min;
-  // White / cream phone-export pad
-  if (avg >= 205 && chroma <= 60) return true;
+  // Near-black baked plate (opaque #000 behind mark) — not navy ink
+  if (avg <= 22 && chroma <= 18) return true;
+  // White / cream phone-export pad (+ soft anti-alias fringe)
+  if (avg >= 185 && chroma <= 60) return true;
   // Neutral greys from transparency-grid tiles (#bbb–#e8e8e8)
-  // chroma≤28 covers mild JPEG noise on grey tiles
-  if (avg >= 150 && avg <= 245 && chroma <= 28) return true;
+  // chroma≤32 covers mild JPEG noise on grey tiles
+  if (avg >= 145 && avg <= 245 && chroma <= 32) return true;
   return false;
 }
 
 /**
- * Knock out light / checkerboard pad → transparent.
+ * Knock out light / checkerboard / near-black pad → transparent.
  *
  * 1) Edge flood-fill (8-connected) clears the outer pad.
  * 2) Full pass clears leftover knockout pixels inside closed holes
  *    (e.g. empty center of a circular mark that edge-fill cannot reach
  *    because ink forms a ring barrier).
+ * 3) Soft fringe pass clears light anti-alias halo next to transparency.
  *
  * Dark / saturated ink is kept.
  */
@@ -233,6 +236,36 @@ export function knockOutLogoLightBackground(
     if (!isLogoKnockoutRgb(d[o], d[o + 1], d[o + 2])) continue;
     d[o + 3] = 0;
     cleared += 1;
+  }
+
+  // Soft fringe (v3): light / blue-gray anti-alias halo touching transparent
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const o = (y * w + x) * 4;
+      if (d[o + 3] < 12) continue;
+      const avg = (d[o] + d[o + 1] + d[o + 2]) / 3;
+      const chroma =
+        Math.max(d[o], d[o + 1], d[o + 2]) - Math.min(d[o], d[o + 1], d[o + 2]);
+      // Mid blue-gray AA (avg~150) from old pad composites — not navy ink (~54)
+      if (avg < 120 || chroma > 55) continue;
+      let touchesClear = x === 0 || y === 0 || x === w - 1 || y === h - 1;
+      if (!touchesClear) {
+        for (const [dx, dy] of [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ] as const) {
+          if (d[((y + dy) * w + (x + dx)) * 4 + 3] < 12) {
+            touchesClear = true;
+            break;
+          }
+        }
+      }
+      if (!touchesClear) continue;
+      d[o + 3] = 0;
+      cleared += 1;
+    }
   }
 
   if (!cleared) return false;

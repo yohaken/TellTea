@@ -91,6 +91,16 @@ textarea {
   background: transparent;
 }
 
+/** Compact topbar: show icon crop — avoid squashed full wordmark blob */
+.brand-wrap-compact .brand-logo-custom.brand-logo-compact {
+  height: 2rem;
+  width: 2rem;
+  max-width: 2rem;
+  object-fit: cover;
+  object-position: center 16%;
+  background: transparent;
+}
+
 /** Placeholder while meta/brandLogo loads — avoids flashing stock TellTea SVG */
 .brand-logo-slot {
   display: inline-block;
@@ -355,13 +365,16 @@ body.modal-open .main-panel {
   height: clamp(5.5rem, 28vw, 8rem);
   width: auto;
   max-width: min(86vw, 20rem);
-  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.22));
+  background: transparent;
+  /* Navy mark → white on green hero so pad never reads as a dark/light box */
+  filter: brightness(0) invert(1) drop-shadow(0 4px 14px rgba(0, 0, 0, 0.28));
 }
 
 .hero-brand .brand-logo-custom {
   height: clamp(5.5rem, 28vw, 8rem);
   max-width: min(86vw, 20rem);
-  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.18));
+  background: transparent;
+  filter: brightness(0) invert(1) drop-shadow(0 4px 14px rgba(0, 0, 0, 0.28));
 }
 
 .hero-brand .brand-logo-slot {

@@ -3,17 +3,13 @@ rules_version = '2';
 // Archive: firestore.rules.full.bak · Sibling apps must not deploy rules
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() {
-      return request.auth != null;
-    }
+    function signedIn() { return request.auth != null; }
     function isOwnerEmail() {
       return signedIn()
         && request.auth.token.email is string
         && request.auth.token.email.lower() == 'yohaken@gmail.com';
     }
-    function isOwnUid(uid) {
-      return signedIn() && request.auth.uid == uid;
-    }
+    function isOwnUid(uid) { return signedIn() && request.auth.uid == uid; }
 
     // Auth bridge tickets
     match /loginTickets/{ticketId} {
@@ -28,14 +24,19 @@ service cloud.firestore {
     }
     match /userData/{userId} {
       allow read, write: if isOwnUid(userId);
-      match /{document=**} {
-        allow read, write: if isOwnUid(userId);
-      }
+      match /{document=**} { allow read, write: if isOwnUid(userId); }
     }
 
     // Admin-SDK-only: weather cache + FinPeer Gemini secret
     match /weatherDays/{dateId} { allow read: if signedIn(); allow write: if false; }
     match /finpeerSecrets/{docId} { allow read, write: if false; }
+
+    // Login needs brand mark before Auth (no secrets)
+    match /meta/{docId} {
+      allow get: if docId == 'brandLogo' || docId == 'businessProfile' || signedIn();
+      allow list: if false;
+      allow write: if signedIn();
+    }
 
     // Shop + POS (incl. anonymous Auth)
     match /{collection}/{document=**} {
@@ -44,7 +45,8 @@ service cloud.firestore {
         && collection != 'userData'
         && collection != 'loginTickets'
         && collection != 'weatherDays'
-        && collection != 'finpeerSecrets';
+        && collection != 'finpeerSecrets'
+        && collection != 'meta';
     }
   }
 }

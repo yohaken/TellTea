@@ -41,8 +41,9 @@ const result = await page.evaluate(async () => {
     const min = Math.min(r, g, b);
     const avg = (r + g + b) / 3;
     const chroma = max - min;
-    if (avg >= 205 && chroma <= 60) return true;
-    if (avg >= 155 && avg <= 245 && chroma <= 22) return true;
+    if (avg <= 22 && chroma <= 18) return true;
+    if (avg >= 185 && chroma <= 60) return true;
+    if (avg >= 145 && avg <= 245 && chroma <= 32) return true;
     return false;
   }
 
@@ -88,6 +89,39 @@ const result = await page.evaluate(async () => {
       tryPush(x - 1, y - 1);
       tryPush(x + 1, y - 1);
       tryPush(x - 1, y + 1);
+    }
+    for (let i = 0, o = 0; i < w * h; i++, o += 4) {
+      if (d[o + 3] < 12) continue;
+      if (!isLogoKnockoutRgb(d[o], d[o + 1], d[o + 2])) continue;
+      d[o + 3] = 0;
+      cleared += 1;
+    }
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const o = (y * w + x) * 4;
+        if (d[o + 3] < 12) continue;
+        const avg = (d[o] + d[o + 1] + d[o + 2]) / 3;
+        const chroma =
+          Math.max(d[o], d[o + 1], d[o + 2]) - Math.min(d[o], d[o + 1], d[o + 2]);
+        if (avg < 120 || chroma > 55) continue;
+        let touches = x === 0 || y === 0 || x === w - 1 || y === h - 1;
+        if (!touches) {
+          for (const [dx, dy] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1],
+          ]) {
+            if (d[((y + dy) * w + (x + dx)) * 4 + 3] < 12) {
+              touches = true;
+              break;
+            }
+          }
+        }
+        if (!touches) continue;
+        d[o + 3] = 0;
+        cleared += 1;
+      }
     }
     ctx.putImageData(img, 0, 0);
     return cleared;
