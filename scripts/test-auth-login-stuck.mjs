@@ -52,7 +52,9 @@ const firebase = read("src/lib/firebase.ts");
 assert.match(firebase, /resolveAuthDomain/);
 assert.match(firebase, /mypeer-501909\.firebaseapp\.com/);
 assert.match(firebase, /authDomain: resolveAuthDomain\(\)/);
-// Same-origin authDomain is off until OAuth client whitelists telltea-bo/__/auth/handler
+assert.match(firebase, /endsWith\("\.firebaseapp\.com"\)/);
+// Must ignore telltea-bo from NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN (CI secret)
+assert.match(firebase, /Only accept the Firebase-managed auth host/);
 assert.doesNotMatch(
   firebase,
   /if \(host === "telltea-bo\.web\.app"/,

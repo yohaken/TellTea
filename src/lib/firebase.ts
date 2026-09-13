@@ -20,22 +20,26 @@ import { getStorage, type FirebaseStorage } from "firebase/storage";
 /**
  * authDomain สำหรับ Google Sign-In.
  *
- * ใช้โดเมนมาตรฐานของโปรเจกต์ (`*.firebaseapp.com`) เสมอ — OAuth Web client
- * ของ Google IdP whitelist แค่ `https://mypeer-501909.firebaseapp.com/__/auth/handler`
+ * บังคับ `*.firebaseapp.com` — อย่าใช้ telltea-bo/pos จาก env
+ * (`NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` ใน CI เคยชี้ telltea-bo แล้วเจอ
+ * redirect_uri_mismatch หลัง logout เพราะ OAuth client ไม่ได้ whitelist
+ * `https://telltea-bo.web.app/__/auth/handler`)
  *
- * เคยลอง same-origin (`telltea-bo.web.app`) เพื่อกัน missing-initial-state บนมือถือ
- * แต่ถ้ายังไม่ได้เพิ่ม Authorized redirect URI ใน Google Cloud ลูกค้าจะเจอ
- * `redirect_uri_mismatch` หลัง logout (session เก่าหมดแล้วเข้าใหม่ไม่ได้)
- *
- * ถ้าจะกลับ same-origin: เพิ่มใน OAuth client แล้วค่อยคืน logic นี้
+ * ถ้าจะกลับ same-origin: เพิ่ม Authorized redirect URIs ใน Google Cloud ก่อน
  *   https://telltea-bo.web.app/__/auth/handler
  *   https://telltea-pos.web.app/__/auth/handler
+ * แล้วค่อยคืน logic อ่าน host/env
  */
 export function resolveAuthDomain(): string {
-  return (
-    process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ||
-    "mypeer-501909.firebaseapp.com"
-  );
+  const fromEnv = (process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "").trim();
+  // Only accept the Firebase-managed auth host (OAuth client already allows it).
+  if (
+    fromEnv === "mypeer-501909.firebaseapp.com" ||
+    fromEnv.endsWith(".firebaseapp.com")
+  ) {
+    return fromEnv;
+  }
+  return "mypeer-501909.firebaseapp.com";
 }
 
 /** Local BO bypass — ใช้ได้เฉพาะ localhost เมื่อเปิด NEXT_PUBLIC_DEV_OWNER_BYPASS=1 */
