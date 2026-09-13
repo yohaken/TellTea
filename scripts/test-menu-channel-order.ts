@@ -13,7 +13,11 @@ import {
   sequenceWrongIds,
   worstOrderStatus,
   rowHasOrderIssue,
+  rowHasOptionIssue,
+  rowHasOptionOrderIssue,
   rowMatchesFilter,
+  channelOptionStatusFor,
+  channelOptionOrderStatusFor,
   type ChannelPriceCell,
 } from "../src/lib/menu-channel-price";
 
@@ -66,6 +70,35 @@ assert(
 assert(namedListOrderStatus(["ความหวาน", "ท้อปปิ้ง"], null) === "unknown", "no live groups");
 assert(namedListOrderStatus(["ท้อปปิ้ง"], ["ท้อปปิ้ง"]) === "ok", "single group cannot be out of order");
 
+assert(channelOptionStatusFor({ posGroupNames: ["ประเภท", "ความหวาน"], liveGroupNames: ["ประเภท", "ความหวาน"] }) === "match", "opts match");
+assert(channelOptionStatusFor({ posGroupNames: ["ประเภท"], liveGroupNames: [] }) === "missing", "opts unbound");
+assert(channelOptionStatusFor({ posGroupNames: [], liveGroupNames: ["ความหวาน"] }) === "wrong", "topping should not have groups");
+assert(channelOptionStatusFor({ posGroupNames: ["ประเภท", "ความหวาน"], liveGroupNames: ["ความหวาน", "ประเภท"] }) === "match", "presence ok even if order wrong");
+assert(channelOptionOrderStatusFor({ posGroupNames: ["ประเภท", "ความหวาน"], liveGroupNames: ["ความหวาน", "ประเภท"] }) === "wrong", "opts order wrong");
+assert(channelOptionOrderStatusFor({ posGroupNames: ["ประเภท", "ความหวาน"], liveGroupNames: ["ประเภท", "ความหวาน"] }) === "ok", "opts order ok");
+assert(channelOptionStatusFor({ posGroupNames: ["ประเภท"], liveGroupNames: null }) === "unknown", "opts not scanned");
+assert(channelOptionStatusFor({ posGroupNames: [], liveGroupNames: [] }) === "none", "no opts either side");
+
+const optMissing = { optionStatus: "missing" } as ChannelPriceCell;
+const optOk = { optionStatus: "match", optionOrderStatus: "ok" } as ChannelPriceCell;
+const optOrderWrong = { optionStatus: "match", optionOrderStatus: "wrong" } as ChannelPriceCell;
+assert(rowHasOptionIssue({ shopee: optMissing, grab: optOk, lineman: optOk }, ["shopee"]), "option_issue sees missing");
+assert(
+  !rowHasOptionIssue({ shopee: optOrderWrong, grab: optOk, lineman: optOk }, ["shopee"]),
+  "presence filter ignores order-only",
+);
+assert(
+  rowHasOptionOrderIssue({ shopee: optOrderWrong, grab: optOk, lineman: optOk }, ["shopee"]),
+  "option_order_issue sees wrong order",
+);
+assert(
+  rowMatchesFilter("match", { shopee: optMissing, grab: optOk, lineman: optOk }, "option_issue", ["shopee"]),
+  "option_issue filter",
+);
+assert(
+  rowMatchesFilter("match", { shopee: optOrderWrong, grab: optOk, lineman: optOk }, "option_order_issue", ["shopee"]),
+  "option_order_issue filter",
+);
 assert(worstOrderStatus("ok", "unknown") === "ok", "ok + unknown = ok");
 assert(worstOrderStatus("ok", "wrong") === "wrong", "any wrong wins");
 assert(worstOrderStatus("unknown", "unknown") === "unknown", "all unknown");
@@ -134,12 +167,22 @@ const grab = read("scripts/grab-api-scan.mjs");
 const css = read("src/app/globals.css");
 
 assert(lib.includes("order_issue"), "lib HubStatusFilter order_issue");
+assert(lib.includes("option_issue"), "lib HubStatusFilter option_issue");
+assert(lib.includes("channelOptionStatusFor"), "option bind status helper");
 assert(lib.includes("categoryNameStatusFor"), "category name compare");
 assert(lib.includes("liveOrdinalMap"), "live ordinal helper");
 assert(hub.includes("HubNameMarks"), "name marks in menu column");
 assert(hub.includes("HubCatMarks"), "cat marks in category column");
+assert(hub.includes("HubOptionMarks"), "option bind marks in menu column");
+assert(hub.includes("HubOptionOrderMarks"), "option group order marks beside options");
 assert(hub.includes("HubChMark"), "colored S/G/L pills");
 assert(hub.includes("catOrderWrong"), "cat pill ⇅ only when category order is wrong");
+assert(hub.includes('["option_issue"'), "option_issue filter chip");
+assert(hub.includes('["option_order_issue"'), "option_order_issue filter chip");
+assert(css.includes("mph-ch-marks.is-option"), "option marks css");
+const guide = read("src/lib/menu-price-hub-guide.ts");
+assert(guide.includes("บังคับ AI"), "hub guide forces AI parity");
+assert(guide.includes("ตัวเลือก (กลุ่มที่ผูกเมนู)"), "hub guide prioritizes options");
 assert(hub.includes("liveSortRank"), "live rank number in cat column");
 assert(hub.includes("mph-cat-rank"), "POS rank badge in cat column");
 assert(hub.includes("HubItemOrderMarks"), "item-in-category marks in menu column");
@@ -150,7 +193,7 @@ assert(ingest.includes("livePhotoId"), "ingest photo id");
 assert(ingest.includes("photoVerifiedAt"), "ingest keeps display verify stamp");
 assert(hub.includes("liveItemRank"), "live item rank in menu column");
 assert(hub.includes("ลำดับ S/G/L"), "cat header says where order is");
-assert(hub.includes("ชื่อ · ลำดับในหมวด"), "name header says name + item order");
+assert(hub.includes("ชื่อ · ลำดับ · ตัวเลือก · ลำดับกลุ่มตัวเลือก · รูป"), "name header says name + order + options + option-order + photo");
 assert(css.includes("mph-ch-mark"), "pill marks");
 assert(css.includes("mph-cat-rank"), "POS rank style");
 assert(hub.includes('["order_issue"'), "ลำดับ chip");

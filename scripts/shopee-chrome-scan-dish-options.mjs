@@ -129,11 +129,20 @@ async function main() {
   const retryEmpty = process.argv.includes("--retry-empty");
 
   // Preserve previously scraped option group names when we only refresh the API list.
+  // If API says count=0, clear names (e.g. toppings unbound).
   if (existing?.items?.length) {
     const prevById = new Map(existing.items.map((x) => [String(x.dishId), x]));
     for (const it of items) {
+      if (Number(it.option_group_count) === 0) {
+        it.optionGroupNames = [];
+        continue;
+      }
       const prev = prevById.get(String(it.dishId));
       if (prev?.optionGroupNames?.length) it.optionGroupNames = prev.optionGroupNames;
+    }
+  } else {
+    for (const it of items) {
+      if (Number(it.option_group_count) === 0) it.optionGroupNames = [];
     }
   }
 
@@ -177,35 +186,61 @@ async function main() {
       if (prev?.optionGroupNames?.length) it.optionGroupNames = prev.optionGroupNames;
     }
   }
-  console.log(`dishes ${items.length} · scrape bound groups ${need.length} ×${workers}`);
-  const scraped = await mapPool(need, workers, async (ti, it, _i, wi) => {
-    const got = await readBoundGroups(ti, wi, it.dishId);
-    const names = got.names || [];
-    console.log(`  ${it.name}  ${it.option_group_count} · ${names.join(" · ") || "(none)"}`);
-    return { dishId: it.dishId, names, ok: got.ok };
-  });
-  const byId = new Map((scraped || []).map((x) => [String(x.dishId), x]));
-  for (const it of items) {
-    const hit = byId.get(it.dishId);
-    if (hit?.names?.length) it.optionGroupNames = hit.names;
+  console.log(`dishes ${items.length} · option-groups API ${need.length}`);
+  let apiFail = 0;
+  for (const it of need) {
+    const j = getJson(
+      tabIndex,
+      windowIndex,
+      `https://foody.shopee.co.th/api/seller/dishes/${it.dishId}/option-groups`,
+    );
+    const groups = j?.data?.groups || [];
+    if (!groups.length) {
+      apiFail += 1;
+      continue;
+    }
+    it.optionGroupNames = groups
+      .slice()
+      .sort((a, b) => (a.rank || 0) - (b.rank || 0))
+      .map((g) => g.group_name || "")
+      .filter(Boolean);
   }
-  const fail = (scraped || []).filter((x) => !x.ok || x.names.length === 0);
+  const stillNeed = need.filter((it) => !(it.optionGroupNames || []).length);
+  let scraped = [];
+  if (stillNeed.length) {
+    console.log(`UI fallback scrape ×${stillNeed.length} ×${workers}`);
+    scraped = await mapPool(stillNeed, workers, async (ti, it, _i, wi) => {
+      const got = await readBoundGroups(ti, wi, it.dishId);
+      const names = got.names || [];
+      console.log(`  ${it.name}  ${it.option_group_count} · ${names.join(" · ") || "(none)"}`);
+      return { dishId: it.dishId, names, ok: got.ok };
+    });
+    const byId = new Map((scraped || []).map((x) => [String(x.dishId), x]));
+    for (const it of items) {
+      const hit = byId.get(it.dishId);
+      if (hit?.names?.length) it.optionGroupNames = hit.names;
+    }
+  }
+  const fail = need.filter((it) => !(it.optionGroupNames || []).length);
   writeFileSync(
     SCAN,
     JSON.stringify(
       {
         scannedAt: new Date().toISOString(),
-        method: "api-store-dishes + edit-page bound groups",
+        method:
+          "api-store-dishes + option-groups ranks" +
+          (stillNeed.length ? " + edit-page fallback" : ""),
         count: items.length,
         scraped: need.length,
         scrapeFail: fail.length,
+        apiFail,
         items,
       },
       null,
       2,
     ) + "\n",
   );
-  console.log(`wrote ${SCAN} · scrape fail ${fail.length}/${need.length}`);
+  console.log(`wrote ${SCAN} · fail ${fail.length}/${need.length} (apiFail ${apiFail})`);
   for (const f of fail.slice(0, 12)) console.log(`  FAIL ${f.dishId}`);
   process.exit(fail.length ? 1 : 0);
 }

@@ -208,6 +208,8 @@ async function loadPos() {
     const g = d.data() || {};
     groups.set(d.id, { name: g.name || "", active: g.active !== false });
   }
+  const isToppingCat = (name) =>
+    /ท็?อ?ปปิ้ง|ท้อปปิ้ง|ทัอปปิ้ง|topping/i.test(String(name || ""));
   const items = itemsSnap.docs
     .map((d) => {
       const data = d.data() || {};
@@ -226,7 +228,8 @@ async function loadPos() {
         price: Number(data.price) || 0,
       };
     })
-    .filter((p) => p.active && !p.storeOnly && p.optionNames.length);
+    // เมนูหมวดทัอปปิ้ง = ท็อปปิ้งเอง ห้ามผูกกลุ่มตัวเลือก
+    .filter((p) => p.active && !p.storeOnly && p.optionNames.length && !isToppingCat(p.category));
   return items;
 }
 

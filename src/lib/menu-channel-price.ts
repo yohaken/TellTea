@@ -259,6 +259,18 @@ export type ChannelPhotoStatus =
   | "stale"
   | "unknown";
 
+/**
+ * กลุ่มตัวเลือกที่ผูกเมนู ↔ POS
+ * บังคับให้ตรงหลังร้าน — missing/wrong = ปัญหาสำคัญ (เคยทำให้ตัวเลือกไม่ขึ้นบนช่องทาง)
+ */
+export type ChannelOptionStatus =
+  | "skip"
+  | "none"
+  | "missing"
+  | "wrong"
+  | "match"
+  | "unknown";
+
 export type ChannelPriceCell = {
   target: number;
   live: number | null;
@@ -287,6 +299,12 @@ export type ChannelPriceCell = {
   /** รูปหลักที่คอนเฟิร์ม vs รูปบนแพลตฟอร์ม */
   photoStatus?: ChannelPhotoStatus;
   livePhotoId?: string | null;
+  /** กลุ่มตัวเลือกที่ผูกเมนู vs POS (มีครบหรือไม่ — แยกจากลำดับกลุ่ม) */
+  optionStatus?: ChannelOptionStatus;
+  /** ลำดับกลุ่มตัวเลือกบนแพลต vs POS optionGroupIds */
+  optionOrderStatus?: ChannelOrderStatus;
+  /** รายชื่อกลุ่มบนแพลตฟอร์ม (สแกน) — โชว์ในป้ายตัวเลือก */
+  liveGroupNames?: string[] | null;
 };
 
 export const DEFAULT_CHANNEL_RULES: ChannelRules = {
@@ -751,6 +769,8 @@ export type HubStatusFilter =
   | "name_issue"
   | "order_issue"
   | "photo_issue"
+  | "option_issue"
+  | "option_order_issue"
   | "na"
   | "extras";
 
@@ -923,7 +943,8 @@ export function rowHasNameIssue(
 }
 
 export function channelOrderStatusOf(cell: ChannelPriceCell | undefined): ChannelOrderStatus {
-  return worstOrderStatus(cell?.orderStatus, cell?.groupOrderStatus, cell?.categoryOrderStatus);
+  // ลำดับเมนู/หมวด — แยกจากป้ายตัวเลือก (group bind)
+  return worstOrderStatus(cell?.orderStatus, cell?.categoryOrderStatus);
 }
 
 export function rowHasItemOrderIssue(
@@ -1045,6 +1066,81 @@ export function rowHasPhotoIssue(
   });
 }
 
+/**
+ * สถานะผูกกลุ่มตัวเลือกเมนู vs POS (มีครบหรือไม่ — ไม่รวมลำดับ)
+ * - POS ไม่มีกลุ่ม + แพลตมีกลุ่ม = wrong (เช่น ท็อปปิ้งที่ผูกเครื่องดื่มผิด)
+ * - POS มีกลุ่ม + แพลตว่าง/ไม่ครบ = missing
+ * - ครบชื่อกลุ่มแล้ว = match (ลำดับดู optionOrderStatus)
+ */
+export function channelOptionStatusFor(input: {
+  storeOnly?: boolean;
+  posGroupNames: string[];
+  liveGroupNames?: string[] | null;
+}): ChannelOptionStatus {
+  if (input.storeOnly) return "skip";
+  const pos = (input.posGroupNames || []).map((n) => n.trim()).filter(Boolean);
+  const liveRaw = input.liveGroupNames;
+  if (liveRaw == null) {
+    return pos.length ? "unknown" : "none";
+  }
+  const live = liveRaw.map((n) => n.trim()).filter(Boolean);
+  if (!pos.length) {
+    return live.length ? "wrong" : "none";
+  }
+  if (!live.length) return "missing";
+  const usedLive = new Set<number>();
+  for (const p of pos) {
+    const idx = live.findIndex((ln, i) => !usedLive.has(i) && namesEqual(p, ln));
+    if (idx < 0) return "missing";
+    usedLive.add(idx);
+  }
+  return "match";
+}
+
+/** ลำดับกลุ่มที่ผูกเมนูต้องตาม POS optionGroupIds (relative order ของกลุ่มที่แมตช์) */
+export function channelOptionOrderStatusFor(input: {
+  storeOnly?: boolean;
+  posGroupNames: string[];
+  liveGroupNames?: string[] | null;
+}): ChannelOrderStatus {
+  if (input.storeOnly) return "unknown";
+  const pos = (input.posGroupNames || []).map((n) => n.trim()).filter(Boolean);
+  if (pos.length < 2) return "ok";
+  const presence = channelOptionStatusFor(input);
+  if (presence === "skip" || presence === "none") return "ok";
+  if (presence === "unknown" || presence === "missing") return "unknown";
+  if (presence === "wrong") return "unknown";
+  return namedListOrderStatus(pos, input.liveGroupNames);
+}
+
+export function optionStatusLabel(status: ChannelOptionStatus): string {
+  if (status === "match") return "ผูกกลุ่มตัวเลือกครบตาม POS";
+  if (status === "wrong") return "ไม่ควรมีกลุ่มตัวเลือก (เช่น ทัอปปิ้ง)";
+  if (status === "missing") return "ยังไม่ผูกกลุ่มตัวเลือกครบตาม POS";
+  if (status === "none") return "เมนูนี้ไม่มีกลุ่มตัวเลือกหลังร้าน";
+  if (status === "skip") return "เฉพาะหน้าร้าน";
+  return "ยังไม่สแกนกลุ่มตัวเลือก";
+}
+
+export function rowHasOptionIssue(
+  channels: Record<DeliveryChannel, ChannelPriceCell>,
+  only: readonly DeliveryChannel[] = DELIVERY_CHANNELS,
+): boolean {
+  const list = only.length ? only : DELIVERY_CHANNELS;
+  return list.some((c) => {
+    const st = channels[c].optionStatus;
+    return st === "missing" || st === "wrong";
+  });
+}
+
+export function rowHasOptionOrderIssue(
+  channels: Record<DeliveryChannel, ChannelPriceCell>,
+  only: readonly DeliveryChannel[] = DELIVERY_CHANNELS,
+): boolean {
+  const list = only.length ? only : DELIVERY_CHANNELS;
+  return list.some((c) => channels[c].optionOrderStatus === "wrong");
+}
+
 export function rowMatchesFilter(
   worst: ChannelMatchStatus,
   channels: Record<DeliveryChannel, ChannelPriceCell>,
@@ -1056,6 +1152,8 @@ export function rowMatchesFilter(
   if (filter === "name_issue") return rowHasNameIssue(channels, only);
   if (filter === "order_issue") return rowHasOrderIssue(channels, only);
   if (filter === "photo_issue") return rowHasPhotoIssue(channels, only);
+  if (filter === "option_issue") return rowHasOptionIssue(channels, only);
+  if (filter === "option_order_issue") return rowHasOptionOrderIssue(channels, only);
   return worst === filter;
 }
 
@@ -1067,6 +1165,8 @@ export type HubTotals = {
   name_issue: number;
   order_issue: number;
   photo_issue: number;
+  option_issue: number;
+  option_order_issue: number;
   na: number;
   extras: number;
 };
@@ -1080,6 +1180,8 @@ export function emptyHubTotals(): HubTotals {
     name_issue: 0,
     order_issue: 0,
     photo_issue: 0,
+    option_issue: 0,
+    option_order_issue: 0,
     na: 0,
     extras: 0,
   };

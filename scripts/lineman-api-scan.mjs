@@ -10,10 +10,12 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   listWongnaiMenuItems,
+  readWongnaiMenuItem,
   wongnaiGql,
   WONGNAI_GQL,
   BUSINESS,
   findWongnaiTab,
+  sleep,
 } from "./lib/lineman-chrome.mjs";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
@@ -73,13 +75,39 @@ async function main() {
     });
   }
 
+  // Per-item properties (= bound option groups, ordered).
+  console.log(`fetch menuItem properties ×${items.length}…`);
+  let optOk = 0;
+  let optFail = 0;
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i];
+    try {
+      const detail = await readWongnaiMenuItem(it.id);
+      const names = detail?.optionNames || [];
+      it.optionGroupNames = names;
+      it.optionGroupCount = names.length;
+      if (names.length) optOk += 1;
+      if (detail?.error) optFail += 1;
+    } catch {
+      it.optionGroupNames = oldOptionNames(prevById.get(it.id));
+      it.optionGroupCount = (it.optionGroupNames || []).length;
+      optFail += 1;
+    }
+    if ((i + 1) % 25 === 0 || i + 1 === items.length) {
+      console.log(`  … ${i + 1}/${items.length} (withOpts ${optOk})`);
+    }
+    await sleep(80);
+  }
+
   const withPhoto = items.filter((it) => it.photoId).length;
   const out = {
     at: scannedAt,
     scannedAt,
-    source: "wongnai-gql-menuItems",
+    source: "wongnai-gql-menuItems+menuItem.properties",
     method: "lineman-api-scan",
     count: items.length,
+    optionOk: optOk,
+    optionFail: optFail,
     items,
     categories: groups.map((g, i) => ({
       id: g.id,
@@ -90,9 +118,14 @@ async function main() {
   };
   writeFileSync(SCAN, JSON.stringify(out, null, 2) + "\n");
   console.log(
-    `LINE MAN API items ${items.length} · photos ${withPhoto} · cats ${groups.length}`,
+    `LINE MAN API items ${items.length} · photos ${withPhoto} · cats ${groups.length} · opts ${optOk} (fail ${optFail})`,
   );
   console.log(`→ ${SCAN}`);
+}
+
+function oldOptionNames(old) {
+  if (Array.isArray(old?.optionGroupNames)) return old.optionGroupNames;
+  return [];
 }
 
 main().catch((e) => {

@@ -86,33 +86,42 @@ function extractCsvFromZip(zipPath) {
   return join(dir, files[0]);
 }
 
-/** Keep Grab-only groups in their slots; reorder POS-matched cells to POS order. */
-function reorderCells(cells, posGroupNames) {
+/**
+ * Attach missing POS groups (copy cell template from catalog) + reorder to POS.
+ * Keep Grab-only extras (e.g. ประเภท) in their relative slots when possible.
+ */
+function syncCells(cells, posGroupNames, templateByFold) {
   const parsed = cells.map((cell, i) => ({ i, cell, g: parseOptionGroup(cell) }));
   const live = parsed.filter((p) => p.g);
-  if (live.length < 2) return { cells, changed: false };
 
-  const posOrder = [];
-  const posSet = new Set();
+  const posCells = [];
+  const usedLive = new Set();
   for (const name of posGroupNames) {
-    const hit = live.find((p) => !posSet.has(p.i) && namesEqual(p.g.groupName, name));
-    if (!hit) continue;
-    posSet.add(hit.i);
-    posOrder.push(hit);
-  }
-  if (posOrder.length < 2) return { cells, changed: false };
-
-  const out = [...cells];
-  let pi = 0;
-  for (const p of live) {
-    if (posSet.has(p.i)) {
-      if (pi < posOrder.length) {
-        out[p.i] = posOrder[pi++].cell;
-      }
+    const hit = live.find((p) => !usedLive.has(p.i) && namesEqual(p.g.groupName, name));
+    if (hit) {
+      usedLive.add(hit.i);
+      posCells.push(hit.cell);
+      continue;
     }
+    const tmpl = templateByFold.get(fold(name));
+    if (tmpl) posCells.push(tmpl);
   }
-  const changed = out.some((c, i) => c !== cells[i]);
-  return { cells: out, changed };
+
+  const extras = live.filter((p) => !usedLive.has(p.i)).map((p) => p.cell);
+  // Put Grab-only extras first (ประเภท etc.), then POS-ordered groups.
+  const nextLive = [...extras, ...posCells];
+  const out = cells.map(() => "");
+  for (let i = 0; i < nextLive.length && i < out.length; i++) out[i] = nextLive[i];
+  // If we need more columns than available, grow (caller pads optionCols).
+  while (nextLive.length > out.length) out.push(nextLive[out.length] || "");
+
+  const before = live.map((p) => p.g.groupName);
+  const after = nextLive.map((c) => parseOptionGroup(c)?.groupName).filter(Boolean);
+  const changed =
+    before.length !== after.length ||
+    before.some((n, i) => !namesEqual(n, after[i] || "")) ||
+    out.length !== cells.length;
+  return { cells: out, changed, after };
 }
 
 async function loadPosByName() {
@@ -311,9 +320,22 @@ async function main() {
       relax_quotes: true,
     });
     const columns = Object.keys(rows[0] || {});
-    const optionCols = columns.filter((c) => /^OptionGroup\d+$/.test(c));
+    let optionCols = columns.filter((c) => /^OptionGroup\d+$/.test(c));
     if (!optionCols.length) throw new Error("CSV has no OptionGroup columns");
 
+    // Templates: first full cell seen per group name (for attaching missing links).
+    const templateByFold = new Map();
+    for (const row of rows) {
+      if (!String(row["*ItemID"] || "").startsWith("THITE")) continue;
+      for (const c of optionCols) {
+        const g = parseOptionGroup(row[c]);
+        if (!g?.groupName) continue;
+        const f = fold(g.groupName);
+        if (!templateByFold.has(f)) templateByFold.set(f, String(row[c]));
+      }
+    }
+
+    let maxNeed = optionCols.length;
     for (const row of rows) {
       if (!String(row["*ItemID"] || "").startsWith("THITE")) continue;
       const name = fold(row["*ItemName"] || row.ItemName || "");
@@ -321,17 +343,28 @@ async function main() {
       if (!pos?.optionNames?.length) continue;
       const cells = optionCols.map((c) => row[c] ?? "");
       const before = cells.map((c) => parseOptionGroup(c)?.groupName).filter(Boolean);
-      const { cells: next, changed } = reorderCells(cells, pos.optionNames);
+      const { cells: next, changed, after } = syncCells(cells, pos.optionNames, templateByFold);
       if (!changed) continue;
       changedRows += 1;
+      maxNeed = Math.max(maxNeed, next.length);
+      while (optionCols.length < next.length) {
+        const col = `OptionGroup${optionCols.length + 1}`;
+        optionCols.push(col);
+        if (!columns.includes(col)) columns.push(col);
+        for (const r of rows) if (r[col] == null) r[col] = "";
+      }
       optionCols.forEach((c, i) => {
         row[c] = next[i] ?? "";
       });
-      const after = next.map((c) => parseOptionGroup(c)?.groupName).filter(Boolean);
-      if (samples.length < 12) {
-        samples.push({ name: pos.name, before: before.join(" → "), after: after.join(" → ") });
+      if (samples.length < 16) {
+        samples.push({
+          name: pos.name,
+          before: before.join(" → "),
+          after: (after || []).join(" → "),
+        });
       }
     }
+    void maxNeed;
 
     const csvText = rowsToCsv(columns, rows);
     writeFileSync(OUT_CSV, csvText);
@@ -380,6 +413,7 @@ async function main() {
       "\n",
   );
   console.log(`→ ${LOG}`);
+  process.exit(0);
 }
 
 main().catch((e) => {

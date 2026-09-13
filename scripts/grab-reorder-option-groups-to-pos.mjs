@@ -87,7 +87,8 @@ async function waitWindowKey(read, timeoutMs = 90_000) {
 }
 
 /**
- * Reorder POS-matched groups to POS order, keep Grab-only extras in their slots
+ * Attach missing POS groups (exist on Grab catalog) + reorder POS-matched groups
+ * to POS order. Keep Grab-only extras in their relative slots
  * (e.g. ประเภท stays first when POS has no matching group).
  */
 function desiredLinkedIds(posGroupNames, liveIds, _groupById, groupByFoldName) {
@@ -96,7 +97,7 @@ function desiredLinkedIds(posGroupNames, liveIds, _groupById, groupByFoldName) {
   for (const name of posGroupNames) {
     const g = groupByFoldName.get(fold(name));
     const id = g?.modifierGroupID;
-    if (!id || !liveIds.includes(id) || posIdSet.has(id)) continue;
+    if (!id || posIdSet.has(id)) continue;
     posIdSet.add(id);
     posIdOrder.push(id);
   }
@@ -368,6 +369,7 @@ async function main() {
   };
   writeFileSync(LOG, JSON.stringify(out, null, 2) + "\n");
   console.log(`→ ${LOG}`);
+  process.exit(0);
 }
 
 main().catch((e) => {

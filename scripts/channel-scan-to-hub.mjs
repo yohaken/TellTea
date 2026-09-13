@@ -132,12 +132,24 @@ function livePhotoId(it) {
 }
 
 function liveGroupNames(it) {
-  const raw = it.optionGroupNames || it.option_group_names || it.optionGroups || [];
-  if (!Array.isArray(raw)) return [];
-  return raw
-    .map((x) => (typeof x === "string" ? x : x?.name || x?.group || ""))
-    .map((s) => String(s || "").trim())
-    .filter(Boolean);
+  const raw = it.optionGroupNames ?? it.option_group_names ?? it.optionGroups;
+  const count = Number(it.option_group_count ?? it.optionGroupCount);
+  if (Array.isArray(raw) && raw.length) {
+    return raw
+      .map((x) => (typeof x === "string" ? x : x?.name || x?.group || ""))
+      .map((s) => String(s || "").trim())
+      .filter(Boolean);
+  }
+  // รู้แน่ๆ ว่าไม่ผูกกลุ่ม
+  if (Number.isFinite(count) && count === 0) return [];
+  // มี count แต่ยังไม่ได้สแกนชื่อกลุ่ม → ไม่ทับของเดิมใน hub
+  if (Array.isArray(raw) && raw.length === 0 && Number.isFinite(count) && count > 0) return null;
+  if (Array.isArray(raw) && raw.length === 0) return [];
+  return null;
+}
+
+function shouldWriteGroupNames(groupNames) {
+  return groupNames != null;
 }
 
 function choiceIndexByOption(optList) {
@@ -267,7 +279,11 @@ async function ingestChannel(channel, db, posItems, posChoices, current, posCatN
       externalId: ext || null,
       category: it.category || "",
       sortIndex: Number.isFinite(Number(it.sortIndex)) ? Number(it.sortIndex) : i,
-      ...(groupNames.length ? { groupNames } : {}),
+      ...(shouldWriteGroupNames(groupNames)
+        ? { groupNames: groupNames || [] }
+        : prevCh.groupNames != null
+          ? { groupNames: prevCh.groupNames }
+          : {}),
       ...(photoId !== undefined ? { photoId } : {}),
       ...(prevCh.photoPushedId
         ? {

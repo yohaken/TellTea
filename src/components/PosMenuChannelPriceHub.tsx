@@ -20,7 +20,10 @@ import {
   channelOrderStatusOf,
   categoryNameStatusFor,
   channelPhotoStatusFor,
+  channelOptionStatusFor,
+  channelOptionOrderStatusFor,
   photoStatusLabel,
+  optionStatusLabel,
   resolveLivePhotoId,
   liveIndexMap,
   liveOrdinalMap,
@@ -42,10 +45,13 @@ import {
   rowHasCategoryOrderIssue,
   rowHasOrderIssue,
   rowHasPhotoIssue,
+  rowHasOptionIssue,
+  rowHasOptionOrderIssue,
   rowMatchesFilter,
   statusLabel,
   summarizeRowChannels,
   type ChannelPhotoStatus,
+  type ChannelOptionStatus,
   type ChannelLiveStore,
   type ChannelLiveObservation,
   type ChannelMatchStatus,
@@ -703,31 +709,35 @@ function HubNameMarks({
   if (visible.every((ch) => channels[ch].nameStatus === "skip")) return null;
   return (
     <span className="mph-ch-marks is-name" aria-label="ชื่อบนแพลตฟอร์ม">
-      <span className="mph-ch-marks-paren" aria-hidden>
-        (
+      <span className="mph-ch-marks-head">
+        <span className="mph-ch-marks-paren" aria-hidden>
+          (
+        </span>
+        <span className="mph-ch-marks-label">ชื่อ</span>
+        <span className="mph-ch-marks-paren" aria-hidden>
+          )
+        </span>
       </span>
-      <span className="mph-ch-marks-label">ชื่อ</span>
-      {visible.map((ch) => {
-        const st = channels[ch].nameStatus;
-        return (
-          <HubChMark
-            key={ch}
-            ch={ch}
-            glyph={nameMarkGlyph(st)}
-            tone={nameMarkTone(st)}
-            title={
-              channels[ch].liveName
-                ? `${channelLabel(ch)} · ชื่อ${nameStatusLabel(st)} · ${channels[ch].liveName}`
-                : st === "missing"
-                  ? `${channelLabel(ch)} · ไม่มีบนแพลตฟอร์ม · แก้ชื่อไม่ได้ ต้องสร้าง`
-                  : `${channelLabel(ch)} · ชื่อ${nameStatusLabel(st)} · แตะใส่ชื่อ`
-            }
-            onClick={() => onPick(ch)}
-          />
-        );
-      })}
-      <span className="mph-ch-marks-paren" aria-hidden>
-        )
+      <span className="mph-ch-marks-pills">
+        {visible.map((ch) => {
+          const st = channels[ch].nameStatus;
+          return (
+            <HubChMark
+              key={ch}
+              ch={ch}
+              glyph={nameMarkGlyph(st)}
+              tone={nameMarkTone(st)}
+              title={
+                channels[ch].liveName
+                  ? `${channelLabel(ch)} · ชื่อ${nameStatusLabel(st)} · ${channels[ch].liveName}`
+                  : st === "missing"
+                    ? `${channelLabel(ch)} · ไม่มีบนแพลตฟอร์ม · แก้ชื่อไม่ได้ ต้องสร้าง`
+                    : `${channelLabel(ch)} · ชื่อ${nameStatusLabel(st)} · แตะใส่ชื่อ`
+              }
+              onClick={() => onPick(ch)}
+            />
+          );
+        })}
       </span>
     </span>
   );
@@ -749,35 +759,39 @@ function HubItemOrderMarks({
   const posLabel = posRank && posRank > 0 ? String(posRank) : "–";
   return (
     <span className="mph-ch-marks is-item-order" aria-label="ลำดับเมนูในหมวดบนแพลตฟอร์ม">
-      <span className="mph-ch-marks-paren" aria-hidden>
-        (
+      <span className="mph-ch-marks-head">
+        <span className="mph-ch-marks-paren" aria-hidden>
+          (
+        </span>
+        <span className="mph-ch-marks-label">ลำดับ</span>
+        <span className="mph-ch-marks-paren" aria-hidden>
+          )
+        </span>
       </span>
-      <span className="mph-ch-marks-label">ลำดับ</span>
-      {visible.map((ch) => {
-        const cell = channels[ch];
-        const itemOrder = cell.orderStatus || "unknown";
-        const liveRank = cell.liveItemRank;
-        const wrong = itemOrder === "wrong";
-        const glyph = orderRankGlyph(liveRank, wrong);
-        const tone = wrong ? "wrong" : liveRank == null ? "unknown" : "ok";
-        const bits = [
-          `${channelLabel(ch)}`,
-          `ลำดับในหมวด POS ${posLabel}`,
-          `ลำดับบนแพลตฟอร์ม ${liveRank != null ? liveRank : "–"}`,
-          `ลำดับเมนูในหมวด ${orderStatusLabel(itemOrder)}`,
-        ];
-        return (
-          <HubChMark
-            key={ch}
-            ch={ch}
-            glyph={glyph}
-            tone={tone}
-            title={bits.join(" · ")}
-          />
-        );
-      })}
-      <span className="mph-ch-marks-paren" aria-hidden>
-        )
+      <span className="mph-ch-marks-pills">
+        {visible.map((ch) => {
+          const cell = channels[ch];
+          const itemOrder = cell.orderStatus || "unknown";
+          const liveRank = cell.liveItemRank;
+          const wrong = itemOrder === "wrong";
+          const glyph = orderRankGlyph(liveRank, wrong);
+          const tone = wrong ? "wrong" : liveRank == null ? "unknown" : "ok";
+          const bits = [
+            `${channelLabel(ch)}`,
+            `ลำดับในหมวด POS ${posLabel}`,
+            `ลำดับบนแพลตฟอร์ม ${liveRank != null ? liveRank : "–"}`,
+            `ลำดับเมนูในหมวด ${orderStatusLabel(itemOrder)}`,
+          ];
+          return (
+            <HubChMark
+              key={ch}
+              ch={ch}
+              glyph={glyph}
+              tone={tone}
+              title={bits.join(" · ")}
+            />
+          );
+        })}
       </span>
     </span>
   );
@@ -876,29 +890,161 @@ function HubPhotoMarks({
   if (visible.every((ch) => (channels[ch].photoStatus || "unknown") === "skip")) return null;
   return (
     <span className="mph-ch-marks is-photo" aria-label="รูปหลักบนแพลตฟอร์ม">
-      <span className="mph-ch-marks-paren" aria-hidden>
-        (
+      <span className="mph-ch-marks-head">
+        <span className="mph-ch-marks-paren" aria-hidden>
+          (
+        </span>
+        <span className="mph-ch-marks-label">รูป</span>
+        <span className="mph-ch-marks-paren" aria-hidden>
+          )
+        </span>
       </span>
-      <span className="mph-ch-marks-label">รูป</span>
-      {visible.map((ch) => {
-        const st = channels[ch].photoStatus || "unknown";
-        const liveId = channels[ch].livePhotoId;
-        return (
-          <HubChMark
-            key={ch}
-            ch={ch}
-            glyph={photoMarkGlyph(st)}
-            tone={photoMarkTone(st)}
-            title={[
-              `${channelLabel(ch)}`,
-              photoStatusLabel(st),
-              liveId ? `รหัสรูป ${liveId}` : st === "unknown" ? "สแกนยังไม่มีฟิลด์รูป" : "ไม่มีรหัสรูป",
-            ].join(" · ")}
-          />
-        );
-      })}
-      <span className="mph-ch-marks-paren" aria-hidden>
-        )
+      <span className="mph-ch-marks-pills">
+        {visible.map((ch) => {
+          const st = channels[ch].photoStatus || "unknown";
+          const liveId = channels[ch].livePhotoId;
+          return (
+            <HubChMark
+              key={ch}
+              ch={ch}
+              glyph={photoMarkGlyph(st)}
+              tone={photoMarkTone(st)}
+              title={[
+                `${channelLabel(ch)}`,
+                photoStatusLabel(st),
+                liveId ? `รหัสรูป ${liveId}` : st === "unknown" ? "สแกนยังไม่มีฟิลด์รูป" : "ไม่มีรหัสรูป",
+              ].join(" · ")}
+            />
+          );
+        })}
+      </span>
+    </span>
+  );
+}
+
+function optionMarkGlyph(status: ChannelOptionStatus): string {
+  if (status === "match") return "ครบ";
+  if (status === "wrong") return "เพี้ยน";
+  if (status === "missing") return "ไม่มี";
+  if (status === "none") return "–";
+  return "ไม่รู้";
+}
+
+function optionMarkTone(
+  status: ChannelOptionStatus,
+): "ok" | "near" | "missing" | "wrong" | "unknown" {
+  if (status === "match") return "ok";
+  if (status === "none") return "unknown";
+  if (status === "missing") return "missing";
+  if (status === "wrong") return "wrong";
+  return "unknown";
+}
+
+function HubOptionMarks({
+  channels,
+  visible,
+  collapsed,
+  posGroupNames,
+}: {
+  channels: Record<DeliveryChannel, ChannelPriceCell>;
+  visible: DeliveryChannel[];
+  collapsed?: boolean;
+  posGroupNames: string[];
+}) {
+  if (collapsed) return null;
+  if (visible.every((ch) => (channels[ch].optionStatus || "unknown") === "skip")) return null;
+  const posLabel = posGroupNames.length ? posGroupNames.join(" → ") : "ไม่มีกลุ่มหลังร้าน";
+  return (
+    <span className="mph-ch-marks is-option" aria-label="กลุ่มตัวเลือกที่ผูกเมนูบนแพลตฟอร์ม">
+      <span className="mph-ch-marks-head">
+        <span className="mph-ch-marks-paren" aria-hidden>
+          (
+        </span>
+        <span className="mph-ch-marks-label">ตัวเลือก</span>
+        <span className="mph-ch-marks-paren" aria-hidden>
+          )
+        </span>
+      </span>
+      <span className="mph-ch-marks-pills">
+        {visible.map((ch) => {
+          const st = channels[ch].optionStatus || "unknown";
+          const live = channels[ch].liveGroupNames;
+          return (
+            <HubChMark
+              key={ch}
+              ch={ch}
+              glyph={optionMarkGlyph(st)}
+              tone={optionMarkTone(st)}
+              title={[
+                `${channelLabel(ch)}`,
+                optionStatusLabel(st),
+                `POS ${posLabel}`,
+                live == null
+                  ? "ยังไม่สแกนกลุ่ม"
+                  : live.length
+                    ? `แพลต ${live.join(" → ")}`
+                    : "แพลตไม่ผูกกลุ่ม",
+              ].join(" · ")}
+            />
+          );
+        })}
+      </span>
+    </span>
+  );
+}
+
+function HubOptionOrderMarks({
+  channels,
+  visible,
+  collapsed,
+  posGroupNames,
+}: {
+  channels: Record<DeliveryChannel, ChannelPriceCell>;
+  visible: DeliveryChannel[];
+  collapsed?: boolean;
+  posGroupNames: string[];
+}) {
+  if (collapsed) return null;
+  if (visible.every((ch) => (channels[ch].optionStatus || "unknown") === "skip")) return null;
+  if (!posGroupNames.length) return null;
+  const posLabel = posGroupNames.join(" → ");
+  return (
+    <span className="mph-ch-marks is-option-order" aria-label="ลำดับกลุ่มตัวเลือกบนแพลตฟอร์ม">
+      <span className="mph-ch-marks-head">
+        <span className="mph-ch-marks-paren" aria-hidden>
+          (
+        </span>
+        <span className="mph-ch-marks-label">ลำดับกลุ่มตัวเลือก</span>
+        <span className="mph-ch-marks-paren" aria-hidden>
+          )
+        </span>
+      </span>
+      <span className="mph-ch-marks-pills">
+        {visible.map((ch) => {
+          const order = channels[ch].optionOrderStatus || "unknown";
+          const live = channels[ch].liveGroupNames;
+          const wrong = order === "wrong";
+          const glyph = wrong ? "⇅" : order === "ok" ? "ตรง" : "–";
+          const tone = wrong ? "wrong" : order === "ok" ? "ok" : "unknown";
+          return (
+            <HubChMark
+              key={ch}
+              ch={ch}
+              glyph={glyph}
+              tone={tone}
+              title={[
+                `${channelLabel(ch)}`,
+                `ลำดับกลุ่มตัวเลือก ${orderStatusLabel(order)}`,
+                `POS ${posLabel}`,
+                live == null
+                  ? "ยังไม่สแกนกลุ่ม"
+                  : live.length
+                    ? `แพลต ${live.join(" → ")}`
+                    : "แพลตไม่ผูกกลุ่ม",
+              ].join(" · ")}
+            />
+          );
+        })}
       </span>
     </span>
   );
@@ -2085,13 +2231,52 @@ export function PosMenuChannelPriceHub({
             pushedHash: stored?.photoPushedHash,
             verifiedAt: stored?.photoVerifiedAt,
           });
-          return [ch, { ...cell, orderStatus, groupOrderStatus, categoryNameStatus, categoryOrderStatus, liveSortRank, liveItemRank, photoStatus, livePhotoId: known ? photoId : null }];
+          const liveGroupNames = isMenuStoreOnly(patched)
+            ? null
+            : stored?.groupNames === undefined
+              ? null
+              : stored?.groupNames ?? [];
+          const optionStatus = channelOptionStatusFor({
+            storeOnly: isMenuStoreOnly(patched),
+            posGroupNames,
+            liveGroupNames,
+          });
+          const optionOrderStatus = channelOptionOrderStatusFor({
+            storeOnly: isMenuStoreOnly(patched),
+            posGroupNames,
+            liveGroupNames,
+          });
+          return [
+            ch,
+            {
+              ...cell,
+              orderStatus,
+              groupOrderStatus,
+              categoryNameStatus,
+              categoryOrderStatus,
+              liveSortRank,
+              liveItemRank,
+              photoStatus,
+              livePhotoId: known ? photoId : null,
+              optionStatus,
+              optionOrderStatus,
+              liveGroupNames,
+            },
+          ];
         }),
       ) as Record<DeliveryChannel, ChannelPriceCell>;
       const worst = summarizeRowChannels(channels);
       const posCatRank = posCatIds.indexOf(patched.categoryId || "") + 1;
       const posItemRank = catIds.indexOf(item.id) + 1;
-      return { item: patched, channels, worst, storeOnly: isMenuStoreOnly(patched), posCatRank, posItemRank };
+      return {
+        item: patched,
+        channels,
+        worst,
+        storeOnly: isMenuStoreOnly(patched),
+        posCatRank,
+        posItemRank,
+        posGroupNames,
+      };
     });
   }, [
     activeItems,
@@ -2608,6 +2793,8 @@ export function PosMenuChannelPriceHub({
       if (rowHasNameIssue(row.channels, visibleChannels)) t.name_issue += 1;
       if (rowHasOrderIssue(row.channels, visibleChannels)) t.order_issue += 1;
       if (rowHasPhotoIssue(row.channels, visibleChannels)) t.photo_issue += 1;
+      if (rowHasOptionIssue(row.channels, visibleChannels)) t.option_issue += 1;
+      if (rowHasOptionOrderIssue(row.channels, visibleChannels)) t.option_order_issue += 1;
     }
     for (const row of optionRowsAll) {
       if (hideStoreOnlyOptions && row.storeOnly) continue;
@@ -4388,7 +4575,7 @@ export function PosMenuChannelPriceHub({
         : key === "cat"
           ? "ป้ายหมวด = โลโก้ช่องทาง + เลขลำดับหมวด · เขียวตรง POS · ส้ม⇅เพี้ยน"
           : key === "name"
-            ? "ป้ายชื่อ = (ชื่อ โลโก้+ตรง/ใกล้/ไม่มี) · ลำดับ/รูป/หมวด ในวงเล็บ · เขียวตรง · ส้ม⇅เพี้ยน"
+            ? "ป้ายชื่อ = (ชื่อ) (ลำดับ) (ตัวเลือก) (ลำดับกลุ่มตัวเลือก) (รูป) · ตัวเลือกต้องครบ + ลำดับกลุ่มตัวเลือกต้องตาม POS"
             : `คลิกชื่อคอลัมน์ = เรียง${colTitle(key)} · พิมพ์ด้านล่าง = กรองทันที`
       : isSales
         ? `คลิกเรียง${colTitle(key)} (${SALES_PERIOD_LABELS[selectedPeriod]}) · คลิกซ้ำสลับ ↑↓ · ลากขอบ = ปรับความกว้าง`
@@ -4707,7 +4894,7 @@ export function PosMenuChannelPriceHub({
                   <>
                     เมนู
                     {sortMark(key)}
-                    <span className="mph-th-sub">ชื่อ · ลำดับในหมวด · รูป</span>
+                    <span className="mph-th-sub">ชื่อ · ลำดับ · ตัวเลือก · ลำดับกลุ่มตัวเลือก · รูป</span>
                   </>
                 ) : (
                   <>
@@ -4886,6 +5073,8 @@ export function PosMenuChannelPriceHub({
               ["name_issue", `ชื่อ ${totals.name_issue}`],
               ["order_issue", `ลำดับ ${totals.order_issue}`],
               ["photo_issue", `รูป ${totals.photo_issue}`],
+              ["option_issue", `ตัวเลือก ${totals.option_issue}`],
+              ["option_order_issue", `ลำดับกลุ่มตัวเลือก ${totals.option_order_issue}`],
               ["no_live", `${clearedLive.size ? "รอสแกน" : "ไม่มีจริง"} ${totals.no_live}`],
               ["unmatched", `ไม่จับคู่ ${totals.unmatched}`],
               ["extras", `เกิน ${totals.extras}`],
@@ -4906,6 +5095,10 @@ export function PosMenuChannelPriceHub({
                       ? "ชื่อหรือลำดับหมวดไม่ตรงดูคอลัมน์หมวด · ลำดับเมนูในหมวดดูป้ายแถวล่างคอลัมน์เมนู"
                     : id === "photo_issue"
                       ? "รูปหลักหลังร้านที่คอนเฟิร์มแล้วยังไม่มีบนแพลตฟอร์ม หรือรหัสรูปไม่ตรงที่ดันล่าสุด · ~ = มีรูปแต่ยังไม่ยืนยัน"
+                    : id === "option_issue"
+                      ? "ยังไม่ผูกกลุ่มตัวเลือกครบตามหลังร้าน (หรือมีกลุ่มทั้งที่ไม่ควรมี) — ดูป้าย «ตัวเลือก»"
+                    : id === "option_order_issue"
+                      ? "ลำดับกลุ่มตัวเลือกไม่ตรงหลังร้าน (เช่น ท้อปปิ้งขึ้นก่อนความหวาน) — ดูป้าย «ลำดับกลุ่มตัวเลือก» S/G/L"
                     : undefined
               }
               onClick={() => setStatusFilter(id)}
@@ -5353,7 +5546,7 @@ export function PosMenuChannelPriceHub({
             </tr>
           </thead>
           <tbody>
-            {(hideMenus ? [] : displayed).map(({ item, channels, storeOnly, posCatRank, posItemRank }) => {
+            {(hideMenus ? [] : displayed).map(({ item, channels, storeOnly, posCatRank, posItemRank, posGroupNames }) => {
               const d = getDraft(item);
               const catTone = item.categoryId ? catToneById.get(item.categoryId) : undefined;
               const collapsed = {
@@ -5374,7 +5567,7 @@ export function PosMenuChannelPriceHub({
                 >
                   {renderSelCell(rowRef, item.name)}
                   <td
-                    className={`mph-td is-sticky${rowHasNameIssue(channels, visibleChannels) ? " is-name-warn" : ""}${rowHasItemOrderIssue(channels, visibleChannels) ? " is-order-warn" : ""}`}
+                    className={`mph-td is-sticky${rowHasNameIssue(channels, visibleChannels) ? " is-name-warn" : ""}${rowHasItemOrderIssue(channels, visibleChannels) ? " is-order-warn" : ""}${rowHasOptionIssue(channels, visibleChannels) || rowHasOptionOrderIssue(channels, visibleChannels) ? " is-option-warn" : ""}`}
                     style={{ width: colW.name, minWidth: colW.name, maxWidth: colW.name }}
                   >
                     <span className="mph-name-cell">
@@ -5443,6 +5636,18 @@ export function PosMenuChannelPriceHub({
                         visible={visibleChannels}
                         collapsed={collapsed.name}
                         posRank={posItemRank}
+                      />
+                      <HubOptionMarks
+                        channels={channels}
+                        visible={visibleChannels}
+                        collapsed={collapsed.name}
+                        posGroupNames={posGroupNames}
+                      />
+                      <HubOptionOrderMarks
+                        channels={channels}
+                        visible={visibleChannels}
+                        collapsed={collapsed.name}
+                        posGroupNames={posGroupNames}
                       />
                       <HubPhotoMarks
                         channels={channels}
