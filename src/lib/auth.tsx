@@ -143,7 +143,7 @@ export function mapFirebaseAuthError(error: unknown): string {
     code === "auth/operation-not-allowed" ||
     /redirect_uri_mismatch/i.test(message)
   ) {
-    return "ตั้งค่า Google Sign-In ยังไม่ครบ — แจ้งเจ้าของร้าน";
+    return "เข้า Google ไม่สำเร็จ (redirect ไม่ตรง) — ลองรีเฟรชหน้า หรือเปิด https://telltea-bo.web.app/login/ ใน Chrome/Safari";
   }
   if (code === "auth/invalid-credential" || code === "auth/invalid-id-token") {
     return "โทเคนล็อกอินหมดอายุ — กดเข้าสู่ระบบอีกครั้ง";

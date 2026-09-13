@@ -18,20 +18,20 @@ import { getFunctions, type Functions } from "firebase/functions";
 import { getStorage, type FirebaseStorage } from "firebase/storage";
 
 /**
- * authDomain ต้องอยู่โดเมนเดียวกับแอป (Option 1 ใน Firebase redirect best practices)
- * ไม่งั้นมือถือ Safari/Chrome จะเจอ "missing initial state" หลัง Google redirect
- * เพราะ sessionStorage ข้ามโดเมนถูกบล็อก
+ * authDomain สำหรับ Google Sign-In.
+ *
+ * ใช้โดเมนมาตรฐานของโปรเจกต์ (`*.firebaseapp.com`) เสมอ — OAuth Web client
+ * ของ Google IdP whitelist แค่ `https://mypeer-501909.firebaseapp.com/__/auth/handler`
+ *
+ * เคยลอง same-origin (`telltea-bo.web.app`) เพื่อกัน missing-initial-state บนมือถือ
+ * แต่ถ้ายังไม่ได้เพิ่ม Authorized redirect URI ใน Google Cloud ลูกค้าจะเจอ
+ * `redirect_uri_mismatch` หลัง logout (session เก่าหมดแล้วเข้าใหม่ไม่ได้)
+ *
+ * ถ้าจะกลับ same-origin: เพิ่มใน OAuth client แล้วค่อยคืน logic นี้
+ *   https://telltea-bo.web.app/__/auth/handler
+ *   https://telltea-pos.web.app/__/auth/handler
  */
 export function resolveAuthDomain(): string {
-  if (typeof window !== "undefined") {
-    const host = window.location.hostname;
-    // Hosting ที่เสิร์ฟ /__/auth/handler จริง — ใช้โดเมนนั้นเป็น authDomain
-    if (host === "telltea-bo.web.app" || host === "telltea-pos.web.app") {
-      return host;
-    }
-    // localhost/127.0.0.1: ห้ามตั้ง authDomain=localhost (Next ไม่มี auth handler)
-    // → ใช้โดเมนโปรเจกต์ + ใส่ localhost ใน Authorized domains แทน
-  }
   return (
     process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ||
     "mypeer-501909.firebaseapp.com"

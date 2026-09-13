@@ -43,15 +43,20 @@ assert.match(auth, /getIdToken\(true\)/);
 assert.match(auth, /resolveStaffLocal/);
 assert.match(auth, /AUTH_STAFF_CALLABLE_TIMEOUT_MS/);
 assert.match(auth, /ownerFallbackMember|isAppOwnerEmail/);
-assert.match(auth, /void resolveStaffViaCallable/);
+assert.match(auth, /await resolveStaffViaCallable|void resolveStaffViaCallable/);
 assert.match(auth, /signInWithPopup/);
 assert.match(auth, /auth\.currentUser/);
 assert.match(auth, /missing initial state|storage-partitioned/);
 
 const firebase = read("src/lib/firebase.ts");
 assert.match(firebase, /resolveAuthDomain/);
-assert.match(firebase, /telltea-bo\.web\.app/);
+assert.match(firebase, /mypeer-501909\.firebaseapp\.com/);
 assert.match(firebase, /authDomain: resolveAuthDomain\(\)/);
+// Same-origin authDomain is off until OAuth client whitelists telltea-bo/__/auth/handler
+assert.doesNotMatch(
+  firebase,
+  /if \(host === "telltea-bo\.web\.app"/,
+);
 
 const login = read("src/app/login/page.tsx");
 assert.match(login, /busyReason/);
