@@ -1,8 +1,10 @@
 /**
- * มินิไทม์ไลน์หลังร้าน — เจ้าของติดตามค้าง / รอ / ประวัติส่ง (รวม soft)
+ * มินิไทม์ไลน์หลังร้าน — เจ้าของติดตามค้าง / รอ / ประวัติส่ง (เฉพาะงานส่ง)
  */
 import {
+  isNotifyOnlyNudge,
   normalizeTaskNudgeKind,
+  type TaskNudgeKind,
   type TaskOccurrence,
 } from "./task-types";
 import { getTaskProofImgs, labelCompletedKind } from "./task-weekly-logic";
@@ -10,7 +12,7 @@ import { getTaskProofImgs, labelCompletedKind } from "./task-weekly-logic";
 export type OwnerTimelineRow = {
   id: string;
   title: string;
-  nudgeKind: "soft" | "deadline";
+  nudgeKind: TaskNudgeKind;
   who: string;
   whenMs: number;
   /** ค้าง | รอ | พลาด | ตรงเวลา | ส่งช้า | ย้อนหลัง */
@@ -32,6 +34,9 @@ export function buildOwnerTaskTimeline(
   const done: OwnerTimelineRow[] = [];
 
   for (const o of occurrences) {
+    // ข่าวสาร soft อยู่ในตารางข่าวสาร — ไม่ซ้ำในภาพรวม
+    if (isNotifyOnlyNudge(o.nudgeKind)) continue;
+
     const nudgeKind = normalizeTaskNudgeKind(o.nudgeKind);
     const who = (o.assigneeNames || []).filter(Boolean).join(", ") || "—";
     const feedback = (o.completionNote || "").trim();

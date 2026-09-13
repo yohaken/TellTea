@@ -86,7 +86,7 @@ export function StaffNewsSetup({ onError }: { onError: (msg: string | null) => v
       await saveStaffNews(notes, actorId);
       // sync local list with what was persisted (ลบออกทั้งคลัง+แจ้งแล้วหาย)
       setNotes((prev) => prev.filter((n) => n.title.trim() && (n.inWarehouse || n.announced)));
-      setSavedMsg("บันทึกแล้ว — โนตที่ติ๊กแจ้งจะลอยให้ทุกคนเห็นทันที");
+      setSavedMsg("บันทึกแล้ว — โนตที่ติ๊กแจ้งจะโชว์การ์ดมุมขวาบนทันที");
       window.setTimeout(() => setSavedMsg(null), 5000);
     } catch (err) {
       onError((err as Error).message || "บันทึกไม่สำเร็จ");
@@ -107,15 +107,15 @@ export function StaffNewsSetup({ onError }: { onError: (msg: string | null) => v
       }
       hint={
         <>
-          เฉพาะเจ้าของ · กำลังแจ้ง {announcedCount} รายการ · ปิดได้แต่เปิดรอบใหม่จะลอยอีก
+          เฉพาะเจ้าของ · กำลังแจ้ง {announcedCount} รายการ · พนักงานหุบเป็นไอคอนมุมขวาบนได้
           จนกว่าจะเอาออกจากแจ้ง
         </>
       }
       defaultOpen={false}
     >
       <p className="muted settings-fold-hint" style={{ marginTop: 0 }}>
-        <strong>คลังโนต</strong> เก็บข้อความไว้ใช้ภายหลัง · ติ๊ก <strong>แจ้ง</strong> เพื่อลอย popup
-        ให้พนักงานและเจ้าของเห็น · กด <strong>เอาออกจากแจ้ง</strong> เมื่อไม่ต้องลอยแล้ว
+        <strong>คลังโนต</strong> เก็บข้อความไว้ใช้ภายหลัง · ติ๊ก <strong>แจ้ง</strong> เพื่อลอยการ์ดมุมขวาบน
+        ให้พนักงานและเจ้าของเห็น · กด <strong>เอาออกจากแจ้ง</strong> เมื่อไม่ต้องแจ้งแล้ว
       </p>
 
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
@@ -158,7 +158,7 @@ export function StaffNewsSetup({ onError }: { onError: (msg: string | null) => v
                   onChange={(e) => updateNote(item.id, { announced: e.target.checked })}
                 />
                 <span>
-                  <strong>แจ้ง</strong> — ลอย popup ให้ทุกคนเห็น
+                  <strong>แจ้ง</strong> — โชว์การ์ดมุมขวาบนให้ทุกคนเห็น
                 </span>
               </label>
               <div className="staff-news-edit-actions">

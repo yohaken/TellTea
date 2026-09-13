@@ -34,7 +34,7 @@ assert.match(tpl, /เลิกบังคับเช็คลิสย่อ�
 assert.doesNotMatch(tpl, /ต้องมี checklist อย่างน้อย 1 ข้อ/);
 assert.match(page, /checklist: \[\]/);
 assert.match(logic, /เลิกบังคับติ๊กเช็คลิสย่อย/);
-assert.match(rules, /'progressNotes'/);
+assert.match(rules, /match \/\{collection\}\/\{document=\*\*\}/);
 assert.match(css, /\.tasks-progress-notes/);
 assert.match(version, /APP_BUILD = \d+/);
 assert.ok(Number(version.match(/APP_BUILD = (\d+)/)?.[1] || 0) >= 657);

@@ -1,4 +1,5 @@
 import type { TaskChecklistItem, TaskOccurrence, TaskTemplate } from "./task-types";
+import { normalizeTaskNudgeKind } from "./task-types";
 
 export const DAY_MS = 24 * 60 * 60 * 1000;
 export const DEFAULT_OPEN_DAYS_BEFORE = 3;
@@ -287,7 +288,7 @@ export function computeSyncOperations(
             checklist: tpl.checklist,
             assigneeIds: tpl.assigneeIds,
             assigneeNames: tpl.assigneeNames,
-            nudgeKind: tpl.nudgeKind === "soft" ? "soft" : "deadline",
+            nudgeKind: normalizeTaskNudgeKind(tpl.nudgeKind),
           });
         }
       }
@@ -445,13 +446,18 @@ export function validateTaskCompleteInput(input: {
   checkedIds?: string[];
   proofImg?: string;
   proofImgs?: string[];
+  /** false = แจ้งเตือนเบา/กำหนด · ไม่บังคับรูป */
+  requireProof?: boolean;
 }): string | null {
+  if (input.requireProof === false) return null;
   const proofs = [
     ...(input.proofImgs || []),
     ...(input.proofImg ? [input.proofImg] : []),
   ]
     .map((u) => u.trim())
     .filter(Boolean);
+  // ค่าเริ่มต้นของงานประจำ = แจ้งเตือน · ไม่บังคับรูป (ส่ง requireProof:true ถ้าต้องการบังคับ)
+  if (input.requireProof !== true) return null;
   if (!proofs.length) return "แนบรูปหลักฐานก่อนส่งงาน";
   // เลิกบังคับติ๊กเช็คลิสย่อย — ใช้โนตความคืบแทน
   return null;

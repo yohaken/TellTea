@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronUp, Megaphone, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Megaphone, Minimize2 } from "lucide-react";
 import {
   announcedStaffNews,
   staffNewsAnnounceFingerprint,
@@ -9,25 +9,29 @@ import {
   type StaffNewsNote,
 } from "@/lib/staff-news";
 
-const DISMISS_KEY = "telltea_staff_news_dismissed_v1";
+const COLLAPSE_KEY = "telltea_staff_news_collapsed_v1";
 
-function readDismissedFingerprint(): string | null {
+function readCollapsedFingerprint(): string | null {
   if (typeof window === "undefined") return null;
-  return window.sessionStorage.getItem(DISMISS_KEY);
+  return window.sessionStorage.getItem(COLLAPSE_KEY);
 }
 
-function writeDismissedFingerprint(fp: string) {
-  window.sessionStorage.setItem(DISMISS_KEY, fp);
+function writeCollapsedFingerprint(fp: string | null) {
+  if (fp == null) {
+    window.sessionStorage.removeItem(COLLAPSE_KEY);
+    return;
+  }
+  window.sessionStorage.setItem(COLLAPSE_KEY, fp);
 }
 
 /**
- * Popup ลอยแจ้งข่าวสารพนักงาน — ทุกคนรวมเจ้าของเห็นช่วงพัฒนา
- * ปิดได้ในรอบนี้ แต่เปิดแอปใหม่จะลอยอีก จนกว่าเจ้าของจะเอาโนตออกจากแจ้ง
+ * แจ้งข่าวสาร/โนตพนักงาน — การ์ดมุมขวาบน (ไม่ทับแถบล่าง)
+ * หุบได้เป็นไอคอนขวาบน · กดไอคอนเปิดอ่านอีก · โนตใหม่ (fingerprint เปลี่ยน) ขยายใหม่อัตโนมัติ
  */
 export function StaffNewsPopup() {
   const [notes, setNotes] = useState<StaffNewsNote[]>([]);
-  const [open, setOpen] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [bodyExpanded, setBodyExpanded] = useState(false);
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
@@ -41,42 +45,66 @@ export function StaffNewsPopup() {
 
   useEffect(() => {
     if (!announced.length || !fingerprint) {
-      setOpen(false);
-      setExpanded(false);
+      setPanelOpen(false);
+      setBodyExpanded(false);
       setIndex(0);
       return;
     }
-    const dismissed = readDismissedFingerprint();
-    if (dismissed === fingerprint) {
-      setOpen(false);
+    const collapsed = readCollapsedFingerprint();
+    if (collapsed === fingerprint) {
+      setPanelOpen(false);
       return;
     }
-    setOpen(true);
+    writeCollapsedFingerprint(null);
+    setPanelOpen(true);
     setIndex(0);
-    setExpanded(false);
+    setBodyExpanded(false);
   }, [announced.length, fingerprint]);
 
-  if (!open || !announced.length) return null;
+  if (!announced.length) return null;
 
   const current = announced[Math.min(index, announced.length - 1)];
   if (!current) return null;
 
   const hasMore = announced.length > 1;
   const bodyPreview =
-    current.body.length > 120 && !expanded
+    current.body.length > 120 && !bodyExpanded
       ? `${current.body.slice(0, 120).trim()}…`
       : current.body;
   const canExpand = current.body.length > 120;
 
-  function dismiss() {
-    writeDismissedFingerprint(fingerprint);
-    setOpen(false);
-    setExpanded(false);
+  function collapse() {
+    writeCollapsedFingerprint(fingerprint);
+    setPanelOpen(false);
+    setBodyExpanded(false);
+  }
+
+  function expandPanel() {
+    writeCollapsedFingerprint(null);
+    setPanelOpen(true);
+    setBodyExpanded(false);
   }
 
   function nextNote() {
     setIndex((i) => (i + 1) % announced.length);
-    setExpanded(false);
+    setBodyExpanded(false);
+  }
+
+  if (!panelOpen) {
+    return (
+      <button
+        type="button"
+        className="staff-news-fab"
+        onClick={expandPanel}
+        aria-label={`เปิดแจ้งข่าวสาร${announced.length > 1 ? ` ${announced.length} รายการ` : ""}`}
+        title="แจ้งข่าวสาร"
+      >
+        <Megaphone size={16} aria-hidden />
+        {announced.length > 1 ? (
+          <span className="staff-news-fab-badge">{announced.length}</span>
+        ) : null}
+      </button>
+    );
   }
 
   return (
@@ -95,17 +123,18 @@ export function StaffNewsPopup() {
           <button
             type="button"
             className="staff-news-float-close"
-            onClick={dismiss}
-            aria-label="ปิดแจ้งข่าวสาร"
+            onClick={collapse}
+            aria-label="หุบแจ้งข่าวสาร"
+            title="หุบ"
           >
-            <X size={16} aria-hidden />
+            <Minimize2 size={15} aria-hidden />
           </button>
         </div>
 
         <h2 className="staff-news-float-title">{current.title}</h2>
 
         {current.body ? (
-          <p className={`staff-news-float-body${expanded ? " is-expanded" : ""}`}>
+          <p className={`staff-news-float-body${bodyExpanded ? " is-expanded" : ""}`}>
             {bodyPreview}
           </p>
         ) : null}
@@ -115,10 +144,10 @@ export function StaffNewsPopup() {
             <button
               type="button"
               className="ghost-btn staff-news-float-btn"
-              onClick={() => setExpanded((v) => !v)}
+              onClick={() => setBodyExpanded((v) => !v)}
             >
-              {expanded ? <ChevronUp size={15} aria-hidden /> : <ChevronDown size={15} aria-hidden />}
-              {expanded ? "ย่อ" : "ขยายอ่าน"}
+              {bodyExpanded ? <ChevronUp size={15} aria-hidden /> : <ChevronDown size={15} aria-hidden />}
+              {bodyExpanded ? "ย่อ" : "ขยายอ่าน"}
             </button>
           ) : null}
           {hasMore ? (
@@ -126,8 +155,8 @@ export function StaffNewsPopup() {
               ถัดไป
             </button>
           ) : null}
-          <button type="button" className="primary-btn staff-news-float-btn" onClick={dismiss}>
-            ปิด
+          <button type="button" className="primary-btn staff-news-float-btn" onClick={collapse}>
+            หุบ
           </button>
         </div>
       </div>

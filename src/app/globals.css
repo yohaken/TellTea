@@ -14572,6 +14572,113 @@ body.modal-open .main-panel {
   font-size: 0.72rem;
 }
 
+.tasks-staff-home {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.tasks-staff-section-title {
+  margin: 0 0 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: rgba(28, 42, 31, 0.72);
+}
+
+.tasks-staff-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.tasks-staff-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid rgba(28, 42, 31, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.tasks-owner-item {
+  align-items: flex-start;
+}
+
+.tasks-staff-item.is-acked {
+  opacity: 0.78;
+  background: rgba(74, 107, 62, 0.06);
+}
+
+.tasks-staff-item.is-late {
+  border-color: rgba(180, 95, 40, 0.28);
+}
+
+.tasks-staff-item.is-waiting {
+  border-color: rgba(74, 107, 62, 0.22);
+}
+
+.tasks-staff-item-main {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.tasks-staff-item-title {
+  font-size: 0.92rem;
+  line-height: 1.3;
+  color: var(--tea-ink, #1c2a1f);
+}
+
+.tasks-staff-item-note,
+.tasks-staff-item-meta {
+  font-size: 0.7rem;
+  line-height: 1.3;
+}
+
+.tasks-staff-item-note {
+  color: rgba(28, 42, 31, 0.72);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.tasks-staff-item-done {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.tasks-staff-item-acts {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.tasks-staff-item-btn {
+  min-height: 2rem;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.tasks-staff-item-btn.is-ghost {
+  min-height: 2rem;
+}
+
+.tasks-owner-item .tasks-news-people {
+  margin-top: 0.2rem;
+}
+
 .tasks-link-banner {
   margin: 0.5rem 0;
   padding: 0.55rem 0.65rem;
@@ -14697,6 +14804,26 @@ body.modal-open .main-panel {
 
 .tasks-title-text {
   font-weight: 700;
+}
+
+.tasks-title-meta {
+  display: block;
+  margin-top: 0.12rem;
+  font-size: 0.62rem;
+  font-weight: 550;
+  color: rgba(28, 42, 31, 0.55);
+  line-height: 1.25;
+}
+
+.tasks-title-note {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.62rem;
+  font-weight: 500;
+  color: rgba(28, 42, 31, 0.72);
+  line-height: 1.3;
+  max-height: 2.5em;
+  overflow: hidden;
 }
 
 .tasks-col-due {
@@ -14836,6 +14963,171 @@ body.modal-open .main-panel {
 .tasks-status-pill.is-pending {
   background: rgba(255, 193, 7, 0.2);
   color: #8a6d00;
+}
+
+.tasks-status-pill.is-acked {
+  background: rgba(74, 107, 62, 0.14);
+  color: var(--tea-leaf);
+}
+
+.tasks-acked-today-hint {
+  font-size: 0.62rem;
+  line-height: 1.2;
+}
+
+.tasks-owner-news {
+  margin: 0 0 0.75rem;
+  border: 1px solid rgba(28, 42, 31, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.55);
+  overflow: hidden;
+}
+
+.tasks-owner-news-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.65rem;
+  padding: 0.55rem 0.75rem 0.45rem;
+}
+
+.tasks-owner-news-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--tea-ink, #1c2a1f);
+}
+
+.tasks-owner-news-hint {
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.tasks-news-card-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid rgba(28, 42, 31, 0.08);
+  display: flex;
+  flex-direction: column;
+}
+
+.tasks-news-card {
+  padding: 0.7rem 0.75rem 0.65rem;
+  border-bottom: 1px solid rgba(28, 42, 31, 0.07);
+}
+
+.tasks-news-card:last-child {
+  border-bottom: none;
+}
+
+.tasks-news-card.is-complete {
+  background: rgba(74, 107, 62, 0.06);
+}
+
+.tasks-news-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.tasks-news-card-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.tasks-news-card-title {
+  font-size: 0.9rem;
+  line-height: 1.3;
+  color: var(--tea-ink, #1c2a1f);
+}
+
+.tasks-news-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  font-size: 0.7rem;
+}
+
+.tasks-news-card-status {
+  margin: 0.45rem 0 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: rgba(28, 42, 31, 0.88);
+}
+
+.tasks-news-people {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.tasks-news-person {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0.22rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  line-height: 1.2;
+  border: 1px solid transparent;
+}
+
+.tasks-news-person.is-acked {
+  background: rgba(74, 107, 62, 0.14);
+  color: var(--tea-leaf);
+  border-color: rgba(74, 107, 62, 0.22);
+}
+
+.tasks-news-person.is-pending {
+  background: rgba(180, 95, 40, 0.1);
+  color: #9a4a18;
+  border-color: rgba(180, 95, 40, 0.18);
+}
+
+.tasks-news-person-mark {
+  font-weight: 700;
+  width: 0.7rem;
+  text-align: center;
+}
+
+.tasks-news-person-name {
+  font-weight: 650;
+}
+
+.tasks-news-person-state {
+  opacity: 0.85;
+}
+
+.tasks-news-card-last {
+  margin: 0.45rem 0 0;
+  font-size: 0.68rem;
+  line-height: 1.3;
+}
+
+.tasks-news-kind {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0.12rem 0.35rem;
+  border-radius: 999px;
+}
+
+.tasks-news-kind.is-soft {
+  background: rgba(74, 107, 62, 0.12);
+  color: var(--tea-leaf);
+}
+
+.tasks-news-kind.is-deadline {
+  background: rgba(180, 95, 40, 0.14);
+  color: #9a4a18;
 }
 
 .tasks-status-pill.is-future {
@@ -15091,6 +15383,21 @@ body.modal-open .main-panel {
   overflow: hidden;
 }
 
+.tasks-owner-timeline-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  padding: 0.32rem 0.55rem;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  min-height: 2rem;
+}
+
 .tasks-owner-timeline-head {
   display: flex;
   align-items: baseline;
@@ -15110,6 +15417,13 @@ body.modal-open .main-panel {
   font-weight: 500;
 }
 
+.tasks-owner-timeline-meta {
+  font-size: 0.62rem;
+  font-weight: 650;
+  color: rgba(28, 42, 31, 0.55);
+  flex: 0 0 auto;
+}
+
 .tasks-timeline-sheet {
   margin: 0;
   max-height: 11.5rem;
@@ -15117,7 +15431,7 @@ body.modal-open .main-panel {
 }
 
 .tasks-timeline-table.sheet-table {
-  min-width: 28rem;
+  min-width: 18rem;
 }
 
 .tasks-page .tasks-timeline-sheet .sheet-table--dense th,
@@ -15130,10 +15444,21 @@ body.modal-open .main-panel {
 
 .tasks-timeline-title {
   font-weight: 700;
-  max-width: 7.5rem;
+  max-width: 11rem;
+}
+
+.tasks-timeline-title-text {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.tasks-timeline-when-inline {
+  display: block;
+  font-size: 0.56rem;
+  font-weight: 500;
+  margin-top: 0.05rem;
 }
 
 .tasks-timeline-who,
@@ -19615,10 +19940,10 @@ body.modal-open .main-panel {
 
 .mph-name-cell {
   display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.08rem 0.18rem;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0.1rem;
   min-width: 0;
   width: 100%;
   min-height: 1.15rem;
@@ -19747,7 +20072,9 @@ button.mph-ch-mark {
 .mph-ch-marks.is-cat .mph-ch-mark,
 .mph-ch-marks.is-name .mph-ch-mark,
 .mph-ch-marks.is-item-order .mph-ch-mark,
-.mph-ch-marks.is-photo .mph-ch-mark {
+.mph-ch-marks.is-photo .mph-ch-mark,
+.mph-ch-marks.is-option .mph-ch-mark,
+.mph-ch-marks.is-option-order .mph-ch-mark {
   min-width: 0;
   height: 0.92rem;
 }
@@ -19812,11 +20139,13 @@ button.mph-ch-mark {
 }
 
 .mph-ch-marks-row {
-  display: inline-flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 0.22rem;
+  display: grid;
+  grid-template-columns: max-content max-content max-content;
+  gap: 0.14rem 0.32rem;
+  align-items: start;
+  justify-content: start;
+  width: max-content;
+  max-width: 100%;
   flex: 0 0 auto;
 }
 
@@ -19828,7 +20157,33 @@ button.mph-ch-mark {
 .mph-cat-cell .mph-ch-marks,
 .mph-name-cell .mph-ch-marks-row {
   flex: 0 0 auto;
-  align-self: center;
+  align-self: flex-start;
+}
+
+.mph-ch-marks-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.02rem;
+  flex: 0 0 auto;
+}
+
+.mph-ch-marks-pills {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.06rem;
+  flex: 0 0 auto;
+}
+
+/* คอลัมน์เมนู: หัวป้ายอยู่บน · S/G/L อยู่แถวถัดไป · จัด 2×2 = ชื่อ|ลำดับ / ตัวเลือก|รูป */
+.mph-name-cell .mph-ch-marks {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.04rem;
+}
+
+.mph-name-cell .mph-ch-marks-label {
+  margin-right: 0;
 }
 
 .mph-sel-col.mph-th,
@@ -21086,8 +21441,17 @@ tr.mph-opt-row.is-row-sel-some .mph-td.mph-sel-col {
   box-shadow: inset 3px 0 0 #c2410c;
 }
 
+.mph-td.is-option-warn:not(.is-st-mismatch) {
+  box-shadow: inset 3px 0 0 #b91c1c;
+}
+
 .mph-td.is-name-warn.is-order-warn:not(.is-st-mismatch) {
   box-shadow: inset 3px 0 0 #d4a84b, inset 6px 0 0 #c2410c;
+}
+
+.mph-td.is-option-warn.is-name-warn:not(.is-st-mismatch),
+.mph-td.is-option-warn.is-order-warn:not(.is-st-mismatch) {
+  box-shadow: inset 3px 0 0 #b91c1c, inset 6px 0 0 #c2410c;
 }
 
 .mph-table tbody tr:hover .mph-td.is-st-mismatch {
@@ -29758,26 +30122,28 @@ a.ghost-btn {
   color: rgba(160, 48, 32, 0.95) !important;
 }
 
-/* —— Staff news floating popup + owner warehouse —— */
+/* —— Staff news: top-right card + collapse FAB (ไม่ทับ bottom-nav / utility) —— */
 .staff-news-float {
   position: fixed;
-  left: 50%;
-  bottom: calc(4.6rem + var(--safe-bottom, 0px));
-  transform: translateX(-50%);
-  z-index: 55;
-  width: min(100% - 1.2rem, 24rem);
+  top: calc(4.85rem + var(--safe-top, 0px));
+  right: max(0.5rem, calc((100vw - var(--shell-max)) / 2 + 0.5rem));
+  left: auto;
+  bottom: auto;
+  z-index: 42;
+  width: min(calc(100% - 1rem), 22rem);
+  max-width: calc(100vw - 1rem);
   pointer-events: none;
-  animation: staff-news-rise 280ms ease-out;
+  animation: staff-news-drop 240ms ease-out;
 }
 
-@keyframes staff-news-rise {
+@keyframes staff-news-drop {
   from {
     opacity: 0;
-    transform: translateX(-50%) translateY(0.75rem);
+    transform: translateY(-0.45rem);
   }
   to {
     opacity: 1;
-    transform: translateX(-50%) translateY(0);
+    transform: translateY(0);
   }
 }
 
@@ -29790,6 +30156,50 @@ a.ghost-btn {
   border-top: 4px solid var(--tea-leaf, #2f6b3a);
   box-shadow: 0 10px 28px rgba(28, 42, 31, 0.18);
   text-align: left;
+  max-height: min(58dvh, 22rem);
+  overflow: auto;
+}
+
+/* ไอคอนหุบ — มุมขวาบนใต้ topbar · ไม่ทับ logout / แถบล่าง / FAB ซ้าย */
+.staff-news-fab {
+  position: fixed;
+  top: calc(4.85rem + var(--safe-top, 0px));
+  right: max(0.5rem, calc((100vw - var(--shell-max)) / 2 + 0.5rem));
+  z-index: 42;
+  width: 2.35rem;
+  height: 2.35rem;
+  padding: 0;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(47, 107, 58, 0.28);
+  background: rgba(255, 253, 248, 0.96);
+  color: var(--tea-leaf, #2f6b3a);
+  box-shadow: 0 3px 12px rgba(28, 42, 31, 0.14);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  cursor: pointer;
+}
+
+.staff-news-fab:hover {
+  border-color: rgba(47, 107, 58, 0.45);
+  background: #fff;
+}
+
+.staff-news-fab-badge {
+  position: absolute;
+  top: -0.2rem;
+  right: -0.2rem;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.22rem;
+  border-radius: 999px;
+  background: var(--tea-leaf, #2f6b3a);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1rem;
+  text-align: center;
 }
 
 .staff-news-float-top {
@@ -29870,12 +30280,98 @@ a.ghost-btn {
   font-size: 0.9rem;
 }
 
-/* งานค้างกึ่งแจ้งเตือน — พนักงานรายคน */
+/* งานค้างกึ่งแจ้งเตือน — พนักงานรายคน · อยู่เหนือ bottom-nav ชัดเจน */
+
+/* popup ทับกลางจอ — บังคับเห็น · ปิดได้ · แถบล่างยังค้าง */
+.staff-work-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 1rem);
+}
+
+.staff-work-modal-scrim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  background: rgba(20, 28, 22, 0.48);
+  cursor: pointer;
+}
+
+.staff-work-modal-card {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 22rem);
+  padding: 0.85rem 0.9rem 0.9rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(180, 95, 40, 0.35);
+  background: #fffdf8;
+  box-shadow: 0 12px 36px rgba(20, 28, 22, 0.28);
+}
+
+.staff-work-modal-card.is-overdue {
+  border-color: rgba(160, 50, 40, 0.45);
+  background: #fff8f6;
+}
+
+.staff-work-modal-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.staff-work-modal-kicker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 750;
+  color: #9a4a18;
+}
+
+.staff-work-modal-title {
+  margin: 0.55rem 0 0.25rem;
+  font-size: 1.05rem;
+  font-weight: 750;
+  line-height: 1.3;
+  color: var(--tea-ink, #1c2a1f);
+}
+
+.staff-work-modal-note {
+  margin: 0.2rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  color: rgba(28, 42, 31, 0.78);
+}
+
+.staff-work-modal-due,
+.staff-work-modal-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
+.staff-work-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  margin-top: 0.85rem;
+}
+
 .staff-task-nudge-float {
   position: fixed;
   left: 0.65rem;
   right: 0.65rem;
-  bottom: calc(4.6rem + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--nav-h) + var(--safe-bottom) + 3.05rem);
   z-index: 46;
   pointer-events: none;
 }
@@ -29923,6 +30419,12 @@ a.ghost-btn {
   color: #9a3412;
 }
 
+.staff-task-nudge-pill.is-overdue {
+  background: rgba(160, 50, 40, 0.14);
+  border-color: rgba(160, 50, 40, 0.3);
+  color: #a03228;
+}
+
 .staff-task-nudge-pill.is-soft {
   background: rgba(45, 106, 79, 0.1);
   border-color: rgba(45, 106, 79, 0.22);
@@ -29945,6 +30447,12 @@ a.ghost-btn {
   line-height: 1.3;
 }
 
+.staff-task-nudge-day-hint {
+  margin: 0 0 0.45rem;
+  font-size: 0.68rem;
+  line-height: 1.3;
+}
+
 .staff-task-nudge-float-actions {
   display: flex;
   justify-content: flex-end;
@@ -29962,7 +30470,7 @@ a.ghost-btn {
   position: fixed;
   left: 0.5rem;
   right: 0.5rem;
-  bottom: calc(3.55rem + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--nav-h) + var(--safe-bottom) + 0.35rem);
   z-index: 44;
   max-width: 28rem;
   margin: 0 auto;
@@ -29971,6 +30479,16 @@ a.ghost-btn {
   background: rgba(255, 252, 247, 0.96);
   box-shadow: 0 4px 14px rgba(28, 42, 31, 0.1);
   overflow: hidden;
+}
+
+.staff-task-nudge-strip.is-work {
+  border-color: rgba(180, 95, 40, 0.38);
+  background: rgba(255, 248, 240, 0.98);
+}
+
+.staff-task-nudge-strip.is-overdue {
+  border-color: rgba(160, 50, 40, 0.42);
+  background: rgba(255, 244, 242, 0.98);
 }
 
 .staff-task-nudge-strip-main {
@@ -30029,9 +30547,37 @@ a.ghost-btn {
   color: #9a3412;
 }
 
+.staff-task-nudge-kind.is-overdue,
+.staff-task-nudge-kind.is-dueSoon,
+.staff-task-nudge-kind.is-open {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 0.1rem 0.32rem;
+  border-radius: 999px;
+}
+
+.staff-task-nudge-kind.is-overdue {
+  background: rgba(160, 50, 40, 0.16);
+  color: #a03228;
+}
+
+.staff-task-nudge-kind.is-dueSoon {
+  background: rgba(180, 83, 9, 0.12);
+  color: #9a3412;
+}
+
+.staff-task-nudge-kind.is-open {
+  background: rgba(45, 106, 79, 0.1);
+  color: #2d6a4f;
+}
+
 .staff-task-nudge-kind.is-soft {
   background: rgba(45, 106, 79, 0.1);
   color: #2d6a4f;
+}
+
+.staff-task-nudge-soft-side {
+  font-size: 0.68rem;
 }
 
 .staff-task-nudge-list-title {
@@ -30043,6 +30589,15 @@ a.ghost-btn {
 .staff-task-nudge-list-due {
   flex: 0 0 auto;
   font-size: 0.68rem;
+}
+
+.staff-task-nudge-ack {
+  margin-left: auto;
+  min-height: 1.7rem;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  flex: 0 0 auto;
 }
 
 .staff-task-nudge-list-foot {

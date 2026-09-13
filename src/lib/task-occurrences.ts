@@ -18,6 +18,7 @@ import {
   normalizeTaskNudgeKind,
   TASK_PROGRESS_NOTE_MAX,
   TASK_PROGRESS_NOTES_MAX,
+  type TaskNotifyAck,
   type TaskOccurrence,
   type TaskOccurrenceStatus,
   type TaskProgressNote,
@@ -30,6 +31,7 @@ import {
   type SyncDeleteOp,
   type SyncMissedOp,
 } from "./task-weekly-logic";
+import { bangkokDateKey } from "./utils";
 
 /** พอสำหรับแท็บ missed (4 สัปดาห์) + ประวัติใกล้ๆ — ไม่ sync งานเก่าทั้งก้อน */
 export const TASK_OCCURRENCE_LOOKBACK_DAYS = 120;
@@ -75,6 +77,24 @@ export function mapTaskProgressNotes(raw: unknown): TaskProgressNote[] {
   return out.slice(-TASK_PROGRESS_NOTES_MAX);
 }
 
+export function mapNotifyAcks(raw: unknown): Record<string, TaskNotifyAck> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out: Record<string, TaskNotifyAck> = {};
+  for (const [employeeId, row] of Object.entries(raw as Record<string, unknown>)) {
+    const id = String(employeeId || "").trim();
+    if (!id || !row || typeof row !== "object") continue;
+    const r = row as Record<string, unknown>;
+    const dayKey = typeof r.dayKey === "string" ? r.dayKey.trim() : "";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dayKey)) continue;
+    out[id] = {
+      dayKey,
+      at: typeof r.at === "number" ? r.at : 0,
+      name: typeof r.name === "string" ? r.name.trim() : "",
+    };
+  }
+  return out;
+}
+
 function mapOccurrence(id: string, data: Record<string, unknown>): TaskOccurrence {
   const checklist = Array.isArray(data.checklist)
     ? (data.checklist as { id: string; label: string }[]).map((c) => ({
@@ -100,6 +120,7 @@ function mapOccurrence(id: string, data: Record<string, unknown>): TaskOccurrenc
     nudgeKind: normalizeTaskNudgeKind(data.nudgeKind),
     checklistDone,
     progressNotes: mapTaskProgressNotes(data.progressNotes),
+    notifyAcks: mapNotifyAcks(data.notifyAcks),
     proofImg: data.proofImg ? String(data.proofImg) : undefined,
     proofImgs: Array.isArray(data.proofImgs)
       ? (data.proofImgs as string[]).map(String).filter((u) => u.trim())
@@ -201,6 +222,7 @@ export async function applySyncOperations(
       nudgeKind: normalizeTaskNudgeKind(op.nudgeKind),
       checklistDone: [],
       progressNotes: [],
+      notifyAcks: {},
       proofImg: "",
       createdAt: now,
       updatedAt: now,
@@ -225,6 +247,30 @@ function normalizeProofImgs(patch: { proofImg?: string; proofImgs?: string[] }) 
 }
 
 /** พนักงานรายงานว่าทำขั้นกลางแล้ว — หยุดแจ้งเตือน · ค้างติดตามหลังร้าน */
+/**
+ * รับทราบวันนี้ (แจ้งเตือน) — เขียนทับ ack ล่าสุดของพนักงานคนนั้น
+ * ไม่เปลี่ยน status · พรุ่งนี้ยังแจ้งใหม่ได้
+ */
+export async function reportTaskNotifyAck(
+  occ: TaskOccurrence,
+  input: {
+    employeeId: string;
+    employeeName: string;
+    now?: number;
+  },
+): Promise<void> {
+  const employeeId = String(input.employeeId || "").trim();
+  if (!employeeId) throw new Error("ไม่พบรหัสพนักงาน");
+  const now = input.now ?? Date.now();
+  const dayKey = bangkokDateKey(now);
+  const name = String(input.employeeName || "").trim() || "ไม่ระบุชื่อ";
+  const ack: TaskNotifyAck = { dayKey, at: now, name };
+  await updateDoc(doc(getDb(), "taskOccurrences", occ.id), {
+    [`notifyAcks.${employeeId}`]: ack,
+    updatedAt: now,
+  });
+}
+
 export async function reportTaskOccurrenceWaiting(
   occ: TaskOccurrence,
   patch: {

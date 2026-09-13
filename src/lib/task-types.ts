@@ -17,10 +17,11 @@ export const TASK_PROGRESS_NOTE_MAX = 280;
 export const TASK_PROGRESS_NOTES_MAX = 80;
 
 /**
- * soft = แจ้งเบาๆ (ปิดได้ · ไม่เน้นเส้นตาย)
- * deadline = ต้องทำตามกำหนด (โชว์วันครบ · แถบค้างชัด)
+ * soft = แจ้งเบา (รับทราบวันนี้ · พรุ่งนี้ขึ้นใหม่ · ไม่ใช่ส่งงาน)
+ * deadline = มีกำหนด (งานส่ง · มีวันครบ · ส่งรูป/จบได้)
+ * task = งานส่ง (ส่งรูป/จบได้)
  */
-export type TaskNudgeKind = "soft" | "deadline";
+export type TaskNudgeKind = "soft" | "deadline" | "task";
 
 export type TaskTemplate = {
   id: string;
@@ -31,7 +32,7 @@ export type TaskTemplate = {
   checklist: TaskChecklistItem[];
   assigneeIds: string[];
   assigneeNames: string[];
-  /** ค่าเริ่มต้น deadline — งานประจำเดิม */
+  /** ค่าเริ่มต้น task — soft = ข่าวสาร · deadline/task = งานส่ง */
   nudgeKind: TaskNudgeKind;
   active: boolean;
   /** รอบที่เจ้าของลบแล้ว — sync จะไม่สร้างซ้ำ */
@@ -43,6 +44,14 @@ export type TaskTemplate = {
 
 /** waiting = พนักงานรายงานแล้ว (เช่น ส่งซ่อมแล้วรอ) — หยุดแจ้งเตือน แต่ยังติดตามในหลังร้าน */
 export type TaskOccurrenceStatus = "pending" | "waiting" | "completed" | "missed";
+
+/** รับทราบล่าสุดของพนักงานต่อรอบแจ้งเตือน (วันต่อวัน · ไม่ใช่ส่งงาน) */
+export type TaskNotifyAck = {
+  /** Asia/Bangkok YYYY-MM-DD */
+  dayKey: string;
+  at: number;
+  name: string;
+};
 
 export type TaskOccurrence = {
   id: string;
@@ -60,6 +69,11 @@ export type TaskOccurrence = {
   checklistDone: string[];
   /** กระดานโนตความคืบในรอบนี้ (แทนติ๊ก checklist ย่อย) */
   progressNotes: TaskProgressNote[];
+  /**
+   * รับทราบล่าสุดต่อ employeeId — เจ้าของดูได้
+   * dayKey = วันรับทราบล่าสุด · พรุ่งนี้ยังแจ้งใหม่ได้
+   */
+  notifyAcks: Record<string, TaskNotifyAck>;
   proofImg?: string;
   /** รูปหลักฐานหลายรูป — ถ้าว่างใช้ proofImg */
   proofImgs?: string[];
@@ -86,5 +100,21 @@ export type TaskTemplateInput = {
 };
 
 export function normalizeTaskNudgeKind(raw: unknown): TaskNudgeKind {
-  return raw === "soft" ? "soft" : "deadline";
+  if (raw === "soft") return "soft";
+  if (raw === "deadline") return "deadline";
+  if (raw === "task") return "task";
+  // เอกสารเก่าไม่มี nudgeKind = งานส่ง
+  return "task";
+}
+
+/** ข่าวสารแจ้งเบา — ไม่ใช่งานที่กดส่ง · รับทราบ ≠ completed */
+export function isNotifyOnlyNudge(kind: unknown): boolean {
+  return normalizeTaskNudgeKind(kind) === "soft";
+}
+
+export function labelTaskNudgeKind(kind: unknown): string {
+  const k = normalizeTaskNudgeKind(kind);
+  if (k === "soft") return "แจ้งเบา";
+  if (k === "deadline") return "มีกำหนด";
+  return "งานส่ง";
 }
