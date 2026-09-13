@@ -199,15 +199,37 @@ export async function applySyncOperations(
   deleteDupes: SyncDeleteOp[] = [],
 ): Promise<void> {
   if (!create.length && !markMissed.length && !deleteDupes.length) return;
-  const batch = writeBatch(getDb());
+  const db = getDb();
   const now = Date.now();
 
+  /** ข้าม id ผี — ถูกลบระหว่าง snapshot กับ commit แล้ว update จะพังทั้ง batch */
+  const missedAlive: SyncMissedOp[] = [];
+  if (markMissed.length) {
+    await Promise.all(
+      markMissed.map(async (op) => {
+        const id = String(op.occurrenceId || "").trim();
+        if (!id) return;
+        try {
+          if ((await getDoc(doc(db, "taskOccurrences", id))).exists()) {
+            missedAlive.push({ occurrenceId: id });
+          }
+        } catch {
+          /* skip ghost */
+        }
+      }),
+    );
+  }
+
+  if (!create.length && !missedAlive.length && !deleteDupes.length) return;
+
+  const batch = writeBatch(db);
+
   for (const op of deleteDupes) {
-    batch.delete(doc(getDb(), "taskOccurrences", op.occurrenceId));
+    batch.delete(doc(db, "taskOccurrences", op.occurrenceId));
   }
 
   for (const op of create) {
-    const ref = doc(getDb(), "taskOccurrences", occurrenceDocId(op.templateId, op.periodKey));
+    const ref = doc(db, "taskOccurrences", occurrenceDocId(op.templateId, op.periodKey));
     batch.set(ref, {
       templateId: op.templateId,
       periodKey: op.periodKey,
@@ -229,8 +251,8 @@ export async function applySyncOperations(
     });
   }
 
-  for (const op of markMissed) {
-    batch.update(doc(getDb(), "taskOccurrences", op.occurrenceId), {
+  for (const op of missedAlive) {
+    batch.update(doc(db, "taskOccurrences", op.occurrenceId), {
       status: "missed",
       updatedAt: now,
     });
@@ -550,10 +572,24 @@ export async function syncPendingOccurrencesFromTemplate(
   occurrenceIds: string[],
 ): Promise<void> {
   if (!occurrenceIds.length) return;
-  const batch = writeBatch(getDb());
+  const db = getDb();
   const now = Date.now();
-  for (const id of occurrenceIds) {
-    batch.update(doc(getDb(), "taskOccurrences", id), {
+  const alive: string[] = [];
+  await Promise.all(
+    occurrenceIds.map(async (rawId) => {
+      const id = String(rawId || "").trim();
+      if (!id) return;
+      try {
+        if ((await getDoc(doc(db, "taskOccurrences", id))).exists()) alive.push(id);
+      } catch {
+        /* skip ghost */
+      }
+    }),
+  );
+  if (!alive.length) return;
+  const batch = writeBatch(db);
+  for (const id of alive) {
+    batch.update(doc(db, "taskOccurrences", id), {
       title: template.title,
       note: template.note,
       checklist: template.checklist,

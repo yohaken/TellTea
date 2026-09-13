@@ -13,12 +13,13 @@ const read = (p) => readFileSync(join(root, p), "utf8");
 const occ = read("src/lib/task-occurrences.ts");
 const version = read("src/lib/version.ts");
 
-assert.match(version, /APP_BUILD = 563/);
+assert.match(version, /APP_BUILD = 946/);
 assert.match(occ, /sanitizeTaskTemplateId/);
 assert.match(occ, /resolveExistingTaskTemplateRef/);
 assert.match(occ, /commitOpenOccurrenceDeletes/);
 assert.match(occ, /getDoc/);
 assert.match(occ, /No document to update/);
+assert.match(occ, /missedAlive|ข้าม id ผี/);
 assert.match(occ, /templateExists|resolveExistingTaskTemplateRef/);
 
 function sanitizeTaskTemplateId(raw) {

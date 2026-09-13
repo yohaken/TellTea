@@ -262,7 +262,10 @@ async function runSyncWithAdmin(db) {
   }
 
   for (const op of markMissed) {
-    batch.update(db.collection("taskOccurrences").doc(op.occurrenceId), {
+    const ref = db.collection("taskOccurrences").doc(op.occurrenceId);
+    const snap = await ref.get();
+    if (!snap.exists) continue;
+    batch.update(ref, {
       status: "missed",
       updatedAt: now,
     });
