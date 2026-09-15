@@ -66,6 +66,9 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # `tools` was removed from the SDK catalog — default input fails CI.
+          packages: platform-tools
 
       - name: Build nPos-telltea Hello World APK
         run: |
