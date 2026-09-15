@@ -16,6 +16,7 @@ import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoC
 import { EntryTimestampsMeta } from "@/components/EntryTimestampsMeta";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { PhotoForensicsPanel } from "@/components/PhotoForensicsPanel";
+import { OtWorkDaysStrip } from "@/components/OtWorkDaysStrip";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useAuth } from "@/lib/auth";
 import { resolveWorkerDisplayNames } from "@/lib/employee-rename-propagate";
@@ -36,6 +37,7 @@ import {
   type PhotoForensicsReport,
 } from "@/lib/photo-forensics-scan";
 import { monthInputValue } from "@/lib/bonus";
+import { buildOtWorkDayRows } from "@/lib/ot-work-days";
 import { periodMonthFromDateMs } from "@/lib/bonus-month-guard";
 import { subscribeBonusMonthStatus } from "@/lib/bonus-personal-close";
 import {
@@ -78,7 +80,7 @@ import {
 import { otViewWindow } from "@/lib/ot-view-window";
 import type { StaffMember } from "@/lib/types";
 import { OtIncompletePopup } from "@/components/OtIncompletePopup";
-import { ShiftOwnerFlags, ShiftProgressSteps, ShiftTodayBanner } from "@/components/ShiftProgressSteps";
+import { ShiftOwnerFlags, ShiftProgressSteps } from "@/components/ShiftProgressSteps";
 import {
   buildSopDrafts,
   ShiftSopSection,
@@ -96,14 +98,12 @@ import {
   computeLiveShiftProgress,
   computeShiftProgress,
   closingItemsFromCatalog,
-  getCurrentShiftId,
   indexChecklistRecordsByDayShift,
   listPastIncompleteOtShifts,
   openingItemsFromCatalog,
   ownerQualityHints,
   otIncompleteWarnTitle,
   shouldShowOtIncompleteWarn,
-  todayShiftBannerLabel,
 } from "@/lib/shift-session";
 import {
   formatDateShortBe,
@@ -111,7 +111,6 @@ import {
   formatPlainNumber,
   formatWeekdayTh,
   parseDateInput,
-  startOfLocalDay,
   todayInputValue,
 } from "@/lib/utils";
 import {
@@ -364,26 +363,6 @@ function OtView() {
     [checkRecords],
   );
 
-  const todayShift = getCurrentShiftId();
-  const todayMs = startOfLocalDay();
-  const todayEntry = useMemo(
-    () => findOtEntryForSlot(entries, todayMs, todayShift),
-    [entries, todayMs, todayShift],
-  );
-  const todayProgress = useMemo(
-    () =>
-      computeShiftProgress({
-        entry: todayEntry,
-        records: checkRecords,
-        openingItems,
-        closingItems,
-        date: todayMs,
-        shift: todayShift,
-        recordsByDayShift: checkRecordsByDayShift,
-      }),
-    [todayEntry, checkRecords, checkRecordsByDayShift, openingItems, closingItems, todayMs, todayShift],
-  );
-
   const pastIncomplete = useMemo(() => {
     if (loading) return [];
     return listPastIncompleteOtShifts({
@@ -466,19 +445,6 @@ function OtView() {
                 date: item.date,
                 shift: item.shift,
                 entry: item.entry,
-              });
-            }}
-          />
-          <ShiftTodayBanner
-            shiftLabel={todayShiftBannerLabel(todayShift)}
-            progress={todayProgress}
-            onOpen={() => {
-              const live = monthInputValue();
-              if (viewMonth !== live) setViewMonth(live);
-              openSlot({
-                date: todayMs,
-                shift: todayShift,
-                entry: todayEntry,
               });
             }}
           />
@@ -1458,6 +1424,16 @@ function OtTable({
     [entries],
   );
 
+  const workDayRows = useMemo(
+    () =>
+      buildOtWorkDayRows(
+        entries,
+        viewMonth,
+        workers.map((w) => ({ id: w.id, name: w.name })),
+      ),
+    [entries, viewMonth, workers],
+  );
+
   useEffect(() => {
     setPhotoReport(null);
   }, [statusFilter, mineOnly, tableView, entries.length]);
@@ -1558,6 +1534,12 @@ function OtTable({
           ลง/แก้/ลบชงไม่ได้ (ปลดที่ จ่าย/โบนัส)
         </p>
       ) : null}
+
+      <OtWorkDaysStrip
+        month={viewMonth}
+        rows={workDayRows}
+        highlightWorkerId={myEmployee?.id}
+      />
 
       {tableView === "sheet" ? (
         <OtSheetTable

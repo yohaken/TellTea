@@ -6525,6 +6525,102 @@ body.has-staff-task-nudge .module-page {
   color: var(--tea-leaf);
 }
 
+/* OT / bonus — days worked (superslim: narrow + short) */
+.ot-work-days-strip {
+  display: inline-block;
+  width: max-content;
+  max-width: 7.5rem;
+  vertical-align: top;
+  margin: 0.1rem 0 0.25rem;
+  padding: 0.1rem 0.28rem 0.08rem;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(47, 107, 79, 0.1);
+  border-radius: 0.28rem;
+}
+
+.ot-work-days-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.28rem;
+  margin: 0 0 0.04rem;
+  line-height: 1.1;
+}
+
+.ot-work-days-title {
+  font-size: 0.52rem;
+  font-weight: 700;
+  color: var(--tea-leaf);
+}
+
+.ot-work-days-note {
+  font-size: 0.48rem;
+}
+
+.ot-work-days-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 0.55rem;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+
+.ot-work-days-table th,
+.ot-work-days-table td {
+  padding: 0;
+  border: 0;
+  text-align: left;
+  white-space: nowrap;
+  vertical-align: baseline;
+}
+
+.ot-work-days-table tbody th {
+  max-width: 5.2rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+  color: rgba(28, 42, 31, 0.88);
+  padding-right: 0.28rem;
+}
+
+.ot-work-days-num {
+  width: 1.35rem;
+  text-align: right !important;
+  font-weight: 700;
+}
+
+.ot-work-days-table tr.is-me th,
+.ot-work-days-table tr.is-me td {
+  background: rgba(47, 107, 79, 0.1);
+}
+
+.ot-work-days-table tr.is-low td.ot-work-days-num,
+.ot-work-days-table tr.is-low th {
+  color: #a85720;
+}
+
+.ot-work-days-me {
+  color: var(--tea-leaf);
+  margin-left: 0.05rem;
+}
+
+.ot-work-days-personal {
+  margin: 0 0 0.3rem;
+  font-size: 0.62rem;
+}
+
+.ot-work-days-personal strong {
+  font-variant-numeric: tabular-nums;
+  color: var(--tea-leaf);
+}
+
+.ot-work-days-strip.is-compact {
+  max-width: 6.8rem;
+  margin: 0.05rem 0 0.15rem;
+  padding: 0.06rem 0.22rem 0.04rem;
+}
+
+
 .ot-formula-banner {
   margin: 0 0 0.35rem;
   font-size: 0.65rem;
@@ -30814,6 +30910,41 @@ a.ghost-btn {
 .bill-notice-slim .col-photo {
   width: 1.9rem;
   text-align: center;
+}
+
+.bill-notice-slim .col-slip {
+  width: 4.6rem;
+  text-align: center;
+  font-size: 0.58rem;
+}
+
+.bill-notice-slip-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+}
+
+.bill-notice-slip-btn {
+  min-height: 1.35rem;
+  padding: 0.1rem 0.3rem;
+  font-size: 0.55rem;
+  line-height: 1.1;
+}
+
+.bill-notice-goto-owner {
+  font-size: 0.55rem;
+  text-decoration: none;
+}
+
+.bill-notice-panel.is-owner-books {
+  margin: 0.35rem 0 0.55rem;
+}
+
+.bill-notice-slip-modal .bill-notice-slip-lead {
+  margin: 0 0 0.55rem;
+  font-size: 0.78rem;
 }
 
 .bill-notice-slim .col-out {

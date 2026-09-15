@@ -5,10 +5,18 @@ import { useRouter } from "next/navigation";
 import { CircleDollarSign } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { BonusDeductionEvidencePanel } from "@/components/BonusDeductionEvidencePanel";
+import {
+  OtWorkDaysPersonalLine,
+  OtWorkDaysStrip,
+} from "@/components/OtWorkDaysStrip";
 import { PayrollHistoryPanel } from "@/components/PayrollHistoryPanel";
 import { PayrollPayPanel } from "@/components/PayrollPayPanel";
 import { PayrollSettingsPanel } from "@/components/PayrollSettingsPanel";
 import { useAuth } from "@/lib/auth";
+import {
+  buildOtWorkDayRows,
+  findOtWorkDayRow,
+} from "@/lib/ot-work-days";
 import {
   buildBonusDeductionLines,
   computeShopDeductPct,
@@ -525,6 +533,21 @@ function BonusView() {
   }, [employees, previewEmployeeId]);
 
   const viewEmployee = isStaffPreview ? previewEmployee : myEmployee;
+
+  const workDayRows = useMemo(
+    () =>
+      buildOtWorkDayRows(
+        effectiveOtEntries,
+        month,
+        effectiveEmployees.map((e) => ({ id: e.id, name: e.name })),
+      ),
+    [effectiveOtEntries, month, effectiveEmployees],
+  );
+
+  const myWorkDayRow = useMemo(() => {
+    const id = viewEmployee?.id || myEmployee?.id || "";
+    return findOtWorkDayRow(workDayRows, id);
+  }, [workDayRows, viewEmployee?.id, myEmployee?.id]);
 
   // พนักงาน: เดือนปิด → แถวจาก bonusPersonalCloses · เดือนเปิด → คำนวณแบบเดียวกับตารางเจ้าของ
   const personalRow = useMemo((): WorkerMonthBonus | null => {
@@ -1053,6 +1076,14 @@ function BonusView() {
             </div>
           ) : null}
 
+          {!loading && !staffBonusLoading && showShopUi ? (
+            <OtWorkDaysStrip
+              month={month}
+              rows={workDayRows}
+              highlightWorkerId={myEmployee?.id}
+            />
+          ) : null}
+
           {monthClosed && showShopUi ? (
             <p className="muted bonus-live-note">
               เดือนนี้ปิดแล้ว — ชง/ผลิตล็อกห้ามลงย้อนหลัง · ยอดด้านบนเป็น snapshot · สร้างโบนัสที่แท็บรอโอน
@@ -1074,6 +1105,7 @@ function BonusView() {
                 </div>
                 <p className="bonus-my-total">฿{fmt(myRow.remaining)}</p>
               </header>
+              <OtWorkDaysPersonalLine row={myWorkDayRow} />
               <dl className="bonus-my-grid">
                 <div>
                   <dt>ขายเบเกอรี่</dt>

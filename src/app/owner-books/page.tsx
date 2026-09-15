@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Suspense,
   useCallback,
   useDeferredValue,
   useEffect,
@@ -9,10 +10,11 @@ import {
   useState,
   type FormEvent,
 } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Trash2, X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { AiSaveProgressModal, type AiSaveStage } from "@/components/AiSaveProgressModal";
+import { BillNoticeLedgerPanel } from "@/components/BillNoticeLedgerPanel";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { EntryTimestampsMeta } from "@/components/EntryTimestampsMeta";
 import { EntryVatFieldset } from "@/components/EntryVatFieldset";
@@ -97,7 +99,9 @@ const BULK_TYPE_OPTIONS = BASE_TYPE_OPTIONS.filter((o) => o.value !== "auto");
 export default function OwnerBooksPage() {
   return (
     <AuthGate>
-      <OwnerBooksView />
+      <Suspense fallback={<p className="empty">กำลังโหลด…</p>}>
+        <OwnerBooksView />
+      </Suspense>
     </AuthGate>
   );
 }
@@ -109,6 +113,8 @@ function toDateInput(ms: number) {
 function OwnerBooksView() {
   const { actorId, staff } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [billNoticeForceOpen, setBillNoticeForceOpen] = useState(false);
   const [entries, setEntries] = useState<OwnerBookEntry[]>([]);
   const [totalOut, setTotalOut] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -140,6 +146,12 @@ function OwnerBooksView() {
       router.replace("/ledger/");
     }
   }, [staff, router]);
+
+  useEffect(() => {
+    if (searchParams.get("billNotice") === "1") {
+      setBillNoticeForceOpen(true);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!can(staff, "ownerBooks")) return;
@@ -342,6 +354,17 @@ function OwnerBooksView() {
           {exporting ? "…" : "Excel"}
         </button>
       </div>
+
+      {isOwner && actorId ? (
+        <BillNoticeLedgerPanel
+          variant="owner"
+          actorId={actorId}
+          isOwner={isOwner}
+          staffName={staff?.displayName || staff?.email || ""}
+          forceOpen={billNoticeForceOpen}
+          onForceOpenConsumed={() => setBillNoticeForceOpen(false)}
+        />
+      ) : null}
 
       <div className="table-search owner-books-search">
         <input

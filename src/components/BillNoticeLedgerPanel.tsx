@@ -24,12 +24,15 @@ import {
   billNoticeBucketLabel,
   BILL_NOTICE_LIVE_MAX,
   BILL_NOTICE_PAGE_SIZE,
+  BILL_NOTICE_PAYMENT_SLIP_MAX,
   BILL_NOTICE_PRESETS,
   BILL_NOTICE_RECEIPT_MAX,
   deleteBillNotice,
+  getBillNoticePaymentSlipUrls,
   getBillNoticeReceiptUrls,
   isBillNoticeReadyForOwnerBooks,
   rejectBillNotice,
+  setBillNoticePaymentSlips,
   shortLabelBillNoticeStatus,
   subscribeBillNoticesPage,
   summarizeBillNotices,
@@ -85,11 +88,17 @@ type Props = {
   onForceOpenConsumed?: () => void;
   /** พรีวิวมุมพนักงาน — ดูได้อย่างเดียว */
   readOnly?: boolean;
+  /**
+   * ledger = พนักงานแจ้งบิล (ไม่รับที่นี่)
+   * owner = บช.เจ้าของ แนบสลิปแล้วกดรับเข้าตารางหลัก
+   */
+  variant?: "ledger" | "owner";
 };
 
 /**
- * ตารางแจ้งบิลบน /ledger/ — พนักงานเสนอบิลค่าไฟ/น้ำ ฯลฯ
- * เจ้าของรับแล้วรวมเข้า บช.เจ้าของ เมื่อวันที่·รายการ·รูป·ยอดครบ
+ * ตารางแจ้งบิล
+ * - /ledger/: พนักงานเสนอบิล · เจ้าของไปรับที่ บช.เจ้าของ
+ * - /owner-books/: แนบสลิปชำระ → กดรับครั้งเดียว → เข้าตารางหลัก
  */
 export function BillNoticeLedgerPanel({
   actorId,
@@ -98,8 +107,10 @@ export function BillNoticeLedgerPanel({
   forceOpen = false,
   onForceOpenConsumed,
   readOnly = false,
+  variant = "ledger",
 }: Props) {
-  const [open, setOpen] = useState(false);
+  const isOwnerBooks = variant === "owner";
+  const [open, setOpen] = useState(isOwnerBooks);
   const [entries, setEntries] = useState<BillNotice[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const [liveLimit, setLiveLimit] = useState(BILL_NOTICE_PAGE_SIZE);
@@ -107,6 +118,7 @@ export function BillNoticeLedgerPanel({
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<BillNotice | null>(null);
+  const [slipEditing, setSlipEditing] = useState<BillNotice | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<{
     urls: string[];
@@ -114,7 +126,7 @@ export function BillNoticeLedgerPanel({
     entryDateMs?: number;
   } | null>(null);
 
-  useBodyScrollLock(adding || !!editing || !!imagePreview);
+  useBodyScrollLock(adding || !!editing || !!slipEditing || !!imagePreview);
 
   useEffect(() => {
     if (forceOpen) {
@@ -124,7 +136,7 @@ export function BillNoticeLedgerPanel({
   }, [forceOpen, onForceOpenConsumed]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open && !isOwnerBooks) return;
     setLoading(true);
     return subscribeBillNoticesPage(
       liveLimit,
@@ -138,22 +150,31 @@ export function BillNoticeLedgerPanel({
         setLoading(false);
       },
     );
-  }, [open, liveLimit]);
+  }, [open, liveLimit, isOwnerBooks]);
 
   const summary = useMemo(() => summarizeBillNotices(entries), [entries]);
   const pendingCount = summary.pendingCount;
 
+  // Owner books: auto-open when there are pending bills waiting for slip/accept
+  useEffect(() => {
+    if (!isOwnerBooks || loading) return;
+    if (pendingCount > 0) setOpen(true);
+  }, [isOwnerBooks, loading, pendingCount]);
+
   async function onAccept(row: BillNotice) {
     if (readOnly) return;
-    if (!isOwner) return;
+    if (!isOwner || !isOwnerBooks) return;
     const ready = isBillNoticeReadyForOwnerBooks(row);
     if (!ready.ok) {
       setError(ready.message);
+      if (!getBillNoticePaymentSlipUrls(row).length) {
+        setSlipEditing(row);
+      }
       return;
     }
     if (
       !window.confirm(
-        `รับบิล «${row.description}» ฿${formatPlainNumber(row.amountOut)} เข้า บช.เจ้าของ?`,
+        `รับบิล «${row.description}» ฿${formatPlainNumber(row.amountOut)} เข้าตารางหลัก บช.เจ้าของ?\n(แนบสลิปแล้ว — บันทึกเป็นเงินออก)`,
       )
     ) {
       return;
@@ -189,7 +210,7 @@ export function BillNoticeLedgerPanel({
     const canDelete = isOwner || row.createdBy === actorId;
     if (!canDelete) return;
     if (row.status !== "pending" && !isOwner) {
-      setError("ลบได้เฉพาะรายการที่รอเจ้าของ");
+      setError("ลบได้เฉพาะรายการที่รอชำระ");
       return;
     }
     if (!window.confirm(`ลบแจ้งบิล «${row.description}»?`)) return;
@@ -205,7 +226,10 @@ export function BillNoticeLedgerPanel({
   }
 
   return (
-    <aside className="bill-notice-panel" aria-label="ตารางแจ้งบิล">
+    <aside
+      className={`bill-notice-panel${isOwnerBooks ? " is-owner-books" : ""}`}
+      aria-label={isOwnerBooks ? "ตารางแจ้งบิลรอชำระ" : "ตารางแจ้งบิล"}
+    >
       <button
         type="button"
         className="bill-notice-panel-toggle"
@@ -213,11 +237,17 @@ export function BillNoticeLedgerPanel({
         onClick={() => setOpen((v) => !v)}
       >
         <span className="bill-notice-panel-toggle-left">
-          <span className="bill-notice-panel-title">แจ้งบิล</span>
+          <span className="bill-notice-panel-title">
+            {isOwnerBooks ? "แจ้งบิลรอชำระ" : "แจ้งบิล"}
+          </span>
           <span className="bill-notice-panel-meta">
             {pendingCount > 0
-              ? `รอเจ้าของ ${pendingCount} · ฿${formatPlainNumber(summary.pendingSum)}`
-              : "ค่าไฟ · ค่าน้ำ · อื่นๆ → บช.เจ้าของ"}
+              ? isOwnerBooks
+                ? `รอแนบสลิป/รับ ${pendingCount} · ฿${formatPlainNumber(summary.pendingSum)}`
+                : `รอชำระ ${pendingCount} · ฿${formatPlainNumber(summary.pendingSum)}`
+              : isOwnerBooks
+                ? "แนบสลิปแล้วกดรับ → ตารางหลัก"
+                : "ค่าไฟ · ค่าน้ำ · อื่นๆ → บช.เจ้าของ"}
           </span>
         </span>
         {open ? <ChevronUp size={18} aria-hidden /> : <ChevronDown size={18} aria-hidden />}
@@ -226,16 +256,18 @@ export function BillNoticeLedgerPanel({
       {open ? (
         <div className="bill-notice-panel-body">
           <p className="muted bill-notice-hint">
-            พนักงานถ่ายบิลเสนอ · เจ้าของรับเข้า บช.เจ้าของ
+            {isOwnerBooks
+              ? "ยังไม่ใช่เงินออกในตารางหลัก — แนบสลิปชำระในแถวนี้ แล้วกดรับครั้งเดียว"
+              : "พนักงานถ่ายบิลเสนอ · เจ้าของรับที่ บช.เจ้าของ (แนบสลิปแล้วกดรับ)"}
           </p>
 
           {entries.length > 0 ? (
             <div className="bill-notice-summary" aria-label="วิเคราะห์สรุปแจ้งบิล">
               <p className="bill-notice-summary-line">
                 <span className="bill-notice-summary-text">
-                  รอ {summary.pendingCount} · ฿{formatPlainNumber(summary.pendingSum)}
+                  รอชำระ {summary.pendingCount} · ฿{formatPlainNumber(summary.pendingSum)}
                   {" · "}
-                  เข้าแล้ว {summary.acceptedCount} · ฿
+                  เข้าบัญชี {summary.acceptedCount} · ฿
                   {formatPlainNumber(summary.acceptedSum)}
                   {summary.byLabel.length
                     ? ` · ${summary.byLabel
@@ -251,7 +283,11 @@ export function BillNoticeLedgerPanel({
           {loading ? <p className="empty">กำลังโหลดแจ้งบิล…</p> : null}
 
           {!loading && entries.length === 0 ? (
-            <p className="empty">ยังไม่มีแจ้งบิล — กดเพิ่มบิลด้านล่าง</p>
+            <p className="empty">
+              {isOwnerBooks
+                ? "ไม่มีบิลรอชำระ — พนักงานแจ้งที่หน้า บัญชีร้าน"
+                : "ยังไม่มีแจ้งบิล — กดเพิ่มบิลด้านล่าง"}
+            </p>
           ) : !loading ? (
             <div className="sheet-wrap bill-notice-panel-table-wrap">
               <table className="sheet-table bill-notice-slim">
@@ -260,8 +296,9 @@ export function BillNoticeLedgerPanel({
                     <th className="col-date">วันที่</th>
                     <th className="col-desc">รายการ</th>
                     <th className="col-photo">บิล</th>
+                    {isOwnerBooks ? <th className="col-slip">สลิป</th> : null}
                     <th className="col-out">ออก</th>
-                    <th className="col-note">note</th>
+                    {!isOwnerBooks ? <th className="col-note">note</th> : null}
                     <th className="col-status">สถานะ</th>
                     <th className="col-act" aria-label="จัดการ" />
                   </tr>
@@ -269,7 +306,9 @@ export function BillNoticeLedgerPanel({
                 <tbody>
                   {entries.map((row) => {
                     const urls = getBillNoticeReceiptUrls(row);
+                    const slipUrls = getBillNoticePaymentSlipUrls(row);
                     const canEdit =
+                      !isOwnerBooks &&
                       row.status === "pending" &&
                       (isOwner || row.createdBy === actorId);
                     const canDelete =
@@ -283,6 +322,7 @@ export function BillNoticeLedgerPanel({
                     ]
                       .filter(Boolean)
                       .join(" · ");
+                    const acceptReady = isBillNoticeReadyForOwnerBooks(row).ok;
                     return (
                       <tr
                         key={row.id}
@@ -333,22 +373,68 @@ export function BillNoticeLedgerPanel({
                             <span className="muted">—</span>
                           )}
                         </td>
+                        {isOwnerBooks ? (
+                          <td className="col-slip">
+                            <div className="bill-notice-slip-cell">
+                              {slipUrls.length ? (
+                                <EntryPhotoIndicator
+                                  imageUrls={slipUrls}
+                                  label="สลิป"
+                                  onView={(viewUrls) =>
+                                    setImagePreview({
+                                      urls: viewUrls,
+                                      title: `สลิป · ${row.description || "บิล"}`,
+                                      entryDateMs: row.date,
+                                    })
+                                  }
+                                />
+                              ) : row.status !== "pending" || !isOwner || readOnly ? (
+                                <span className="muted">—</span>
+                              ) : null}
+                              {row.status === "pending" && isOwner && !readOnly ? (
+                                <button
+                                  type="button"
+                                  className="ghost-btn bill-notice-slip-btn"
+                                  disabled={busyId === row.id}
+                                  title={
+                                    slipUrls.length
+                                      ? "แก้สลิปชำระ"
+                                      : "แนบสลิปชำระ"
+                                  }
+                                  onClick={() => {
+                                    setError(null);
+                                    setSlipEditing(row);
+                                  }}
+                                >
+                                  {slipUrls.length ? "แก้" : "แนบสลิป"}
+                                </button>
+                              ) : null}
+                            </div>
+                          </td>
+                        ) : null}
                         <td className="col-out">
                           {formatPlainNumber(row.amountOut)}
                         </td>
-                        <td className="col-note">
-                          <span className="bill-notice-line" title={row.note || undefined}>
-                            {row.note || "—"}
-                          </span>
-                        </td>
+                        {!isOwnerBooks ? (
+                          <td className="col-note">
+                            <span
+                              className="bill-notice-line"
+                              title={row.note || undefined}
+                            >
+                              {row.note || "—"}
+                            </span>
+                          </td>
+                        ) : null}
                         <td className="col-status">
                           <span
                             className={statusClass(row.status)}
                             title={
                               row.status === "pending"
-                                ? "รอเจ้าของ"
+                                ? isOwnerBooks
+                                  ? "รอแนบสลิปแล้วกดรับ"
+                                  : "รอชำระที่ บช.เจ้าของ"
                                 : row.status === "accepted"
-                                  ? "เข้าร้านแล้ว"
+                                  ? "เข้าตารางหลักแล้ว"
                                   : undefined
                             }
                           >
@@ -357,13 +443,17 @@ export function BillNoticeLedgerPanel({
                         </td>
                         <td className="col-act">
                           <div className="bill-notice-act-row">
-                            {row.status === "pending" && isOwner ? (
+                            {row.status === "pending" && isOwner && isOwnerBooks ? (
                               <>
                                 <button
                                   type="button"
                                   className="ghost-btn bill-notice-act bill-notice-accept"
-                                  disabled={busyId === row.id}
-                                  title="รับเข้า บช.เจ้าของ"
+                                  disabled={busyId === row.id || !acceptReady}
+                                  title={
+                                    acceptReady
+                                      ? "รับเข้าตารางหลัก"
+                                      : "แนบสลิปก่อน"
+                                  }
                                   onClick={() => void onAccept(row)}
                                 >
                                   รับ
@@ -379,7 +469,18 @@ export function BillNoticeLedgerPanel({
                                 </button>
                               </>
                             ) : null}
-                            {canDelete ? (
+                            {row.status === "pending" &&
+                            isOwner &&
+                            !isOwnerBooks ? (
+                              <a
+                                className="ghost-btn bill-notice-act bill-notice-goto-owner"
+                                href="/owner-books/?billNotice=1"
+                                title="ไปแนบสลิปแล้วกดรับที่ บช.เจ้าของ"
+                              >
+                                ไปรับ
+                              </a>
+                            ) : null}
+                            {canDelete && !isOwnerBooks ? (
                               <button
                                 type="button"
                                 className="ghost-btn icon-btn bill-notice-act"
@@ -415,7 +516,7 @@ export function BillNoticeLedgerPanel({
             </button>
           ) : null}
 
-          {!readOnly ? (
+          {!readOnly && !isOwnerBooks ? (
             <button
               type="button"
               className="primary-btn action-out bill-notice-panel-add"
@@ -426,11 +527,12 @@ export function BillNoticeLedgerPanel({
             >
               เพิ่มแจ้งบิล
             </button>
-          ) : (
+          ) : null}
+          {readOnly && !isOwnerBooks ? (
             <p className="muted" style={{ margin: "0.35rem 0 0" }}>
               พรีวิว — ดูแจ้งบิลได้ · เพิ่มไม่ได้
             </p>
-          )}
+          ) : null}
         </div>
       ) : null}
 
@@ -455,6 +557,16 @@ export function BillNoticeLedgerPanel({
           onError={setError}
         />
       ) : null}
+      {slipEditing ? (
+        <BillNoticeSlipModal
+          entry={slipEditing}
+          busy={busyId === slipEditing.id}
+          onClose={() => setSlipEditing(null)}
+          onError={setError}
+          onSaved={() => setSlipEditing(null)}
+          setBusy={(busy) => setBusyId(busy ? slipEditing.id : null)}
+        />
+      ) : null}
       {imagePreview ? (
         <ImagePreviewModal
           urls={imagePreview.urls}
@@ -465,6 +577,104 @@ export function BillNoticeLedgerPanel({
         />
       ) : null}
     </aside>
+  );
+}
+
+function BillNoticeSlipModal({
+  entry,
+  busy,
+  onClose,
+  onError,
+  onSaved,
+  setBusy,
+}: {
+  entry: BillNotice;
+  busy: boolean;
+  onClose: () => void;
+  onError: (msg: string | null) => void;
+  onSaved: () => void;
+  setBusy: (busy: boolean) => void;
+}) {
+  const [slipUrls, setSlipUrls] = useState(() =>
+    getBillNoticePaymentSlipUrls(entry),
+  );
+
+  async function onSave() {
+    if (!slipUrls.length) {
+      onError("ต้องแนบสลิปชำระอย่างน้อย 1 รูป");
+      return;
+    }
+    if (slipUrls.some((u) => u.startsWith("data:"))) {
+      onError("สลิปเก่ายังฝังในเอกสาร — ลบแล้วแนบใหม่");
+      return;
+    }
+    setBusy(true);
+    onError(null);
+    try {
+      await setBillNoticePaymentSlips({
+        id: entry.id,
+        paymentSlipUrls: slipUrls,
+      });
+      onSaved();
+    } catch (err) {
+      onError(friendlyFirestoreWriteError(err, "บันทึกสลิปไม่สำเร็จ"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="modal-backdrop" role="presentation" onClick={onClose}>
+      <div
+        className="modal-card bill-notice-slip-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="bill-notice-slip-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="modal-head">
+          <h2 id="bill-notice-slip-title" className="panel-title">
+            แนบสลิปชำระ
+          </h2>
+          <button
+            type="button"
+            className="ghost-btn icon-btn"
+            aria-label="ปิด"
+            onClick={onClose}
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <p className="muted bill-notice-slip-lead">
+          {entry.description} · ฿{formatPlainNumber(entry.amountOut)}
+          {" · "}
+          ยังไม่เข้าตารางหลักจนกว่าจะกดรับ
+        </p>
+        <PhotoAttachMultiField
+          values={slipUrls}
+          onChange={setSlipUrls}
+          onError={(msg) => onError(msg)}
+          label="สลิปชำระ"
+          max={BILL_NOTICE_PAYMENT_SLIP_MAX}
+          storageFolder="owner-books"
+          storageSlotKey={`bill-notice-slip-${entry.id}`}
+          hint="ถ่าย/แนบสลิปโอนหรือชำระ"
+        />
+        <div className="modal-actions">
+          <button type="button" className="ghost-btn" onClick={onClose} disabled={busy}>
+            ยกเลิก
+          </button>
+          <button
+            type="button"
+            className="primary-btn"
+            disabled={busy || !slipUrls.length}
+            onClick={() => void onSave()}
+          >
+            {busy ? "กำลังบันทึก…" : "บันทึกสลิป"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

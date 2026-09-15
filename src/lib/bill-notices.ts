@@ -20,6 +20,8 @@ export const BILL_NOTICE_PAGE_SIZE = 40;
 export const BILL_NOTICE_LIVE_MAX = 200;
 /** Max bill photos per notice row */
 export const BILL_NOTICE_RECEIPT_MAX = 6;
+/** Max owner payment slips before accept into บช.เจ้าของ */
+export const BILL_NOTICE_PAYMENT_SLIP_MAX = 6;
 
 export type BillNoticeStatus = "pending" | "accepted" | "rejected" | "void";
 
@@ -32,8 +34,12 @@ export type BillNotice = {
   typeSource: string;
   typeAiReason: string;
   note: string;
+  /** Staff utility bill photos */
   receiptUrl: string;
   receiptUrls: string[];
+  /** Owner payment slips — required before accept into main owner-books table */
+  paymentSlipUrl: string;
+  paymentSlipUrls: string[];
   createdBy: string;
   staffName: string;
   createdAt: number;
@@ -128,6 +134,19 @@ function normalizeReceiptFields(input: {
   return { receiptUrl: urls[0] || "", receiptUrls: urls };
 }
 
+function normalizePaymentSlipFields(input: {
+  paymentSlipUrl?: string;
+  paymentSlipUrls?: string[];
+}): { paymentSlipUrl: string; paymentSlipUrls: string[] } {
+  const fromList = normalizeUrls(input.paymentSlipUrls, BILL_NOTICE_PAYMENT_SLIP_MAX);
+  const legacy = (input.paymentSlipUrl || "").trim();
+  const urls = (fromList.length ? fromList : legacy ? [legacy] : []).slice(
+    0,
+    BILL_NOTICE_PAYMENT_SLIP_MAX,
+  );
+  return { paymentSlipUrl: urls[0] || "", paymentSlipUrls: urls };
+}
+
 export function getBillNoticeReceiptUrls(
   entry?: Pick<BillNotice, "receiptUrl" | "receiptUrls"> | null,
 ): string[] {
@@ -135,11 +154,23 @@ export function getBillNoticeReceiptUrls(
   return normalizeReceiptFields(entry).receiptUrls;
 }
 
+export function getBillNoticePaymentSlipUrls(
+  entry?: Pick<BillNotice, "paymentSlipUrl" | "paymentSlipUrls"> | null,
+): string[] {
+  if (!entry) return [];
+  return normalizePaymentSlipFields(entry).paymentSlipUrls;
+}
+
 function mapData(id: string, data: Record<string, unknown>): BillNotice {
   const createdAt = Number(data.createdAt) || 0;
   const { receiptUrl, receiptUrls } = normalizeReceiptFields({
     receiptUrl: typeof data.receiptUrl === "string" ? data.receiptUrl : "",
     receiptUrls: data.receiptUrls as string[] | undefined,
+  });
+  const { paymentSlipUrl, paymentSlipUrls } = normalizePaymentSlipFields({
+    paymentSlipUrl:
+      typeof data.paymentSlipUrl === "string" ? data.paymentSlipUrl : "",
+    paymentSlipUrls: data.paymentSlipUrls as string[] | undefined,
   });
   const statusRaw = String(data.status || "pending") as BillNoticeStatus;
   return {
@@ -153,6 +184,8 @@ function mapData(id: string, data: Record<string, unknown>): BillNotice {
     note: typeof data.note === "string" ? data.note : "",
     receiptUrl,
     receiptUrls,
+    paymentSlipUrl,
+    paymentSlipUrls,
     createdBy: typeof data.createdBy === "string" ? data.createdBy : "",
     staffName: typeof data.staffName === "string" ? data.staffName : "",
     createdAt,
@@ -187,13 +220,13 @@ function sortNewestFirst(entries: BillNotice[]): BillNotice[] {
 export function labelBillNoticeStatus(status: BillNoticeStatus) {
   switch (status) {
     case "accepted":
-      return "เข้าร้านแล้ว";
+      return "เข้าบัญชีแล้ว";
     case "rejected":
       return "ไม่รับ";
     case "void":
       return "ยกเลิก";
     default:
-      return "รอเจ้าของ";
+      return "รอชำระ";
   }
 }
 
@@ -201,13 +234,13 @@ export function labelBillNoticeStatus(status: BillNoticeStatus) {
 export function shortLabelBillNoticeStatus(status: BillNoticeStatus) {
   switch (status) {
     case "accepted":
-      return "เข้าแล้ว";
+      return "เข้าบัญชี";
     case "rejected":
       return "ไม่รับ";
     case "void":
       return "ยกเลิก";
     default:
-      return "รอ";
+      return "รอชำระ";
   }
 }
 
@@ -231,10 +264,10 @@ export function billNoticeBucketLabel(description: string): string {
 }
 
 /**
- * Ready to merge into บช.เจ้าของ when date / description / amount / bill photo
- * are present in the correct shape.
+ * Staff bill is complete (date / description / amount / bill photo).
+ * Does not mean paid — owner still attaches slip then accepts on บช.เจ้าของ.
  */
-export function isBillNoticeReadyForOwnerBooks(
+export function isBillNoticeBillReady(
   entry: Pick<BillNotice, "date" | "description" | "amountOut" | "receiptUrl" | "receiptUrls">,
 ): { ok: true } | { ok: false; message: string } {
   if (!(Number(entry.date) > 0)) {
@@ -248,10 +281,37 @@ export function isBillNoticeReadyForOwnerBooks(
   }
   const urls = getBillNoticeReceiptUrls(entry);
   if (!urls.length) {
-    return { ok: false, message: "ต้องอัพรูปบิลก่อนรวมเข้า บช.เจ้าของ" };
+    return { ok: false, message: "ต้องอัพรูปบิลก่อน" };
   }
   if (urls.some((u) => u.startsWith("data:"))) {
     return { ok: false, message: "รูปเก่ายังฝังในเอกสาร — ลบแล้วแนบใหม่" };
+  }
+  return { ok: true };
+}
+
+/**
+ * Ready to merge into บช.เจ้าของ main table: bill ready + owner payment slip.
+ */
+export function isBillNoticeReadyForOwnerBooks(
+  entry: Pick<
+    BillNotice,
+    | "date"
+    | "description"
+    | "amountOut"
+    | "receiptUrl"
+    | "receiptUrls"
+    | "paymentSlipUrl"
+    | "paymentSlipUrls"
+  >,
+): { ok: true } | { ok: false; message: string } {
+  const bill = isBillNoticeBillReady(entry);
+  if (!bill.ok) return bill;
+  const slips = getBillNoticePaymentSlipUrls(entry);
+  if (!slips.length) {
+    return { ok: false, message: "ต้องแนบสลิปชำระก่อนรับเข้าตารางหลัก" };
+  }
+  if (slips.some((u) => u.startsWith("data:"))) {
+    return { ok: false, message: "สลิปเก่ายังฝังในเอกสาร — ลบแล้วแนบใหม่" };
   }
   return { ok: true };
 }
@@ -387,6 +447,8 @@ export async function addBillNotice(input: BillNoticeInput): Promise<string> {
   const now = Date.now();
   const ref = await addDoc(billNoticesCol(), {
     ...payload,
+    paymentSlipUrl: "",
+    paymentSlipUrls: [],
     status: "pending" satisfies BillNoticeStatus,
     ownerNote: "",
     verifiedBy: "",
@@ -431,8 +493,38 @@ export async function updateBillNotice(
 }
 
 /**
- * Owner accepts a pending bill → create บช.เจ้าของ row, mark notice accepted.
- * Requires ownerBooks permission (client + rules).
+ * Owner attaches payment slip(s) on a pending notice (บช.เจ้าของ table).
+ * Does not accept into main books yet.
+ */
+export async function setBillNoticePaymentSlips(input: {
+  id: string;
+  paymentSlipUrl?: string;
+  paymentSlipUrls?: string[];
+}): Promise<void> {
+  const entryRef = doc(getDb(), "billNotices", input.id);
+  const prevSnap = await getDoc(entryRef);
+  if (!prevSnap.exists()) throw new Error("ไม่พบรายการแจ้งบิล");
+  const prev = mapData(prevSnap.id, prevSnap.data() as Record<string, unknown>);
+  if (prev.status !== "pending") {
+    throw new Error("แนบสลิปได้เฉพาะรายการที่รอชำระ");
+  }
+  const { paymentSlipUrl, paymentSlipUrls } = normalizePaymentSlipFields({
+    paymentSlipUrl: input.paymentSlipUrl,
+    paymentSlipUrls: input.paymentSlipUrls,
+  });
+  if (paymentSlipUrls.some((u) => u.startsWith("data:"))) {
+    throw new Error("สลิปเก่ายังฝังในเอกสาร — ลบแล้วแนบใหม่");
+  }
+  await updateDoc(entryRef, {
+    paymentSlipUrl,
+    paymentSlipUrls,
+    updatedAt: Date.now(),
+  });
+}
+
+/**
+ * Owner accepts a pending bill → create บช.เจ้าของ main-table row.
+ * Requires staff bill photo + owner payment slip (attach on บช.เจ้าของ first).
  */
 export async function acceptBillNotice(input: {
   id: string;
@@ -440,6 +532,9 @@ export async function acceptBillNotice(input: {
   ownerNote?: string;
   /** Override type when accepting (owner) */
   type?: string;
+  /** Optional last-second slip override (same as setBillNoticePaymentSlips) */
+  paymentSlipUrl?: string;
+  paymentSlipUrls?: string[];
 }): Promise<string> {
   if (!input.verifiedBy.trim()) throw new Error("ไม่พบผู้รับบิล");
   const entryRef = doc(getDb(), "billNotices", input.id);
@@ -447,9 +542,25 @@ export async function acceptBillNotice(input: {
   if (!prevSnap.exists()) throw new Error("ไม่พบรายการแจ้งบิล");
   const prev = mapData(prevSnap.id, prevSnap.data() as Record<string, unknown>);
   if (prev.status !== "pending") {
-    throw new Error("รับได้เฉพาะรายการที่รอเจ้าของ");
+    throw new Error("รับได้เฉพาะรายการที่รอชำระ");
   }
-  const ready = isBillNoticeReadyForOwnerBooks(prev);
+
+  const slipOverride =
+    input.paymentSlipUrls != null || input.paymentSlipUrl != null
+      ? normalizePaymentSlipFields({
+          paymentSlipUrl: input.paymentSlipUrl,
+          paymentSlipUrls: input.paymentSlipUrls,
+        })
+      : null;
+  const withSlips: BillNotice = slipOverride
+    ? {
+        ...prev,
+        paymentSlipUrl: slipOverride.paymentSlipUrl,
+        paymentSlipUrls: slipOverride.paymentSlipUrls,
+      }
+    : prev;
+
+  const ready = isBillNoticeReadyForOwnerBooks(withSlips);
   if (!ready.ok) throw new Error(ready.message);
 
   const type =
@@ -457,6 +568,13 @@ export async function acceptBillNotice(input: {
     prev.type ||
     guessTypeFromDescription(prev.description) ||
     "sga";
+
+  const billUrls = getBillNoticeReceiptUrls(prev);
+  const slipUrls = getBillNoticePaymentSlipUrls(withSlips);
+  // Payment slip first (proof of pay) · keep bill photos for VAT/evidence
+  const mergedReceipts = [...slipUrls, ...billUrls].filter(
+    (u, i, arr) => u && arr.indexOf(u) === i,
+  );
 
   const ownerBookId = await addOwnerBookEntry({
     date: prev.date,
@@ -466,8 +584,8 @@ export async function acceptBillNotice(input: {
     typeSource: input.type ? "owner" : prev.typeSource || "staff",
     typeAiReason: prev.typeAiReason || "",
     createdBy: input.verifiedBy.trim(),
-    receiptUrl: prev.receiptUrl,
-    receiptUrls: prev.receiptUrls,
+    receiptUrl: mergedReceipts[0] || "",
+    receiptUrls: mergedReceipts,
     note: [prev.note, input.ownerNote].filter((s) => String(s || "").trim()).join(" · "),
     hasVat: prev.hasVat,
     vatInput: prev.hasVat ? prev.vatInput : 0,
@@ -485,6 +603,8 @@ export async function acceptBillNotice(input: {
     verifiedAt: Date.now(),
     updatedAt: Date.now(),
     type,
+    paymentSlipUrl: withSlips.paymentSlipUrl,
+    paymentSlipUrls: withSlips.paymentSlipUrls,
   });
 
   return ownerBookId;
@@ -506,7 +626,7 @@ export async function rejectBillNotice(input: {
   if (!prevSnap.exists()) throw new Error("ไม่พบรายการแจ้งบิล");
   const prev = mapData(prevSnap.id, prevSnap.data() as Record<string, unknown>);
   if (prev.status !== "pending") {
-    throw new Error("ตรวจได้เฉพาะรายการที่รอเจ้าของ");
+    throw new Error("ตรวจได้เฉพาะรายการที่รอชำระ");
   }
   await updateDoc(entryRef, {
     status: nextStatus,
