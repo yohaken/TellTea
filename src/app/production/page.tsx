@@ -5,18 +5,18 @@ import {
   useMemo,
   useState,
   type FormEvent,
-  type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
 import { ChefHat, Lock, ScrollText, Trash2, X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
-import { ProdCatalogSetup } from "@/components/ProdCatalogSetup";
+import { ProdAddProductModal, ProdCatalogSetup } from "@/components/ProdCatalogSetup";
 import { ProdPolicyPopup } from "@/components/ProdPolicyPopup";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { EntryTimestampsMeta } from "@/components/EntryTimestampsMeta";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { PhotoForensicsPanel } from "@/components/PhotoForensicsPanel";
+import { ProdProductSummaryStrip, ProdWorkerSummaryStrip } from "@/components/ProdWorkSummaryStrip";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useStaffWorkBundle } from "@/hooks/useStaffWorkBundle";
 import { useAuth } from "@/lib/auth";
@@ -62,6 +62,11 @@ import {
   type ProdWorker,
 } from "@/lib/production";
 import {
+  buildProdProductCompareSummary,
+  buildProdWorkerCompareSummary,
+  shiftMonthInput,
+} from "@/lib/prod-work-summary";
+import {
   resolveRateForDate,
   subscribeRateSchedule,
   type RateScheduleEntry,
@@ -95,8 +100,10 @@ function ProductionView() {
   /** พรีวิว = มุมพนักงาน: ดู/เลือกเดือนได้ · กรอกไม่ได้ */
   const canWrite = !!actorId && !isPermPreview;
   const [ownerView, setOwnerView] = useState<ProdOwnerView>("log");
+  const [addProductOpen, setAddProductOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [entries, setEntries] = useState<ProdEntry[]>([]);
+  const [prevEntries, setPrevEntries] = useState<ProdEntry[]>([]);
   const [products, setProducts] = useState<ProdProduct[]>([]);
   const [workers, setWorkers] = useState<ProdWorker[]>([]);
   const [logMonth, setLogMonth] = useState(monthInputValue());
@@ -110,6 +117,7 @@ function ProductionView() {
   const [policyOpen, setPolicyOpen] = useState(false);
   const [policyAutoShown, setPolicyAutoShown] = useState(false);
   const [policyTodayEntries, setPolicyTodayEntries] = useState<ProdEntry[] | null>(null);
+  const [photoReport, setPhotoReport] = useState<PhotoForensicsReport | null>(null);
   const { year: logYear, month: logMonthIdx } = parseMonthInput(logMonth);
 
   const staffUseBundle = !shopProdView && !isPermPreview;
@@ -135,6 +143,60 @@ function ProductionView() {
     staffUseBundle && productionBundle ? productionBundle.products : products;
   const effectiveWorkers =
     staffUseBundle && productionBundle ? productionBundle.workers : workers;
+
+  const prevMonth = useMemo(() => shiftMonthInput(logMonth, -1), [logMonth]);
+
+  const forensicsRows = useMemo(
+    () =>
+      effectiveEntries.map((row) => ({
+        entryId: row.id,
+        entryDate: row.date,
+        label: `${formatDateShortBe(row.date)} ${row.productName}`,
+        imageUrls: getProdImageUrls(row),
+      })),
+    [effectiveEntries],
+  );
+
+  useEffect(() => {
+    setPhotoReport(null);
+  }, [logMonth, effectiveEntries.length]);
+
+  // เดือนก่อน — เทียบจำนวนผลิต (ร้านทั้งร้าน / ของฉัน)
+  useEffect(() => {
+    if (authStatus !== "ready" || !can(staff, "production")) return;
+    const { year, month } = parseMonthInput(prevMonth);
+    if (!year) {
+      setPrevEntries([]);
+      return;
+    }
+    const window = bangkokMonthRangeMs(year, month);
+    return subscribeProdEntries(
+      (rows) => {
+        if (shopProdView) {
+          setPrevEntries(rows);
+          return;
+        }
+        const roster = effectiveWorkers.length ? effectiveWorkers : workers;
+        const linked = resolveLinkedEmployee(roster, staff);
+        if (!linked) {
+          setPrevEntries([]);
+          return;
+        }
+        setPrevEntries(
+          rows.filter((r) => workEntryCreditsEmployee(r, linked, roster, staff?.id)),
+        );
+      },
+      (err) => setProdError(mapFirestoreError(err, "โหลดผลิตเดือนก่อน")),
+      window,
+    );
+  }, [
+    authStatus,
+    staff,
+    shopProdView,
+    prevMonth,
+    effectiveWorkers,
+    workers,
+  ]);
 
   const staffProdLoading = staffUseBundle && staffBundleStatus === "loading";
   const staffProdReady = staffUseBundle && staffBundleStatus === "ready";
@@ -299,49 +361,85 @@ function ProductionView() {
     setEditing(null);
   }
 
-  const ownerTabs = canSetPolicy ? (
-    <div className="stock-owner-tabs stock-owner-tabs--inline" role="tablist" aria-label="มุมมองผลิตเจ้าของ">
+  const catalogTools = canSetPolicy ? (
+    <div className="production-head-catalog-group" role="group" aria-label="สินค้าและเรท">
       <button
         type="button"
-        role="tab"
-        className={ownerView === "log" ? "stock-owner-tab is-active" : "stock-owner-tab"}
-        aria-selected={ownerView === "log"}
+        className={
+          ownerView === "catalog"
+            ? "production-head-chip is-active"
+            : "production-head-chip"
+        }
+        aria-pressed={ownerView === "catalog"}
+        title={
+          ownerView === "catalog"
+            ? "กลับไปรายการผลิต"
+            : "ดู/แก้รายการสินค้าและเรท"
+        }
         onClick={() => {
-          setOwnerView("log");
+          setOwnerView((v) => (v === "catalog" ? "log" : "catalog"));
           setFormOpen(false);
           setPolicyOpen(false);
         }}
       >
-        บันทึกผลิต
+        {ownerView === "catalog" ? "← รายการ" : "สินค้า/เรท"}
+        {ownerView !== "catalog" && products.length ? ` ${products.length}` : ""}
       </button>
       <button
         type="button"
-        role="tab"
-        className={ownerView === "catalog" ? "stock-owner-tab is-active" : "stock-owner-tab"}
-        aria-selected={ownerView === "catalog"}
+        className="production-head-chip production-head-chip--add"
+        title="เจ้าของเท่านั้น — เพิ่มชื่อขนม + เรทผลิต"
         onClick={() => {
-          setOwnerView("catalog");
+          setAddProductOpen(true);
           setFormOpen(false);
+          setPolicyOpen(false);
         }}
       >
-        สินค้า / เรท
-        {products.length ? ` (${products.length})` : ""}
+        +สินค้า
       </button>
     </div>
   ) : null;
 
   return (
     <div className="module-page production-page">
-      <div className="module-page-head">
-        <h1 className="panel-title module-page-title">
-          <ChefHat size={18} aria-hidden />
+      <div className="module-page-head production-page-head">
+        <h1 className="panel-title module-page-title production-page-title">
+          <ChefHat size={15} aria-hidden />
           ผลิต / โบนัส
         </h1>
-        <p className="muted stock-subtitle">
-          {showCatalog
-            ? "จัดการสินค้า + เรทเริ่มต้น (เจ้าของ)"
-            : "บันทึกยอดผลิตประจำวัน"}
-        </p>
+        <div className="production-head-tools">
+          {catalogTools}
+          {showLog ? (
+            <input
+              type="month"
+              className="ot-slim-input production-head-month"
+              value={logMonth}
+              onChange={(e) => setLogMonth(e.target.value)}
+              aria-label="เดือนอ้างอิง"
+            />
+          ) : null}
+          {canSetPolicy ? (
+            <button
+              type="button"
+              className="ghost-btn prod-policy-toolbar-btn production-head-policy"
+              onClick={() => setPolicyOpen(true)}
+            >
+              <ScrollText size={12} aria-hidden />
+              นโยบาย
+            </button>
+          ) : null}
+          {isOwner && showLog && !pageLoading ? (
+            <PhotoForensicsPanel
+              className="production-head-forensics"
+              rows={forensicsRows}
+              onReport={setPhotoReport}
+              onPickEntry={(id) => {
+                const row = effectiveEntries.find((r) => r.id === id);
+                if (row && canWrite) openEdit(row);
+              }}
+            />
+          ) : null}
+        </div>
       </div>
 
       {error ? <p className="error-text">{error}</p> : null}
@@ -355,54 +453,54 @@ function ProductionView() {
         </p>
       ) : null}
       {isPermPreview && showLog ? (
-        <p className="muted" style={{ margin: "0 0 0.55rem", fontSize: "0.78rem" }}>
+        <p className="muted" style={{ margin: "0 0 0.35rem", fontSize: "0.72rem" }}>
           พรีวิวมุมพนักงาน — เลือกเดือนดูรายการของคนนี้ได้ · กรอก/แก้ไม่ได้
         </p>
       ) : null}
       {pageLoading ? <p className="empty">กำลังโหลด...</p> : null}
 
       {!pageLoading && showCatalog ? (
-        <>
-          {ownerTabs ? (
-            <div className="ot-toolbar-slim module-toolbar-slim">
-              {ownerTabs}
-              <button
-                type="button"
-                className="ghost-btn prod-policy-toolbar-btn"
-                onClick={() => setPolicyOpen(true)}
-              >
-                <ScrollText size={14} aria-hidden />
-                นโยบาย
-              </button>
-            </div>
-          ) : null}
-          <ProdCatalogSetup
-            products={products}
-            wasteBonusPct={policy.wasteBonusPct}
-            shopSalesRate={
-              resolveRateForDate(rateSchedule, "bakerySales", Date.now())?.rate ??
-              undefined
-            }
-            onReload={() => void reloadCatalog().catch((err) => setError((err as Error).message))}
-            onError={setError}
-          />
-        </>
+        <ProdCatalogSetup
+          products={products}
+          wasteBonusPct={policy.wasteBonusPct}
+          onReload={() => void reloadCatalog().catch((err) => setError((err as Error).message))}
+          onError={setError}
+        />
+      ) : null}
+
+      {canSetPolicy ? (
+        <ProdAddProductModal
+          open={addProductOpen}
+          wasteBonusPct={policy.wasteBonusPct}
+          shopSalesRate={
+            resolveRateForDate(rateSchedule, "bakerySales", Date.now())?.rate ??
+            undefined
+          }
+          onClose={() => setAddProductOpen(false)}
+          onSaved={() => {
+            void reloadCatalog().catch((err) => setError((err as Error).message));
+          }}
+          onError={setError}
+        />
       ) : null}
 
       {!pageLoading && showLog && (shopProdView || staffProdReady) ? (
         <ProdTable
           entries={effectiveEntries}
+          prevEntries={prevEntries}
           workers={effectiveWorkers}
           isOwner={isOwner}
           mineOnly={!shopProdView}
           canOpenRow={canWrite}
           month={logMonth}
-          onMonthChange={setLogMonth}
+          prevMonth={prevMonth}
           onEdit={openEdit}
           onError={setError}
-          toolbarLeading={ownerTabs}
           policy={policy}
-          onOpenPolicy={canSetPolicy ? () => setPolicyOpen(true) : undefined}
+          photoReport={photoReport}
+          highlightWorkerId={
+            resolveLinkedEmployee(effectiveWorkers, staff)?.id || null
+          }
         />
       ) : null}
 
@@ -799,19 +897,21 @@ function ProdEntryForm({
 
 function ProdTable({
   entries,
+  prevEntries,
   workers,
   isOwner,
   mineOnly,
   canOpenRow,
   month,
-  onMonthChange,
+  prevMonth,
   onEdit,
   onError,
-  toolbarLeading,
   policy,
-  onOpenPolicy,
+  photoReport,
+  highlightWorkerId,
 }: {
   entries: ProdEntry[];
+  prevEntries: ProdEntry[];
   workers: ProdWorker[];
   isOwner: boolean;
   /** true = มุมพนักงาน (รายการของฉัน) — ซ่อนคอลัมน์พนักงาน */
@@ -819,39 +919,32 @@ function ProdTable({
   /** false = พรีวิว/อ่านอย่างเดียว — ไม่เปิดฟอร์มแก้ */
   canOpenRow: boolean;
   month: string;
-  onMonthChange: (month: string) => void;
+  prevMonth: string;
   onEdit: (row: ProdEntry) => void;
   onError: (msg: string | null) => void;
-  toolbarLeading?: ReactNode;
   policy: ProdPolicySettings;
-  onOpenPolicy?: () => void;
+  photoReport: PhotoForensicsReport | null;
+  highlightWorkerId?: string | null;
 }) {
   const [preview, setPreview] = useState<{
     urls: string[];
     title: string;
     entryDateMs?: number;
   } | null>(null);
-  const [photoReport, setPhotoReport] = useState<PhotoForensicsReport | null>(null);
 
   useBodyScrollLock(!!preview);
 
   // entries ถูก scope ตามเดือน (+ workerId มุมพนักงาน) จาก parent แล้ว
   const filtered = entries;
 
-  const forensicsRows = useMemo(
-    () =>
-      entries.map((row) => ({
-        entryId: row.id,
-        entryDate: row.date,
-        label: `${formatDateShortBe(row.date)} ${row.productName}`,
-        imageUrls: getProdImageUrls(row),
-      })),
-    [entries],
+  const productSummary = useMemo(
+    () => buildProdProductCompareSummary(entries, prevEntries),
+    [entries, prevEntries],
   );
-
-  useEffect(() => {
-    setPhotoReport(null);
-  }, [month, entries.length]);
+  const workerSummary = useMemo(
+    () => buildProdWorkerCompareSummary(entries, prevEntries),
+    [entries, prevEntries],
+  );
 
   async function onDelete(row: ProdEntry) {
     if (!isOwner) return;
@@ -871,41 +964,18 @@ function ProdTable({
 
   return (
     <>
-      <div className="ot-toolbar-slim module-toolbar-slim">
-        {toolbarLeading}
-        <input
-          type="month"
-          className="ot-slim-input"
-          value={month}
-          onChange={(e) => onMonthChange(e.target.value)}
-          aria-label="เดือนอ้างอิง"
+      <div className="prod-work-summary-duo">
+        <ProdProductSummaryStrip
+          month={month}
+          prevMonth={prevMonth}
+          summary={productSummary}
         />
-        {onOpenPolicy ? (
-          <button
-            type="button"
-            className="ghost-btn prod-policy-toolbar-btn"
-            onClick={onOpenPolicy}
-          >
-            <ScrollText size={14} aria-hidden />
-            นโยบาย
-          </button>
-        ) : null}
-        <span
-          className="ot-slim-hint muted module-slim-hint"
-          title="สถานะล็อกเมื่อปิดเดือนโบนัสที่ จ่าย/โบนัส — ไม่เปลี่ยนสถานะเป็นกลุ่มที่นี่"
-        >
-          {mineOnly ? "รายการของฉันในเดือนนี้" : "ล็อกเมื่อปิดเดือนโบนัส"}
-        </span>
-        {isOwner ? (
-          <PhotoForensicsPanel
-            rows={forensicsRows}
-            onReport={setPhotoReport}
-            onPickEntry={(id) => {
-              const row = filtered.find((r) => r.id === id);
-              if (row && canOpenRow) onEdit(row);
-            }}
-          />
-        ) : null}
+        <ProdWorkerSummaryStrip
+          month={month}
+          prevMonth={prevMonth}
+          summary={workerSummary}
+          highlightWorkerId={highlightWorkerId}
+        />
       </div>
 
       {!entries.length ? (
@@ -1054,7 +1124,7 @@ function ProdTable({
                           }
                           onClick={() => void onDelete(row)}
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={11} strokeWidth={2.25} />
                         </button>
                       ) : null}
                     </td>

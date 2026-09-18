@@ -6078,10 +6078,202 @@ body.has-staff-task-nudge .module-page {
  * Date/row sizing from ledger-staff-sheet prototype; bleed via shared .sheet-bleed.
  * Scoped under .production-page so OT / other modules stay untouched.
  */
+.production-page .production-page-head {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.28rem 0.4rem;
+  margin-bottom: 0.22rem;
+  min-height: 1.4rem;
+}
+
+.production-page .production-page-title {
+  margin: 0;
+  flex: 0 0 auto;
+  font-size: 0.88rem;
+  gap: 0.22rem;
+  white-space: nowrap;
+}
+
+.production-page .production-head-tools {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.28rem;
+  min-width: 0;
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.production-page .production-head-tools::-webkit-scrollbar {
+  display: none;
+}
+
+/* สินค้า/เรท + +สินค้า — กลุ่มเดียวกัน สูงเท่ากัน */
+.production-page .production-head-catalog-group {
+  display: inline-flex;
+  align-items: stretch;
+  flex: 0 0 auto;
+  gap: 0;
+  border: 1px solid rgba(28, 42, 31, 0.16);
+  border-radius: 0.35rem;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.production-page .production-head-chip {
+  appearance: none;
+  margin: 0;
+  border: 0;
+  border-right: 1px solid rgba(28, 42, 31, 0.12);
+  background: transparent;
+  color: rgba(28, 42, 31, 0.72);
+  font: inherit;
+  font-size: 0.55rem;
+  font-weight: 700;
+  line-height: 1.1;
+  min-height: 1.28rem;
+  padding: 0.1rem 0.42rem;
+  white-space: nowrap;
+  cursor: pointer;
+  border-radius: 0;
+}
+
+.production-page .production-head-chip:last-child {
+  border-right: 0;
+}
+
+.production-page .production-head-chip.is-active {
+  background: rgba(47, 107, 79, 0.14);
+  color: var(--tea-leaf);
+}
+
+.production-page .production-head-chip--add {
+  color: var(--tea-leaf);
+  font-weight: 800;
+}
+
+.production-page .production-head-chip:hover {
+  background: rgba(47, 107, 79, 0.08);
+}
+
+.production-page .production-head-month.ot-slim-input {
+  width: auto;
+  min-width: 6.6rem;
+  max-width: 7.6rem;
+  min-height: 1.28rem;
+  padding: 0.06rem 0.18rem;
+  font-size: 0.55rem;
+  font-weight: 650;
+  border-radius: 0.35rem;
+  flex: 0 0 auto;
+}
+
+.production-page .production-head-policy.prod-policy-toolbar-btn {
+  min-height: 1.28rem;
+  padding: 0.06rem 0.32rem;
+  font-size: 0.52rem;
+  gap: 0.12rem;
+  border-radius: 0.35rem;
+  flex: 0 0 auto;
+}
+
+/* ปุ่มตรวจ — แถวเดียวกับหัว · รายละเอียดผลสแกนยืดเต็มความกว้างด้านล่าง */
+.production-page .production-head-tools .photo-forensics-panel {
+  display: contents;
+}
+
+.production-page .production-head-tools .photo-forensics-bar {
+  display: contents;
+}
+
+.production-page .production-head-tools .photo-forensics-hint {
+  display: none;
+}
+
+.production-page .production-head-tools .bulk-status-chip {
+  min-height: 1.28rem;
+  padding: 0.06rem 0.28rem;
+  font-size: 0.52rem;
+  border-radius: 0.35rem;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.production-page .production-head-tools .photo-forensics-body {
+  /* ผลตรวจยืดแถวใหม่เฉพาะตอนเปิดรายละเอียด — ปุ่มยังอยู่แถวหัว */
+  flex: 1 1 100%;
+  margin-top: 0.12rem;
+  width: 100%;
+  max-width: 100%;
+}
+
+.production-page .production-head-tools:has(.photo-forensics-body) {
+  flex-wrap: wrap;
+}
+
 .production-page .production-sheet .sheet-table--dense th,
 .production-page .production-sheet .sheet-table--dense td {
-  padding: 0.12rem 0.26rem;
-  line-height: 1.12;
+  padding: 0.06rem 0.2rem;
+  line-height: 1.08;
+  vertical-align: middle;
+}
+
+.production-page .production-sheet .sheet-table--dense .col-act {
+  width: 1.35rem;
+  min-width: 1.35rem;
+  max-width: 1.5rem;
+  padding-left: 0.06rem;
+  padding-right: 0.06rem;
+}
+
+.production-page .production-sheet .sheet-table--dense .trash-btn {
+  width: 1.2rem;
+  height: 1.2rem;
+  min-width: 1.2rem;
+  min-height: 1.2rem;
+  border-radius: 0.28rem;
+  background: transparent;
+}
+
+.production-page .production-sheet .sheet-table--dense .trash-btn:hover {
+  background: rgba(180, 35, 24, 0.1);
+}
+
+.production-page .production-sheet .sheet-table--dense .photo-status {
+  width: 1.05rem;
+  height: 1.05rem;
+  min-width: 1.05rem;
+  min-height: 1.05rem;
+}
+
+.production-page .production-sheet .sheet-table--dense .prod-status-pill {
+  font-size: 0.48rem;
+  padding: 0.02rem 0.2rem;
+  line-height: 1.1;
+}
+
+.production-page .production-sheet .sheet-table--dense .prod-qty-rate,
+.production-page .production-sheet .sheet-table--dense .prod-waste-rate,
+.production-page .production-sheet .sheet-table--dense .prod-waste-money,
+.production-page .production-sheet .sheet-table--dense .prod-bonus-eq {
+  font-size: 0.5rem;
+  line-height: 1.05;
+}
+
+.production-page .production-sheet .sheet-table--dense .bulk-check-col {
+  width: 1.15rem;
+  min-width: 1.15rem;
+  padding: 0.04rem !important;
+}
+
+.production-page .production-sheet .sheet-table--dense .bulk-check-col input[type="checkbox"] {
+  width: 0.72rem;
+  height: 0.72rem;
+  min-width: 0.72rem;
+  min-height: 0.72rem;
 }
 
 .production-page .production-sheet .sheet-table .col-date {
@@ -6618,6 +6810,166 @@ body.has-staff-task-nudge .module-page {
   max-width: 6.8rem;
   margin: 0.05rem 0 0.15rem;
   padding: 0.06rem 0.22rem 0.04rem;
+}
+
+/* Production — who × product qty (superslim, like เข้างาน) */
+.prod-work-summary-duo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.35rem 0.55rem;
+  margin: 0.1rem 0 0.3rem;
+}
+
+.prod-work-summary-strip {
+  display: inline-block;
+  width: max-content;
+  max-width: 100%;
+  vertical-align: top;
+  margin: 0;
+  padding: 0.1rem 0.28rem 0.08rem;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(47, 107, 79, 0.1);
+  border-radius: 0.28rem;
+}
+
+.prod-work-summary-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.28rem;
+  margin: 0 0 0.04rem;
+  line-height: 1.1;
+}
+
+.prod-work-summary-title {
+  font-size: 0.52rem;
+  font-weight: 700;
+  color: var(--tea-leaf);
+}
+
+.prod-work-summary-note {
+  font-size: 0.48rem;
+}
+
+.prod-work-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+  font-size: 0.55rem;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+
+.prod-work-summary-table th,
+.prod-work-summary-table td {
+  padding: 0 0.08rem 0 0;
+  border: 0;
+  text-align: left;
+  vertical-align: baseline;
+}
+
+.prod-work-summary-table thead th {
+  font-size: 0.45rem;
+  font-weight: 700;
+  color: rgba(28, 42, 31, 0.45);
+  padding-bottom: 0.06rem;
+  white-space: nowrap;
+}
+
+.prod-work-summary-table .prod-work-summary-num {
+  white-space: nowrap;
+}
+
+.prod-work-summary-table tbody th {
+  max-width: none;
+  overflow: visible;
+  text-overflow: unset;
+  white-space: normal;
+  word-break: break-word;
+  font-weight: 600;
+  color: rgba(28, 42, 31, 0.88);
+  padding-right: 0.35rem;
+  line-height: 1.2;
+}
+
+.prod-work-summary-prod {
+  max-width: none;
+  overflow: visible;
+  text-overflow: unset;
+  white-space: normal;
+  word-break: break-word;
+  padding-right: 0.35rem;
+  color: rgba(28, 42, 31, 0.72);
+  line-height: 1.2;
+}
+
+.prod-work-summary-num {
+  min-width: 1.6rem;
+  text-align: right !important;
+  font-weight: 700;
+  padding-left: 0.25rem !important;
+}
+
+.prod-work-summary-table.is-compare .prod-work-summary-num {
+  min-width: 2.4rem;
+}
+
+.prod-work-summary-diff.is-up {
+  color: var(--tea-leaf);
+}
+
+.prod-work-summary-diff.is-down {
+  color: #a85720;
+}
+
+.prod-work-summary-diff.is-flat {
+  color: rgba(28, 42, 31, 0.45);
+}
+
+.prod-work-summary-table tr.is-me th,
+.prod-work-summary-table tr.is-me td {
+  background: rgba(47, 107, 79, 0.1);
+}
+
+.prod-work-summary-table tr.is-total th,
+.prod-work-summary-table tr.is-total td {
+  font-weight: 700;
+  color: var(--tea-leaf);
+  padding-top: 0.08rem;
+  border-top: 1px solid rgba(47, 107, 79, 0.14);
+}
+
+.prod-work-summary-me {
+  color: var(--tea-leaf);
+  margin-left: 0.05rem;
+}
+
+.prod-work-summary-sort-th {
+  padding: 0 !important;
+}
+
+.prod-work-summary-sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.05rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.prod-work-summary-sort-btn.is-active {
+  color: var(--tea-leaf);
+}
+
+.prod-work-summary-num .prod-work-summary-sort-btn {
+  width: 100%;
+  justify-content: flex-end;
 }
 
 
@@ -7500,20 +7852,41 @@ body.has-staff-task-nudge .module-page {
 .prod-catalog-panel {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  padding-bottom: 1.25rem;
+  gap: 0.35rem;
+  margin: 0.25rem 0 0.55rem;
+  padding-bottom: 0.5rem;
+}
+
+.prod-catalog-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  margin-bottom: 0.05rem;
+}
+
+.prod-catalog-list-title {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--tea-leaf);
 }
 
 .prod-catalog-lead {
   margin: 0;
-  font-size: 0.84rem;
+  font-size: 0.68rem;
+  line-height: 1.3;
   text-align: left;
+}
+
+.prod-catalog-list {
+  margin-top: 0.1rem;
 }
 
 .prod-catalog-row {
   flex-wrap: wrap;
-  gap: 0.4rem 0.55rem;
-  align-items: center;
+  gap: 0.35rem 0.45rem;
+  align-items: flex-start;
 }
 
 .prod-catalog-row-main {
@@ -7522,33 +7895,117 @@ body.has-staff-task-nudge .module-page {
 }
 
 .prod-catalog-row-meta {
-  font-size: 0.78rem;
+  font-size: 0.68rem;
 }
 
 .prod-catalog-min {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
-  gap: 0.25rem;
+  gap: 0.2rem;
 }
 
 .prod-catalog-min-label {
   display: flex;
   flex-direction: column;
-  gap: 0.12rem;
-  font-size: 0.62rem;
+  gap: 0.1rem;
+  font-size: 0.58rem;
   color: rgba(28, 42, 31, 0.62);
 }
 
 .prod-catalog-min-label input {
   width: 3.4rem;
-  min-height: 2.05rem;
-  padding: 0.22rem 0.35rem;
-  font-size: 0.82rem;
+  min-height: 1.45rem;
+  padding: 0.15rem 0.28rem;
+  font-size: 0.72rem;
 }
 
 .prod-catalog-min-sep {
-  padding-bottom: 0.45rem;
+  padding-bottom: 0.35rem;
+  font-size: 0.7rem;
   opacity: 0.45;
+}
+
+/* Super-slim add-product popup (owner) — บันทึกอยู่ในนี้ */
+.modal-backdrop.edit-modal.is-prod-add-product {
+  align-items: flex-start;
+  padding-top: max(12vh, 2.5rem);
+}
+
+.modal-backdrop.edit-modal.is-prod-add-product .modal-card.prod-add-product-card {
+  width: min(18.5rem, calc(100vw - 1.4rem));
+  max-width: 18.5rem;
+  margin: 0 auto;
+  padding: 0.45rem 0.55rem 0.5rem;
+  border-radius: 0.55rem;
+}
+
+.prod-add-product-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  margin-bottom: 0.28rem;
+}
+
+.prod-add-product-title {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--tea-leaf);
+}
+
+.prod-add-product-head .icon-btn {
+  min-width: 1.45rem;
+  min-height: 1.45rem;
+  padding: 0.1rem;
+}
+
+.prod-add-product-form {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.prod-add-product-field {
+  display: grid;
+  grid-template-columns: 3.4rem 1fr;
+  align-items: center;
+  gap: 0.28rem;
+  margin: 0;
+  font-size: 0.62rem;
+  font-weight: 650;
+  color: rgba(28, 42, 31, 0.62);
+}
+
+.prod-add-product-field input {
+  width: 100%;
+  min-height: 1.55rem;
+  padding: 0.18rem 0.35rem;
+  border: 1px solid var(--tea-line);
+  border-radius: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.prod-add-product-meta {
+  margin: 0;
+  font-size: 0.55rem;
+  line-height: 1.2;
+}
+
+.prod-add-product-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.28rem;
+  margin-top: 0.12rem;
+}
+
+.prod-add-product-actions .ghost-btn,
+.prod-add-product-actions .primary-btn {
+  min-height: 1.55rem;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.68rem;
+  border-radius: 0.35rem;
 }
 
 .prod-policy-toolbar-btn {
@@ -10292,43 +10749,78 @@ body.has-staff-task-nudge .module-page {
 
 .modal-backdrop.ot-incomplete-backdrop {
   z-index: 55;
-  align-items: flex-start;
-  padding-top: calc(1.25rem + var(--safe-top));
+  place-items: center;
+  align-items: center;
+  justify-items: center;
+  padding: calc(0.55rem + var(--safe-top)) 0.45rem calc(0.55rem + var(--safe-bottom));
 }
 
-.ot-incomplete-card {
-  width: min(100%, 26rem);
-  max-height: min(88dvh, 40rem);
-  gap: 0.35rem;
+.ot-incomplete-card,
+.modal-card.ot-incomplete-card {
+  width: min(100%, 20.5rem);
+  max-width: 20.5rem;
+  max-height: none;
+  overflow: visible;
+  gap: 0.2rem;
+  padding: 0.4rem 0.45rem 0.42rem;
+  border-radius: 0.55rem;
 }
 
 .ot-incomplete-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.25rem;
+  margin: 0;
 }
 
 .ot-incomplete-kicker {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.2rem 0.35rem;
   margin: 0;
-  font-size: 0.78rem;
-  font-weight: 700;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.15;
   color: #9a3412;
 }
 
-.ot-incomplete-title {
-  margin: 0.15rem 0 0;
-  font-size: 1.05rem;
-  line-height: 1.35;
+.ot-incomplete-head-clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #c2410c;
 }
 
-.ot-incomplete-lead {
-  margin: 0.2rem 0 0.45rem;
-  font-size: 0.82rem;
-  line-height: 1.4;
+.ot-incomplete-head-clock.is-overdue {
+  color: #b91c1c;
+}
+
+.ot-incomplete-close.icon-btn {
+  min-width: 1.35rem;
+  min-height: 1.35rem;
+  padding: 0.08rem;
+  flex-shrink: 0;
+}
+
+.ot-incomplete-meta {
+  margin: 0;
+  padding: 0.18rem 0.32rem;
+  border-radius: 0.28rem;
+  background: #eff6ff;
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  font-size: 0.52rem;
+  line-height: 1.2;
+  color: #1e3a8a;
+}
+
+.ot-incomplete-meta--live {
+  background: #fef2f2;
+  border-color: rgba(185, 28, 28, 0.22);
+  color: #991b1b;
 }
 
 .ot-incomplete-list {
@@ -10337,153 +10829,144 @@ body.has-staff-task-nudge .module-page {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.14rem;
 }
 
 .ot-incomplete-item-btn {
   width: 100%;
   text-align: left;
-  border: 1px solid rgba(154, 52, 18, 0.22);
-  border-radius: 0.75rem;
+  border: 1px solid rgba(154, 52, 18, 0.18);
+  border-radius: 0.32rem;
   background: #fff8f1;
-  padding: 0.55rem 0.65rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
+  padding: 0.18rem 0.32rem;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.2rem 0.35rem;
   cursor: pointer;
+  min-height: 0;
 }
 
 .ot-incomplete-item-btn:hover {
-  border-color: rgba(154, 52, 18, 0.45);
+  border-color: rgba(154, 52, 18, 0.4);
   background: #fff1e4;
 }
 
-.ot-incomplete-item-when {
+.ot-incomplete-item-main {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 0.35rem;
-  font-weight: 700;
-  font-size: 0.9rem;
+  gap: 0.12rem 0.28rem;
+  min-width: 0;
+}
+
+.ot-incomplete-item-when {
+  font-weight: 750;
+  font-size: 0.62rem;
+  line-height: 1.1;
+  white-space: nowrap;
 }
 
 .ot-incomplete-item-status {
-  font-size: 0.72rem;
-  font-weight: 600;
+  font-size: 0.48rem;
+  font-weight: 650;
   color: #9a3412;
   opacity: 0.9;
 }
 
+.ot-incomplete-item-workers {
+  font-size: 0.5rem;
+  line-height: 1.1;
+  max-width: 5.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ot-incomplete-item-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.02rem;
+  flex-shrink: 0;
+}
+
 .ot-incomplete-item-missing {
-  font-size: 0.8rem;
-  line-height: 1.35;
-  color: #44403c;
+  font-size: 0.48rem;
+  line-height: 1.1;
+  color: #57534e;
+  max-width: 7.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
 }
 
 .ot-incomplete-more {
-  margin: 0.35rem 0 0;
-  font-size: 0.78rem;
+  margin: 0;
+  font-size: 0.5rem;
+  line-height: 1.15;
 }
 
 .ot-incomplete-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
-  gap: 0.4rem;
-  margin-top: 0.45rem;
-}
-
-.ot-incomplete-grace {
-  margin: 0.15rem 0 0;
-  padding: 0.45rem 0.55rem;
-  border-radius: 0.55rem;
-  background: #eff6ff;
-  border: 1px solid rgba(37, 99, 235, 0.22);
-  font-size: 0.78rem;
-  line-height: 1.4;
-  color: #1e3a8a;
-}
-
-.ot-incomplete-grace--live {
-  background: #fef2f2;
-  border-color: rgba(185, 28, 28, 0.25);
-  color: #991b1b;
-}
-
-.ot-incomplete-deduct {
-  margin: 0.35rem 0 0;
-  font-size: 0.84rem;
-  line-height: 1.4;
-  color: #9a3412;
-}
-
-.ot-incomplete-deduct-note {
-  font-weight: 500;
-  opacity: 0.92;
-}
-
-.ot-incomplete-hero {
-  margin: 0.5rem 0 0.15rem;
-  padding: 0.65rem 0.75rem;
-  border-radius: 0.75rem;
-  background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%);
-  border: 1px solid rgba(234, 88, 12, 0.28);
-  text-align: center;
-}
-
-.ot-incomplete-hero.is-warn {
-  background: linear-gradient(180deg, #fff1f2 0%, #ffe4e6 100%);
-  border-color: rgba(225, 29, 72, 0.35);
-  animation: ot-incomplete-hero-pulse 1.6s ease-in-out infinite;
-}
-
-.ot-incomplete-hero.is-critical {
-  background: linear-gradient(180deg, #fef2f2 0%, #fecaca 100%);
-  border-color: rgba(220, 38, 38, 0.55);
-  animation: ot-incomplete-hero-pulse 0.85s ease-in-out infinite;
-}
-
-@keyframes ot-incomplete-hero-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.38);
-    transform: scale(1);
-  }
-  50% {
-    box-shadow: 0 0 0 8px rgba(220, 38, 38, 0);
-    transform: scale(1.008);
-  }
-}
-
-.ot-incomplete-hero--overdue {
-  background: linear-gradient(180deg, #fef2f2 0%, #fee2e2 100%);
-  border-color: rgba(220, 38, 38, 0.28);
-}
-
-.ot-incomplete-hero-label {
-  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.3rem;
-  margin: 0;
-  font-size: 0.76rem;
-  font-weight: 700;
-  color: #9a3412;
+  gap: 0.25rem;
+  margin-top: 0.12rem;
 }
 
-.ot-incomplete-hero.is-critical .ot-incomplete-hero-label {
-  color: #b91c1c;
-  font-size: 0.82rem;
+.ot-incomplete-actions .primary-btn,
+.ot-incomplete-actions .ghost-btn {
+  min-height: 1.45rem;
+  padding: 0.18rem 0.5rem;
+  font-size: 0.62rem;
+  border-radius: 0.32rem;
 }
 
-.ot-incomplete-hero-time {
-  margin: 0.2rem 0 0;
-  font-size: 1.85rem;
+.ot-incomplete-actions .primary-btn {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* legacy hooks kept minimal (hero/grace removed from markup) */
+.ot-incomplete-grace,
+.ot-incomplete-deduct,
+.ot-incomplete-hero,
+.ot-incomplete-title,
+.ot-incomplete-lead {
+  display: none;
+}
+
+.ot-incomplete-section-label {
+  margin: 0.12rem 0 0.04rem;
+  font-size: 0.48rem;
   font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.04em;
-  color: #c2410c;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #ea580c;
   line-height: 1.1;
+}
+
+.ot-incomplete-section-label--overdue {
+  color: #b91c1c;
+}
+
+.ot-incomplete-item.is-overdue .ot-incomplete-item-btn {
+  background: #fef2f2;
+  border-color: rgba(185, 28, 28, 0.2);
+}
+
+.ot-incomplete-item-countdown {
+  font-size: 0.58rem;
+  font-weight: 750;
+  color: #c2410c;
+  line-height: 1;
+}
+
+.ot-incomplete-item-countdown.is-overdue {
+  color: #b91c1c;
 }
 
 .ot-countdown-clock {
@@ -10491,19 +10974,19 @@ body.has-staff-task-nudge .module-page {
   align-items: baseline;
   justify-content: center;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   line-height: 1;
 }
 
 .ot-countdown-clock.is-hero {
-  margin: 0.25rem 0 0;
-  font-size: 2rem;
+  margin: 0;
+  font-size: 0.9rem;
   font-weight: 800;
 }
 
 .ot-countdown-clock.is-row {
-  font-size: 0.82rem;
-  font-weight: 700;
+  font-size: 0.58rem;
+  font-weight: 750;
 }
 
 .ot-countdown-hms {
@@ -10517,11 +11000,11 @@ body.has-staff-task-nudge .module-page {
 
 .ot-countdown-clock.is-hero .ot-countdown-ms {
   font-size: 0.72em;
-  min-width: 3.2em;
+  min-width: 2.6em;
 }
 
 .ot-countdown-clock.is-row .ot-countdown-ms {
-  font-size: 0.95em;
+  font-size: 0.9em;
 }
 
 .ot-countdown-clock.is-warn .ot-countdown-hms,
@@ -10548,61 +11031,16 @@ body.has-staff-task-nudge .module-page {
   }
 }
 
-.ot-incomplete-hero-time--warn {
-  font-size: 1.45rem;
-  color: #b91c1c;
-}
-
-.ot-incomplete-hero-slot {
-  margin: 0.15rem 0 0;
-  font-size: 0.78rem;
-}
-
-.ot-incomplete-section-label {
-  margin: 0.55rem 0 0.25rem;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  color: #ea580c;
-}
-
-.ot-incomplete-section-label--overdue {
-  color: #b91c1c;
-}
-
-.ot-incomplete-item.is-overdue .ot-incomplete-item-btn {
-  background: #fef2f2;
-  border-color: rgba(185, 28, 28, 0.22);
-}
-
-.ot-incomplete-item-workers {
-  font-size: 0.76rem;
-  line-height: 1.3;
-}
-
-.ot-incomplete-item-deduct {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: #b91c1c;
-  background: rgba(254, 226, 226, 0.85);
-  padding: 0.05rem 0.35rem;
-  border-radius: 999px;
-}
-
-.ot-incomplete-item-countdown {
-  font-size: 0.76rem;
-  font-weight: 700;
-  color: #c2410c;
-}
-
-.ot-incomplete-item-countdown.is-overdue {
-  color: #b91c1c;
-}
-
-.ot-incomplete-actions .primary-btn {
-  flex: 1 1 auto;
-  min-width: 9rem;
+@keyframes ot-incomplete-hero-pulse {
+  0%,
+  100% {
+    box-shadow: none;
+    transform: none;
+  }
+  50% {
+    box-shadow: none;
+    transform: none;
+  }
 }
 
 .modal-backdrop.edit-modal {
@@ -28867,6 +29305,13 @@ a.ghost-btn {
   line-height: 1.15;
 }
 
+.ledger-ops-duo .bill-notice-pending-badge {
+  min-width: 1.2rem;
+  height: 1.05rem;
+  padding: 0 0.28rem;
+  font-size: 0.62rem;
+}
+
 .ledger-ops-duo .cash-in-panel-meta,
 .ledger-ops-duo .bill-notice-panel-meta {
   font-size: 0.58rem;
@@ -30810,9 +31255,35 @@ a.ghost-btn {
   min-width: 0;
 }
 
+.bill-notice-panel-title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
 .bill-notice-panel-title {
   font-size: 0.86rem;
   font-weight: 700;
+}
+
+.bill-notice-pending-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.35rem;
+  height: 1.15rem;
+  padding: 0 0.32rem;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  box-shadow: 0 0 0 1.5px rgba(220, 38, 38, 0.25);
+  flex-shrink: 0;
 }
 
 .bill-notice-panel-meta {

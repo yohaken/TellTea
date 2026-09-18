@@ -237,14 +237,28 @@ export function BillNoticeLedgerPanel({
         onClick={() => setOpen((v) => !v)}
       >
         <span className="bill-notice-panel-toggle-left">
-          <span className="bill-notice-panel-title">
-            {isOwnerBooks ? "แจ้งบิลรอชำระ" : "แจ้งบิล"}
+          <span className="bill-notice-panel-title-row">
+            <span className="bill-notice-panel-title">
+              {isOwnerBooks ? "แจ้งบิลรอชำระ" : "แจ้งบิล"}
+            </span>
+            {pendingCount > 0 ? (
+              <span
+                className="bill-notice-pending-badge"
+                aria-label={
+                  isOwnerBooks
+                    ? `รอแนบสลิปหรือรับ ${pendingCount} รายการ`
+                    : `รอชำระ ${pendingCount} รายการ`
+                }
+              >
+                +{pendingCount > 99 ? "99" : pendingCount}
+              </span>
+            ) : null}
           </span>
           <span className="bill-notice-panel-meta">
             {pendingCount > 0
               ? isOwnerBooks
-                ? `รอแนบสลิป/รับ ${pendingCount} · ฿${formatPlainNumber(summary.pendingSum)}`
-                : `รอชำระ ${pendingCount} · ฿${formatPlainNumber(summary.pendingSum)}`
+                ? `รอแนบสลิป/รับ · ฿${formatPlainNumber(summary.pendingSum)}`
+                : `รอชำระ · ฿${formatPlainNumber(summary.pendingSum)}`
               : isOwnerBooks
                 ? "แนบสลิปแล้วกดรับ → ตารางหลัก"
                 : "ค่าไฟ · ค่าน้ำ · อื่นๆ → บช.เจ้าของ"}

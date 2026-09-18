@@ -20,11 +20,12 @@ assert.match(deadlineLib, /shiftCountdownUrgency/);
 assert.match(deadlineLib, /isOtIncompleteEnforcementActive/);
 assert.match(deadlineLib, /sumIncompletePreviewDeductPct/);
 
-assert.match(popup, /ทีมยังใส่ข้อมูลกะไม่ครบ/);
-assert.match(popup, /ยังไม่หักโบนัสจริง/);
+assert.match(popup, /ทีมค้าง/);
+assert.match(popup, /ยังไม่หักจริง/);
 assert.match(popup, /ShiftCountdownClock/);
-assert.match(popup, /requestAnimationFrame/);
-assert.match(popup, /ot-countdown-ms/);
+assert.match(popup, /setInterval/);
+assert.doesNotMatch(popup, /ot-countdown-ms/);
+assert.doesNotMatch(popup, /requestAnimationFrame/);
 assert.match(popup, /sumIncompletePreviewDeductPct/);
 
 assert.match(otPage, /includeEmptySlots: true/);

@@ -77,10 +77,6 @@ function pad2(n: number) {
   return String(n).padStart(2, "0");
 }
 
-function pad3(n: number) {
-  return String(n).padStart(3, "0");
-}
-
 export type ShiftCountdownParts = {
   hours: number;
   minutes: number;
@@ -99,11 +95,11 @@ export function splitShiftCountdown(ms: number): ShiftCountdownParts {
   };
 }
 
-/** HH:MM:SS.mmm — ใช้ทั้ง hero และรายการ */
+/** HH:MM:SS */
 export function formatShiftCountdownPrecise(ms: number): string {
-  if (ms <= 0) return "00:00:00.000";
-  const { hours, minutes, seconds, millis } = splitShiftCountdown(ms);
-  return `${pad2(hours)}:${pad2(minutes)}:${pad2(seconds)}.${pad3(millis)}`;
+  if (ms <= 0) return "00:00:00";
+  const { hours, minutes, seconds } = splitShiftCountdown(ms);
+  return `${pad2(hours)}:${pad2(minutes)}:${pad2(seconds)}`;
 }
 
 /** @deprecated ใช้ formatShiftCountdownPrecise */

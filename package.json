@@ -100,6 +100,7 @@
     "test:bonus-month-close": "node scripts/test-bonus-month-close.mjs",
     "test:ot-rate-settings-dedupe": "node scripts/test-ot-rate-settings-dedupe.mjs",
     "test:ot-work-days": "node scripts/test-ot-work-days.mjs",
+    "test:prod-work-summary": "node scripts/test-prod-work-summary.mjs",
     "test:ot-load-perf": "node scripts/test-ot-load-perf.mjs",
     "test:ot-incomplete-popup": "node scripts/test-ot-incomplete-popup.mjs",
     "test:customer-spin-resilience": "node scripts/test-customer-spin-resilience.mjs",

@@ -18,7 +18,7 @@ import { thaiMonthYearLabel } from "@/lib/bonus";
 
 /**
  * ป๊อปอัปเตือนกะที่พ้นเวลาทำงานแล้วยังไม่ครบ — ทีมเห็นทั้งร้าน
- * นับถอยหลัง 24 ชม. · แสดงหักสะสม 0.3%/กะ (ยังไม่หักจริงจนเดือนหน้า)
+ * Super-slim: เนื้อหาทั้งก้อนอยู่ในจอ ไม่ต้องเลื่อน
  */
 export function OtIncompletePopup({
   items,
@@ -49,13 +49,8 @@ export function OtIncompletePopup({
 
   useEffect(() => {
     if (!open) return;
-    let raf = 0;
-    const tick = () => {
-      setNowMs(Date.now());
-      raf = window.requestAnimationFrame(tick);
-    };
-    raf = window.requestAnimationFrame(tick);
-    return () => window.cancelAnimationFrame(raf);
+    const id = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(id);
   }, [open]);
 
   const liveItems = useMemo(() => {
@@ -93,8 +88,9 @@ export function OtIncompletePopup({
 
   if (!open) return null;
 
-  const shownUrgent = urgent.slice(0, 6);
-  const shownOverdue = overdue.slice(0, 8);
+  /** แถวเดียวต่อกะ · จำกัดพอให้พอดีจอ */
+  const shownUrgent = urgent.slice(0, 5);
+  const shownOverdue = overdue.slice(0, 6);
   const hiddenCount = Math.max(0, liveItems.length - shownUrgent.length - shownOverdue.length);
 
   function dismiss() {
@@ -108,6 +104,11 @@ export function OtIncompletePopup({
     onOpenSlot(target);
   }
 
+  function openSlot(item: PastIncompleteOtShift) {
+    dismiss();
+    onOpenSlot(item);
+  }
+
   return (
     <div className="modal-backdrop alert-backdrop ot-incomplete-backdrop" role="presentation">
       <div
@@ -117,139 +118,110 @@ export function OtIncompletePopup({
         aria-labelledby="ot-incomplete-title"
       >
         <div className="ot-incomplete-head">
-          <p className="ot-incomplete-kicker">
-            <Users size={16} aria-hidden />
-            ทีมยังใส่ข้อมูลกะไม่ครบ
+          <p id="ot-incomplete-title" className="ot-incomplete-kicker">
+            <Users size={12} aria-hidden />
+            ทีมค้าง {liveItems.length} กะ
+            {hero ? (
+              <span className="ot-incomplete-head-clock">
+                <Clock size={10} aria-hidden />
+                <ShiftCountdownClock ms={hero.countdownMs} size="row" />
+              </span>
+            ) : overdue.length ? (
+              <span className="ot-incomplete-head-clock is-overdue">
+                <AlertTriangle size={10} aria-hidden />
+                เลย 24 ชม.
+              </span>
+            ) : null}
           </p>
           <button
             type="button"
-            className="ghost-btn icon-btn"
+            className="ghost-btn icon-btn ot-incomplete-close"
             aria-label="ปิดการแจ้งเตือน"
             onClick={dismiss}
           >
-            <X size={18} aria-hidden />
+            <X size={14} aria-hidden />
           </button>
         </div>
 
-        {!enforceActive ? (
-          <p className="ot-incomplete-grace">
-            เดือน {graceMonthLabel} — <strong>ยังไม่หักโบนัสจริง</strong> · เริ่มหักสะสม{" "}
-            {enforceLabel}
-          </p>
-        ) : (
-          <p className="ot-incomplete-grace ot-incomplete-grace--live">
-            กติกาหักโบนัสมีผลแล้ว — กะเลย 24 ชม. หักสะสม {fmtDeductPct(OT_INCOMPLETE_DEDUCT_PCT_PER_SHIFT)}/กะ
-          </p>
-        )}
-
-        {totalDeductPct > 0 ? (
-          <p className="ot-incomplete-deduct">
-            สะสมหักโบนัส <strong>−{fmtDeductPct(totalDeductPct)}</strong> ({overdue.length} กะเลย
-            24 ชม.)
-            {!enforceActive ? (
-              <span className="ot-incomplete-deduct-note"> · ยังไม่หักจริง — แก้ให้ครบก่อน {enforceLabel}</span>
-            ) : null}
-          </p>
-        ) : null}
-
-        {hero ? (
-          <div
-            className={`ot-incomplete-hero is-${shiftCountdownUrgency(hero.countdownMs)}`}
-            aria-live="polite"
-          >
-            <p className="ot-incomplete-hero-label">
-              <Clock size={14} aria-hidden />
-              {shiftCountdownUrgency(hero.countdownMs) === "critical"
-                ? "รีบ! เหลือเวลาน้อย"
-                : "เหลือเวลาใส่ครบ"}
-            </p>
-            <ShiftCountdownClock ms={hero.countdownMs} size="hero" />
-            <p className="ot-incomplete-hero-slot muted">
-              {hero.dateLabel} · {hero.shiftLabel}
-            </p>
-          </div>
-        ) : overdue.length ? (
-          <div className="ot-incomplete-hero ot-incomplete-hero--overdue">
-            <p className="ot-incomplete-hero-label">
-              <AlertTriangle size={14} aria-hidden />
-              ทุกกะค้างเลย 24 ชม. แล้ว
-            </p>
-            <p className="ot-incomplete-hero-time ot-incomplete-hero-time--warn">
-              {overdue.length} กะ
-            </p>
-          </div>
-        ) : null}
-
-        <h2 id="ot-incomplete-title" className="ot-incomplete-title">
-          ทีมมี {liveItems.length} กะค้าง — ช่วยกันใส่ให้ครบภายใน 24 ชม. หลังจบกะ
-        </h2>
-        <p className="ot-incomplete-lead muted">
-          พนักงานกะ · เช็คเปิด/ปิดกะ · ยอดชง · รูปภาพ — กะว่างที่ยังไม่แตะก็ถือว่ายังไม่ครบ ·
-          ทุกคนในทีมเห็นรายการเดียวกัน
+        <p
+          className={
+            enforceActive
+              ? "ot-incomplete-meta ot-incomplete-meta--live"
+              : "ot-incomplete-meta"
+          }
+        >
+          {!enforceActive
+            ? `${graceMonthLabel} · ยังไม่หักจริง · เริ่ม ${enforceLabel}`
+            : `หัก ${fmtDeductPct(OT_INCOMPLETE_DEDUCT_PCT_PER_SHIFT)}/กะ หลัง 24 ชม.`}
+          {totalDeductPct > 0
+            ? ` · สะสม −${fmtDeductPct(totalDeductPct)} (${overdue.length})`
+            : ""}
         </p>
 
         {shownUrgent.length ? (
-          <>
-            <p className="ot-incomplete-section-label">ใกล้หมดเวลา</p>
-            <ul className="ot-incomplete-list">
-              {shownUrgent.map((item) => (
-                <IncompleteShiftRow key={`${item.date}_${item.shift}`} item={item} onPick={openSlot} dismiss={dismiss} />
-              ))}
-            </ul>
-          </>
+          <ul className="ot-incomplete-list">
+            {shownUrgent.map((item) => (
+              <IncompleteShiftRow
+                key={`${item.date}_${item.shift}`}
+                item={item}
+                onPick={openSlot}
+                dismiss={dismiss}
+              />
+            ))}
+          </ul>
         ) : null}
 
         {shownOverdue.length ? (
           <>
             <p className="ot-incomplete-section-label ot-incomplete-section-label--overdue">
-              เลย 24 ชม. แล้ว
-              {!enforceActive ? " · ยังไม่หักจริง" : null}
+              เลย 24 ชม.
+              {!enforceActive ? " · ยังไม่หักจริง" : ""}
             </p>
             <ul className="ot-incomplete-list">
               {shownOverdue.map((item) => (
-                <IncompleteShiftRow key={`${item.date}_${item.shift}`} item={item} onPick={openSlot} dismiss={dismiss} overdue />
+                <IncompleteShiftRow
+                  key={`${item.date}_${item.shift}`}
+                  item={item}
+                  onPick={openSlot}
+                  dismiss={dismiss}
+                  overdue
+                />
               ))}
             </ul>
           </>
         ) : null}
 
         {hiddenCount > 0 ? (
-          <p className="muted ot-incomplete-more">และอีก {hiddenCount} กะ — ดูในตารางด้านล่าง</p>
+          <p className="muted ot-incomplete-more">+อีก {hiddenCount} กะในตาราง</p>
         ) : null}
 
         <div className="ot-incomplete-actions">
           {hero || overdue.length ? (
             <button type="button" className="primary-btn" onClick={openHero}>
-              ไปใส่กะที่เร่งที่สุด
+              ไปใส่กะเร่ง
             </button>
           ) : null}
           <button type="button" className="ghost-btn" onClick={dismiss}>
-            ปิดไปก่อน
+            ปิด
           </button>
         </div>
       </div>
     </div>
   );
-
-  function openSlot(item: PastIncompleteOtShift) {
-    dismiss();
-    onOpenSlot(item);
-  }
 }
 
 function ShiftCountdownClock({ ms, size }: { ms: number; size: "hero" | "row" }) {
-  const { hours, minutes, seconds, millis } = splitShiftCountdown(ms);
+  const { hours, minutes, seconds } = splitShiftCountdown(ms);
   const urgency = shiftCountdownUrgency(ms);
   return (
     <span
       className={`ot-countdown-clock is-${size} is-${urgency}`}
-      aria-label={`เหลือ ${hours} ชั่วโมง ${minutes} นาที ${seconds} วินาที ${millis} มิลลิวินาที`}
+      aria-label={`เหลือ ${hours} ชั่วโมง ${minutes} นาที ${seconds} วินาที`}
     >
       <span className="ot-countdown-hms">
         {String(hours).padStart(2, "0")}:{String(minutes).padStart(2, "0")}:
         {String(seconds).padStart(2, "0")}
       </span>
-      <span className="ot-countdown-ms">.{String(millis).padStart(3, "0")}</span>
     </span>
   );
 }
@@ -266,7 +238,12 @@ function IncompleteShiftRow({
   overdue?: boolean;
 }) {
   const workers = (item.entry?.workerNames || []).filter(Boolean);
-  const workerLabel = workers.length ? workers.join(", ") : "ยังไม่ระบุคนในกะ";
+  const workerShort = workers.length
+    ? workers.length === 1
+      ? workers[0]
+      : `${workers[0]}+${workers.length - 1}`
+    : "—";
+  const missingShort = item.missingLabels.join("·");
 
   return (
     <li className={`ot-incomplete-item${overdueRow ? " is-overdue" : ""}`}>
@@ -278,25 +255,24 @@ function IncompleteShiftRow({
           onPick(item);
         }}
       >
-        <span className="ot-incomplete-item-when">
-          {item.dateLabel} · {item.shiftLabel}
-          <span className="ot-incomplete-item-status">
-            {labelShiftSlotStatus(item.status)}
+        <span className="ot-incomplete-item-main">
+          <span className="ot-incomplete-item-when">
+            {item.dateLabel} {item.shiftLabel}
           </span>
-          {overdueRow && item.previewDeductPct > 0 ? (
-            <span className="ot-incomplete-item-deduct">−{fmtDeductPct(item.previewDeductPct)}</span>
-          ) : null}
+          <span className="ot-incomplete-item-status">{labelShiftSlotStatus(item.status)}</span>
+          <span className="ot-incomplete-item-workers muted">{workerShort}</span>
         </span>
-        <span className="ot-incomplete-item-workers muted">{workerLabel}</span>
-        <span className="ot-incomplete-item-missing">
-          ต้องทำ: {item.missingLabels.join(" · ")}
-        </span>
-        <span className={`ot-incomplete-item-countdown${overdueRow ? " is-overdue" : ""}`}>
-          {overdueRow ? (
-            `เลย 24 ชม. · สะสม −${fmtDeductPct(item.previewDeductPct)}`
-          ) : (
-            <ShiftCountdownClock ms={item.countdownMs} size="row" />
-          )}
+        <span className="ot-incomplete-item-side">
+          <span className="ot-incomplete-item-missing" title={item.missingLabels.join(" · ")}>
+            {missingShort}
+          </span>
+          <span className={`ot-incomplete-item-countdown${overdueRow ? " is-overdue" : ""}`}>
+            {overdueRow ? (
+              `−${fmtDeductPct(item.previewDeductPct)}`
+            ) : (
+              <ShiftCountdownClock ms={item.countdownMs} size="row" />
+            )}
+          </span>
         </span>
       </button>
     </li>

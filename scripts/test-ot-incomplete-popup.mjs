@@ -25,8 +25,10 @@ assert.match(otPage, /OtIncompletePopup/);
 assert.match(otPage, /listPastIncompleteOtShifts/);
 assert.match(otPage, /photosComplete: imageUrls\.length > 0/);
 assert.match(otPage, /แนบรูปอย่างน้อย 1 รูป/);
-assert.match(popup, /ต้องทำ:/);
-assert.match(popup, /ผ่านเวลาทำงานแล้ว/);
+assert.match(popup, /ทีมค้าง/);
+assert.match(popup, /ShiftCountdownClock/);
+assert.match(popup, /ไปใส่กะเร่ง/);
+assert.doesNotMatch(popup, /ot-countdown-ms/);
 assert.match(steps, /photosComplete/);
 
 // Mirror date-first past logic
