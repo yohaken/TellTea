@@ -177,7 +177,7 @@ function StockView() {
           >
             <p className="stock-fifo-policy-kicker">นโยบายคลัง</p>
             <h2 id="stock-fifo-policy-title" className="stock-fifo-policy-title">
-              สินค้าเข้าก่อน ให้นำมาใช้เท่านั้น
+              สินค้าเข้าก่อน → ให้นำมาใช้ก่อน
             </h2>
             <p className="stock-fifo-policy-reason">
               เพราะสินค้าอาจเน่าเสีย / หมดอายุได้
