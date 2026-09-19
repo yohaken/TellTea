@@ -418,6 +418,7 @@ function StockItemSlimModal({
 }) {
   const [name, setName] = useState(item?.name || "");
   const [minQty, setMinQty] = useState(String(item?.minQty ?? 0));
+  const [alertEnabled, setAlertEnabled] = useState(item?.alertEnabled === true);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const iconId = guessStockIconId(name.trim() || item?.name || "");
@@ -437,6 +438,7 @@ function StockItemSlimModal({
           unit: "ชิ้น",
           qty: 0,
           minQty: Number(minQty) || 0,
+          alertEnabled,
           safetyStock: 0,
           unitCost: 0,
           icon,
@@ -446,6 +448,7 @@ function StockItemSlimModal({
         await updateStockItem(item.id, {
           name: trimmed,
           minQty: Number(minQty) || 0,
+          alertEnabled,
           icon,
           updatedBy: actorId,
         });
@@ -524,6 +527,14 @@ function StockItemSlimModal({
                 onChange={(e) => setMinQty(e.target.value)}
               />
             </span>
+          </label>
+          <label className="check-row stock-item-slim-alert-check">
+            <input
+              type="checkbox"
+              checked={alertEnabled}
+              onChange={(e) => setAlertEnabled(e.target.checked)}
+            />
+            <span>เปิดแจ้งเตือน LINE เมื่อคงเหลือ ≤ เกณฑ์</span>
           </label>
           <div className="stock-item-slim-actions">
             {mode === "edit" ? (

@@ -63,6 +63,8 @@ function parseNotify(raw) {
     includeBillNotices: d.includeBillNotices !== false,
     includeYesterdaySales: d.includeYesterdaySales !== false,
     includeMemberCount: d.includeMemberCount !== false,
+    instantStockLowEnabled: d.instantStockLowEnabled !== false,
+    includeStockLow: d.includeStockLow !== false,
     /** Optional secondary channel — LINE is primary */
     webPushOnDigest: d.webPushOnDigest === true,
     webPushOnInstant: d.webPushOnInstant === true,

@@ -95,6 +95,7 @@
     "test:brand-logo-perf": "node scripts/test-brand-logo-perf.mjs",
     "test:login-brand-logo": "node scripts/test-login-brand-logo.mjs",
     "test:stock-catalog-owner": "node scripts/test-stock-catalog-owner.mjs",
+    "test:stock-low-alert": "node scripts/test-stock-low-alert.mjs",
     "test:stock-history-round-label": "node scripts/test-stock-history-round-label.mjs",
     "test:stock-count-edit": "node scripts/test-stock-count-edit.mjs",
     "test:bonus-month-close": "node scripts/test-bonus-month-close.mjs",

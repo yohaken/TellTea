@@ -130,6 +130,11 @@ export type StockItem = {
   qty: number;
   /** reorder_point — เตือนเมื่อ qty ≤ ค่านี้ */
   minQty: number;
+  /**
+   * ติ๊กเปิดแจ้งเตือน LINE เมื่อคงเหลือ ≤ minQty
+   * (ต้องเปิดในตั้งค่าแจ้งเตือนเจ้าของด้วย)
+   */
+  alertEnabled: boolean;
   /** safety_stock — สต๊อกสำรอง */
   safetyStock: number;
   /** ราคาต่อหน่วย (บาท) — ใช้คำนวณมูลค่าคงคลัง */
@@ -148,6 +153,7 @@ export type StockItemInput = {
   unit: string;
   qty: number;
   minQty: number;
+  alertEnabled?: boolean;
   safetyStock?: number;
   unitCost?: number;
   barcode?: string;

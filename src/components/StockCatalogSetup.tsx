@@ -32,6 +32,7 @@ export function StockCatalogSetup({ onError }: { onError: (msg: string | null) =
   const [name, setName] = useState("");
   const [unit, setUnit] = useState("ชิ้น");
   const [minQty, setMinQty] = useState("0");
+  const [alertEnabled, setAlertEnabled] = useState(false);
   const [icon, setIcon] = useState<StockIconId>("bag");
   const [busy, setBusy] = useState(false);
   const [qtyBusyId, setQtyBusyId] = useState<string | null>(null);
@@ -70,6 +71,7 @@ export function StockCatalogSetup({ onError }: { onError: (msg: string | null) =
         unit: unit.trim() || "ชิ้น",
         qty: 0,
         minQty: Number(minQty) || 0,
+        alertEnabled,
         safetyStock: 0,
         unitCost: 0,
         icon: icon || guessStockIconId(trimmed),
@@ -77,6 +79,7 @@ export function StockCatalogSetup({ onError }: { onError: (msg: string | null) =
       });
       setName("");
       setMinQty("0");
+      setAlertEnabled(false);
       setIcon("bag");
     } catch (err) {
       onError((err as Error).message || "เพิ่มไม่สำเร็จ");
@@ -85,7 +88,11 @@ export function StockCatalogSetup({ onError }: { onError: (msg: string | null) =
     }
   }
 
-  async function saveField(item: StockItem, field: keyof StockItem, value: string) {
+  async function saveField(
+    item: StockItem,
+    field: keyof StockItem,
+    value: string | boolean,
+  ) {
     if (!userEmail) return;
     onError(null);
     try {
@@ -94,6 +101,7 @@ export function StockCatalogSetup({ onError }: { onError: (msg: string | null) =
       if (field === "unit") patch.unit = value;
       if (field === "minQty") patch.minQty = Number(value);
       if (field === "icon") patch.icon = value;
+      if (field === "alertEnabled") patch.alertEnabled = value === true;
       await updateStockItem(item.id, patch as Parameters<typeof updateStockItem>[1]);
     } catch (err) {
       onError((err as Error).message || "บันทึกไม่สำเร็จ");
@@ -162,13 +170,24 @@ export function StockCatalogSetup({ onError }: { onError: (msg: string | null) =
             aria-label="แจ้งเตือนเมื่อจำนวนน้อยกว่าหรือเท่ากับ"
           />
         </label>
+        <label
+          className="stock-catalog-add-bell"
+          title="เปิดแจ้งเตือน LINE เมื่อต่ำกว่าเกณฑ์"
+        >
+          <input
+            type="checkbox"
+            checked={alertEnabled}
+            onChange={(e) => setAlertEnabled(e.target.checked)}
+            aria-label="เปิดแจ้งเตือน LINE"
+          />
+        </label>
         <button type="submit" className="primary-btn stock-catalog-add-btn" disabled={busy}>
           {busy ? "…" : "+"}
         </button>
       </form>
 
       <p className="muted stock-catalog-lead">
-        แจ้งเตือนเมื่อคงเหลือ ≤ ค่าที่ตั้ง · {items.length} รายการ
+        ติ๊กเปิดแจ้งเตือน LINE เมื่อคงเหลือ ≤ ค่าที่ตั้ง · {items.length} รายการ
       </p>
 
       <ul className="stock-catalog-list">
@@ -225,6 +244,23 @@ export function StockCatalogSetup({ onError }: { onError: (msg: string | null) =
                   <Plus size={11} aria-hidden />
                 </button>
               </div>
+              <label
+                className={
+                  item.alertEnabled
+                    ? "stock-catalog-row-bell is-on"
+                    : "stock-catalog-row-bell"
+                }
+                title="เปิดแจ้งเตือน LINE เมื่อคงเหลือ ≤ เกณฑ์"
+              >
+                <input
+                  type="checkbox"
+                  checked={item.alertEnabled}
+                  aria-label={`${item.name} เปิดแจ้งเตือน LINE`}
+                  onChange={(e) =>
+                    void saveField(item, "alertEnabled", e.target.checked)
+                  }
+                />
+              </label>
               <label className="stock-catalog-row-alert" title="แจ้งเตือนเมื่อ ≤">
                 ≤
                 <input

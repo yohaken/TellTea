@@ -37,6 +37,8 @@ assert.match(icons, /guessStockIconId/);
 assert.match(icons, /ShoppingBag/);
 assert.match(icons, /Disc3/);
 assert.match(icons, /Cylinder/);
+assert.match(stockPage, /เปิดแจ้งเตือน LINE เมื่อคงเหลือ/);
+assert.match(stockPage, /alertEnabled/);
 assert.match(icons, /powder/);
 assert.doesNotMatch(icons, /Pipette/);
 assert.doesNotMatch(icons, /Candy/);

@@ -115,6 +115,7 @@ const VAPID_PUBLIC =
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || "";
 
 const { evaluateAndSendLowBalanceLine } = require("./low-balance-line");
+const { evaluateAndSendStockLowLine } = require("./low-stock-line");
 const { formatBaht } = require("./line-owner");
 
 async function sendToOwnerSubscriptions(payload) {
@@ -171,6 +172,37 @@ exports.onLedgerBalanceWritten = functions
 
     const result = await evaluateAndSendLowBalanceLine({ balance, force: false });
     console.log("low balance LINE", result);
+    return null;
+  });
+
+/** Stock item qty/min/alert → LINE when armed (alertEnabled + qty ≤ minQty). */
+exports.onStockItemWritten = functions
+  .region("asia-southeast1")
+  .firestore.document("stock/{itemId}")
+  .onWrite(async (change, context) => {
+    const after = change.after;
+    if (!after.exists) {
+      await evaluateAndSendStockLowLine({
+        itemId: context.params.itemId,
+        itemData: { alertEnabled: false, minQty: 0, qty: 0 },
+        force: false,
+      });
+      return null;
+    }
+    const before = change.before.exists ? change.before.data() : null;
+    const afterData = after.data() || {};
+    const changed =
+      !before ||
+      before.qty !== afterData.qty ||
+      before.minQty !== afterData.minQty ||
+      Boolean(before.alertEnabled) !== Boolean(afterData.alertEnabled);
+    if (!changed) return null;
+    const result = await evaluateAndSendStockLowLine({
+      itemId: context.params.itemId,
+      itemData: afterData,
+      force: false,
+    });
+    console.log("stock low LINE", result);
     return null;
   });
 

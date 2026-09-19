@@ -14,6 +14,7 @@ const {
   loadOwnerNotify,
 } = require("./line-owner");
 const { evaluateAndSendLowBalanceLine } = require("./low-balance-line");
+const { flushDeferredStockLowLines } = require("./low-stock-line");
 
 const REGION = "asia-southeast1";
 const VAPID_PUBLIC =
@@ -171,6 +172,38 @@ async function buildDigestText(db, notify, now = Date.now()) {
     }
   }
 
+  if (notify.includeStockLow) {
+    const stockSnap = await db.collection("stock").get();
+    const lowRows = [];
+    for (const docSnap of stockSnap.docs) {
+      const d = docSnap.data() || {};
+      const minQty = Number(d.minQty) || 0;
+      const qty = Number(d.qty) || 0;
+      if (d.alertEnabled === true && minQty > 0 && qty <= minQty) {
+        lowRows.push({
+          name: String(d.name || docSnap.id).slice(0, 40),
+          qty,
+          minQty,
+          unit: String(d.unit || "").slice(0, 12),
+        });
+      }
+    }
+    lowRows.sort((a, b) => a.name.localeCompare(b.name, "th"));
+    lines.push("");
+    lines.push("คลังต่ำกว่าเกณฑ์");
+    if (!lowRows.length) {
+      lines.push("· ไม่มีรายการที่ติ๊กเปิดและติดเงื่อนไข");
+    } else {
+      lines.push(`· ${lowRows.length} รายการ`);
+      for (const row of lowRows.slice(0, 10)) {
+        lines.push(`· ${row.name}: ${row.qty} ${row.unit} (≤ ${row.minQty})`.trim());
+      }
+      if (lowRows.length > 10) {
+        lines.push(`· …อีก ${lowRows.length - 10} รายการ`);
+      }
+    }
+  }
+
   if (notify.includeBillNotices) {
     const bills = await pendingBillNotices(db);
     lines.push("");
@@ -302,6 +335,8 @@ exports.ownerDailyDigestHourly = functions
   .onRun(async () => {
     const deferred = await evaluateAndSendLowBalanceLine({ force: false });
     console.log("flushDeferredLowBalanceLine", deferred);
+    const stockFlush = await flushDeferredStockLowLines({ force: false });
+    console.log("flushDeferredStockLowLines", stockFlush.length);
     const result = await runDigest({ force: false });
     console.log("ownerDailyDigestHourly", result);
     return null;

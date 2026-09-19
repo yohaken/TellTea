@@ -38,14 +38,20 @@ assert.doesNotMatch(setup, /Web Push บนเครื่องนี้/);
 assert.match(settingsPage, /OwnerNotifySetup/);
 assert.match(more, /LINE สรุปเช้า/);
 
-assert.match(rules, /ownerLineNotify/);
+assert.match(rules, /stockLowAlerts/);
 assert.match(indexFn, /ownerLowBalanceLineCheck/);
 assert.match(indexFn, /evaluateAndSendLowBalanceLine/);
 assert.match(indexFn, /instantLineEnabled|low-balance-line/);
 assert.match(digestFn, /evaluateAndSendLowBalanceLine/);
 assert.match(lineOwner, /api\.line\.me\/v2\/bot\/message\/push/);
-assert.match(digestFn, /billNotices/);
-assert.equal(existsSync(join(root, "functions/line-owner.js")), true);
-assert.equal(existsSync(join(root, "functions/low-balance-line.js")), true);
+assert.match(ownerNotify, /instantStockLowEnabled/);
+assert.match(ownerNotify, /includeStockLow/);
+assert.match(setup, /แจ้งคลังต่ำ/);
+assert.match(setup, /includeStockLow/);
+assert.match(indexFn, /onStockItemWritten/);
+assert.match(indexFn, /evaluateAndSendStockLowLine/);
+assert.match(digestFn, /คลังต่ำกว่าเกณฑ์/);
+assert.match(lineOwner, /instantStockLowEnabled/);
+assert.equal(existsSync(join(root, "functions/low-stock-line.js")), true);
 
 console.log("OK test-owner-line-daily-digest");

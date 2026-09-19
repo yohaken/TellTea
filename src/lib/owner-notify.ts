@@ -23,6 +23,10 @@ export type OwnerNotifySettings = {
   includeBillNotices: boolean;
   includeYesterdaySales: boolean;
   includeMemberCount: boolean;
+  /** แจ้งทันทีเมื่อวัตถุดิบที่ติ๊กเปิด ติดเงื่อนไขคงเหลือ ≤ เกณฑ์ */
+  instantStockLowEnabled: boolean;
+  /** สรุปเช้า: รายการคลังต่ำ (ที่ติ๊กเปิดแจ้งเตือน) */
+  includeStockLow: boolean;
   /** ช่องทางสำรอง (ปิดเป็นค่าเริ่ม — หลักคือ LINE) */
   webPushOnDigest: boolean;
   webPushOnInstant: boolean;
@@ -42,6 +46,8 @@ export const DEFAULT_OWNER_NOTIFY: OwnerNotifySettings = {
   includeBillNotices: true,
   includeYesterdaySales: true,
   includeMemberCount: true,
+  instantStockLowEnabled: true,
+  includeStockLow: true,
   webPushOnDigest: false,
   webPushOnInstant: false,
   updatedAt: 0,
@@ -74,6 +80,8 @@ export function parseOwnerNotifySettings(
     includeBillNotices: data.includeBillNotices !== false,
     includeYesterdaySales: data.includeYesterdaySales !== false,
     includeMemberCount: data.includeMemberCount !== false,
+    instantStockLowEnabled: data.instantStockLowEnabled !== false,
+    includeStockLow: data.includeStockLow !== false,
     webPushOnDigest: data.webPushOnDigest === true,
     webPushOnInstant: data.webPushOnInstant === true,
     updatedAt: Number(data.updatedAt) || 0,
@@ -124,6 +132,8 @@ export async function saveOwnerNotifySettings(
       includeBillNotices: next.includeBillNotices,
       includeYesterdaySales: next.includeYesterdaySales,
       includeMemberCount: next.includeMemberCount,
+      instantStockLowEnabled: next.instantStockLowEnabled,
+      includeStockLow: next.includeStockLow,
       webPushOnDigest: next.webPushOnDigest,
       webPushOnInstant: next.webPushOnInstant,
       updatedAt: next.updatedAt,

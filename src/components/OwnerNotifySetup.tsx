@@ -130,6 +130,8 @@ export function OwnerNotifySetup({ onError }: Props) {
           includeBillNotices: notify.includeBillNotices,
           includeYesterdaySales: notify.includeYesterdaySales,
           includeMemberCount: notify.includeMemberCount,
+          instantStockLowEnabled: notify.instantStockLowEnabled,
+          includeStockLow: notify.includeStockLow,
           webPushOnDigest: notify.webPushOnDigest,
           webPushOnInstant: notify.webPushOnInstant,
         },
@@ -381,6 +383,18 @@ export function OwnerNotifySetup({ onError }: Props) {
           <p className="field-hint">
             ค่าเริ่ม {formatHourLabel(8)}–{formatHourLabel(21)} · นอกช่วงนี้จะรอส่งเมื่อเข้าช่วง
           </p>
+          <label className="check-row" style={{ marginTop: "0.45rem" }}>
+            <input
+              type="checkbox"
+              checked={notify.instantStockLowEnabled && notify.instantLineEnabled}
+              onChange={(e) => patchNotify("instantStockLowEnabled", e.target.checked)}
+              disabled={!notify.instantLineEnabled}
+            />
+            <span>แจ้งคลังต่ำ (รายการที่ติ๊กเปิดในหน้าคลัง) → LINE ทันที</span>
+          </label>
+          <p className="field-hint">
+            เหมือนยอดเงินพนักงาน — ต้องติ๊กเปิดรายการในคลัง + ตั้งเกณฑ์ ≤ ด้วย
+          </p>
           <div className="owner-notify-status">
             <p className="muted" style={{ margin: 0, textAlign: "left" }}>
               ยอดคงเหลือปัจจุบัน:{" "}
@@ -463,6 +477,14 @@ export function OwnerNotifySetup({ onError }: Props) {
                 onChange={(e) => patchNotify("includeLowBalance", e.target.checked)}
               />
               <span>เงินคงเหลือพนักงาน / สถานะยอดต่ำ</span>
+            </label>
+            <label className="check-row">
+              <input
+                type="checkbox"
+                checked={notify.includeStockLow}
+                onChange={(e) => patchNotify("includeStockLow", e.target.checked)}
+              />
+              <span>คลังต่ำกว่าเกณฑ์ (รายการที่ติ๊กเปิดแจ้งเตือน)</span>
             </label>
             <label className="check-row">
               <input

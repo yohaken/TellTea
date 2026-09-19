@@ -61,6 +61,7 @@ function mapStockDoc(id: string, data: Record<string, unknown>): StockItem {
     unit: String(data.unit || "ชิ้น"),
     qty: Number(data.qty) || 0,
     minQty: Number(data.minQty) || 0,
+    alertEnabled: data.alertEnabled === true,
     safetyStock: Number(data.safetyStock) || 0,
     // ต้นทุนอยู่ stockCosts — ไม่อ่านจาก stock (กัน leak ระหว่าง migrate)
     unitCost: 0,
@@ -102,6 +103,7 @@ function stockPayload(input: StockItemInput, opts?: { stripUnitCost?: boolean })
     unit: (input.unit || "ชิ้น").trim(),
     qty: Number(input.qty) || 0,
     minQty: Number(input.minQty) || 0,
+    alertEnabled: input.alertEnabled === true,
     safetyStock: Number(input.safetyStock) || 0,
     barcode: (input.barcode || "").trim() || null,
     icon: (input.icon || "").trim() || null,
@@ -343,6 +345,10 @@ export async function updateStockItem(
     unit: patch.unit ?? current.unit,
     qty: patch.qty ?? current.qty,
     minQty: patch.minQty ?? current.minQty,
+    alertEnabled:
+      patch.alertEnabled !== undefined
+        ? patch.alertEnabled === true
+        : current.alertEnabled,
     safetyStock: patch.safetyStock ?? current.safetyStock,
     barcode: patch.barcode ?? current.barcode,
     icon: patch.icon ?? current.icon,
@@ -466,6 +472,13 @@ export function totalStockValue(items: StockItem[]): number {
 
 export function criticalStockItems(items: StockItem[]): StockItem[] {
   return items.filter((i) => i.minQty > 0 && i.qty <= i.minQty);
+}
+
+/** รายการที่ติ๊กแจ้งเตือนและติดเงื่อนไขต่ำ */
+export function alertArmedStockItems(items: StockItem[]): StockItem[] {
+  return items.filter(
+    (i) => i.alertEnabled && i.minQty > 0 && i.qty <= i.minQty,
+  );
 }
 
 /** Pick random item for daily cycle count — prefer items not ADJUST-counted today */
