@@ -1,6 +1,6 @@
 /**
- * Guard: stock history — full พ.ศ. dates, auto 3 rounds ahead,
- * newest→oldest sort, no free-form "+ นับสต็อก" create.
+ * Guard: stock history — full พ.ศ. dates, auto 2 rounds ahead,
+ * newest→oldest (left), items as rows, no free-form "+ นับสต็อก" create.
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -18,7 +18,9 @@ const version = read("src/lib/version.ts");
 assert.match(version, /APP_BUILD\s*=\s*\d+/);
 assert.match(histSrc, /export function stockRoundDateLabelBe/);
 assert.match(histSrc, /export function upcomingStockRounds/);
-assert.match(histSrc, /upcomingStockRounds\(3/);
+assert.match(histSrc, /upcomingStockRounds\(2/);
+assert.match(histSrc, /aheadKeys/);
+assert.match(histSrc, /dateMs > todayMs && !aheadKeys\.has/);
 assert.match(histSrc, /Always newest → oldest|newest → oldest/i);
 assert.match(histSrc, /b\.dateMs - a\.dateMs/);
 assert.match(
@@ -31,14 +33,16 @@ assert.doesNotMatch(histSrc, /day <= todayDay/);
 assert.match(stockPage, /lockedRound/);
 assert.match(stockPage, /onCountRound/);
 assert.match(stockPage, /ยังไม่นับ/);
-assert.match(stockPage, /onEditFilled|แก้ไขยอด/);
+assert.match(stockPage, /StockHistoryItemRow|stock-history-table--items-rows/);
+assert.match(stockPage, /stockIconComponent/);
 assert.doesNotMatch(stockPage, /ModuleTabDock/);
 assert.doesNotMatch(stockPage, /\+ นับสต็อก/);
 assert.doesNotMatch(stockPage, /type="month"/);
 assert.doesNotMatch(stockPage, /STOCK_COUNT_ROUNDS\.map/);
 
 assert.match(css, /Phone: stack|grid-template-columns:\s*minmax\(0,\s*1fr\)/);
-assert.match(css, /\.stock-history-round-btn/);
+assert.match(css, /\.stock-history-table--items-rows/);
+assert.match(css, /\.stock-history-low-badge/);
 
 /** Mirror stockRoundDateLabelBe */
 function stockRoundDateLabelBe(year, month, dayOfMonth) {

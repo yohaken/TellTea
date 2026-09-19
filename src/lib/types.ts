@@ -136,6 +136,8 @@ export type StockItem = {
   unitCost: number;
   /** บาร์โค้ดสำหรับสแกนค้นหา */
   barcode?: string;
+  /** ไอคอนแสดงในตารางคลัง (ดู STOCK_ICON_OPTIONS) */
+  icon?: string;
   note?: string;
   updatedAt: number;
   updatedBy: string;
@@ -149,6 +151,7 @@ export type StockItemInput = {
   safetyStock?: number;
   unitCost?: number;
   barcode?: string;
+  icon?: string;
   note?: string;
   updatedBy: string;
 };

@@ -40,18 +40,18 @@ export const DEFAULT_STOCK_ITEMS: Omit<
   StockItemInput,
   "updatedBy"
 >[] = [
-  { name: "ถุงเก็บความเย็น", unit: "ถุง", qty: 0, minQty: 50, safetyStock: 20, unitCost: 0 },
-  { name: "ถุงกระดาษเบเกอรี่", unit: "ถุง", qty: 0, minQty: 100, safetyStock: 30, unitCost: 0 },
-  { name: "แก้วชา", unit: "ใบ", qty: 0, minQty: 200, safetyStock: 50, unitCost: 0 },
-  { name: "หลอดใหญ่", unit: "หลอด", qty: 0, minQty: 500, safetyStock: 100, unitCost: 0 },
-  { name: "หลอดเล็ก 0.5 มล", unit: "หลอด", qty: 0, minQty: 500, safetyStock: 100, unitCost: 0 },
-  { name: "ฝาซีล", unit: "ฝา", qty: 0, minQty: 300, safetyStock: 80, unitCost: 0 },
-  { name: "โซดา", unit: "กระป๋อง", qty: 0, minQty: 24, safetyStock: 12, unitCost: 0 },
-  { name: "โคน S", unit: "โคน", qty: 0, minQty: 30, safetyStock: 10, unitCost: 0 },
-  { name: "โคน M", unit: "โคน", qty: 0, minQty: 30, safetyStock: 10, unitCost: 0 },
-  { name: "โคน L", unit: "โคน", qty: 0, minQty: 30, safetyStock: 10, unitCost: 0 },
-  { name: "IC.นม", unit: "ถุง", qty: 0, minQty: 20, safetyStock: 8, unitCost: 0 },
-  { name: "IC.รสอื่นๆ", unit: "ถุง", qty: 0, minQty: 20, safetyStock: 8, unitCost: 0 },
+  { name: "ถุงเก็บความเย็น", unit: "ถุง", qty: 0, minQty: 50, safetyStock: 20, unitCost: 0, icon: "cold" },
+  { name: "ถุงกระดาษเบเกอรี่", unit: "ถุง", qty: 0, minQty: 100, safetyStock: 30, unitCost: 0, icon: "bakery" },
+  { name: "แก้วชา", unit: "ใบ", qty: 0, minQty: 200, safetyStock: 50, unitCost: 0, icon: "cup" },
+  { name: "หลอดใหญ่", unit: "หลอด", qty: 0, minQty: 500, safetyStock: 100, unitCost: 0, icon: "straw" },
+  { name: "หลอดเล็ก 0.5 มล", unit: "หลอด", qty: 0, minQty: 500, safetyStock: 100, unitCost: 0, icon: "straw" },
+  { name: "ฝาซีล", unit: "ฝา", qty: 0, minQty: 300, safetyStock: 80, unitCost: 0, icon: "lid" },
+  { name: "โซดา", unit: "กระป๋อง", qty: 0, minQty: 24, safetyStock: 12, unitCost: 0, icon: "soda" },
+  { name: "โคน S", unit: "โคน", qty: 0, minQty: 30, safetyStock: 10, unitCost: 0, icon: "ice" },
+  { name: "โคน M", unit: "โคน", qty: 0, minQty: 30, safetyStock: 10, unitCost: 0, icon: "ice" },
+  { name: "โคน L", unit: "โคน", qty: 0, minQty: 30, safetyStock: 10, unitCost: 0, icon: "ice" },
+  { name: "IC.นม", unit: "ถุง", qty: 0, minQty: 20, safetyStock: 8, unitCost: 0, icon: "powder" },
+  { name: "IC.รสอื่นๆ", unit: "ถุง", qty: 0, minQty: 20, safetyStock: 8, unitCost: 0, icon: "powder" },
 ];
 
 function mapStockDoc(id: string, data: Record<string, unknown>): StockItem {
@@ -65,6 +65,7 @@ function mapStockDoc(id: string, data: Record<string, unknown>): StockItem {
     // ต้นทุนอยู่ stockCosts — ไม่อ่านจาก stock (กัน leak ระหว่าง migrate)
     unitCost: 0,
     barcode: data.barcode ? String(data.barcode) : undefined,
+    icon: data.icon ? String(data.icon) : undefined,
     note: data.note ? String(data.note) : undefined,
     updatedAt: Number(data.updatedAt) || 0,
     updatedBy: String(data.updatedBy || ""),
@@ -103,6 +104,7 @@ function stockPayload(input: StockItemInput, opts?: { stripUnitCost?: boolean })
     minQty: Number(input.minQty) || 0,
     safetyStock: Number(input.safetyStock) || 0,
     barcode: (input.barcode || "").trim() || null,
+    icon: (input.icon || "").trim() || null,
     note: (input.note || "").trim(),
     updatedAt: Date.now(),
     updatedBy: input.updatedBy,
@@ -343,6 +345,7 @@ export async function updateStockItem(
     minQty: patch.minQty ?? current.minQty,
     safetyStock: patch.safetyStock ?? current.safetyStock,
     barcode: patch.barcode ?? current.barcode,
+    icon: patch.icon ?? current.icon,
     note: patch.note ?? current.note,
     updatedBy: patch.updatedBy,
   };
@@ -462,7 +465,7 @@ export function totalStockValue(items: StockItem[]): number {
 }
 
 export function criticalStockItems(items: StockItem[]): StockItem[] {
-  return items.filter((i) => i.minQty > 0 && i.qty < i.minQty);
+  return items.filter((i) => i.minQty > 0 && i.qty <= i.minQty);
 }
 
 /** Pick random item for daily cycle count — prefer items not ADJUST-counted today */

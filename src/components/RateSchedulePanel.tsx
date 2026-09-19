@@ -17,7 +17,6 @@ import {
 import { listProdProducts, type ProdProduct } from "@/lib/production";
 import {
   repairOtBonusRatesFromSchedule,
-  type OtRateRepairReport,
 } from "@/lib/ot-rate-repair";
 import { formatDateShortBe, formatPlainNumber, todayInputValue } from "@/lib/utils";
 
@@ -60,7 +59,6 @@ export function RateSchedulePanel({
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [repairBusy, setRepairBusy] = useState(false);
-  const [repairReport, setRepairReport] = useState<OtRateRepairReport | null>(null);
 
   useBodyScrollLock(!!editTarget);
 
@@ -94,9 +92,8 @@ export function RateSchedulePanel({
     }
     setRepairBusy(true);
     void repairOtBonusRatesFromSchedule({ createdBy: actorId })
-      .then((report) => {
+      .then(() => {
         if (cancelled) return;
-        setRepairReport(report);
         try {
           sessionStorage.setItem(key, "1");
         } catch {
@@ -196,8 +193,7 @@ export function RateSchedulePanel({
     if (!isOwner || !actorId) return;
     setRepairBusy(true);
     try {
-      const report = await repairOtBonusRatesFromSchedule({ createdBy: actorId });
-      setRepairReport(report);
+      await repairOtBonusRatesFromSchedule({ createdBy: actorId });
     } catch (err) {
       onError((err as Error).message || "ซ่อมเรทชงไม่สำเร็จ");
     } finally {
@@ -209,9 +205,6 @@ export function RateSchedulePanel({
     <section className="bonus-rate-schedule">
       <header className="bonus-rate-schedule-head">
         <h2 className="bonus-rate-schedule-title">ตารางเรท</h2>
-        <p className="muted bonus-rate-schedule-hint">
-          เรทขายเบเกอรี่ตั้งที่นี่ที่เดียว · ผลิตใหม่จะติดเรทตามวันเริ่มใช้
-        </p>
       </header>
 
       {loading ? <p className="empty">กำลังโหลดตารางเรท...</p> : null}
@@ -279,11 +272,6 @@ export function RateSchedulePanel({
               })}
             </tbody>
           </table>
-          <p className="muted bonus-rate-schedule-hint">
-            {isOwner
-              ? "เรทชงติดตามวันในตารางกะตอนบันทึก · ก่อน 17 ก.ค. = 0.6 · ตั้งแต่ 17 ก.ค. = เรทใหม่"
-              : "เรทที่ใช้ตอนนี้ · แถวชงยึดเรทตามวันในตาราง ไม่ใช่วันที่กดบันทึก"}
-          </p>
           {isOwner ? (
             <div className="bonus-rate-repair-row">
               <button
@@ -292,16 +280,8 @@ export function RateSchedulePanel({
                 disabled={repairBusy}
                 onClick={() => void onRepairOtRates()}
               >
-                {repairBusy ? "กำลังซ่อมเรทชง..." : "ซ่อมเรทชงตามวันในตาราง"}
+                {repairBusy ? "…" : "ซ่อมเรทชง"}
               </button>
-              {repairReport ? (
-                <p className="muted bonus-rate-repair-note">
-                  ซ่อมแล้ว {repairReport.updated}/{repairReport.scanned} แถว
-                  {repairReport.updated
-                    ? " — แถวก่อน 17 ก.ค. ที่ติด 1 บาทถูกปรับเป็น 0.6"
-                    : " — ไม่มีแถวที่ต้องแก้"}
-                </p>
-              ) : null}
             </div>
           ) : null}
           {!activeProducts.length ? (
@@ -319,10 +299,10 @@ export function RateSchedulePanel({
           onClick={() => setShowHistory((v) => !v)}
         >
           {showHistory
-            ? "ซ่อนประวัติเรท"
+            ? "ซ่อนประวัติ"
             : history.length
-              ? `ดูประวัติเรท (${history.length})`
-              : "ดูประวัติเรท"}
+              ? `ประวัติเรท (${history.length})`
+              : "ประวัติเรท"}
         </button>
       ) : null}
 

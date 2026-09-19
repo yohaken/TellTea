@@ -75,7 +75,10 @@ assert.equal(croissants?.diff, 10);
 assert.ok(existsSync(join(root, "src/lib/prod-work-summary.ts")));
 assert.ok(existsSync(join(root, "src/components/ProdWorkSummaryStrip.tsx")));
 assert.match(read("src/lib/prod-work-summary.ts"), /buildProdProductCompareSummary/);
-assert.match(read("src/lib/prod-work-summary.ts"), /buildProdWorkerCompareSummary/);
+assert.match(read("src/lib/prod-work-summary.ts"), /groupProdWorkerCompareRows/);
+assert.match(read("src/components/ProdWorkSummaryStrip.tsx"), /prod-work-summary-parent/);
+assert.match(read("src/components/ProdWorkSummaryStrip.tsx"), /prod-work-summary-child/);
+assert.match(read("src/app/globals.css"), /\.prod-work-summary-child-label/);
 assert.match(read("src/lib/prod-work-summary.ts"), /shiftMonthInput/);
 assert.match(read("src/components/ProdWorkSummaryStrip.tsx"), /ProdProductSummaryStrip/);
 assert.match(read("src/components/ProdWorkSummaryStrip.tsx"), /ProdWorkerSummaryStrip/);
@@ -87,5 +90,9 @@ assert.match(read("src/app/production/page.tsx"), /prevEntries/);
 assert.match(read("src/app/globals.css"), /\.prod-work-summary-diff/);
 assert.match(read("src/app/globals.css"), /\.production-page-head/);
 assert.match(read("src/app/globals.css"), /white-space:\s*normal/);
+assert.match(
+  read("src/app/globals.css"),
+  /\.prod-work-summary-duo \{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)\s+minmax\(0,\s*1fr\)/,
+);
 
 console.log("OK test-prod-work-summary");

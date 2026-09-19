@@ -11,6 +11,10 @@ export type StockHistoryItemCol = {
   name: string;
   unit: string;
   shortName: string;
+  icon?: string;
+  minQty: number;
+  qty: number;
+  note?: string;
 };
 
 export type StockHistoryCell = {
@@ -70,6 +74,10 @@ export function buildStockItemColumns(items: StockItem[]): StockHistoryItemCol[]
     name: item.name,
     unit: item.unit,
     shortName: itemShortName(item.name),
+    icon: item.icon,
+    minQty: item.minQty,
+    qty: item.qty,
+    note: item.note || "",
   }));
 }
 
@@ -115,9 +123,9 @@ export type StockRoundSlot = {
   dateMs: number;
 };
 
-/** Next N round slots on/after `from` (system plan-ahead — default 3). */
+/** Next N round slots on/after `from` (system plan-ahead — default 2). */
 export function upcomingStockRounds(
-  count = 3,
+  count = 2,
   from: Date = new Date(),
 ): StockRoundSlot[] {
   const start = new Date(from);
@@ -180,8 +188,12 @@ export function buildStockHistoryTimeline(
   let maxYear: number;
   let maxMonth: number;
 
-  // Always reserve the next 3 rounds ahead (system-created plan slots).
-  const ahead = upcomingStockRounds(3, today);
+  // Always reserve the next 2 rounds ahead (system-created plan slots).
+  // Do NOT fill every 1·10·20 slot in the end month — that turned 2 ahead into 4.
+  const ahead = upcomingStockRounds(2, today);
+  const aheadKeys = new Set(
+    ahead.map((a) => stockCountSessionId(a.year, a.month, a.dayOfMonth)),
+  );
   const aheadEnd = ahead[ahead.length - 1];
 
   if (sessions.length) {
@@ -209,7 +221,10 @@ export function buildStockHistoryTimeline(
     const { year, month } = months[mi]!;
     const rounds = applicableRounds(year, month).slice().reverse();
     for (const dayOfMonth of rounds) {
+      const dateMs = roundDateMs(year, month, dayOfMonth);
       const rowKey = stockCountSessionId(year, month, dayOfMonth);
+      // Future slots: only the 2 plan-ahead rounds (not every day-of-month in that month).
+      if (dateMs > todayMs && !aheadKeys.has(rowKey)) continue;
       const session = sessionMap.get(rowKey) || null;
       const cells = buildRowCells(session, columns);
       rows.push({
@@ -219,7 +234,7 @@ export function buildStockHistoryTimeline(
         // Full date พ.ศ. D/M/YY (storage year stays CE).
         monthLabel: stockRoundDateLabelBe(year, month, dayOfMonth),
         dayOfMonth,
-        dateMs: roundDateMs(year, month, dayOfMonth),
+        dateMs,
         session,
         cells,
         filled: cells.filter((c) => c.qty != null).length,

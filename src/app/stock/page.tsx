@@ -1,17 +1,17 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
   type FormEvent,
-  type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
-import { Boxes, X } from "lucide-react";
+import { Boxes, Plus, Trash2, X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
-import { StockCatalogSetup } from "@/components/StockCatalogSetup";
+import { PosConfirmDialog } from "@/components/PosConfirmDialog";
 import { useAuth } from "@/lib/auth";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
@@ -28,14 +28,23 @@ import type { StockCountRound, StockCountSession, StockItem } from "@/lib/types"
 import {
   buildStockHistoryTimeline,
   formatStockCountTimeShort,
-  inspectorShort,
   roundLabel,
   stockRoundDateLabelBe,
   timelineRoundLabel,
   type StockHistoryItemCol,
   type StockHistoryTimelineRow,
 } from "@/lib/stock-history";
-import { seedStockItemsIfEmpty, subscribeStockItems } from "@/lib/stock";
+import {
+  guessStockIconId,
+  stockIconComponent,
+} from "@/lib/stock-icons";
+import {
+  createStockItem,
+  deleteStockItem,
+  seedStockItemsIfEmpty,
+  subscribeStockItems,
+  updateStockItem,
+} from "@/lib/stock";
 import { formatStockQty, parseDateInput } from "@/lib/utils";
 
 type DraftLine = {
@@ -43,8 +52,6 @@ type DraftLine = {
   itemName: string;
   qty: string;
 };
-
-type StockOwnerView = "history" | "catalog";
 
 export default function StockPage() {
   return (
@@ -59,7 +66,6 @@ function StockView() {
   const router = useRouter();
   const isOwner = staff?.role === "owner";
   const canUseStock = can(staff, "stock");
-  const [ownerView, setOwnerView] = useState<StockOwnerView>("history");
   const [countTarget, setCountTarget] = useState<{
     year: number;
     month: number;
@@ -70,6 +76,7 @@ function StockView() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [policyOpen, setPolicyOpen] = useState(false);
 
   useEffect(() => {
     if (staff && !canUseStock) router.replace(staffHomeHref(staff));
@@ -100,42 +107,14 @@ function StockView() {
     };
   }, [canUseStock, actorId]);
 
-  useBodyScrollLock(!!countTarget);
+  useEffect(() => {
+    if (loading || !canUseStock) return;
+    setPolicyOpen(true);
+  }, [loading, canUseStock]);
+
+  useBodyScrollLock(!!countTarget || policyOpen);
 
   if (!canUseStock) return null;
-
-  const showCatalog = isOwner && ownerView === "catalog";
-  const showHistory = !showCatalog;
-
-  const ownerTabs = isOwner ? (
-    <div className="stock-owner-tabs stock-owner-tabs--inline" role="tablist" aria-label="มุมมองคลังเจ้าของ">
-      <button
-        type="button"
-        role="tab"
-        className={ownerView === "history" ? "stock-owner-tab is-active" : "stock-owner-tab"}
-        aria-selected={ownerView === "history"}
-        onClick={() => {
-          setOwnerView("history");
-          setCountTarget(null);
-        }}
-      >
-        ประวัตินับ
-      </button>
-      <button
-        type="button"
-        role="tab"
-        className={ownerView === "catalog" ? "stock-owner-tab is-active" : "stock-owner-tab"}
-        aria-selected={ownerView === "catalog"}
-        onClick={() => {
-          setOwnerView("catalog");
-          setCountTarget(null);
-        }}
-      >
-        รายการวัตถุดิบ
-        {items.length ? ` (${items.length})` : ""}
-      </button>
-    </div>
-  ) : null;
 
   return (
     <div className="module-page stock-module stock-page">
@@ -144,32 +123,18 @@ function StockView() {
           <Boxes size={18} aria-hidden />
           คลังวัตถุดิบ
         </h1>
-        <p className="muted stock-subtitle">
-          {showCatalog
-            ? "จัดการรายการ — ตั้งชื่อ · เพิ่ม/ลด · ลบ (เจ้าของ)"
-            : "นับสต๊อกคงเหลือ — ระบบเปิดรอบ 1 · 10 · 20 ล่วงหน้า 3 รอบ · เรียงใหม่→เก่า"}
-        </p>
       </div>
 
       {error ? <p className="error-text">{error}</p> : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
-      {!loading && showCatalog ? (
-        <>
-          {ownerTabs ? (
-            <div className="ot-toolbar-slim module-toolbar-slim">{ownerTabs}</div>
-          ) : null}
-          <StockCatalogSetup onError={setError} />
-        </>
-      ) : null}
-
-      {!loading && showHistory ? (
+      {!loading ? (
         <StockHistoryView
           items={items}
           sessions={sessions}
           isOwner={isOwner}
+          actorId={actorId}
           onError={setError}
-          onOpenCatalog={isOwner ? () => setOwnerView("catalog") : undefined}
           onCountRound={(row) =>
             setCountTarget({
               year: row.year,
@@ -177,11 +142,10 @@ function StockView() {
               dayOfMonth: row.dayOfMonth,
             })
           }
-          toolbarLeading={ownerTabs}
         />
       ) : null}
 
-      {countTarget && !loading && showHistory ? (
+      {countTarget && !loading ? (
         <div
           className="modal-backdrop edit-modal is-module-form is-stock-form"
           onClick={() => setCountTarget(null)}
@@ -195,8 +159,36 @@ function StockView() {
               lockedRound={countTarget}
               onError={setError}
               onClose={() => setCountTarget(null)}
-              onOpenCatalog={isOwner ? () => setOwnerView("catalog") : undefined}
             />
+          </div>
+        </div>
+      ) : null}
+
+      {policyOpen ? (
+        <div
+          className="modal-backdrop alert-backdrop stock-fifo-policy-backdrop"
+          role="presentation"
+        >
+          <div
+            className="modal-card stock-fifo-policy-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="stock-fifo-policy-title"
+          >
+            <p className="stock-fifo-policy-kicker">นโยบายคลัง</p>
+            <h2 id="stock-fifo-policy-title" className="stock-fifo-policy-title">
+              สินค้าเข้าก่อน ให้นำมาใช้เท่านั้น
+            </h2>
+            <p className="stock-fifo-policy-reason">
+              เพราะสินค้าอาจเน่าเสีย / หมดอายุได้
+            </p>
+            <button
+              type="button"
+              className="primary-btn stock-fifo-policy-ok"
+              onClick={() => setPolicyOpen(false)}
+            >
+              ยอมรับ
+            </button>
           </div>
         </div>
       ) : null}
@@ -208,66 +200,60 @@ function StockHistoryView({
   items,
   sessions,
   isOwner,
+  actorId,
   onError,
-  onOpenCatalog,
   onCountRound,
-  toolbarLeading,
 }: {
   items: StockItem[];
   sessions: StockCountSession[];
   isOwner: boolean;
+  actorId: string;
   onError: (msg: string | null) => void;
-  onOpenCatalog?: () => void;
   onCountRound: (row: StockHistoryTimelineRow) => void;
-  toolbarLeading?: ReactNode;
 }) {
   const [filter, setFilter] = useState<"all" | "missing">("all");
   const [detail, setDetail] = useState<StockHistoryTimelineRow | null>(null);
+  /** null = closed · "new" = เพิ่ม · string = แก้ itemId */
+  const [editTarget, setEditTarget] = useState<"new" | string | null>(null);
+  const [confirmDeleteSessionId, setConfirmDeleteSessionId] = useState<string | null>(null);
+  const [deletingSession, setDeletingSession] = useState(false);
 
-  useBodyScrollLock(!!detail);
+  useBodyScrollLock(!!detail || !!editTarget);
 
   const grid = useMemo(
     () => buildStockHistoryTimeline(sessions, items),
     [sessions, items],
   );
 
-  // Preserve newest → oldest from timeline builder.
   const rows = useMemo(
     () => (filter === "missing" ? grid.rows.filter((r) => !r.session) : grid.rows),
     [grid.rows, filter],
   );
 
   const stats = grid.stats;
+  const editingItem =
+    editTarget && editTarget !== "new"
+      ? items.find((i) => i.id === editTarget) || null
+      : null;
 
-  async function onDeleteSession(sessionId: string) {
-    if (!window.confirm("ลบรอบนับนี้?")) return;
+  async function confirmDeleteSession() {
+    if (!confirmDeleteSessionId) return;
+    setDeletingSession(true);
+    onError(null);
     try {
-      await deleteStockCountSession(sessionId);
+      await deleteStockCountSession(confirmDeleteSessionId);
+      setConfirmDeleteSessionId(null);
       setDetail(null);
     } catch (err) {
       onError((err as Error).message || "ลบไม่สำเร็จ");
+    } finally {
+      setDeletingSession(false);
     }
-  }
-
-  if (items.length === 0) {
-    return (
-      <p className="empty">
-        ยังไม่มีรายการสินค้า —{" "}
-        {isOwner && onOpenCatalog ? (
-          <button type="button" className="linkish-btn" onClick={onOpenCatalog}>
-            ไปเพิ่มที่แท็บรายการวัตถุดิบ
-          </button>
-        ) : (
-          "รอเจ้าของตั้งค่ารายการ"
-        )}
-      </p>
-    );
   }
 
   return (
     <div className="stock-summary-view">
       <div className="check-history-toolbar stock-history-toolbar ot-toolbar-slim module-toolbar-slim">
-        {toolbarLeading}
         <div className="check-filter-pills" role="group" aria-label="ตัวกรอง">
           <button
             type="button"
@@ -288,48 +274,102 @@ function StockHistoryView({
           {stats.filledRounds}/{stats.totalRounds} รอบ · {stats.itemsTracked} รายการ
           {stats.rangeLabel !== "—" ? ` · ${stats.rangeLabel}` : ""}
         </p>
-        <span
-          className="ot-slim-hint muted module-slim-hint"
-          title="เรียงวันที่ใหม่→เก่า · ระบบเปิดรอบล่วงหน้า 3 รอบ · แตะแถวว่างเพื่อนับ · แตะช่องที่นับแล้วเพื่อแก้ไข"
-        >
-          ใหม่→เก่า · แตะเพื่อนับ/แก้
-        </span>
       </div>
 
-      {rows.length ? (
-        <div className="sheet-wrap stock-history-wrap stock-history-sheet sheet-bleed">
-          <table className="sheet-table stock-history-table sheet-table--dense">
-            <thead>
-              <tr>
-                <th className="stock-history-th-date">รอบ</th>
-                {grid.columns.map((col) => (
-                  <th key={col.itemId} className="stock-history-th-item" title={col.name}>
-                    {col.shortName}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <StockHistoryRow
-                  key={row.rowKey}
-                  row={row}
-                  columns={grid.columns}
-                  onOpenDetail={() => row.session && setDetail(row)}
-                  onEditFilled={() => onCountRound(row)}
-                  onCountMissing={() => onCountRound(row)}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {items.length === 0 && !isOwner ? (
+        <p className="empty">ยังไม่มีรายการสินค้า — รอเจ้าของเพิ่ม</p>
       ) : (
-        <p className="empty">
-          {filter === "missing"
-            ? "ครบทุกรอบในช่วงนี้แล้ว"
-            : "ยังไม่มีรอบนับ — ระบบจะเปิดรอบ 1 · 10 · 20 ให้อัตโนมัติ"}
-        </p>
+        <>
+          <div className="sheet-wrap stock-history-wrap stock-history-sheet sheet-bleed">
+            <table className="sheet-table stock-history-table stock-history-table--items-rows sheet-table--dense">
+              <thead>
+                <tr>
+                  <th className="stock-history-th-item stock-history-th-sticky">วัตถุดิบ</th>
+                  <th className="stock-history-th-note">โน้ต</th>
+                  {rows.map((row) => (
+                    <th
+                      key={row.rowKey}
+                      className={
+                        row.session
+                          ? "stock-history-th-date is-filled"
+                          : "stock-history-th-date is-missing"
+                      }
+                      title={
+                        row.session
+                          ? `${timelineRoundLabel(row)} · ${row.session.inspector}`
+                          : `${timelineRoundLabel(row)} · ยังไม่นับ`
+                      }
+                    >
+                      <button
+                        type="button"
+                        className="stock-history-date-head-btn"
+                        onClick={() =>
+                          row.session ? setDetail(row) : onCountRound(row)
+                        }
+                      >
+                        <span className="stock-history-date-head-label">
+                          {timelineRoundLabel(row)}
+                        </span>
+                        {!row.session ? (
+                          <span className="stock-history-missing-tag">ยังไม่นับ</span>
+                        ) : null}
+                      </button>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {grid.columns.map((col) => (
+                  <StockHistoryItemRow
+                    key={col.itemId}
+                    col={col}
+                    rounds={rows}
+                    isOwner={isOwner}
+                    actorId={actorId}
+                    onCountRound={onCountRound}
+                    onOpenFilled={(row) => setDetail(row)}
+                    onOpenSettings={() => setEditTarget(col.itemId)}
+                    onError={onError}
+                  />
+                ))}
+              </tbody>
+            </table>
+            {filter === "missing" && rows.length === 0 && items.length > 0 ? (
+              <p className="empty">ครบทุกรอบในช่วงนี้แล้ว</p>
+            ) : null}
+          </div>
+
+          {isOwner ? (
+            <div className="stock-history-add-bar">
+              <button
+                type="button"
+                className="stock-history-add-btn"
+                onClick={() => setEditTarget("new")}
+                aria-label="เพิ่มวัตถุดิบ"
+              >
+                <Plus size={14} aria-hidden />
+              </button>
+              <button
+                type="button"
+                className="stock-history-add-link"
+                onClick={() => setEditTarget("new")}
+              >
+                + เพิ่มรายการ
+              </button>
+            </div>
+          ) : null}
+        </>
       )}
+
+      {editTarget && isOwner ? (
+        <StockItemSlimModal
+          mode={editTarget === "new" ? "new" : "edit"}
+          item={editingItem}
+          actorId={actorId}
+          onClose={() => setEditTarget(null)}
+          onError={onError}
+        />
+      ) : null}
 
       {detail?.session ? (
         <StockCountDetailModal
@@ -342,67 +382,324 @@ function StockHistoryView({
             setDetail(null);
             onCountRound(target);
           }}
-          onDelete={() => void onDeleteSession(detail.session!.id)}
+          onDelete={() => setConfirmDeleteSessionId(detail.session!.id)}
         />
       ) : null}
+
+      <PosConfirmDialog
+        open={!!confirmDeleteSessionId}
+        title="ลบรอบนับนี้?"
+        message="ลบแล้วกู้คืนไม่ได้ — ยืนยันอีกครั้ง"
+        destructive
+        confirmLabel="ลบ"
+        busy={deletingSession}
+        onCancel={() => {
+          if (deletingSession) return;
+          setConfirmDeleteSessionId(null);
+        }}
+        onConfirm={() => void confirmDeleteSession()}
+      />
     </div>
   );
 }
 
-function StockHistoryRow({
-  row,
-  columns,
-  onOpenDetail,
-  onEditFilled,
-  onCountMissing,
+function StockItemSlimModal({
+  mode,
+  item,
+  actorId,
+  onClose,
+  onError,
 }: {
-  row: StockHistoryTimelineRow;
-  columns: StockHistoryItemCol[];
-  onOpenDetail: () => void;
-  onEditFilled: () => void;
-  onCountMissing: () => void;
+  mode: "new" | "edit";
+  item: StockItem | null;
+  actorId: string;
+  onClose: () => void;
+  onError: (msg: string | null) => void;
 }) {
-  const hasSession = !!row.session;
-  const isMissing = !hasSession;
+  const [name, setName] = useState(item?.name || "");
+  const [minQty, setMinQty] = useState(String(item?.minQty ?? 0));
+  const [busy, setBusy] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const iconId = guessStockIconId(name.trim() || item?.name || "");
+  const Icon = stockIconComponent(iconId);
+
+  async function onSave(e: FormEvent) {
+    e.preventDefault();
+    const trimmed = name.trim();
+    if (!trimmed || !actorId) return;
+    setBusy(true);
+    onError(null);
+    try {
+      const icon = guessStockIconId(trimmed);
+      if (mode === "new") {
+        await createStockItem({
+          name: trimmed,
+          unit: "ชิ้น",
+          qty: 0,
+          minQty: Number(minQty) || 0,
+          safetyStock: 0,
+          unitCost: 0,
+          icon,
+          updatedBy: actorId,
+        });
+      } else if (item) {
+        await updateStockItem(item.id, {
+          name: trimmed,
+          minQty: Number(minQty) || 0,
+          icon,
+          updatedBy: actorId,
+        });
+      }
+      onClose();
+    } catch (err) {
+      onError((err as Error).message || "บันทึกไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onDeleteConfirmed() {
+    if (!item) return;
+    setBusy(true);
+    onError(null);
+    try {
+      await deleteStockItem(item.id);
+      setConfirmDelete(false);
+      onClose();
+    } catch (err) {
+      onError((err as Error).message || "ลบไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
-    <tr className={isMissing ? "stock-history-row-missing" : "stock-history-row-filled"}>
-      <td className="stock-history-date">
-        {isMissing ? (
+    <>
+    <div
+      className="modal-backdrop edit-modal is-stock-item-slim"
+      role="presentation"
+      onClick={onClose}
+    >
+      <div
+        className="modal-card stock-item-slim-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="stock-item-slim-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="stock-item-slim-head">
+          <h2 id="stock-item-slim-title" className="stock-item-slim-title">
+            {mode === "new" ? "เพิ่มวัตถุดิบ" : "ตั้งค่ารายการ"}
+          </h2>
+          <button type="button" className="ghost-btn icon-btn" aria-label="ปิด" onClick={onClose}>
+            <X size={14} />
+          </button>
+        </div>
+        <form className="stock-item-slim-form" onSubmit={(e) => void onSave(e)}>
+          <label className="stock-item-slim-field">
+            <span>ชื่อ</span>
+            <span className="stock-item-slim-name-wrap">
+              <Icon size={15} aria-hidden className="stock-item-slim-icon-preview" />
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="ชื่อวัตถุดิบ"
+                required
+                autoFocus
+                autoComplete="off"
+              />
+            </span>
+          </label>
+          <label className="stock-item-slim-field">
+            <span>แจ้งเตือน</span>
+            <span className="stock-item-slim-min-wrap">
+              <span className="stock-item-slim-min-prefix" aria-hidden>
+                ≤
+              </span>
+              <input
+                type="number"
+                min="0"
+                inputMode="numeric"
+                value={minQty}
+                onChange={(e) => setMinQty(e.target.value)}
+              />
+            </span>
+          </label>
+          <div className="stock-item-slim-actions">
+            {mode === "edit" ? (
+              <button
+                type="button"
+                className="ghost-btn stock-item-slim-del"
+                disabled={busy}
+                onClick={() => setConfirmDelete(true)}
+              >
+                <Trash2 size={12} aria-hidden />
+                ลบ
+              </button>
+            ) : (
+              <span />
+            )}
+            <button type="button" className="ghost-btn" disabled={busy} onClick={onClose}>
+              ยกเลิก
+            </button>
+            <button type="submit" className="primary-btn" disabled={busy || !name.trim()}>
+              {busy ? "…" : "บันทึก"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <PosConfirmDialog
+      open={confirmDelete}
+      title="ลบรายการนี้?"
+      message={item ? `ลบ「${item.name}」แล้วกู้คืนไม่ได้` : "ลบแล้วกู้คืนไม่ได้"}
+      destructive
+      confirmLabel="ลบ"
+      busy={busy}
+      onCancel={() => {
+        if (busy) return;
+        setConfirmDelete(false);
+      }}
+      onConfirm={() => void onDeleteConfirmed()}
+    />
+    </>
+  );
+}
+
+function StockHistoryItemRow({
+  col,
+  rounds,
+  isOwner,
+  actorId,
+  onCountRound,
+  onOpenFilled,
+  onOpenSettings,
+  onError,
+}: {
+  col: StockHistoryItemCol;
+  rounds: StockHistoryTimelineRow[];
+  isOwner: boolean;
+  actorId: string;
+  onCountRound: (row: StockHistoryTimelineRow) => void;
+  onOpenFilled: (row: StockHistoryTimelineRow) => void;
+  onOpenSettings: () => void;
+  onError: (msg: string | null) => void;
+}) {
+  const iconId = guessStockIconId(col.name);
+  const Icon = stockIconComponent(iconId);
+  const iconClass =
+    iconId === "straw"
+      ? "stock-history-item-icon is-straw"
+      : iconId === "lid"
+        ? "stock-history-item-icon is-lid"
+        : iconId === "powder"
+          ? "stock-history-item-icon is-powder"
+          : "stock-history-item-icon";
+  const low = col.minQty > 0 && col.qty <= col.minQty;
+  const [noteDraft, setNoteDraft] = useState(col.note || "");
+  const noteDraftRef = useRef(noteDraft);
+  const noteFocusedRef = useRef(false);
+  noteDraftRef.current = noteDraft;
+
+  useEffect(() => {
+    if (noteFocusedRef.current) return;
+    setNoteDraft(col.note || "");
+  }, [col.itemId, col.note]);
+
+  const saveNote = useCallback(
+    async (next: string) => {
+      const trimmed = next.trim();
+      const prev = (col.note || "").trim();
+      if (trimmed === prev) return;
+      if (!actorId) return;
+      onError(null);
+      try {
+        await updateStockItem(col.itemId, { note: trimmed, updatedBy: actorId });
+      } catch (err) {
+        onError((err as Error).message || "บันทึกโน้ตไม่สำเร็จ");
+        setNoteDraft(col.note || "");
+      }
+    },
+    [actorId, col.itemId, col.note, onError],
+  );
+
+  // พิมพ์แล้วบันทึกอัตโนมัติ (debounce) — ไม่ต้องกดปุ่ม
+  useEffect(() => {
+    const trimmed = noteDraft.trim();
+    const prev = (col.note || "").trim();
+    if (trimmed === prev) return;
+    if (!actorId) return;
+    const t = window.setTimeout(() => {
+      void saveNote(noteDraftRef.current);
+    }, 450);
+    return () => window.clearTimeout(t);
+  }, [noteDraft, col.note, actorId, saveNote]);
+
+  return (
+    <tr className={low ? "stock-history-item-row is-low" : "stock-history-item-row"}>
+      <th scope="row" className="stock-history-item-cell stock-history-th-sticky">
+        {isOwner ? (
           <button
             type="button"
-            className="stock-history-round-btn"
-            onClick={onCountMissing}
-            title={`กรอกนับรอบ ${timelineRoundLabel(row)}`}
+            className="stock-history-item-main is-tappable"
+            onClick={onOpenSettings}
+            title="เปิดตั้งค่า"
           >
-            {timelineRoundLabel(row)}
-            <span className="stock-history-missing-tag">ยังไม่นับ</span>
+            <Icon size={13} aria-hidden className={iconClass} />
+            <span className="stock-history-item-name">{col.name}</span>
+            {low ? (
+              <span className="stock-history-low-badge" title={`คงเหลือ ${col.qty} ≤ ${col.minQty}`}>
+                ≤{col.minQty}
+              </span>
+            ) : col.minQty > 0 ? (
+              <span className="stock-history-min-tag">≤{col.minQty}</span>
+            ) : null}
           </button>
         ) : (
-          <button
-            type="button"
-            className="stock-history-round-btn is-filled"
-            onClick={onOpenDetail}
-            title={`ดูรายละเอียดรอบ ${timelineRoundLabel(row)}`}
-          >
-            {timelineRoundLabel(row)}
-            <span className="stock-history-meta-inline">
-              {inspectorShort(row.session!.inspector)} ·{" "}
-              {formatStockCountTimeShort(row.session!.submittedAt)}
-            </span>
-          </button>
+          <span className="stock-history-item-main" title={col.name}>
+            <Icon size={13} aria-hidden className={iconClass} />
+            <span className="stock-history-item-name">{col.name}</span>
+            {low ? (
+              <span className="stock-history-low-badge" title={`คงเหลือ ${col.qty} ≤ ${col.minQty}`}>
+                ≤{col.minQty}
+              </span>
+            ) : null}
+          </span>
         )}
+      </th>
+      <td className="stock-history-note-cell">
+        <input
+          className="stock-history-note-input"
+          value={noteDraft}
+          placeholder=""
+          aria-label={`โน้ต ${col.name}`}
+          onChange={(e) => setNoteDraft(e.target.value)}
+          onFocus={() => {
+            noteFocusedRef.current = true;
+          }}
+          onBlur={() => {
+            noteFocusedRef.current = false;
+            void saveNote(noteDraft);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.currentTarget.blur();
+            }
+          }}
+        />
       </td>
-      {columns.map((col, idx) => {
-        const cell = row.cells[idx];
-        const qty = cell?.qty;
+      {rounds.map((row) => {
+        const cell = row.cells.find((c) => c.itemId === col.itemId);
+        const qty = cell?.qty ?? null;
+        const hasSession = !!row.session;
+        const cellLow = hasSession && qty != null && col.minQty > 0 && qty <= col.minQty;
         if (!hasSession) {
           return (
-            <td key={col.itemId}>
+            <td key={row.rowKey}>
               <button
                 type="button"
                 className="stock-history-cell is-pending"
-                onClick={onCountMissing}
+                onClick={() => onCountRound(row)}
                 title={`กรอกนับรอบ ${timelineRoundLabel(row)}`}
               >
                 —
@@ -411,11 +708,19 @@ function StockHistoryRow({
           );
         }
         return (
-          <td key={col.itemId}>
+          <td key={row.rowKey}>
             <button
               type="button"
-              className="stock-history-cell is-filled"
-              onClick={onEditFilled}
+              className={
+                cellLow
+                  ? "stock-history-cell is-filled is-low"
+                  : "stock-history-cell is-filled"
+              }
+              onClick={() => onCountRound(row)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                onOpenFilled(row);
+              }}
               title={`แก้ไข ${col.name}: ${qty != null ? formatStockQty(qty) : "—"} ${col.unit}`}
             >
               {qty != null ? formatStockQty(qty) : "—"}
@@ -524,7 +829,6 @@ function StockCountForm({
   lockedRound,
   onError,
   onClose,
-  onOpenCatalog,
 }: {
   items: StockItem[];
   employees: Employee[];
@@ -534,7 +838,6 @@ function StockCountForm({
   lockedRound: { year: number; month: number; dayOfMonth: StockCountRound };
   onError: (msg: string | null) => void;
   onClose: () => void;
-  onOpenCatalog?: () => void;
 }) {
   const { year, month, dayOfMonth } = lockedRound;
   const [step, setStep] = useState<"setup" | "count" | "done" | "loading">("loading");
@@ -622,21 +925,9 @@ function StockCountForm({
     return (
       <div className="check-form">
         <p className="empty">
-          ยังไม่มีรายการสินค้า —{" "}
-          {isOwner && onOpenCatalog ? (
-            <button
-              type="button"
-              className="linkish-btn"
-              onClick={() => {
-                onClose();
-                onOpenCatalog();
-              }}
-            >
-              ไปเพิ่มที่แท็บรายการวัตถุดิบ
-            </button>
-          ) : (
-            "รอเจ้าของตั้งค่ารายการ"
-          )}
+          {isOwner
+            ? "ยังไม่มีรายการสินค้า — ปิดแล้วพิมพ์ชื่อที่แถว + ด้านล่างตาราง"
+            : "ยังไม่มีรายการสินค้า — รอเจ้าของเพิ่ม"}
         </p>
         <button type="button" className="ghost-btn" onClick={onClose}>
           ปิด

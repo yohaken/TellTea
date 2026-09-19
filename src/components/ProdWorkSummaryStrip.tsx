@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import type {
-  ProdProductCompareSummary,
-  ProdWorkerCompareRow,
-  ProdWorkerCompareSummary,
+import { Fragment, useMemo, useState } from "react";
+import {
+  groupProdWorkerCompareRows,
+  type ProdProductCompareSummary,
+  type ProdWorkerCompareSummary,
+  type ProdWorkerTreeGroup,
 } from "@/lib/prod-work-summary";
 import { cn, formatStockQty } from "@/lib/utils";
 
@@ -107,26 +108,22 @@ export function ProdProductSummaryStrip({
   );
 }
 
-type WorkerSortKey = "name" | "product" | "qtyPrev" | "qtyNow" | "diff";
+type WorkerSortKey = "name" | "qtyPrev" | "qtyNow" | "diff";
 
-function sortWorkerRows(
-  rows: ProdWorkerCompareRow[],
+function sortWorkerGroups(
+  groups: ProdWorkerTreeGroup[],
   key: WorkerSortKey,
   dir: "asc" | "desc",
-): ProdWorkerCompareRow[] {
+): ProdWorkerTreeGroup[] {
   const mul = dir === "asc" ? 1 : -1;
-  return [...rows].sort((a, b) => {
+  return [...groups].sort((a, b) => {
     let cmp = 0;
     if (key === "name") cmp = a.workerName.localeCompare(b.workerName, "th");
-    else if (key === "product") cmp = a.productName.localeCompare(b.productName, "th");
     else if (key === "qtyPrev") cmp = a.qtyPrev - b.qtyPrev;
     else if (key === "qtyNow") cmp = a.qtyNow - b.qtyNow;
     else cmp = a.diff - b.diff;
     if (cmp) return cmp * mul;
-    // Stable tie-breakers
-    const byName = a.workerName.localeCompare(b.workerName, "th");
-    if (byName) return byName;
-    return a.productName.localeCompare(b.productName, "th");
+    return a.workerName.localeCompare(b.workerName, "th");
   });
 }
 
@@ -167,8 +164,7 @@ function SortTh({
 }
 
 /**
- * Per staff: ชื่อ · สินค้า · เดือนก่อน · จำนวน · ส่วนต่าง
- * Tap column headers to sort.
+ * ตามคน — ต้นไม้: พนักงาน (แม่ · ชื่อไม่ซ้ำ) → สินค้า (ลูก · เยื้องเข้า)
  */
 export function ProdWorkerSummaryStrip({
   month,
@@ -186,10 +182,10 @@ export function ProdWorkerSummaryStrip({
   const [sortKey, setSortKey] = useState<WorkerSortKey>("qtyNow");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
-  const rows = useMemo(
-    () => sortWorkerRows(summary.rows, sortKey, sortDir),
-    [summary.rows, sortKey, sortDir],
-  );
+  const groups = useMemo(() => {
+    const tree = groupProdWorkerCompareRows(summary.rows);
+    return sortWorkerGroups(tree, sortKey, sortDir);
+  }, [summary.rows, sortKey, sortDir]);
 
   if (!summary.rows.length) return null;
   const me = String(highlightWorkerId || "").trim();
@@ -200,8 +196,7 @@ export function ProdWorkerSummaryStrip({
       return;
     }
     setSortKey(key);
-    // Numbers default high→low; names A→Z
-    setSortDir(key === "name" || key === "product" ? "asc" : "desc");
+    setSortDir(key === "name" ? "asc" : "desc");
   }
 
   return (
@@ -212,22 +207,15 @@ export function ProdWorkerSummaryStrip({
       <p className="prod-work-summary-head">
         <span className="prod-work-summary-title">ผลิต · ตามคน</span>
         <span className="muted prod-work-summary-note">
-          {prevMonth} → {month} · แตะหัวคอลัมน์เพื่อเรียง
+          {prevMonth} → {month}
         </span>
       </p>
-      <table className="prod-work-summary-table is-compare is-worker">
+      <table className="prod-work-summary-table is-compare is-worker is-tree">
         <thead>
           <tr>
             <SortTh
-              label="ชื่อ"
+              label="รายการ"
               colKey="name"
-              activeKey={sortKey}
-              dir={sortDir}
-              onSort={onSort}
-            />
-            <SortTh
-              label="สินค้า"
-              colKey="product"
               activeKey={sortKey}
               dir={sortDir}
               onSort={onSort}
@@ -259,42 +247,61 @@ export function ProdWorkerSummaryStrip({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => {
-            const isMe = Boolean(me && row.workerId === me);
+          {groups.map((group) => {
+            const isMe = Boolean(me && group.workerId === me);
             return (
-              <tr
-                key={`${row.workerId}:${row.productId}`}
-                className={cn(isMe && "is-me")}
-              >
-                <th scope="row" title={row.workerName}>
-                  {row.workerName}
-                  {isMe ? <span className="prod-work-summary-me">·</span> : null}
-                </th>
-                <td className="prod-work-summary-prod" title={row.productName}>
-                  {row.productName}
-                </td>
-                <td className="prod-work-summary-num">
-                  {formatStockQty(row.qtyPrev)}
-                </td>
-                <td className="prod-work-summary-num">
-                  {formatStockQty(row.qtyNow)}
-                </td>
-                <td
-                  className={cn(
-                    "prod-work-summary-num",
-                    "prod-work-summary-diff",
-                    diffClass(row.diff),
-                  )}
-                >
-                  {formatDiff(row.diff)}
-                </td>
-              </tr>
+              <Fragment key={group.workerId}>
+                <tr className={cn("prod-work-summary-parent", isMe && "is-me")}>
+                  <th scope="rowgroup" title={group.workerName}>
+                    {group.workerName}
+                    {isMe ? <span className="prod-work-summary-me">·</span> : null}
+                  </th>
+                  <td className="prod-work-summary-num">
+                    {formatStockQty(group.qtyPrev)}
+                  </td>
+                  <td className="prod-work-summary-num">
+                    {formatStockQty(group.qtyNow)}
+                  </td>
+                  <td
+                    className={cn(
+                      "prod-work-summary-num",
+                      "prod-work-summary-diff",
+                      diffClass(group.diff),
+                    )}
+                  >
+                    {formatDiff(group.diff)}
+                  </td>
+                </tr>
+                {group.products.map((row) => (
+                  <tr
+                    key={`${row.workerId}:${row.productId}`}
+                    className={cn("prod-work-summary-child", isMe && "is-me")}
+                  >
+                    <th scope="row" title={row.productName} className="prod-work-summary-child-label">
+                      {row.productName}
+                    </th>
+                    <td className="prod-work-summary-num">
+                      {formatStockQty(row.qtyPrev)}
+                    </td>
+                    <td className="prod-work-summary-num">
+                      {formatStockQty(row.qtyNow)}
+                    </td>
+                    <td
+                      className={cn(
+                        "prod-work-summary-num",
+                        "prod-work-summary-diff",
+                        diffClass(row.diff),
+                      )}
+                    >
+                      {formatDiff(row.diff)}
+                    </td>
+                  </tr>
+                ))}
+              </Fragment>
             );
           })}
           <tr className="is-total">
-            <th scope="row" colSpan={2}>
-              รวมชิ้น
-            </th>
+            <th scope="row">รวมชิ้น</th>
             <td className="prod-work-summary-num">
               {formatStockQty(summary.totalPrev)}
             </td>

@@ -12,12 +12,18 @@ import {
   subscribeStockItemsWithCosts,
   updateStockItem,
 } from "@/lib/stock";
+import {
+  guessStockIconId,
+  STOCK_ICON_OPTIONS,
+  stockIconComponent,
+  type StockIconId,
+} from "@/lib/stock-icons";
 import type { StockItem } from "@/lib/types";
 import { formatPlainNumber } from "@/lib/utils";
 
 /**
- * รายการวัตถุดิบ — เจ้าของเท่านั้น
- * ใช้ในหน้าคลัง (/stock) มุมมองรายการ · ตั้งชื่อ · เพิ่ม/ลดคงเหลือ · ลบ
+ * รายการวัตถุดิบ — เจ้าของเท่านั้น · super compact
+ * เพิ่มชื่อ · ไอคอน · เกณฑ์แจ้งเตือน (≤) · ลบ
  */
 export function StockCatalogSetup({ onError }: { onError: (msg: string | null) => void }) {
   const { actorId } = useAuth();
@@ -26,9 +32,7 @@ export function StockCatalogSetup({ onError }: { onError: (msg: string | null) =
   const [name, setName] = useState("");
   const [unit, setUnit] = useState("ชิ้น");
   const [minQty, setMinQty] = useState("0");
-  const [safetyStock, setSafetyStock] = useState("0");
-  const [unitCost, setUnitCost] = useState("0");
-  const [barcode, setBarcode] = useState("");
+  const [icon, setIcon] = useState<StockIconId>("bag");
   const [busy, setBusy] = useState(false);
   const [qtyBusyId, setQtyBusyId] = useState<string | null>(null);
 
@@ -56,21 +60,24 @@ export function StockCatalogSetup({ onError }: { onError: (msg: string | null) =
   async function onCreate(e: FormEvent) {
     e.preventDefault();
     if (!userEmail) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
     setBusy(true);
     onError(null);
     try {
       await createStockItem({
-        name,
-        unit,
+        name: trimmed,
+        unit: unit.trim() || "ชิ้น",
         qty: 0,
-        minQty: Number(minQty),
-        safetyStock: Number(safetyStock),
-        unitCost: Number(unitCost),
-        barcode,
+        minQty: Number(minQty) || 0,
+        safetyStock: 0,
+        unitCost: 0,
+        icon: icon || guessStockIconId(trimmed),
         updatedBy: userEmail,
       });
       setName("");
-      setBarcode("");
+      setMinQty("0");
+      setIcon("bag");
     } catch (err) {
       onError((err as Error).message || "เพิ่มไม่สำเร็จ");
     } finally {
@@ -86,9 +93,7 @@ export function StockCatalogSetup({ onError }: { onError: (msg: string | null) =
       if (field === "name") patch.name = value;
       if (field === "unit") patch.unit = value;
       if (field === "minQty") patch.minQty = Number(value);
-      if (field === "safetyStock") patch.safetyStock = Number(value);
-      if (field === "unitCost") patch.unitCost = Number(value);
-      if (field === "barcode") patch.barcode = value;
+      if (field === "icon") patch.icon = value;
       await updateStockItem(item.id, patch as Parameters<typeof updateStockItem>[1]);
     } catch (err) {
       onError((err as Error).message || "บันทึกไม่สำเร็จ");
@@ -110,7 +115,7 @@ export function StockCatalogSetup({ onError }: { onError: (msg: string | null) =
   }
 
   async function onDelete(item: StockItem) {
-    if (!window.confirm(`ลบ「${item.name}」ออกจากคลัง?`)) return;
+    if (!window.confirm(`ลบ「${item.name}」?`)) return;
     onError(null);
     try {
       await deleteStockItem(item.id);
@@ -120,85 +125,72 @@ export function StockCatalogSetup({ onError }: { onError: (msg: string | null) =
   }
 
   return (
-    <section className="stock-catalog-panel">
-      <p className="muted stock-catalog-lead">
-        จัดการรายการวัตถุดิบ — ตั้งชื่อ · เพิ่ม/ลดคงเหลือ · ลบ · เฉพาะเจ้าของ
-      </p>
-
-      <form className="form-card entry-form" onSubmit={(e) => void onCreate(e)}>
-        <h3 className="panel-title" style={{ fontSize: "1rem" }}>
-          เพิ่มวัตถุดิบ
-        </h3>
-        <div className="field">
-          <label htmlFor="stock-setup-name">ชื่อ</label>
+    <section className="stock-catalog-panel stock-catalog-panel--slim">
+      <form
+        className="stock-catalog-add"
+        onSubmit={(e) => void onCreate(e)}
+        aria-label="เพิ่มวัตถุดิบ"
+      >
+        <StockIconSelect value={icon} onChange={setIcon} ariaLabel="ไอคอนรายการใหม่" />
+        <input
+          className="stock-catalog-add-name"
+          value={name}
+          onChange={(e) => {
+            setName(e.target.value);
+            if (!e.target.value.trim()) return;
+            setIcon(guessStockIconId(e.target.value));
+          }}
+          placeholder="ชื่อวัตถุดิบ"
+          required
+          aria-label="ชื่อวัตถุดิบ"
+        />
+        <input
+          className="stock-catalog-add-unit"
+          value={unit}
+          onChange={(e) => setUnit(e.target.value)}
+          placeholder="หน่วย"
+          aria-label="หน่วย"
+        />
+        <label className="stock-catalog-add-alert">
+          ≤
           <input
-            id="stock-setup-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="เช่น แก้วชา"
-            required
+            type="number"
+            min="0"
+            inputMode="numeric"
+            value={minQty}
+            onChange={(e) => setMinQty(e.target.value)}
+            aria-label="แจ้งเตือนเมื่อจำนวนน้อยกว่าหรือเท่ากับ"
           />
-        </div>
-        <div className="stock-form-grid">
-          <div className="field">
-            <label htmlFor="stock-setup-unit">หน่วย</label>
-            <input id="stock-setup-unit" value={unit} onChange={(e) => setUnit(e.target.value)} />
-          </div>
-          <div className="field">
-            <label htmlFor="stock-setup-reorder">จุดสั่งซื้อ</label>
-            <input
-              id="stock-setup-reorder"
-              type="number"
-              value={minQty}
-              onChange={(e) => setMinQty(e.target.value)}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="stock-setup-safety">สต๊อกสำรอง</label>
-            <input
-              id="stock-setup-safety"
-              type="number"
-              value={safetyStock}
-              onChange={(e) => setSafetyStock(e.target.value)}
-            />
-          </div>
-        </div>
-        <div className="stock-form-grid">
-          <div className="field">
-            <label htmlFor="stock-setup-cost">ราคา/หน่วย (บาท)</label>
-            <input
-              id="stock-setup-cost"
-              type="number"
-              step="0.01"
-              value={unitCost}
-              onChange={(e) => setUnitCost(e.target.value)}
-            />
-          </div>
-          <div className="field" style={{ gridColumn: "span 2" }}>
-            <label htmlFor="stock-setup-barcode">บาร์โค้ด</label>
-            <input
-              id="stock-setup-barcode"
-              value={barcode}
-              onChange={(e) => setBarcode(e.target.value)}
-            />
-          </div>
-        </div>
-        <button type="submit" className="primary-btn" disabled={busy}>
-          {busy ? "กำลังเพิ่ม..." : "เพิ่มรายการ"}
+        </label>
+        <button type="submit" className="primary-btn stock-catalog-add-btn" disabled={busy}>
+          {busy ? "…" : "+"}
         </button>
       </form>
 
-      <div className="list-card stock-setup-list">
-        <h3 className="panel-title" style={{ fontSize: "0.95rem" }}>
-          รายการวัตถุดิบ ({items.length})
-        </h3>
-        {items.length === 0 ? <p className="empty">ยังไม่มีรายการ — เพิ่มด้านบน</p> : null}
+      <p className="muted stock-catalog-lead">
+        แจ้งเตือนเมื่อคงเหลือ ≤ ค่าที่ตั้ง · {items.length} รายการ
+      </p>
+
+      <ul className="stock-catalog-list">
+        {items.length === 0 ? (
+          <li className="empty stock-catalog-empty">ยังไม่มีรายการ</li>
+        ) : null}
         {items.map((item) => {
           const qtyBusy = qtyBusyId === item.id;
+          const low = item.minQty > 0 && item.qty <= item.minQty;
+          const Icon = stockIconComponent(item.icon);
           return (
-            <div key={item.id} className="stock-setup-row">
+            <li
+              key={item.id}
+              className={low ? "stock-catalog-row is-low" : "stock-catalog-row"}
+            >
+              <StockIconSelect
+                value={(item.icon as StockIconId) || "bag"}
+                onChange={(next) => void saveField(item, "icon", next)}
+                ariaLabel={`ไอคอน ${item.name}`}
+              />
               <input
-                className="stock-setup-name"
+                className="stock-catalog-row-name"
                 defaultValue={item.name}
                 key={`name-${item.id}-${item.name}`}
                 aria-label={`ชื่อ ${item.name}`}
@@ -208,112 +200,87 @@ export function StockCatalogSetup({ onError }: { onError: (msg: string | null) =
                   else if (!next) e.target.value = item.name;
                 }}
               />
-
-              <div className="stock-qty-stepper" aria-label={`คงเหลือ ${item.name}`}>
+              <div className="stock-catalog-qty" aria-label={`คงเหลือ ${item.name}`}>
                 <button
                   type="button"
-                  className="stock-qty-btn"
+                  className="stock-catalog-qty-btn"
                   disabled={qtyBusy || item.qty <= 0}
                   aria-label="ลด 1"
                   onClick={() => void onAdjustQty(item, -1)}
                 >
-                  <Minus size={16} aria-hidden />
+                  <Minus size={11} aria-hidden />
                 </button>
-                <div className="stock-qty-value">
-                  <strong>{formatPlainNumber(item.qty)}</strong>
+                <span className={low ? "stock-catalog-qty-val is-low" : "stock-catalog-qty-val"}>
+                  <Icon size={11} aria-hidden className="stock-catalog-qty-icon" />
+                  {formatPlainNumber(item.qty)}
                   <span className="muted">{item.unit}</span>
-                </div>
+                </span>
                 <button
                   type="button"
-                  className="stock-qty-btn"
+                  className="stock-catalog-qty-btn"
                   disabled={qtyBusy}
                   aria-label="เพิ่ม 1"
                   onClick={() => void onAdjustQty(item, 1)}
                 >
-                  <Plus size={16} aria-hidden />
+                  <Plus size={11} aria-hidden />
                 </button>
               </div>
-
-              <div className="stock-setup-grid">
-                <label>
-                  หน่วย
-                  <input
-                    defaultValue={item.unit}
-                    key={`unit-${item.id}-${item.unit}`}
-                    onBlur={(e) => {
-                      if (e.target.value !== item.unit) void saveField(item, "unit", e.target.value);
-                    }}
-                  />
-                </label>
-                <label>
-                  สั่งซื้อ ≤
-                  <input
-                    type="number"
-                    defaultValue={item.minQty}
-                    key={`min-${item.id}-${item.minQty}`}
-                    onBlur={(e) => {
-                      if (Number(e.target.value) !== item.minQty) {
-                        void saveField(item, "minQty", e.target.value);
-                      }
-                    }}
-                  />
-                </label>
-                <label>
-                  สำรอง
-                  <input
-                    type="number"
-                    defaultValue={item.safetyStock}
-                    key={`safe-${item.id}-${item.safetyStock}`}
-                    onBlur={(e) => {
-                      if (Number(e.target.value) !== item.safetyStock) {
-                        void saveField(item, "safetyStock", e.target.value);
-                      }
-                    }}
-                  />
-                </label>
-                <label>
-                  ฿/หน่วย
-                  <input
-                    type="number"
-                    step="0.01"
-                    defaultValue={item.unitCost}
-                    key={`cost-${item.id}-${item.unitCost}`}
-                    onBlur={(e) => {
-                      if (Number(e.target.value) !== item.unitCost) {
-                        void saveField(item, "unitCost", e.target.value);
-                      }
-                    }}
-                  />
-                </label>
-                <label className="wide">
-                  บาร์โค้ด
-                  <input
-                    defaultValue={item.barcode || ""}
-                    key={`bc-${item.id}-${item.barcode || ""}`}
-                    onBlur={(e) => {
-                      if (e.target.value !== (item.barcode || "")) {
-                        void saveField(item, "barcode", e.target.value);
-                      }
-                    }}
-                  />
-                </label>
-              </div>
-
-              <div className="stock-setup-meta">
-                <span className="muted">แตะชื่อเพื่อแก้ · ± ปรับคงเหลือ</span>
-                <button
-                  type="button"
-                  className="danger-btn stock-setup-delete"
-                  onClick={() => void onDelete(item)}
-                >
-                  <Trash2 size={14} aria-hidden />
-                  ลบ
-                </button>
-              </div>
-            </div>
+              <label className="stock-catalog-row-alert" title="แจ้งเตือนเมื่อ ≤">
+                ≤
+                <input
+                  type="number"
+                  min="0"
+                  inputMode="numeric"
+                  defaultValue={item.minQty || ""}
+                  key={`min-${item.id}-${item.minQty}`}
+                  aria-label={`${item.name} แจ้งเตือนเมื่อน้อยกว่าหรือเท่ากับ`}
+                  onBlur={(e) => {
+                    if (Number(e.target.value) !== item.minQty) {
+                      void saveField(item, "minQty", e.target.value);
+                    }
+                  }}
+                />
+              </label>
+              <button
+                type="button"
+                className="trash-btn stock-catalog-del"
+                aria-label={`ลบ ${item.name}`}
+                onClick={() => void onDelete(item)}
+              >
+                <Trash2 size={11} />
+              </button>
+            </li>
           );
         })}
-      </div>
+      </ul>
     </section>
+  );
+}
+
+function StockIconSelect({
+  value,
+  onChange,
+  ariaLabel,
+}: {
+  value: StockIconId;
+  onChange: (id: StockIconId) => void;
+  ariaLabel: string;
+}) {
+  const Current = stockIconComponent(value);
+  return (
+    <label className="stock-icon-select" title="เลือกไอคอน">
+      <Current size={12} aria-hidden />
+      <select
+        value={value}
+        aria-label={ariaLabel}
+        onChange={(e) => onChange(e.target.value as StockIconId)}
+      >
+        {STOCK_ICON_OPTIONS.map((opt) => (
+          <option key={opt.id} value={opt.id}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }

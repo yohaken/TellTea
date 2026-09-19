@@ -807,13 +807,7 @@ function BonusView() {
         </h1>
       </div>
 
-      {shopPayView && !isStaffPreview ? (
-        <p className="muted payroll-staff-preview-hint" style={{ margin: "0 0 0.55rem", fontSize: "0.78rem" }}>
-          ดูมุมพนักงาน: แตะไอคอนชื่อมุมขวาบน → ดูในมุมพนักงานคนนี้ · แตะไอคอนเขียวซ้ำเพื่อออก
-        </p>
-      ) : null}
-
-      <div className="payroll-tabs" role="tablist" aria-label="จ่ายและโบนัส">
+      <div className="payroll-tabs bonus-tabs-slim" role="tablist" aria-label="จ่ายและโบนัส">
         <button
           type="button"
           role="tab"
@@ -853,7 +847,7 @@ function BonusView() {
       </div>
 
       {tab === "bonus" || tab === "pay" ? (
-        <div className="bonus-toolbar">
+        <div className="bonus-toolbar module-toolbar-slim">
           <input
             type="month"
             className="ot-slim-input"
@@ -861,7 +855,7 @@ function BonusView() {
             onChange={(e) => setMonth(e.target.value)}
             aria-label="เดือนอ้างอิง"
           />
-          <span className="bonus-toolbar-meta muted">
+          <span className="bonus-toolbar-meta muted module-slim-stats">
             {showShopUi && report
               ? `${thaiMonthYearLabel(report.year, report.month)} · หารขาย ${report.employeeCount} คน`
               : report
@@ -876,7 +870,7 @@ function BonusView() {
             monthClosed ? (
               <button
                 type="button"
-                className="ghost-btn"
+                className="ghost-btn bonus-toolbar-btn"
                 disabled={closeBusy}
                 onClick={() => void onUnlockMonth()}
               >
@@ -885,17 +879,17 @@ function BonusView() {
             ) : (
               <button
                 type="button"
-                className="primary-btn"
+                className="primary-btn bonus-toolbar-btn"
                 disabled={closeBusy || !liveReport}
                 onClick={() => void onCloseMonth()}
               >
-                {closeBusy ? "กำลังปิด…" : "ปิดเดือนนี้"}
+                {closeBusy ? "…" : "ปิดเดือน"}
               </button>
             )
           ) : null}
         </div>
       ) : tab === "history" ? (
-        <div className="bonus-toolbar">
+        <div className="bonus-toolbar module-toolbar-slim">
           <input
             type="month"
             className="ot-slim-input"
@@ -903,18 +897,18 @@ function BonusView() {
             onChange={(e) => setMonth(e.target.value)}
             aria-label="เดือนอ้างอิงช่วงหลักฐานจ่าย"
           />
-          <span className="bonus-toolbar-meta muted">
-            โหลดย้อนหลัง ~14 เดือนจากเดือนที่เลือก · ใบสรุปหลังโอน · แยกตามงวดงาน
+          <span className="bonus-toolbar-meta muted module-slim-stats">
+            ย้อนหลัง ~14 เดือน · ใบสรุปหลังโอน
             {isStaffPreview && previewEmployee
               ? ` · มุม ${previewEmployee.name}`
               : ""}
           </span>
         </div>
       ) : (
-        <p className="muted bonus-toolbar-meta" style={{ margin: "0.25rem 0 0.65rem" }}>
+        <p className="muted bonus-toolbar-meta bonus-settings-hint">
           {uiIsOwner
-            ? "ตั้งเงินเดือนและรอบจ่ายที่นี่ · ไม่ต้องไปหน้าอื่น"
-            : "ดูเงินเดือนและรอบจ่ายของตัวเอง · ไม่เห็นยอดคนอื่น"}
+            ? "ตั้งเงินเดือนและรอบจ่ายที่นี่"
+            : "ดูเงินเดือนและรอบจ่ายของตัวเอง"}
         </p>
       )}
 
@@ -1062,12 +1056,11 @@ function BonusView() {
               <div className="bonus-summary-pool">
                 <span className="bonus-summary-label">โบนัสขายเบเกอรี่ รวม</span>
                 <strong className="bonus-summary-pool-amt">฿{fmt(report.totalSalesPool)}</strong>
-                <span className="muted bonus-summary-pool-meta">
-                  จากผลิต {fmt(report.totalProdQty)} ชิ้น × เรทขายตามวัน (ตารางเรท)
-                  {monthClosed && monthClose
-                    ? ` · ปิด ${formatDateShortBe(monthClose.closedAt)}`
-                    : ""}
-                </span>
+                {monthClosed && monthClose ? (
+                  <span className="muted bonus-summary-pool-meta">
+                    ปิด {formatDateShortBe(monthClose.closedAt)}
+                  </span>
+                ) : null}
               </div>
               <div className="bonus-summary-total">
                 <span className="bonus-summary-label">คงเหลือรวม</span>
@@ -1175,14 +1168,6 @@ function BonusView() {
 
           {!loading && report && showShopUi ? (
             <BonusTable report={report} highlightName={myRow?.workerName} />
-          ) : null}
-
-          {report && showShopUi ? (
-            <p className="muted bonus-footnote">
-              ขาย = จำนวนผลิต × เรทขายจากตารางเรท (ตามวันผลิต) แล้วหารคนที่ลงทะเบียนทำงานในเดือน
-              (ผลิตหรือชง) — มีชื่ออย่างเดียวไม่หาร · ผลิต/ชง จากยอดจริง · เจ้าของกรอกจำนวนหักทั้งร้านสิ้นเดือน ·
-              เรท% ถาวร
-            </p>
           ) : null}
 
           {rulesReport ? (
@@ -1310,11 +1295,6 @@ function BonusDeductionSummaryTable({
           </tr>
         </tfoot>
       </table>
-      <p className="muted bonus-deduct-note">
-        {isOwner
-          ? "กรอกจำนวนสิ้นเดือน · แตะเรท% แก้ถาวร · รวม% นำไปหักทุกคน · หลักฐานแนบด้านล่าง"
-          : "กติกาหักโบนัสทั้งร้าน · ดูหลักฐานงวดได้ด้านล่าง — ไม่แสดงยอดรายคน"}
-      </p>
     </div>
   );
 }

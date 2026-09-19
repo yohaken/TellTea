@@ -46,6 +46,57 @@ export type ProdWorkerCompareSummary = {
   totalDiff: number;
 };
 
+/** พนักงานเป็นแม่ · สินค้าเป็นลูก (ชื่อไม่ซ้ำ) */
+export type ProdWorkerTreeGroup = {
+  workerId: string;
+  workerName: string;
+  qtyPrev: number;
+  qtyNow: number;
+  diff: number;
+  products: ProdWorkerCompareRow[];
+};
+
+export function groupProdWorkerCompareRows(
+  rows: ProdWorkerCompareRow[],
+): ProdWorkerTreeGroup[] {
+  const byWorker = new Map<string, ProdWorkerTreeGroup>();
+  for (const row of rows) {
+    const id = String(row.workerId || "").trim() || "_";
+    let group = byWorker.get(id);
+    if (!group) {
+      group = {
+        workerId: id,
+        workerName: row.workerName || "—",
+        qtyPrev: 0,
+        qtyNow: 0,
+        diff: 0,
+        products: [],
+      };
+      byWorker.set(id, group);
+    }
+    if (row.workerName && row.workerName !== row.workerId) {
+      group.workerName = row.workerName;
+    }
+    group.qtyPrev += row.qtyPrev;
+    group.qtyNow += row.qtyNow;
+    group.diff += row.diff;
+    group.products.push(row);
+  }
+
+  const groups = [...byWorker.values()];
+  for (const g of groups) {
+    g.products.sort((a, b) => {
+      if (b.qtyNow !== a.qtyNow) return b.qtyNow - a.qtyNow;
+      return a.productName.localeCompare(b.productName, "th");
+    });
+  }
+  groups.sort((a, b) => {
+    if (b.qtyNow !== a.qtyNow) return b.qtyNow - a.qtyNow;
+    return a.workerName.localeCompare(b.workerName, "th");
+  });
+  return groups;
+}
+
 function pieceQty(raw: unknown): number {
   return Math.max(0, Math.round(Number(raw) || 0));
 }

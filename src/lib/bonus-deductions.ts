@@ -152,12 +152,135 @@ export function bonusEvidenceViewOrder(
   return order;
 }
 
+/** บังคับดูหลักฐานตั้งแต่เดือนนี้ (CE YYYY-MM) — เดือนก่อนหน้าไม่บังคับ */
+export const BONUS_EVIDENCE_FORCE_SINCE = "2026-09";
+
+export function shouldForceBonusEvidenceMonth(
+  periodMonth: string,
+  since: string = BONUS_EVIDENCE_FORCE_SINCE,
+): boolean {
+  const ym = String(periodMonth || "").trim();
+  const start = String(since || "").trim();
+  if (!/^\d{4}-\d{2}$/.test(ym) || !/^\d{4}-\d{2}$/.test(start)) return false;
+  return ym >= start;
+}
+
+/** รายการเดือน CE จาก fromYm ถึง toYm รวมปลาย (YYYY-MM) */
+export function listBonusEvidenceForceMonths(
+  fromYm: string,
+  toYm: string,
+): string[] {
+  const from = String(fromYm || "").trim();
+  const to = String(toYm || "").trim();
+  if (!/^\d{4}-\d{2}$/.test(from) || !/^\d{4}-\d{2}$/.test(to)) return [];
+  if (from > to) return [];
+  const out: string[] = [];
+  let y = Number(from.slice(0, 4));
+  let m = Number(from.slice(5, 7));
+  const ty = Number(to.slice(0, 4));
+  const tm = Number(to.slice(5, 7));
+  while (y < ty || (y === ty && m <= tm)) {
+    out.push(`${y}-${String(m).padStart(2, "0")}`);
+    m += 1;
+    if (m > 12) {
+      m = 1;
+      y += 1;
+    }
+  }
+  return out;
+}
+
 export function bonusEvidenceViewedStorageKey(
   actorId: string,
   periodMonth: string,
 ): string {
   const actor = (actorId || "anon").trim() || "anon";
   return `telltea:bonusEvidenceViewed:${actor}:${periodMonth}`;
+}
+
+/** ยอมรับหลังดูครบ + ติ๊ก — จำต่องวด/คนบนเครื่องนี้ */
+export function bonusEvidenceAcceptedStorageKey(
+  actorId: string,
+  periodMonth: string,
+): string {
+  const actor = (actorId || "anon").trim() || "anon";
+  return `telltea:bonusEvidenceAccepted:v1:${actor}:${periodMonth}`;
+}
+
+export function readBonusEvidenceAccepted(
+  actorId: string,
+  periodMonth: string,
+): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return (
+      window.localStorage.getItem(
+        bonusEvidenceAcceptedStorageKey(actorId, periodMonth),
+      ) === "1"
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function writeBonusEvidenceAccepted(
+  actorId: string,
+  periodMonth: string,
+): void {
+  try {
+    window.localStorage.setItem(
+      bonusEvidenceAcceptedStorageKey(actorId, periodMonth),
+      "1",
+    );
+    // legacy key — กันโค้ดเก่าอ่านค้าง
+    window.localStorage.setItem(
+      bonusEvidenceViewedStorageKey(actorId, periodMonth),
+      "1",
+    );
+  } catch {
+    /* ignore quota */
+  }
+}
+
+export function bonusEvidenceDocHasForceContent(
+  doc: Pick<
+    BonusDeductionMonthDoc,
+    "cautionUrls" | "cautionNote" | "evidenceUrls" | "note"
+  > | null | undefined,
+): boolean {
+  if (!doc) return false;
+  return bonusEvidenceViewOrder(doc).length > 0;
+}
+
+/**
+ * บังคับไล่ทีละสไลด์ — อยู่ได้แค่ใบที่เคยถึงแล้ว (maxReached)
+ * ไปต่อ = idx+1 เท่านั้น
+ */
+export function forcedSlideAdvance(
+  idx: number,
+  slideCount: number,
+  maxReached: number,
+): { idx: number; maxReached: number; atEnd: boolean } | null {
+  if (slideCount <= 0) return null;
+  if (idx < 0 || idx > maxReached || idx >= slideCount) return null;
+  if (idx >= slideCount - 1) {
+    return { idx, maxReached: Math.max(maxReached, idx), atEnd: true };
+  }
+  const next = idx + 1;
+  return {
+    idx: next,
+    maxReached: Math.max(maxReached, next),
+    atEnd: next >= slideCount - 1,
+  };
+}
+
+export function forcedSlideAcceptReady(
+  idx: number,
+  slideCount: number,
+  maxReached: number,
+): boolean {
+  if (slideCount <= 0) return false;
+  return idx === slideCount - 1 && maxReached >= slideCount - 1;
 }
 
 export function computeRuleLinePct(qty: number, ratePct: number) {
