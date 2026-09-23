@@ -43,15 +43,91 @@ import { assertBonusMonthOpenForDate } from "./bonus-month-guard";
 
 export type ProdStatus = "unpaid" | "paid";
 
+export type ProdPhotoQaVerifyStatus =
+  | "ok"
+  | "conflict_confirmed"
+  | "flagged"
+  | "fixed"
+  | "skipped"
+  | "pending";
+
+export type ProdPhotoQaConflictLevel = "none" | "conflict" | "uncertain";
+
+/** AI / staff photo conflict QA — persisted on prodEntries */
+export type ProdPhotoQa = {
+  verifyStatus: ProdPhotoQaVerifyStatus;
+  conflictLevel?: ProdPhotoQaConflictLevel;
+  selectedProductId: string;
+  selectedProductName: string;
+  aiSuggestedProductName?: string;
+  aiReason?: string;
+  staffAction?: "confirmed" | "changed_product";
+  checkedAt: number;
+  flaggedAt?: number;
+  flaggedBy?: string;
+  fixedAt?: number;
+};
+
 export function normalizeProdStatus(raw: unknown): ProdStatus {
   return raw === "paid" ? "paid" : "unpaid";
 }
 
+export function normalizeProdPhotoQa(raw: unknown): ProdPhotoQa | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const d = raw as Record<string, unknown>;
+  const verifyStatus = String(d.verifyStatus || "").trim() as ProdPhotoQaVerifyStatus;
+  const allowed: ProdPhotoQaVerifyStatus[] = [
+    "ok",
+    "conflict_confirmed",
+    "flagged",
+    "fixed",
+    "skipped",
+    "pending",
+  ];
+  if (!allowed.includes(verifyStatus)) return undefined;
+  const levelRaw = String(d.conflictLevel || "").trim();
+  const conflictLevel =
+    levelRaw === "conflict" || levelRaw === "uncertain" || levelRaw === "none"
+      ? (levelRaw as ProdPhotoQaConflictLevel)
+      : undefined;
+  const staffRaw = String(d.staffAction || "").trim();
+  const staffAction =
+    staffRaw === "confirmed" || staffRaw === "changed_product"
+      ? staffRaw
+      : undefined;
+  return {
+    verifyStatus,
+    ...(conflictLevel ? { conflictLevel } : {}),
+    selectedProductId: String(d.selectedProductId || ""),
+    selectedProductName: String(d.selectedProductName || ""),
+    ...(d.aiSuggestedProductName
+      ? { aiSuggestedProductName: String(d.aiSuggestedProductName).trim() }
+      : {}),
+    ...(d.aiReason ? { aiReason: String(d.aiReason).trim().slice(0, 120) } : {}),
+    ...(staffAction ? { staffAction } : {}),
+    checkedAt: Number(d.checkedAt) || 0,
+    ...(d.flaggedAt != null ? { flaggedAt: Number(d.flaggedAt) || 0 } : {}),
+    ...(d.flaggedBy ? { flaggedBy: String(d.flaggedBy) } : {}),
+    ...(d.fixedAt != null ? { fixedAt: Number(d.fixedAt) || 0 } : {}),
+  };
+}
+
+export function isProdPhotoQaFlagged(
+  entry: Pick<ProdEntry, "photoQa"> | null | undefined,
+): boolean {
+  const s = entry?.photoQa?.verifyStatus;
+  return s === "flagged" || s === "pending";
+}
+
 /**
- * Bonus calc counts all month rows; `paid` only means locked after month-close / pay.
- * Kept for call-site compatibility.
+ * Bonus calc counts month rows except photo-QA flagged (wrong product until fixed).
+ * `paid` only means locked after month-close / pay.
  */
-export function prodEntryCountsTowardBonus(_entry: Pick<ProdEntry, "status">) {
+export function prodEntryCountsTowardBonus(
+  entry: Pick<ProdEntry, "status" | "photoQa">,
+) {
+  if (entry.photoQa?.verifyStatus === "flagged") return false;
+  if (entry.photoQa?.verifyStatus === "pending") return false;
   return true;
 }
 
@@ -89,6 +165,7 @@ export type ProdEntry = {
   imageUrl?: string;
   imageUrls?: string[];
   status: ProdStatus;
+  photoQa?: ProdPhotoQa;
   createdBy: string;
   createdAt: number;
   updatedAt: number;
@@ -107,6 +184,7 @@ export type ProdEntryInput = {
   note?: string;
   imageUrl?: string;
   imageUrls?: string[];
+  photoQa?: ProdPhotoQa;
   createdBy: string;
 };
 
@@ -230,6 +308,7 @@ export function mapProdEntryDoc(id: string, data: Record<string, unknown>): Prod
     imageUrl: imageUrls[0] || (data.imageUrl ? String(data.imageUrl) : undefined),
     imageUrls,
     status: normalizeProdStatus(data.status),
+    photoQa: normalizeProdPhotoQa(data.photoQa),
     createdBy: String(data.createdBy || ""),
     createdAt: Number(data.createdAt) || 0,
     updatedAt: Number(data.updatedAt) || 0,
@@ -462,6 +541,7 @@ export async function addProdEntry(input: ProdEntryInput): Promise<string> {
       .filter(Boolean)
       .slice(0, PROD_IMAGE_MAX),
     status: "unpaid" as ProdStatus,
+    ...(input.photoQa ? { photoQa: input.photoQa } : {}),
     createdBy: input.createdBy,
     createdAt: now,
     updatedAt: now,
@@ -489,6 +569,7 @@ export async function updateProdEntry(
       | "imageUrl"
       | "imageUrls"
       | "status"
+      | "photoQa"
     >
   >,
   /** ผู้บันทึกครั้งนี้ — ปัก lastSeenAt (ค่าเริ่มต้น = createdBy ของแถว) */
@@ -513,7 +594,7 @@ export async function updateProdEntry(
     if (patch.date != null) await assertBonusMonthOpenForDate(patch.date);
   }
 
-  const next: Record<string, string | number | boolean | string[]> = {
+  const next: Record<string, string | number | boolean | string[] | ProdPhotoQa> = {
     updatedAt: Date.now(),
   };
   if (patch.date != null) next.date = patch.date;
@@ -541,6 +622,7 @@ export async function updateProdEntry(
     next.imageUrls = urls;
   }
   if (patch.status != null) next.status = normalizeProdStatus(patch.status);
+  if (patch.photoQa != null) next.photoQa = patch.photoQa;
   await updateDoc(ref, next);
   // แก้รายการผลิตที่มีอยู่แล้ว — ปัก lastSeenAt เหมือนตอนสร้าง
   const { touchStaffPresenceFromActor } = await import("./staff-presence");

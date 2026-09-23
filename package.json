@@ -163,6 +163,8 @@
     "test:photo-forensics-report": "node scripts/test-photo-forensics-report.mjs",
     "test:photo-forensics-lookback": "node scripts/test-photo-forensics-lookback.mjs",
     "test:prod-camera-only": "node scripts/test-prod-camera-only.mjs",
+    "test:prod-photo-qa": "node scripts/test-prod-photo-qa.mjs",
+    "test:prod-photo-qa-unit": "npx --yes tsx scripts/test-prod-photo-qa-unit.ts",
     "test:ot-multi-photo": "node scripts/test-ot-multi-photo.mjs",
     "test:ot-photo-budget": "node scripts/test-ot-photo-budget.mjs",
     "test:ot-photo-save-amend": "node scripts/test-ot-photo-save-amend.mjs",

@@ -4,7 +4,7 @@
  */
 import { computeOtBonus, type OtEntry, type OtShiftId } from "./ot";
 import { OT_SHIFT_DISPLAY_ORDER } from "./ot-grid";
-import { computeProdBonus, type ProdEntry } from "./production";
+import { computeProdBonus, prodEntryCountsTowardBonus, type ProdEntry } from "./production";
 import type { PosDashDayPoint } from "./pos-sales-dashboard";
 import type { PosDateRange } from "./pos-sales-report";
 import { bangkokDateKey, startOfLocalDay, addLocalDays } from "./utils";
@@ -112,6 +112,7 @@ export function summarizeOpsCorrelationByDay(input: {
   }
 
   for (const entry of prodEntries) {
+    if (!prodEntryCountsTowardBonus(entry)) continue;
     const dateKey = bangkokDateKey(startOfLocalDay(Number(entry.date) || 0));
     const row = map.get(dateKey);
     if (!row) continue;

@@ -6,6 +6,7 @@ const { runSyncWithAdmin } = require("./task-weekly-sync");
 const { completePosSaleAdmin, isPosCaller } = require("./pos-complete-sale");
 const evidenceUpload = require("./evidence-upload");
 const classifyLedger = require("./classify-ledger");
+const verifyProdPhotoConflict = require("./verify-prod-photo-conflict");
 const extractOwnerBook = require("./extract-owner-book");
 const extractCashDeposit = require("./extract-cash-deposit");
 
@@ -15,6 +16,7 @@ exports.createEvidenceUpload = evidenceUpload.createEvidenceUpload;
 exports.finalizeEvidenceUpload = evidenceUpload.finalizeEvidenceUpload;
 exports.uploadEvidencePhoto = evidenceUpload.uploadEvidencePhoto;
 exports.classifyLedgerType = classifyLedger.classifyLedgerType;
+exports.verifyProdPhotoConflict = verifyProdPhotoConflict.verifyProdPhotoConflict;
 exports.extractOwnerBookFromReceipt = extractOwnerBook.extractOwnerBookFromReceipt;
 exports.extractCashDepositSlip = extractCashDeposit.extractCashDepositSlip;
 exports.reportNposDiagnose = require("./npos-diagnose").reportNposDiagnose;

@@ -2,7 +2,7 @@ import type { Employee } from "./employees";
 import type { BonusDeductionLine, BonusDeductionMonthCounts, BonusDeductionRule } from "./bonus-deductions";
 import { buildBonusDeductionLines, computeShopDeductPct } from "./bonus-deductions";
 import { computeOtBonus, type OtEntry } from "./ot";
-import { computeProdBonus, type ProdEntry } from "./production";
+import { computeProdBonus, prodEntryCountsTowardBonus, type ProdEntry } from "./production";
 import {
   resolveBakerySalesRateForNewEntry,
   type RateScheduleEntry,
@@ -136,8 +136,10 @@ export function computeMonthBonus(
   const active = employees.filter((e) => e.active);
 
   const otMonth = otEntries.filter((e) => isInMonth(e.date, year, month));
-  // Count all prod rows in month — `paid` is a lock flag after month-close, not a filter.
-  const prodMonth = prodEntries.filter((e) => isInMonth(e.date, year, month));
+  // Count prod rows in month except photo-QA flagged/pending — `paid` is lock only.
+  const prodMonth = prodEntries.filter(
+    (e) => isInMonth(e.date, year, month) && prodEntryCountsTowardBonus(e),
+  );
 
   const { totalProdQty, totalSalesPool } = computeBakerySalesPool(
     prodMonth,
@@ -326,7 +328,9 @@ export function computePersonalBonusRow(input: {
   const { otEntries, prodEntries, employee, year, month } = input;
   const wasteBonusPct = Number(input.wasteBonusPct) || 0;
   const otMonth = otEntries.filter((e) => isInMonth(e.date, year, month));
-  const prodMonth = prodEntries.filter((e) => isInMonth(e.date, year, month));
+  const prodMonth = prodEntries.filter(
+    (e) => isInMonth(e.date, year, month) && prodEntryCountsTowardBonus(e),
+  );
 
   let otMain = 0;
   let prodBonus = 0;

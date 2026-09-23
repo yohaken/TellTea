@@ -11268,6 +11268,86 @@ body.has-staff-task-nudge .module-page {
   background: rgba(254, 215, 170, 0.22);
 }
 
+.sheet-table tr.is-photo-qa-flag td {
+  background: rgba(254, 202, 202, 0.45);
+  box-shadow: inset 3px 0 0 #b91c1c;
+}
+
+.prod-photo-qa-badge {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 0.25rem;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #7f1d1d;
+  background: #fecaca;
+  vertical-align: middle;
+}
+
+.prod-photo-qa-banner {
+  margin: 0 0 0.65rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.4rem;
+  border: 1px solid #f87171;
+  background: #fef2f2;
+  color: #7f1d1d;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.prod-photo-qa-analyzing {
+  margin: 0 0 0.65rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: 0.4rem;
+  background: rgba(64, 91, 74, 0.12);
+  color: #1f3a2e;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.prod-photo-qa-confirm {
+  margin: 0 0 0.75rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.45rem;
+  border: 1px solid #f59e0b;
+  background: #fffbeb;
+}
+
+.prod-photo-qa-confirm.is-ai-outage {
+  border-color: #405b4a;
+  background: rgba(64, 91, 74, 0.1);
+}
+
+.prod-photo-qa-confirm-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+}
+
+.prod-photo-qa-confirm-body {
+  margin: 0 0 0.35rem;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.prod-photo-qa-confirm-hint {
+  margin: 0 0 0.55rem;
+  font-size: 0.72rem;
+}
+
+.prod-photo-qa-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.prod-bonus-held {
+  color: #b91c1c;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
 .ot-card.is-photo-flag {
   box-shadow: inset 0 0 0 1px rgba(194, 65, 12, 0.35);
   background: rgba(254, 215, 170, 0.18);

@@ -95,6 +95,9 @@ function computeBakerySalesPool(prodRows, schedule) {
   let totalProdQty = 0;
   let totalSalesPool = 0;
   for (const row of prodRows) {
+    const qa = row.photoQa && typeof row.photoQa === "object" ? row.photoQa : null;
+    const status = qa ? String(qa.verifyStatus || "") : "";
+    if (status === "flagged" || status === "pending") continue;
     const qty = Number(row.qtyProduced) || 0;
     if (qty <= 0) continue;
     totalProdQty += qty;
@@ -227,7 +230,12 @@ async function refreshBonusLivePoolForMonth(db, periodMonth) {
   ]);
 
   const otMonth = otAll.filter((e) => isInMonthBangkok(e.date, bounds.year, bounds.month));
-  const prodMonth = prodAll.filter((e) => isInMonthBangkok(e.date, bounds.year, bounds.month));
+  const prodMonth = prodAll.filter((e) => {
+    if (!isInMonthBangkok(e.date, bounds.year, bounds.month)) return false;
+    const qa = e.photoQa && typeof e.photoQa === "object" ? e.photoQa : null;
+    const status = qa ? String(qa.verifyStatus || "") : "";
+    return status !== "flagged" && status !== "pending";
+  });
   const { totalProdQty, totalSalesPool } = computeBakerySalesPool(prodMonth, schedule);
   const employeeCount = countWorkersWhoWorked(otMonth, prodMonth, employees);
   const shopDeductPct = computeShopDeductPct(counts, rules);

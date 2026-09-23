@@ -16,6 +16,8 @@ import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoC
 import { EntryTimestampsMeta } from "@/components/EntryTimestampsMeta";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { PhotoForensicsPanel } from "@/components/PhotoForensicsPanel";
+import { ProdPhotoQaBatchPanel } from "@/components/ProdPhotoQaBatchPanel";
+import { ProdPhotoQaConfirm } from "@/components/ProdPhotoQaConfirm";
 import { ProdProductSummaryStrip, ProdWorkerSummaryStrip } from "@/components/ProdWorkSummaryStrip";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useStaffWorkBundle } from "@/hooks/useStaffWorkBundle";
@@ -44,11 +46,19 @@ import {
   type PhotoForensicsReport,
 } from "@/lib/photo-forensics-scan";
 import {
+  prodEntryNeedsPhotoQaFix,
+  runProdPhotoQaForSave,
+  buildProdPhotoQa,
+  type ProdPhotoQaConfirmKind,
+  type VerifyProdPhotoConflictResult,
+} from "@/lib/prod-photo-qa";
+import {
   addProdEntry,
   computeProdBonus,
   deleteProdEntry,
   getProdImageUrls,
   isProdEntryLocked,
+  isProdPhotoQaFlagged,
   labelProdStatus,
   listProdProducts,
   listProdWorkers,
@@ -58,6 +68,7 @@ import {
   subscribeProdEntries,
   updateProdEntry,
   type ProdEntry,
+  type ProdPhotoQa,
   type ProdProduct,
   type ProdWorker,
 } from "@/lib/production";
@@ -153,6 +164,20 @@ function ProductionView() {
         entryDate: row.date,
         label: `${formatDateShortBe(row.date)} ${row.productName}`,
         imageUrls: getProdImageUrls(row),
+      })),
+    [effectiveEntries],
+  );
+
+  const photoQaRows = useMemo(
+    () =>
+      effectiveEntries.map((row) => ({
+        entryId: row.id,
+        entryDate: row.date,
+        label: `${formatDateShortBe(row.date)} ${row.productName}`,
+        productId: row.productId,
+        productName: row.productName,
+        imageUrls: getProdImageUrls(row),
+        photoQa: row.photoQa,
       })),
     [effectiveEntries],
   );
@@ -429,15 +454,29 @@ function ProductionView() {
             </button>
           ) : null}
           {isOwner && showLog && !pageLoading ? (
-            <PhotoForensicsPanel
-              className="production-head-forensics"
-              rows={forensicsRows}
-              onReport={setPhotoReport}
-              onPickEntry={(id) => {
-                const row = effectiveEntries.find((r) => r.id === id);
-                if (row && canWrite) openEdit(row);
-              }}
-            />
+            <>
+              <PhotoForensicsPanel
+                className="production-head-forensics"
+                rows={forensicsRows}
+                onReport={setPhotoReport}
+                onPickEntry={(id) => {
+                  const row = effectiveEntries.find((r) => r.id === id);
+                  if (row && canWrite) openEdit(row);
+                }}
+              />
+              <ProdPhotoQaBatchPanel
+                className="production-head-photo-qa"
+                rows={photoQaRows}
+                products={effectiveProducts}
+                onUpdatePhotoQa={async (entryId, photoQa) => {
+                  await updateProdEntry(entryId, { photoQa }, actorId);
+                }}
+                onPickEntry={(id) => {
+                  const row = effectiveEntries.find((r) => r.id === id);
+                  if (row && canWrite) openEdit(row);
+                }}
+              />
+            </>
           ) : null}
         </div>
       </div>
@@ -631,7 +670,27 @@ function ProdEntryForm({
   const [note, setNote] = useState(entry?.note || "");
   const [imageUrls, setImageUrls] = useState<string[]>(() => getProdImageUrls(entry));
   const [busy, setBusy] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [pendingConflict, setPendingConflict] = useState<{
+    kind: ProdPhotoQaConfirmKind;
+    result: VerifyProdPhotoConflictResult;
+    payload: {
+      date: number;
+      workerIds: string[];
+      workerNames: string[];
+      productId: string;
+      productName: string;
+      salesRate: number;
+      prodRate: number;
+      qtyProduced: number;
+      qtyWaste: number;
+      note: string;
+      imageUrls: string[];
+      imageUrl: string;
+    };
+  } | null>(null);
 
+  const formLocked = locked || analyzing || busy || !!pendingConflict;
   const product = products.find((p) => p.id === productId) || null;
   const dateMs = parseDateInput(date);
   const rates = resolveProdEntryRates(entry, productId, product, {
@@ -655,7 +714,7 @@ function ProdEntryForm({
   const wasteMoneyPreview = preview.wasteDeduction;
 
   function toggleWorker(id: string) {
-    if (locked) return;
+    if (formLocked) return;
     setSelectedWorkers((prev) => {
       if (prev.includes(id)) return prev.filter((x) => x !== id);
       if (prev.length >= 2) return [prev[1]!, id];
@@ -663,9 +722,75 @@ function ProdEntryForm({
     });
   }
 
+  async function persistEntry(
+    payload: {
+      date: number;
+      workerIds: string[];
+      workerNames: string[];
+      productId: string;
+      productName: string;
+      salesRate: number;
+      prodRate: number;
+      qtyProduced: number;
+      qtyWaste: number;
+      note: string;
+      imageUrls: string[];
+      imageUrl: string;
+    },
+    photoQa: ProdPhotoQa,
+  ) {
+    if (entry) {
+      await updateProdEntry(entry.id, { ...payload, photoQa }, createdBy);
+    } else {
+      await addProdEntry({ ...payload, photoQa, createdBy });
+    }
+    onSaved();
+  }
+
+  async function finishWithQa(
+    payload: {
+      date: number;
+      workerIds: string[];
+      workerNames: string[];
+      productId: string;
+      productName: string;
+      salesRate: number;
+      prodRate: number;
+      qtyProduced: number;
+      qtyWaste: number;
+      note: string;
+      imageUrls: string[];
+      imageUrl: string;
+    },
+    opts?: { staffConfirmedPhotoMatch?: boolean },
+  ) {
+    setAnalyzing(true);
+    try {
+      const { photoQa, needsStaffConfirm, confirmKind, result } =
+        await runProdPhotoQaForSave({
+          productId: payload.productId,
+          productName: payload.productName,
+          imageUrls: payload.imageUrls,
+          products,
+          previous: entry?.photoQa,
+          staffConfirmedPhotoMatch: opts?.staffConfirmedPhotoMatch,
+        });
+
+      if (needsStaffConfirm && result && confirmKind) {
+        setPendingConflict({ kind: confirmKind, result, payload });
+        return;
+      }
+
+      setPendingConflict(null);
+      await persistEntry(payload, photoQa);
+    } finally {
+      setAnalyzing(false);
+    }
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (locked) return;
+    if (locked || analyzing || pendingConflict) return;
     if (!createdBy) return;
     const chosen = workers.filter((w) => selectedWorkers.includes(w.id));
     if (!chosen.length) {
@@ -677,14 +802,17 @@ function ProdEntryForm({
       onError("เลือกสินค้า");
       return;
     }
+    const urls = imageUrls.filter(Boolean).slice(0, PROD_IMAGE_MAX);
+    if (!urls.length) {
+      onError("ถ่ายรูปอย่างน้อย 1 รูปก่อนบันทึก");
+      return;
+    }
+    if (urls.some((u) => u.startsWith("data:"))) {
+      onError("รูปเก่ายังฝังในเอกสาร — ลบแล้วแนบใหม่เพื่อบันทึกเข้าคลังหลักฐาน");
+      return;
+    }
     setBusy(true);
     try {
-      const urls = imageUrls.filter(Boolean).slice(0, PROD_IMAGE_MAX);
-      if (urls.some((u) => u.startsWith("data:"))) {
-        onError("รูปเก่ายังฝังในเอกสาร — ลบแล้วแนบใหม่เพื่อบันทึกเข้าคลังหลักฐาน");
-        setBusy(false);
-        return;
-      }
       const entryDateMs = parseDateInput(date);
       const resolved = resolveProdEntryRates(entry, productId, prod ?? null, {
         bakerySalesSchedule: rateSchedule,
@@ -696,7 +824,6 @@ function ProdEntryForm({
         workerNames: chosen.map((w) => w.name),
         productId: prod?.id || entry!.productId,
         productName: prod?.name || entry!.productName,
-        // โบนัสขายคิดที่หน้าสรุปโบนัสจากจำนวน × ตารางเรท — ไม่ติดเรทขายที่แถวผลิต
         salesRate: 0,
         prodRate: resolved.prodRate,
         qtyProduced: Math.max(0, Math.round(Number(qty) || 0)),
@@ -705,12 +832,7 @@ function ProdEntryForm({
         imageUrls: urls,
         imageUrl: urls[0] || "",
       };
-      if (entry) {
-        await updateProdEntry(entry.id, payload, createdBy);
-      } else {
-        await addProdEntry({ ...payload, createdBy });
-      }
-      onSaved();
+      await finishWithQa(payload);
     } catch (err) {
       onError((err as Error).message || "บันทึกไม่สำเร็จ");
     } finally {
@@ -718,11 +840,44 @@ function ProdEntryForm({
     }
   }
 
+  async function onConfirmCorrect() {
+    if (!pendingConflict || locked) return;
+    const { payload, result } = pendingConflict;
+    setBusy(true);
+    try {
+      const photoQa = buildProdPhotoQa({
+        productId: payload.productId,
+        productName: payload.productName,
+        result,
+        staffConfirmedPhotoMatch: true,
+        previous: entry?.photoQa,
+      });
+      await persistEntry(payload, photoQa);
+      setPendingConflict(null);
+    } catch (err) {
+      onError((err as Error).message || "บันทึกไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function onRejectChangeProduct() {
+    if (!pendingConflict) return;
+    const suggested = pendingConflict.result.suggestedProductName?.trim();
+    setPendingConflict(null);
+    if (suggested) {
+      const want = suggested.trim();
+      const match = products.find((p) => p.name.trim() === want);
+      if (match) setProductId(match.id);
+    }
+    onError("เปลี่ยนสินค้าให้ตรงกับรูป แล้วบันทึกอีกครั้ง");
+  }
+
   return (
     <form className="form-card entry-form module-entry-form" onSubmit={(e) => void onSubmit(e)}>
       <div className="entry-toolbar module-form-head">
         <h2 className="panel-title">{entry ? (locked ? "ดูรายการ (จ่ายแล้ว)" : "แก้ไขรายการ") : "บันทึกผลิต"}</h2>
-        <button type="button" className="ghost-btn icon-btn" aria-label="ปิด" disabled={busy} onClick={onCancelEdit}>
+        <button type="button" className="ghost-btn icon-btn" aria-label="ปิด" disabled={formLocked} onClick={onCancelEdit}>
           <X size={18} />
         </button>
       </div>
@@ -732,6 +887,33 @@ function ProdEntryForm({
           createdAt={entry.createdAt}
           updatedAt={entry.updatedAt}
           era="be"
+        />
+      ) : null}
+
+      {isProdPhotoQaFlagged(entry) ? (
+        <p className="prod-photo-qa-banner" role="status">
+          {entry?.photoQa?.verifyStatus === "pending"
+            ? "รอยืนยันรูปกับสินค้า — AI ตรวจไม่สำเร็จ · ไม่นับโบนัสจนกว่าจะยืนยัน"
+            : "รายการไม่ถูกต้อง — รูปขัดกับสินค้า · ไม่นับโบนัสจนกว่าจะแก้แล้วบันทึกใหม่"}
+        </p>
+      ) : null}
+
+      {analyzing ? (
+        <p className="prod-photo-qa-analyzing" role="status">
+          กำลังตรวจรูปด้วย AI — ยังกดอะไรไม่ได้จนกว่าจะเสร็จ
+        </p>
+      ) : null}
+
+      {pendingConflict ? (
+        <ProdPhotoQaConfirm
+          kind={pendingConflict.kind}
+          selectedProductName={pendingConflict.payload.productName}
+          suggestedProductName={pendingConflict.result.suggestedProductName}
+          reason={pendingConflict.result.reason}
+          busy={busy || analyzing}
+          onConfirmCorrect={() => void onConfirmCorrect()}
+          onRejectChange={onRejectChangeProduct}
+          onCancel={() => setPendingConflict(null)}
         />
       ) : null}
 
@@ -757,7 +939,7 @@ function ProdEntryForm({
       <div className="stock-form-grid">
         <div className="field">
           <label htmlFor="prod-date">วันที่</label>
-          <input id="prod-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required disabled={locked} />
+          <input id="prod-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required disabled={formLocked} />
         </div>
         <div className="field">
           <label htmlFor="prod-product">สินค้า</label>
@@ -766,7 +948,7 @@ function ProdEntryForm({
             value={productId}
             onChange={(e) => setProductId(e.target.value)}
             required
-            disabled={locked}
+            disabled={formLocked}
           >
             {products.map((p) => (
               <option key={p.id} value={p.id}>
@@ -802,7 +984,7 @@ function ProdEntryForm({
                 type="button"
                 className={on ? "suggest-chip is-active" : "suggest-chip"}
                 onClick={() => toggleWorker(w.id)}
-                disabled={locked}
+                disabled={formLocked}
               >
                 {w.name}
               </button>
@@ -823,7 +1005,7 @@ function ProdEntryForm({
             value={qty}
             onChange={(e) => setQty(e.target.value)}
             required
-            disabled={locked}
+            disabled={formLocked}
           />
         </div>
         <div className="field">
@@ -837,7 +1019,7 @@ function ProdEntryForm({
             value={waste}
             onChange={(e) => setWaste(e.target.value)}
             placeholder="0"
-            disabled={locked}
+            disabled={formLocked}
           />
         </div>
       </div>
@@ -849,7 +1031,7 @@ function ProdEntryForm({
           value={note}
           onChange={(e) => setNote(e.target.value)}
           autoComplete="off"
-          disabled={locked}
+          disabled={formLocked}
         />
       </div>
 
@@ -862,11 +1044,11 @@ function ProdEntryForm({
           max={PROD_IMAGE_MAX}
           storageFolder="production"
           storageSlotKey={entry?.id || "new"}
-          hint="ถ่ายสดจากกล้องเท่านั้น — ห้ามแนบจากแกลเลอรี"
+          hint="ถ่ายสดจากกล้องเท่านั้น — บังคับอย่างน้อย 1 รูป · กลุ่มมันจะตรวจความขัดแย้งด้วย AI"
           allowCamera
           allowGallery={false}
           requireLiveCapture
-          readOnly={locked}
+          readOnly={formLocked}
         />
       ) : null}
 
@@ -882,12 +1064,16 @@ function ProdEntryForm({
       ) : null}
 
       <div className="entry-actions module-form-actions">
-        {!locked ? (
-          <button type="submit" className="primary-btn action-out" disabled={busy || !products.length}>
-            {busy ? "กำลังบันทึก..." : "บันทึก"}
+        {!locked && !pendingConflict ? (
+          <button
+            type="submit"
+            className="primary-btn action-out"
+            disabled={formLocked || !products.length}
+          >
+            {analyzing ? "กำลังตรวจรูป…" : busy ? "กำลังบันทึก…" : "บันทึก"}
           </button>
         ) : null}
-        <button type="button" className="ghost-btn" disabled={busy} onClick={onCancelEdit}>
+        <button type="button" className="ghost-btn" disabled={analyzing} onClick={onCancelEdit}>
           {locked ? "ปิด" : "ออก"}
         </button>
       </div>
@@ -1021,14 +1207,17 @@ function ProdTable({
               {filtered.map((row) => {
                 const c = computeProdBonus(row, policy.wasteBonusPct);
                 const locked = isProdEntryLocked(row);
+                const qaFlagged = prodEntryNeedsPhotoQaFix(row);
                 const photoFlagged = isOwner && entryHasPhotoFlag(photoReport, row.id);
                 const flagHints = photoReport?.byEntryId[row.id]?.hints || [];
+                const bonusHeld = isProdPhotoQaFlagged(row);
                 return (
                   <tr
                     key={row.id}
                     className={[
                       locked ? "row-out prod-row-paid" : "row-out",
                       photoFlagged ? "is-photo-flag" : "",
+                      qaFlagged ? "is-photo-qa-flag" : "",
                     ]
                       .filter(Boolean)
                       .join(" ")}
@@ -1058,12 +1247,26 @@ function ProdTable({
                         >
                           {locked ? <Lock size={11} aria-hidden /> : null} {row.productName}
                         </button>
+                        {qaFlagged ? (
+                          <span
+                            className="prod-photo-qa-badge"
+                            title={row.photoQa?.aiReason || "ต้องยืนยันรูปกับสินค้า"}
+                          >
+                            {row.photoQa?.verifyStatus === "pending"
+                              ? "รอยืนยัน"
+                              : "ไม่ถูกต้อง"}
+                          </span>
+                        ) : null}
                         <EntryPhotoIndicator
                           imageUrl={row.imageUrl}
                           imageUrls={row.imageUrls}
                           label={row.productName}
-                          flagged={photoFlagged}
-                          flagTitle={flagHints.join(" · ") || undefined}
+                          flagged={photoFlagged || qaFlagged}
+                          flagTitle={
+                            qaFlagged
+                              ? row.photoQa?.aiReason || "รายการไม่ถูกต้อง"
+                              : flagHints.join(" · ") || undefined
+                          }
                           onView={(urls) =>
                             setPreview({ urls, title: row.productName, entryDateMs: row.date })
                           }
@@ -1091,17 +1294,27 @@ function ProdTable({
                     {isOwner ? (
                       <>
                         <td className="col-out prod-col-bonus">
-                          <span className="prod-bonus-eq">
-                            {formatPlainNumber(c.income)} − {formatPlainNumber(c.wasteDeduction)}
-                          </span>
-                          <span className="prod-bonus-sum">
-                            = {formatPlainNumber(c.prodBonus)}
-                          </span>
+                          {bonusHeld ? (
+                            <span className="prod-bonus-held" title="ไม่นับโบนัสจนกว่าจะแก้">
+                              พักโบนัส
+                            </span>
+                          ) : (
+                            <>
+                              <span className="prod-bonus-eq">
+                                {formatPlainNumber(c.income)} − {formatPlainNumber(c.wasteDeduction)}
+                              </span>
+                              <span className="prod-bonus-sum">
+                                = {formatPlainNumber(c.prodBonus)}
+                              </span>
+                            </>
+                          )}
                         </td>
                         <td className="col-act">{c.workerCount}</td>
                       </>
                     ) : null}
-                    <td className="col-out">{formatPlainNumber(c.bonusPerPerson)}</td>
+                    <td className="col-out">
+                      {bonusHeld ? "—" : formatPlainNumber(c.bonusPerPerson)}
+                    </td>
                     <td className="col-act">
                       <span
                         className={
