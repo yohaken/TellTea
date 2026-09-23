@@ -33,7 +33,6 @@ import {
 import { can } from "@/lib/permissions";
 import {
   DEFAULT_PROD_POLICY,
-  computeWasteRate,
   formatDeductRate,
   formatPolicyMoney,
   formatProdMinRange,
@@ -47,8 +46,14 @@ import {
 } from "@/lib/photo-forensics-scan";
 import {
   prodEntryNeedsPhotoQaFix,
+  prodPhotoQaBadgeLabel,
+  prodPhotoQaBadgeTitle,
   runProdPhotoQaForSave,
+  runOwnerEntryPhotoQaCheck,
+  shouldRunProdPhotoConflictAi,
   buildProdPhotoQa,
+  buildOwnerManualFlagPhotoQa,
+  buildOwnerClearPhotoQa,
   type ProdPhotoQaConfirmKind,
   type VerifyProdPhotoConflictResult,
 } from "@/lib/prod-photo-qa";
@@ -567,8 +572,11 @@ function ProductionView() {
       ) : null}
 
       {canWrite && formOpen && !pageLoading && showLog ? (
-        <div className="modal-backdrop edit-modal is-module-form" onClick={closeForm}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="modal-backdrop edit-modal is-module-form is-prod-form"
+          onClick={closeForm}
+        >
+          <div className="modal-card prod-form-card" onClick={(e) => e.stopPropagation()}>
             <ProdEntryForm
               key={editing?.id || "new"}
               entry={editing}
@@ -710,7 +718,6 @@ function ProdEntryForm({
   }, [qty, waste, rates.prodRate, selectedWorkers, workers, entry, policy.wasteBonusPct]);
 
   const policyProduct = product && productHasMinPolicy(product) ? product : null;
-  const wasteRatePreview = computeWasteRate(rates.prodRate, policy.wasteBonusPct);
   const wasteMoneyPreview = preview.wasteDeduction;
 
   function toggleWorker(id: string) {
@@ -874,74 +881,204 @@ function ProdEntryForm({
   }
 
   return (
-    <form className="form-card entry-form module-entry-form" onSubmit={(e) => void onSubmit(e)}>
-      <div className="entry-toolbar module-form-head">
-        <h2 className="panel-title">{entry ? (locked ? "ดูรายการ (จ่ายแล้ว)" : "แก้ไขรายการ") : "บันทึกผลิต"}</h2>
-        <button type="button" className="ghost-btn icon-btn" aria-label="ปิด" disabled={formLocked} onClick={onCancelEdit}>
+    <form
+      className="form-card entry-form module-entry-form prod-entry-form"
+      onSubmit={(e) => void onSubmit(e)}
+    >
+      <div className="entry-toolbar module-form-head prod-form-head">
+        <h2 className="panel-title">
+          {entry ? (locked ? "ดูรายการ" : "แก้รายการ") : "บันทึกผลิต"}
+        </h2>
+        <button
+          type="button"
+          className="ghost-btn icon-btn"
+          aria-label="ปิด"
+          disabled={formLocked}
+          onClick={onCancelEdit}
+        >
           <X size={18} />
         </button>
       </div>
-      {entry ? (
-        <EntryTimestampsMeta
-          entryDate={entry.date}
-          createdAt={entry.createdAt}
-          updatedAt={entry.updatedAt}
-          era="be"
-        />
-      ) : null}
 
-      {isProdPhotoQaFlagged(entry) ? (
-        <p className="prod-photo-qa-banner" role="status">
-          {entry?.photoQa?.verifyStatus === "pending"
-            ? "รอยืนยันรูปกับสินค้า — AI ตรวจไม่สำเร็จ · ไม่นับโบนัสจนกว่าจะยืนยัน"
-            : "รายการไม่ถูกต้อง — รูปขัดกับสินค้า · ไม่นับโบนัสจนกว่าจะแก้แล้วบันทึกใหม่"}
-        </p>
-      ) : null}
+      <div className="prod-form-body">
+        {entry ? (
+          <EntryTimestampsMeta
+            entryDate={entry.date}
+            createdAt={entry.createdAt}
+            updatedAt={entry.updatedAt}
+            era="be"
+          />
+        ) : null}
 
-      {analyzing ? (
-        <p className="prod-photo-qa-analyzing" role="status">
-          กำลังตรวจรูปด้วย AI — ยังกดอะไรไม่ได้จนกว่าจะเสร็จ
-        </p>
-      ) : null}
+        {isProdPhotoQaFlagged(entry) ? (
+          <p className="prod-photo-qa-banner" role="status">
+            {entry?.photoQa?.verifyStatus === "pending"
+              ? "ให้ตรวจสอบรายการอีกครั้ง — รูปกับสินค้ายังไม่ยืนยัน · พักโบนัส"
+              : "รายการไม่ตรง · พักโบนัสจนกว่าจะแก้แล้วบันทึกใหม่"}
+          </p>
+        ) : null}
 
-      {pendingConflict ? (
-        <ProdPhotoQaConfirm
-          kind={pendingConflict.kind}
-          selectedProductName={pendingConflict.payload.productName}
-          suggestedProductName={pendingConflict.result.suggestedProductName}
-          reason={pendingConflict.result.reason}
-          busy={busy || analyzing}
-          onConfirmCorrect={() => void onConfirmCorrect()}
-          onRejectChange={onRejectChangeProduct}
-          onCancel={() => setPendingConflict(null)}
-        />
-      ) : null}
-
-      {locked ? (
-        <p className="muted form-hint-inline prod-locked-hint">
-          <Lock size={14} aria-hidden /> จ่ายโบนัสแล้ว — เรทและยอดล็อก · เปลี่ยนสถานะได้ที่ตาราง
-        </p>
-      ) : null}
-
-      {!products.length || !workers.length ? (
-        <p className="muted form-hint-inline">
-          ยังไม่มีสินค้าหรือรายชื่อพนักงาน —{" "}
-          {isOwner && onOpenCatalog && !products.length ? (
-            <button type="button" className="linkish-btn" onClick={onOpenCatalog}>
-              ไปเพิ่มที่แท็บสินค้า / เรท
+        {isOwner && entry && !locked ? (
+          <div className="prod-photo-qa-owner-actions" aria-label="เครื่องมือเจ้าของ">
+            <button
+              type="button"
+              className="ghost-btn"
+              disabled={
+                busy ||
+                analyzing ||
+                !imageUrls.filter(Boolean).length ||
+                !shouldRunProdPhotoConflictAi(
+                  products.find((p) => p.id === productId)?.name || entry.productName,
+                )
+              }
+              title="เจ้าของเท่านั้น — สั่ง AI ตรวจรูปกับสินค้าในรายการนี้"
+              onClick={() => {
+                void (async () => {
+                  setAnalyzing(true);
+                  try {
+                    const name =
+                      products.find((p) => p.id === productId)?.name ||
+                      entry.productName;
+                    const check = await runOwnerEntryPhotoQaCheck({
+                      productId: productId || entry.productId,
+                      productName: name,
+                      imageUrls,
+                      products,
+                      previous: entry.photoQa,
+                    });
+                    if (!check.ok) {
+                      onError(check.message);
+                      return;
+                    }
+                    await updateProdEntry(
+                      entry.id,
+                      { photoQa: check.photoQa },
+                      createdBy,
+                    );
+                    onSaved();
+                  } catch (err) {
+                    onError((err as Error).message || "ตรวจ AI ไม่สำเร็จ");
+                  } finally {
+                    setAnalyzing(false);
+                  }
+                })();
+              }}
+            >
+              {analyzing ? "กำลังตรวจ…" : "ตรวจ AI"}
             </button>
-          ) : (
-            "รอเจ้าของตั้งค่าที่หน้าผลิต → สินค้า / เรท · พนักงานอยู่ศูนย์รวมพนักงาน"
-          )}
-        </p>
-      ) : null}
+            {isProdPhotoQaFlagged(entry) ? (
+              <button
+                type="button"
+                className="ghost-btn"
+                disabled={busy || analyzing}
+                title="เจ้าของเท่านั้น — ปลดป้าย นับโบนัสได้"
+                onClick={() => {
+                  void (async () => {
+                    setBusy(true);
+                    try {
+                      const photoQa = buildOwnerClearPhotoQa({
+                        productId: productId || entry.productId,
+                        productName:
+                          products.find((p) => p.id === productId)?.name ||
+                          entry.productName,
+                        previous: entry.photoQa,
+                      });
+                      await updateProdEntry(entry.id, { photoQa }, createdBy);
+                      onSaved();
+                    } catch (err) {
+                      onError((err as Error).message || "ปลดป้ายไม่สำเร็จ");
+                    } finally {
+                      setBusy(false);
+                    }
+                  })();
+                }}
+              >
+                ปลดป้าย
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="ghost-btn prod-photo-qa-flag-btn"
+                disabled={busy || analyzing}
+                title="เจ้าของเท่านั้น — ติดป้ายมือ รูปไม่ตรง"
+                onClick={() => {
+                  void (async () => {
+                    setBusy(true);
+                    try {
+                      const photoQa = buildOwnerManualFlagPhotoQa({
+                        productId: productId || entry.productId,
+                        productName:
+                          products.find((p) => p.id === productId)?.name ||
+                          entry.productName,
+                        previous: entry.photoQa,
+                        reason: "เจ้าของติดป้ายมือ — รูปไม่ตรงสินค้า",
+                      });
+                      await updateProdEntry(entry.id, { photoQa }, createdBy);
+                      onSaved();
+                    } catch (err) {
+                      onError((err as Error).message || "ติดป้ายไม่สำเร็จ");
+                    } finally {
+                      setBusy(false);
+                    }
+                  })();
+                }}
+              >
+                ติดป้ายมือ
+              </button>
+            )}
+          </div>
+        ) : null}
 
-      <div className="stock-form-grid">
-        <div className="field">
+        {analyzing ? (
+          <p className="prod-photo-qa-analyzing" role="status">
+            {isOwner ? "กำลังตรวจ AI…" : "กำลังตรวจรูป…"}
+          </p>
+        ) : null}
+
+        {pendingConflict ? (
+          <ProdPhotoQaConfirm
+            kind={pendingConflict.kind}
+            selectedProductName={pendingConflict.payload.productName}
+            suggestedProductName={pendingConflict.result.suggestedProductName}
+            reason={pendingConflict.result.reason}
+            busy={busy || analyzing}
+            onConfirmCorrect={() => void onConfirmCorrect()}
+            onRejectChange={onRejectChangeProduct}
+            onCancel={() => setPendingConflict(null)}
+          />
+        ) : null}
+
+        {locked ? (
+          <p className="muted form-hint-inline prod-locked-hint">
+            <Lock size={14} aria-hidden /> จ่ายแล้ว — ล็อกเรท/ยอด
+          </p>
+        ) : null}
+
+        {!products.length || !workers.length ? (
+          <p className="muted form-hint-inline">
+            ยังไม่มีสินค้าหรือพนักงาน —{" "}
+            {isOwner && onOpenCatalog && !products.length ? (
+              <button type="button" className="linkish-btn" onClick={onOpenCatalog}>
+                ไปแท็บสินค้า / เรท
+              </button>
+            ) : (
+              "รอเจ้าของตั้งค่า"
+            )}
+          </p>
+        ) : null}
+
+        <div className="field prod-form-date">
           <label htmlFor="prod-date">วันที่</label>
-          <input id="prod-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required disabled={formLocked} />
+          <input
+            id="prod-date"
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            required
+            disabled={formLocked}
+          />
         </div>
-        <div className="field">
+        <div className="field prod-form-product">
           <label htmlFor="prod-product">สินค้า</label>
           <select
             id="prod-product"
@@ -957,123 +1094,131 @@ function ProdEntryForm({
             ))}
           </select>
         </div>
-      </div>
 
-      {policyProduct ? (
-        <p className="prod-policy-chip">
-          นโยบาย · ขั้นต่ำ {formatProdMinRange(policyProduct.minQtyLow, policyProduct.minQtyHigh)} ชิ้น/วัน · ไม่บังคับ
-          {policy.wasteBonusPct > 0
-            ? ` · รายได้ − หัก(เรทเสีย×ทิ้ง) = โบนัส · ไม่มีทิ้ง = ×0`
-            : ""}
-          {wasteMoneyPreview > 0 ? ` · หัก ${formatPolicyMoney(wasteMoneyPreview)}` : ""}
-        </p>
-      ) : null}
+        {policyProduct ? (
+          <p className="prod-policy-chip">
+            ขั้นต่ำ {formatProdMinRange(policyProduct.minQtyLow, policyProduct.minQtyHigh)}
+            /วัน
+            {wasteMoneyPreview > 0 ? ` · หัก ${formatPolicyMoney(wasteMoneyPreview)}` : ""}
+          </p>
+        ) : null}
 
-      {entry && !locked && productId !== entry.productId ? (
-        <p className="muted check-hint">เปลี่ยนสินค้า → ใช้เรทปัจจุบันของสินค้าใหม่</p>
-      ) : null}
+        {entry && !locked && productId !== entry.productId ? (
+          <p className="muted check-hint">เปลี่ยนสินค้า → เรทใหม่</p>
+        ) : null}
 
-      <div className="field">
-        <span className="field-label">พนักงาน (สูงสุด 2)</span>
-        <div className="suggest-list">
-          {workers.map((w) => {
-            const on = selectedWorkers.includes(w.id);
-            return (
-              <button
-                key={w.id}
-                type="button"
-                className={on ? "suggest-chip is-active" : "suggest-chip"}
-                onClick={() => toggleWorker(w.id)}
-                disabled={formLocked}
-              >
-                {w.name}
-              </button>
-            );
-          })}
+        <div className="field prod-form-workers">
+          <span className="field-label">พนักงาน (สูงสุด 2)</span>
+          <div className="suggest-list">
+            {workers.map((w) => {
+              const on = selectedWorkers.includes(w.id);
+              return (
+                <button
+                  key={w.id}
+                  type="button"
+                  className={on ? "suggest-chip is-active" : "suggest-chip"}
+                  onClick={() => toggleWorker(w.id)}
+                  disabled={formLocked}
+                >
+                  {w.name}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
 
-      <div className="stock-form-grid">
-        <div className="field">
-          <label htmlFor="prod-qty">ผลิต</label>
-          <input
-            id="prod-qty"
-            type="number"
-            min="1"
-            step="1"
-            inputMode="numeric"
-            value={qty}
-            onChange={(e) => setQty(e.target.value)}
-            required
-            disabled={formLocked}
+        <div className="stock-form-grid prod-form-qty-grid">
+          <div className="field">
+            <label htmlFor="prod-qty">ผลิต</label>
+            <input
+              id="prod-qty"
+              type="number"
+              min="1"
+              step="1"
+              inputMode="numeric"
+              value={qty}
+              onChange={(e) => setQty(e.target.value)}
+              required
+              disabled={formLocked}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="prod-waste">ทิ้ง/เสีย</label>
+            <input
+              id="prod-waste"
+              type="number"
+              min="0"
+              step="1"
+              inputMode="numeric"
+              value={waste}
+              onChange={(e) => setWaste(e.target.value)}
+              placeholder="0"
+              disabled={formLocked}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="prod-note">หมายเหตุ</label>
+            <input
+              id="prod-note"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              autoComplete="off"
+              disabled={formLocked}
+              placeholder="—"
+            />
+          </div>
+        </div>
+
+        {imageUrls.length || !locked ? (
+          <PhotoAttachMultiField
+            values={imageUrls}
+            onChange={setImageUrls}
+            onError={onError}
+            label="ถ่ายรูป"
+            max={PROD_IMAGE_MAX}
+            storageFolder="production"
+            storageSlotKey={entry?.id || "new"}
+            hint={
+              isOwner
+                ? "บังคับ ≥1 รูปสด · กลุ่มมันตรวจ AI"
+                : "บังคับ ≥1 รูปสดจากกล้อง"
+            }
+            allowCamera
+            allowGallery={false}
+            requireLiveCapture
+            readOnly={formLocked}
           />
-        </div>
-        <div className="field">
-          <label htmlFor="prod-waste">ทิ้ง/เสีย</label>
-          <input
-            id="prod-waste"
-            type="number"
-            min="0"
-            step="1"
-            inputMode="numeric"
-            value={waste}
-            onChange={(e) => setWaste(e.target.value)}
-            placeholder="0"
-            disabled={formLocked}
-          />
-        </div>
+        ) : null}
+
+        {locked ? (
+          <p className="muted form-hint-inline prod-form-preview">
+            {formatPlainNumber(preview.income)} − {formatPlainNumber(preview.wasteDeduction)} ={" "}
+            {formatPlainNumber(preview.prodBonus)} · /คน {formatPlainNumber(preview.bonusPerPerson)}
+          </p>
+        ) : Number(qty) > 0 && selectedWorkers.length > 0 ? (
+          <p className="muted form-hint-inline prod-form-preview">
+            {formatPlainNumber(preview.income)} − {formatPlainNumber(preview.wasteDeduction)} ={" "}
+            {formatPlainNumber(preview.prodBonus)} · /คน {formatPlainNumber(preview.bonusPerPerson)}
+          </p>
+        ) : null}
       </div>
 
-      <div className="field">
-        <label htmlFor="prod-note">หมายเหตุ</label>
-        <input
-          id="prod-note"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          autoComplete="off"
-          disabled={formLocked}
-        />
-      </div>
-
-      {imageUrls.length || !locked ? (
-        <PhotoAttachMultiField
-          values={imageUrls}
-          onChange={setImageUrls}
-          onError={onError}
-          label="ถ่ายรูป"
-          max={PROD_IMAGE_MAX}
-          storageFolder="production"
-          storageSlotKey={entry?.id || "new"}
-          hint="ถ่ายสดจากกล้องเท่านั้น — บังคับอย่างน้อย 1 รูป · กลุ่มมันจะตรวจความขัดแย้งด้วย AI"
-          allowCamera
-          allowGallery={false}
-          requireLiveCapture
-          readOnly={formLocked}
-        />
-      ) : null}
-
-      {locked ? (
-        <p className="muted form-hint-inline">
-          รายได้ {formatPlainNumber(preview.income)} − หัก {formatPlainNumber(preview.wasteDeduction)} = โบนัส {formatPlainNumber(preview.prodBonus)} · /คน {formatPlainNumber(preview.bonusPerPerson)}
-        </p>
-      ) : Number(qty) > 0 && selectedWorkers.length > 0 ? (
-        <p className="muted form-hint-inline">
-          รายได้ {formatPlainNumber(preview.income)} − หัก(เรทเสีย×ทิ้ง) {formatPlainNumber(preview.wasteDeduction)} = โบนัส {formatPlainNumber(preview.prodBonus)} · /คน {formatPlainNumber(preview.bonusPerPerson)}
-          {entry ? ` · เรทผลิต ${formatPlainNumber(rates.prodRate)} (ติดกับแถวนี้)` : ""}
-        </p>
-      ) : null}
-
-      <div className="entry-actions module-form-actions">
+      <div className="entry-actions module-form-actions prod-form-actions">
         {!locked && !pendingConflict ? (
           <button
             type="submit"
             className="primary-btn action-out"
             disabled={formLocked || !products.length}
           >
-            {analyzing ? "กำลังตรวจรูป…" : busy ? "กำลังบันทึก…" : "บันทึก"}
+            {analyzing ? "ตรวจรูป…" : busy ? "บันทึก…" : "บันทึก"}
           </button>
         ) : null}
-        <button type="button" className="ghost-btn" disabled={analyzing} onClick={onCancelEdit}>
+        <button
+          type="button"
+          className="ghost-btn"
+          disabled={analyzing}
+          onClick={onCancelEdit}
+        >
           {locked ? "ปิด" : "ออก"}
         </button>
       </div>
@@ -1208,6 +1353,7 @@ function ProdTable({
                 const c = computeProdBonus(row, policy.wasteBonusPct);
                 const locked = isProdEntryLocked(row);
                 const qaFlagged = prodEntryNeedsPhotoQaFix(row);
+                const qaBadge = prodPhotoQaBadgeLabel(row);
                 const photoFlagged = isOwner && entryHasPhotoFlag(photoReport, row.id);
                 const flagHints = photoReport?.byEntryId[row.id]?.hints || [];
                 const bonusHeld = isProdPhotoQaFlagged(row);
@@ -1247,14 +1393,12 @@ function ProdTable({
                         >
                           {locked ? <Lock size={11} aria-hidden /> : null} {row.productName}
                         </button>
-                        {qaFlagged ? (
+                        {qaBadge ? (
                           <span
                             className="prod-photo-qa-badge"
-                            title={row.photoQa?.aiReason || "ต้องยืนยันรูปกับสินค้า"}
+                            title={prodPhotoQaBadgeTitle(row) || undefined}
                           >
-                            {row.photoQa?.verifyStatus === "pending"
-                              ? "รอยืนยัน"
-                              : "ไม่ถูกต้อง"}
+                            {qaBadge}
                           </span>
                         ) : null}
                         <EntryPhotoIndicator
@@ -1264,7 +1408,7 @@ function ProdTable({
                           flagged={photoFlagged || qaFlagged}
                           flagTitle={
                             qaFlagged
-                              ? row.photoQa?.aiReason || "รายการไม่ถูกต้อง"
+                              ? prodPhotoQaBadgeTitle(row) || "ให้ตรวจสอบรายการอีกครั้ง"
                               : flagHints.join(" · ") || undefined
                           }
                           onView={(urls) =>
@@ -1325,21 +1469,23 @@ function ProdTable({
                       </span>
                     </td>
                     <td className="col-act">
-                      {isOwner ? (
-                        <button
-                          type="button"
-                          className="trash-btn"
-                          aria-label={locked ? "ลบรายการที่จ่ายแล้ว" : "ลบ"}
-                          title={
-                            locked
-                              ? "ลบได้แม้จ่ายแล้ว (เจ้าของร้าน)"
-                              : "ลบรายการ"
-                          }
-                          onClick={() => void onDelete(row)}
-                        >
-                          <Trash2 size={11} strokeWidth={2.25} />
-                        </button>
-                      ) : null}
+                      <div className="prod-row-actions">
+                        {isOwner ? (
+                          <button
+                            type="button"
+                            className="trash-btn"
+                            aria-label={locked ? "ลบรายการที่จ่ายแล้ว" : "ลบ"}
+                            title={
+                              locked
+                                ? "ลบได้แม้จ่ายแล้ว (เจ้าของร้าน)"
+                                : "ลบรายการ"
+                            }
+                            onClick={() => void onDelete(row)}
+                          >
+                            <Trash2 size={11} strokeWidth={2.25} />
+                          </button>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 );

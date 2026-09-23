@@ -561,3 +561,149 @@ export function prodEntryNeedsPhotoQaFix(entry: Pick<ProdEntry, "photoQa">): boo
   const s = entry.photoQa?.verifyStatus;
   return s === "flagged" || s === "pending";
 }
+
+export type OwnerEntryPhotoQaCheckOutcome =
+  | { ok: true; photoQa: ProdPhotoQa; outcome: "ok" | "flagged" | "pending" | "skipped" }
+  | { ok: false; message: string };
+
+/**
+ * Owner commands AI on one saved entry (not batch).
+ * Conflict → flagged · AI outage → pending · flavor-blind / no group → skipped ok.
+ */
+export async function runOwnerEntryPhotoQaCheck(input: {
+  productId: string;
+  productName: string;
+  imageUrls: string[];
+  products: Pick<ProdProduct, "name" | "id">[];
+  previous?: ProdPhotoQa | null;
+}): Promise<OwnerEntryPhotoQaCheckOutcome> {
+  const urls = (input.imageUrls || []).filter(Boolean);
+  if (!urls.length) {
+    return { ok: false, message: "ยังไม่มีรูปในรายการนี้" };
+  }
+  if (!shouldRunProdPhotoConflictAi(input.productName)) {
+    const photoQa = buildSkippedOkPhotoQa({
+      productId: input.productId,
+      productName: input.productName,
+      previous: input.previous,
+      reason: "ไม่อยู่กลุ่มสับสนที่ต้องตรวจ AI",
+    });
+    return { ok: true, photoQa, outcome: "skipped" };
+  }
+
+  const { photoQa, result } = await runProdPhotoQaForSave({
+    productId: input.productId,
+    productName: input.productName,
+    imageUrls: urls,
+    products: input.products,
+    previous: input.previous,
+  });
+
+  if (result?.conflictLevel === "conflict" && !result.skipped) {
+    return {
+      ok: true,
+      photoQa: {
+        ...photoQa,
+        verifyStatus: "flagged",
+        conflictLevel: "conflict",
+        flaggedAt: Date.now(),
+        flaggedBy: "ai_owner",
+      },
+      outcome: "flagged",
+    };
+  }
+  if (result?.skipped || photoQa.verifyStatus === "pending") {
+    return {
+      ok: true,
+      photoQa: {
+        ...photoQa,
+        verifyStatus: "pending",
+        conflictLevel: "uncertain",
+        flaggedAt: Date.now(),
+        flaggedBy: "ai_owner_outage",
+        aiReason: result?.reason || result?.skipReason || photoQa.aiReason,
+      },
+      outcome: "pending",
+    };
+  }
+  if (photoQa.verifyStatus === "skipped") {
+    return { ok: true, photoQa, outcome: "skipped" };
+  }
+  return { ok: true, photoQa, outcome: "ok" };
+}
+
+/** Owner manually marks photo ≠ product (when AI failed or after visual review). */
+export function buildOwnerManualFlagPhotoQa(input: {
+  productId: string;
+  productName: string;
+  previous?: ProdPhotoQa | null;
+  reason?: string;
+}): ProdPhotoQa {
+  const now = Date.now();
+  return {
+    verifyStatus: "flagged",
+    conflictLevel: "conflict",
+    selectedProductId: input.productId,
+    selectedProductName: input.productName,
+    aiSuggestedProductName: input.previous?.aiSuggestedProductName,
+    aiReason: (input.reason || "เจ้าของติดป้าย — รูปไม่ตรงสินค้า").slice(0, 120),
+    checkedAt: now,
+    flaggedAt: now,
+    flaggedBy: "owner",
+  };
+}
+
+/** Owner clears a flag after reviewing (bonus counts again). */
+export function buildOwnerClearPhotoQa(input: {
+  productId: string;
+  productName: string;
+  previous?: ProdPhotoQa | null;
+}): ProdPhotoQa {
+  const now = Date.now();
+  const wasHeld =
+    input.previous?.verifyStatus === "flagged" ||
+    input.previous?.verifyStatus === "pending";
+  return {
+    verifyStatus: wasHeld ? "fixed" : "ok",
+    conflictLevel: "none",
+    selectedProductId: input.productId,
+    selectedProductName: input.productName,
+    aiReason: "เจ้าของปลดป้าย",
+    staffAction: undefined,
+    checkedAt: now,
+    ...(wasHeld
+      ? {
+          fixedAt: now,
+          flaggedAt: input.previous?.flaggedAt,
+          flaggedBy: input.previous?.flaggedBy,
+        }
+      : {}),
+  };
+}
+
+/** Staff-facing short label for table badge */
+export function prodPhotoQaBadgeLabel(
+  entry: Pick<ProdEntry, "photoQa"> | null | undefined,
+): string | null {
+  const s = entry?.photoQa?.verifyStatus;
+  if (s === "pending") return "ตรวจอีกครั้ง";
+  if (s === "flagged") return "ไม่ตรง";
+  return null;
+}
+
+/** Longer title/tooltip for badge hover */
+export function prodPhotoQaBadgeTitle(
+  entry: Pick<ProdEntry, "photoQa"> | null | undefined,
+): string | null {
+  const s = entry?.photoQa?.verifyStatus;
+  if (s === "pending") {
+    return (
+      entry?.photoQa?.aiReason ||
+      "ให้ตรวจสอบรายการอีกครั้ง — รูปกับสินค้ายังไม่ยืนยัน · พักโบนัส"
+    );
+  }
+  if (s === "flagged") {
+    return entry?.photoQa?.aiReason || "รายการไม่ตรง — รูปไม่ตรงสินค้า";
+  }
+  return null;
+}

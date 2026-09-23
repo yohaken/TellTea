@@ -11308,9 +11308,9 @@ body.has-staff-task-nudge .module-page {
 }
 
 .prod-photo-qa-confirm {
-  margin: 0 0 0.75rem;
-  padding: 0.75rem 0.85rem;
-  border-radius: 0.45rem;
+  margin: 0 0 0.55rem;
+  padding: 0.55rem 0.6rem;
+  border-radius: 0.4rem;
   border: 1px solid #f59e0b;
   background: #fffbeb;
 }
@@ -11318,6 +11318,79 @@ body.has-staff-task-nudge .module-page {
 .prod-photo-qa-confirm.is-ai-outage {
   border-color: #405b4a;
   background: rgba(64, 91, 74, 0.1);
+}
+
+.prod-photo-qa-confirm.is-slim .prod-photo-qa-confirm-title {
+  margin: 0 0 0.2rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.prod-photo-qa-confirm.is-slim .prod-photo-qa-confirm-body {
+  margin: 0 0 0.4rem;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.prod-photo-qa-confirm.is-slim .prod-photo-qa-confirm-actions {
+  gap: 0.28rem;
+}
+
+.prod-photo-qa-confirm.is-slim .prod-photo-qa-confirm-actions .primary-btn,
+.prod-photo-qa-confirm.is-slim .prod-photo-qa-confirm-actions .ghost-btn {
+  min-height: 2rem;
+  padding: 0.28rem 0.5rem;
+  font-size: 0.74rem;
+}
+
+.prod-photo-qa-owner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.28rem;
+  margin: 0 0 0.45rem;
+}
+
+.prod-photo-qa-owner-actions .ghost-btn {
+  min-height: 1.85rem;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.72rem;
+}
+
+.prod-photo-qa-flag-btn {
+  color: #7f1d1d !important;
+  border-color: #f87171 !important;
+}
+
+.prod-photo-qa-select-list {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0;
+}
+
+.prod-photo-qa-select-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.prod-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.prod-qa-row-btn {
+  font-size: 0.62rem !important;
+  padding: 0.15rem 0.35rem !important;
+  min-height: 0 !important;
+}
+
+.prod-qa-row-btn.is-flag {
+  color: #7f1d1d !important;
 }
 
 .prod-photo-qa-confirm-title {
@@ -11340,6 +11413,235 @@ body.has-staff-task-nudge .module-page {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
+}
+
+/* Production entry popup — same locked one-screen pattern as OT (ชง) */
+.modal-backdrop.edit-modal.is-prod-form {
+  padding: calc(0.3rem + var(--safe-top)) 0.35rem calc(0.3rem + var(--safe-bottom));
+  overflow: hidden;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .prod-form-card {
+  width: min(100%, 20rem);
+  max-height: min(100dvh - 0.6rem - var(--safe-top) - var(--safe-bottom), 30rem);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 0.4rem 0.5rem 0.28rem;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .prod-entry-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .prod-form-head {
+  flex-shrink: 0;
+  position: static;
+  padding-bottom: 0.12rem;
+  background: #f7f3e8;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .prod-form-head .panel-title {
+  font-size: 0.82rem;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .prod-form-head .icon-btn {
+  width: 1.7rem;
+  height: 1.7rem;
+  min-height: 1.7rem;
+  padding: 0;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .prod-form-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .prod-form-body .field {
+  margin-bottom: 0.2rem;
+  gap: 0.08rem;
+}
+
+/* วันที่แถวสั้น · สินค้าเต็มแถว — ไม่ถูกบีบ/บัง */
+.modal-backdrop.edit-modal.is-prod-form .prod-form-date {
+  margin-bottom: 0.18rem;
+  max-width: 9.25rem;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .prod-form-product {
+  margin-bottom: 0.18rem;
+  min-width: 0;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .prod-form-product select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .prod-form-workers {
+  margin-bottom: 0.18rem;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .prod-form-qty-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.2fr;
+  gap: 0.22rem;
+  margin-bottom: 0.1rem;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .prod-form-qty-grid .field {
+  margin-bottom: 0.1rem;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .prod-form-qty-grid label {
+  font-size: 0.62rem;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .modal-card .field input,
+.modal-backdrop.edit-modal.is-prod-form .modal-card .field select,
+.modal-backdrop.edit-modal.is-prod-form .module-entry-form input,
+.modal-backdrop.edit-modal.is-prod-form .module-entry-form select,
+.modal-backdrop.edit-modal.is-prod-form .prod-form-qty-grid input {
+  min-height: 1.65rem;
+  height: 1.65rem;
+  padding: 0.15rem 0.35rem;
+  font-size: 0.76rem;
+  border-radius: 0.4rem;
+  box-shadow: none;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .module-entry-form label,
+.modal-backdrop.edit-modal.is-prod-form .module-entry-form .field-label {
+  font-size: 0.64rem;
+  margin-bottom: 0;
+  line-height: 1.2;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .suggest-list {
+  gap: 0.2rem;
+  margin-top: 0.15rem;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .suggest-chip {
+  padding: 0.12rem 0.38rem;
+  font-size: 0.66rem;
+  min-height: 1.45rem;
+  border-radius: 999px;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .prod-policy-chip {
+  margin: 0 0 0.18rem;
+  padding: 0.15rem 0.35rem;
+  font-size: 0.62rem;
+  line-height: 1.2;
+  border-radius: 0.35rem;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .prod-photo-qa-banner {
+  margin: 0 0 0.22rem;
+  padding: 0.28rem 0.4rem;
+  font-size: 0.66rem;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .prod-photo-qa-analyzing {
+  margin: 0 0 0.22rem;
+  padding: 0.22rem 0.4rem;
+  font-size: 0.66rem;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .prod-photo-qa-owner-actions .ghost-btn {
+  min-height: 1.45rem;
+  height: 1.45rem;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.66rem;
+  box-shadow: none;
+  width: auto;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .photo-attach-field {
+  margin-bottom: 0.1rem;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .photo-attach-field .field-label {
+  font-size: 0.64rem;
+  margin-bottom: 0.05rem;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .photo-attach-field .form-hint-inline {
+  margin: 0 0 0.15rem;
+  font-size: 0.62rem;
+  line-height: 1.2;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .photo-attach-field .receipt-actions {
+  margin-bottom: 0;
+  gap: 0.25rem;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .photo-attach-field .receipt-actions .primary-btn,
+.modal-backdrop.edit-modal.is-prod-form .photo-attach-field .receipt-actions .ghost-btn {
+  width: auto;
+  min-width: 0;
+  min-height: 1.55rem;
+  height: 1.55rem;
+  padding: 0.12rem 0.55rem;
+  font-size: 0.72rem;
+  box-shadow: none;
+  gap: 0.25rem;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .photo-attach-field .receipt-actions .primary-btn svg,
+.modal-backdrop.edit-modal.is-prod-form .photo-attach-field .receipt-actions .ghost-btn svg {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .photo-attach-multi-grid .photo-attach-preview {
+  max-height: 2.6rem;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .prod-form-preview {
+  margin: 0.12rem 0 0;
+  font-size: 0.64rem;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .prod-form-actions {
+  flex-shrink: 0;
+  position: static;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.28rem;
+  margin-top: 0.25rem;
+  padding: 0.28rem 0 0.05rem;
+  background: #f7f3e8;
+  box-shadow: none;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .prod-form-actions .primary-btn,
+.modal-backdrop.edit-modal.is-prod-form .prod-form-actions .ghost-btn {
+  min-height: 1.7rem;
+  height: 1.7rem;
+  padding: 0.15rem 0.65rem;
+  font-size: 0.76rem;
+  box-shadow: none;
+  border-radius: 999px;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .prod-form-actions .primary-btn {
+  width: 100%;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .prod-form-actions .ghost-btn {
+  width: auto;
+  min-width: 3.4rem;
 }
 
 .prod-bonus-held {
@@ -12348,90 +12650,130 @@ body.has-staff-task-nudge .module-page {
 }
 
 .modal-backdrop.edit-modal.is-module-form {
-  padding: calc(0.45rem + var(--safe-top)) 0.45rem calc(0.45rem + var(--safe-bottom));
+  padding: calc(0.35rem + var(--safe-top)) 0.4rem calc(0.35rem + var(--safe-bottom));
 }
 
 .modal-backdrop.edit-modal.is-module-form .modal-card {
-  width: min(100%, 22rem);
-  max-height: min(84dvh, 34rem);
-  padding: 0.6rem 0.7rem 0.45rem;
+  width: min(100%, 21rem);
+  max-height: min(100dvh - 0.7rem - var(--safe-top) - var(--safe-bottom), 32rem);
+  padding: 0.5rem 0.6rem 0.35rem;
 }
 
 .modal-backdrop.edit-modal.is-module-form .module-form-head {
   position: sticky;
   top: 0;
   z-index: 2;
-  padding: 0 0 0.3rem;
+  padding: 0 0 0.25rem;
   margin: 0;
   background: #f7f3e8;
 }
 
 .modal-backdrop.edit-modal.is-module-form .module-form-head .panel-title {
-  font-size: 0.95rem;
+  font-size: 0.88rem;
 }
 
 .modal-backdrop.edit-modal.is-module-form .module-entry-form .field {
-  margin-bottom: 0.38rem;
-  gap: 0.18rem;
+  margin-bottom: 0.3rem;
+  gap: 0.12rem;
 }
 
 .modal-backdrop.edit-modal.is-module-form .module-entry-form label,
 .modal-backdrop.edit-modal.is-module-form .module-entry-form .field-label {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
 }
 
 .modal-backdrop.edit-modal.is-module-form .module-entry-form input,
 .modal-backdrop.edit-modal.is-module-form .module-entry-form select {
-  min-height: 2.15rem;
-  padding: 0.38rem 0.55rem;
-  font-size: 0.86rem;
+  min-height: 1.95rem;
+  padding: 0.32rem 0.48rem;
+  font-size: 0.84rem;
 }
 
 .modal-backdrop.edit-modal.is-module-form .module-entry-form .suggest-chip {
-  padding: 0.22rem 0.48rem;
-  font-size: 0.74rem;
+  padding: 0.2rem 0.42rem;
+  font-size: 0.7rem;
 }
 
 .modal-backdrop.edit-modal.is-module-form .stock-form-grid {
-  gap: 0.35rem;
+  gap: 0.3rem;
 }
 
 .modal-backdrop.edit-modal.is-module-form .form-hint-inline {
-  margin: 0 0 0.35rem;
+  margin: 0 0 0.28rem;
   text-align: left;
-  font-size: 0.72rem;
-  line-height: 1.35;
+  font-size: 0.68rem;
+  line-height: 1.3;
 }
 
 .modal-backdrop.edit-modal.is-module-form .photo-attach-field {
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.28rem;
 }
 
 .modal-backdrop.edit-modal.is-module-form .photo-attach-field .receipt-actions {
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.2rem;
 }
 
 .modal-backdrop.edit-modal.is-module-form .photo-attach-clear {
-  font-size: 0.72rem;
-  padding: 0.25rem 0.45rem;
-  margin-bottom: 0.25rem;
+  font-size: 0.68rem;
+  padding: 0.22rem 0.4rem;
+  margin-bottom: 0.2rem;
 }
 
 .modal-backdrop.edit-modal.is-module-form .photo-attach-preview {
-  max-height: 4.5rem;
+  max-height: 3.5rem;
 }
 
 .modal-backdrop.edit-modal.is-module-form .module-form-actions {
-  grid-template-columns: 1fr 1fr;
-  gap: 0.4rem;
-  margin-top: 0.4rem;
-  padding: 0.45rem 0 0.25rem;
+  grid-template-columns: 1fr auto;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+  padding: 0.4rem 0 0.15rem;
 }
 
 .modal-backdrop.edit-modal.is-module-form .module-form-actions .primary-btn,
 .modal-backdrop.edit-modal.is-module-form .module-form-actions .ghost-btn {
-  min-height: 2.35rem;
+  min-height: 2.15rem;
   width: 100%;
+}
+
+/* Prod form wins over shared module-form button sizes */
+.modal-backdrop.edit-modal.is-module-form.is-prod-form .prod-form-actions .primary-btn,
+.modal-backdrop.edit-modal.is-module-form.is-prod-form .prod-form-actions .ghost-btn {
+  min-height: 1.55rem;
+  height: 1.55rem;
+  padding: 0.1rem 0.55rem;
+  font-size: 0.72rem;
+  box-shadow: none;
+}
+
+.modal-backdrop.edit-modal.is-module-form.is-prod-form .prod-form-actions .ghost-btn {
+  width: auto;
+  min-width: 3.1rem;
+}
+
+.modal-backdrop.edit-modal.is-module-form.is-prod-form .photo-attach-field .receipt-actions .primary-btn,
+.modal-backdrop.edit-modal.is-module-form.is-prod-form .photo-attach-field .receipt-actions .ghost-btn {
+  width: auto;
+  min-width: 0;
+  min-height: 1.45rem;
+  height: 1.45rem;
+  padding: 0.08rem 0.5rem;
+  font-size: 0.7rem;
+  box-shadow: none;
+}
+
+.modal-backdrop.edit-modal.is-module-form.is-prod-form .module-entry-form input,
+.modal-backdrop.edit-modal.is-module-form.is-prod-form .module-entry-form select {
+  min-height: 1.55rem;
+  height: 1.55rem;
+  padding: 0.12rem 0.32rem;
+  font-size: 0.74rem;
+}
+
+.modal-backdrop.edit-modal.is-module-form.is-prod-form .suggest-chip {
+  min-height: 1.35rem;
+  padding: 0.08rem 0.34rem;
+  font-size: 0.64rem;
 }
 
 /* ── Transfer-in — ป๊อบอัพคงที่ เห็นครบในหน้าเดียว ── */
