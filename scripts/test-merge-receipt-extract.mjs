@@ -128,4 +128,51 @@ assert.match(String(makro3.vatInvoiceNo), /MK-DEL-1/);
 const makro3b = mergeExtractResults([packing, bank, makroTax]);
 assert.equal(makro3b.vatInput, 14);
 
+assert.equal(normalizeDocKind("utility_bill"), "utility_bill");
+assert.equal(normalizeDocKind("ใบแจ้งค่าไฟฟ้า กฟน."), "utility_bill");
+assert.equal(normalizeDocKind("ใบเสร็จรับเงิน ท็อปเวิลด์"), "tax_invoice");
+
+// Utility notice amount wins over a mis-read "paid receipt" stub amount on another image
+const utility = {
+  docKind: "utility_bill",
+  date: "2026-09-01",
+  description: "ค่าไฟ",
+  amountOut: 4820.5,
+  type: "sga",
+  note: "",
+  reason: "ยอดเรียกเก็บ",
+  hasVat: false,
+  vatInput: null,
+  vatBase: null,
+  vatInvoiceNo: "",
+  vatSeenOnBill: false,
+  vatReason: "ใบแจ้งค่าไฟ",
+};
+const wrongReceiptStub = {
+  docKind: "tax_invoice",
+  date: "2026-08-01",
+  description: "ใบเสร็จรับเงิน",
+  amountOut: 350,
+  type: "sga",
+  note: "",
+  reason: "ยอดชำระรอบก่อน",
+  hasVat: false,
+  vatInput: null,
+  vatBase: null,
+  vatInvoiceNo: "",
+  vatSeenOnBill: false,
+  vatReason: "",
+};
+const utilMerged = mergeExtractResults([wrongReceiptStub, utility]);
+assert.equal(utilMerged.docKind, "utility_bill");
+assert.equal(utilMerged.amountOut, 4820.5);
+assert.equal(utilMerged.description, "ค่าไฟ");
+assert.equal(utilMerged.type, "sga");
+assert.equal(utilMerged.hasVat, false);
+
+const utilOnly = mergeExtractResults([utility]);
+assert.equal(utilOnly.docKind, "utility_bill");
+assert.equal(utilOnly.hasVat, false);
+assert.equal(utilOnly.vatInput, null);
+
 console.log("OK test-merge-receipt-extract");

@@ -26,20 +26,28 @@ const BOOTSTRAP_GEMINI_API_KEY = "";
 
 const EXTRACT_SYSTEM_PROMPT = `คุณเป็นผู้ช่วยอ่านใบเสร็จ/หลักฐานการจ่ายเงินสำหรับร้านเครื่องดื่ม/เบเกอรี่ในไทย
 อ่านจากรูปเดียวแล้วดึงข้อมูลสำหรับบันทึกบัญชีเงินออก + ภาษีซื้อ (VAT)
+ใช้ทั้งตอนลงบัญชีเงินออก และตอนพนักงานแจ้งบิลรอชำระ
 
 ตอบเป็น JSON เท่านั้น ในรูป:
-{"docKind":"tax_invoice|bank_slip|other","date":"YYYY-MM-DD หรือว่าง","description":"ชื่อรายการสั้นๆ ภาษาไทย","amountOut":จำนวนเงินเป็นตัวเลขหรือ null,"type":"cogs|sga|asset|อื่นๆ","note":"หมายเหตุสั้นๆ หรือว่าง","reason":"เหตุผลสั้นๆ ภาษาไทยไม่เกิน 40 ตัวอักษร","hasVat":trueหรือfalse,"vatInput":จำนวนภาษีมูลค่าเพิ่มเป็นตัวเลขหรือ null,"vatBase":มูลค่าก่อนภาษีหรือ null,"vatInvoiceNo":"เลขที่ใบกำกับหรือว่าง","vatSeenOnBill":trueหรือfalse,"vatReason":"สั้นๆ ว่าเห็น VAT จากตรงไหน หรือทำไมไม่มี"}
+{"docKind":"tax_invoice|bank_slip|utility_bill|other","date":"YYYY-MM-DD หรือว่าง","description":"ชื่อรายการสั้นๆ ภาษาไทย","amountOut":จำนวนเงินเป็นตัวเลขหรือ null,"type":"cogs|sga|asset|อื่นๆ","note":"หมายเหตุสั้นๆ หรือว่าง","reason":"เหตุผลสั้นๆ ภาษาไทยไม่เกิน 40 ตัวอักษร","hasVat":trueหรือfalse,"vatInput":จำนวนภาษีมูลค่าเพิ่มเป็นตัวเลขหรือ null,"vatBase":มูลค่าก่อนภาษีหรือ null,"vatInvoiceNo":"เลขที่ใบกำกับหรือว่าง","vatSeenOnBill":trueหรือfalse,"vatReason":"สั้นๆ ว่าเห็น VAT จากตรงไหน หรือทำไมไม่มี"}
 
 กฎ:
 - docKind:
-  - tax_invoice = ใบเสร็จรับเงิน / ใบกำกับภาษี / ใบกำกับอย่างย่อ / บิลห้าง / ใบแจ้งค่าขนส่งที่มี VAT (ท็อปเวิลด์ ท็อปส์ แม็คโคร SCG ฯลฯ)
+  - utility_bill = ใบแจ้งค่าสาธารณูปโภคที่ยังไม่ใช่หลักฐานว่าจ่ายแล้ว เช่น ใบแจ้งค่าไฟฟ้า (กฟน./กฟภ.) · ใบแจ้งค่าน้ำ · ค่าเน็ต/ค่าโทรศัพท์ที่ระบุยอดเรียกเก็บ
+  - tax_invoice = ใบเสร็จรับเงิน / ใบกำกับภาษี / ใบกำกับอย่างย่อ / บิลห้าง / ใบแจ้งค่าขนส่งที่มี VAT (ท็อปเวิลด์ ท็อปส์ แม็คโคร SCG ฯลฯ) — **ไม่รวม** ใบแจ้งค่าไฟ/ค่าน้ำ
   - bank_slip = สลิปโอนเงิน / PromptPay / แอปธนาคาร / หลักฐานโอน — **ไม่มี VAT บนสลิปนี้**
   - other = อื่นๆ (ใบแพ็กกิ้ง/รายการสินค้าที่ไม่มีบรรทัดภาษี)
 - ถ้า docKind=bank_slip → hasVat=false, vatInput=null, vatBase=null เสมอ (อย่าเดา VAT จากยอดโอน)
+- ถ้า docKind=utility_bill → type=sga เสมอ · hasVat=false (ใบแจ้งค่าไฟไทยทั่วไปไม่ใช่ใบกำกับ VAT ซื้อ) · description สั้นๆ เช่น "ค่าไฟ" "ค่าน้ำ"
 - date = วันที่บนเอกสารเป็น **ค.ศ. YYYY-MM-DD เท่านั้น** (เช่น 2025-07-22) — ถ้าบิลเป็นพ.ศ. ให้ลบ 543 ก่อน ห้ามส่งปีพ.ศ. ถ้าไม่ชัดให้ ""
-- description = สรุปสั้น ชัด (เช่น "ท็อปเวิลด์" "แม็คโคร" "ค่าขนส่งแม็คโคร" "โอนค่าของ")
+- description = สรุปสั้น ชัด (เช่น "ท็อปเวิลด์" "แม็คโคร" "ค่าไฟ" "โอนค่าของ")
 - amountOut = ยอดบนเอกสารนั้น (ตัวเลข ไม่มี comma) ถ้าไม่ชัดให้ null
-- type: cogs=วัตถุดิบ/บรรจุภัณฑ์/ค่าขนส่งวัตถุดิบ · sga=ค่าแรง/ค่าไฟ/ค่าเช่า/ซ่อม · asset=เครื่องจักร · อื่นๆ=ไม่ชัด
+  - **utility_bill (สำคัญมาก):** amountOut = ยอดที่ต้องชำระรอบนี้ / จำนวนเงินที่เรียกเก็บ เท่านั้น
+    ใบแจ้งค่าไฟ กฟน./กฟภ. มักมี 2 ส่วนในแผ่นเดียว: บน=ใบแจ้งเรียกเก็บ · ล่าง=ใบเสร็จรับเงิน/ใบกำกับภาษีของรอบก่อน — **ใช้ยอดส่วนบนเท่านั้น**
+    ห้ามใช้ยอดจากส่วน "ใบเสร็จรับเงิน" · "ใบกำกับภาษี" · ยอดชำระรอบก่อน · ยอดที่จ่ายไปแล้ว · ยอดหน่วย kWh · ยอดค้างย่อย
+    หาป้าย (เรียงความสำคัญ): "รวมเงินที่ต้องชำระทั้งสิ้น" · "จำนวนเงินที่ต้องชำระ" · "ยอดเงินที่ต้องชำระ" · "รวมเงินที่เรียกเก็บ" · "ยอดเรียกเก็บ" · Amount (บนใบแจ้ง ไม่ใช่บนใบเสร็จ)
+  - tax_invoice / bank_slip: ยอดรวมที่จ่าย/โอนตามเอกสารนั้น
+- type: cogs=วัตถุดิบ/บรรจุภัณฑ์/ค่าขนส่งวัตถุดิบ · sga=ค่าแรง/ค่าไฟ/ค่าน้ำ/ค่าเช่า/ซ่อม · asset=เครื่องจักร · อื่นๆ=ไม่ชัด
 - **VAT — อ่านตัวเลขที่พิมพ์บนใบกำกับเท่านั้น ห้ามคำนวณ ×7/107 จากยอดรวม**
   (บางรายการสินค้าไม่มี VAT การคูณยอดรวมจะผิด)
   - โฟกัสท้ายบิลใต้ยอดรวมตัวหนา: หา "ภาษีมูลค่าเพิ่ม" / "ภาษีมูลค่าเพิ่ม 7%" / "VAT" / "VAT 7%"
@@ -62,6 +70,19 @@ const VAT_RETRY_SYSTEM_PROMPT = `คุณเป็นผู้ช่วย OCR 
 - อ่าน "ฐานภาษี 7%" → vatBase ถ้าเห็น
 - ห้ามคำนวณจากยอดรวม×7/107 (สินค้าผสม VAT/ไม่มี VAT ได้)
 - ถ้าเป็นสลิปโอน/ไม่เห็นบรรทัดภาษี → hasVat=false, vatInput=null`;
+
+/** Second pass: PEA/MEA bills print prior-period receipt under the notice — force amount due. */
+const UTILITY_AMOUNT_RETRY_SYSTEM_PROMPT = `คุณเป็นผู้ช่วย OCR ใบแจ้งค่าสาธารณูปโภคไทย (ค่าไฟ กฟน./กฟภ. · ค่าน้ำ)
+โฟกัสเฉพาะยอดเรียกเก็บรอบนี้ที่ยังต้องชำระ — ไม่ใช่ยอดบนใบเสร็จรับเงินด้านล่าง
+
+ตอบเป็น JSON เท่านั้น:
+{"amountOut":จำนวนเงินเป็นตัวเลขหรือ null,"amountLabel":"ข้อความป้ายที่ยอดนี้อยู่ข้างๆ หรือว่าง"}
+
+กฎ:
+- หาป้าย: "รวมเงินที่ต้องชำระทั้งสิ้น" · "จำนวนเงินที่ต้องชำระ" · "ยอดเงินที่ต้องชำระ" · "รวมเงินที่เรียกเก็บ" · "ยอดเรียกเก็บ" · Amount บนส่วนใบแจ้ง
+- ห้ามใช้ยอดจากส่วนหัวว่า "ใบเสร็จรับเงิน" หรือ "ใบกำกับภาษี" (มักเป็นยอดชำระรอบก่อนที่พิมพ์ด้านล่างแผ่นเดียวกัน)
+- ห้ามใช้ยอดหน่วย (kWh) · มิเตอร์ · ยอดค้างย่อย
+- amountOut = ตัวเลขไม่มี comma`;
 
 function buildExtractSystemPrompt(businessContext) {
   const ctx = String(businessContext || "").trim() || DEFAULT_BUSINESS_CONTEXT;
@@ -307,47 +328,94 @@ async function extractOneImage({ apiKey, model, imagePart, businessContext, imag
     imageParts: [imagePart],
     systemText: buildExtractSystemPrompt(businessContext),
     userText: `อ่านเอกสารในรูปนี้ (รูปที่ ${imageIndex}/${imageCount}) แล้วดึง JSON
-ก่อนอื่นตัดสิน docKind: สลิปโอนเงิน=bank_slip / ใบเสร็จ-ใบกำกับ-ใบแจ้งค่าขนส่งที่มี VAT=tax_invoice / อื่น=other
+ก่อนอื่นตัดสิน docKind:
+- ใบแจ้งค่าไฟ/ค่าน้ำ/ค่าเน็ต (ยอดเรียกเก็บ ยังไม่ใช่ใบเสร็จจ่าย) = utility_bill
+- สลิปโอนเงิน = bank_slip
+- ใบเสร็จห้าง/ใบกำกับ/ใบแจ้งค่าขนส่งที่มี VAT = tax_invoice
+- อื่น = other
+ถ้า utility_bill: amountOut ต้องเป็นยอดที่ต้องชำระ/ยอดเรียกเก็บรอบนี้ เท่านั้น — หาป้าย "รวมเงินที่ต้องชำระทั้งสิ้น" — ห้ามหยิบยอดจากส่วน "ใบเสร็จรับเงิน"/"ใบกำกับภาษี" ด้านล่าง (ยอดรอบก่อน) · type=sga · hasVat=false
 ถ้าเป็นใบเสร็จห้าง/ใบกำกับ/แม็คโคร/ค่าขนส่งที่มีบรรทัดภาษี — อ่านภาษีมูลค่าเพิ่มที่พิมพ์บนบิล (ห้าม×7/107)
 ถ้าเป็นสลิปโอน ให้ hasVat=false`,
   });
 
-  const type = normalizeType(parsed.type) || "อื่นๆ";
+  let type = normalizeType(parsed.type) || "อื่นๆ";
   if (!ALLOWED_TYPES.has(type)) {
     throw new Error("AI ตอบประเภทไม่ถูกต้อง");
   }
 
   let docKind = normalizeDocKind(parsed.docKind);
-  // Heuristic fallback if model omits docKind
-  if (docKind === "other") {
-    const blob = `${parsed.description || ""} ${parsed.note || ""} ${parsed.vatReason || ""} ${parsed.reason || ""}`;
-    if (/สลิป|โอนเงิน|promptpay|ธนาคาร|เป๋าตัง|พร้อมเพย์/i.test(blob)) {
-      docKind = "bank_slip";
-    } else if (
-      /ท็อปเวิลด์|ท็อปส์|แม็คโคร|makro|ค่าขนส่ง|ใบกำกับ|ใบเสร็จ|ภาษีมูลค่าเพิ่ม|top\s*world/i.test(
+  // Heuristic fallback if model omits / mislabels docKind
+  if (docKind === "other" || docKind === "tax_invoice") {
+    const blob = `${parsed.description || ""} ${parsed.note || ""} ${parsed.vatReason || ""} ${parsed.reason || ""} ${parsed.docKind || ""}`;
+    if (
+      /utility_bill|ใบแจ้งค่าไฟ|ใบแจ้งค่าไฟฟ้า|ค่าไฟฟ้า|กฟน|กฟภ|การไฟฟ้า|mea\b|pea\b|ใบแจ้งค่าน้ำ|ค่าน้ำประปา|ค่าเน็ต|ค่าอินเทอร์เน็ต/i.test(
         blob,
-      )
+      ) ||
+      /^(ค่าไฟ|ค่าน้ำ|ค่าเน็ต|ค่าโทรศัพท์)$/i.test(String(parsed.description || "").trim())
     ) {
-      docKind = "tax_invoice";
+      docKind = "utility_bill";
+    } else if (docKind === "other") {
+      if (/สลิป|โอนเงิน|promptpay|ธนาคาร|เป๋าตัง|พร้อมเพย์/i.test(blob)) {
+        docKind = "bank_slip";
+      } else if (
+        /ท็อปเวิลด์|ท็อปส์|แม็คโคร|makro|ค่าขนส่ง|ใบกำกับ|ภาษีมูลค่าเพิ่ม|top\s*world/i.test(
+          blob,
+        ) &&
+        !/ใบแจ้งค่าไฟ|ค่าไฟฟ้า|กฟน|กฟภ/i.test(blob)
+      ) {
+        docKind = "tax_invoice";
+      }
     }
   }
 
+  if (docKind === "utility_bill") {
+    type = "sga";
+  }
+
   let vat = normalizeVatFields(parsed);
-  if (docKind === "bank_slip") {
+  if (docKind === "bank_slip" || docKind === "utility_bill") {
     vat = {
       hasVat: false,
       vatInput: null,
       vatBase: null,
       vatInvoiceNo: "",
       vatSeenOnBill: false,
-      vatReason: "สลิปโอนเงิน — ไม่ใช้เป็นแหล่ง VAT",
+      vatReason:
+        docKind === "utility_bill"
+          ? "ใบแจ้งค่าสาธารณูปโภค — ใช้ยอดเรียกเก็บ ไม่ใช่ใบกำกับ VAT"
+          : "สลิปโอนเงิน — ไม่ใช้เป็นแหล่ง VAT",
     };
   }
 
-  const amountOut = normalizeAmount(parsed.amountOut);
+  let amountOut = normalizeAmount(parsed.amountOut);
 
-  // Retry VAT OCR only on non-bank docs when the first pass missed the tax line.
-  if (docKind !== "bank_slip" && (!vat.hasVat || vat.vatInput == null)) {
+  // Utility bills: PEA/MEA print prior receipt under the notice — always re-read amount due.
+  if (docKind === "utility_bill") {
+    try {
+      const amtParsed = await callGeminiJson({
+        apiKey,
+        model,
+        imageParts: [imagePart],
+        systemText: UTILITY_AMOUNT_RETRY_SYSTEM_PROMPT,
+        userText: `รอบสอง: อ่านเฉพาะยอดเรียกเก็บรอบนี้จากใบแจ้งค่าสาธารณูปโภคในรูปนี้
+หา "รวมเงินที่ต้องชำระทั้งสิ้น" หรือป้ายยอดที่ต้องชำระบนส่วนใบแจ้ง (ด้านบน)
+ห้ามใช้ยอดจาก "ใบเสร็จรับเงิน" / "ใบกำกับภาษี" ด้านล่าง`,
+      });
+      const retryAmt = normalizeAmount(amtParsed?.amountOut);
+      if (retryAmt != null && retryAmt > 0) {
+        amountOut = retryAmt;
+      }
+    } catch (err) {
+      console.warn("utility amount retry skip", err?.message || err);
+    }
+  }
+
+  // Retry VAT OCR only on non-bank / non-utility docs when the first pass missed the tax line.
+  if (
+    docKind !== "bank_slip" &&
+    docKind !== "utility_bill" &&
+    (!vat.hasVat || vat.vatInput == null)
+  ) {
     try {
       const vatParsed = await callGeminiJson({
         apiKey,

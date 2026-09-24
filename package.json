@@ -177,6 +177,7 @@
     "test:ai-vat-extract": "node scripts/test-ai-vat-extract.mjs",
     "test:vat-from-bill": "node scripts/test-vat-from-bill.mjs",
     "test:merge-receipt-extract": "node scripts/test-merge-receipt-extract.mjs",
+    "test:extract-utility-bill": "node scripts/test-extract-utility-bill.mjs",
     "test:vat-books-breakdown": "node scripts/test-vat-books-breakdown.mjs",
     "ensure:storage-bucket": "node scripts/ensure-storage-bucket.mjs",
     "test:pos-connectivity": "node scripts/test-pos-connectivity.mjs",
