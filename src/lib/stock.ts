@@ -193,7 +193,9 @@ export function subscribeStockItems(
   );
 }
 
-/** subscribe พร้อมต้นทุน — ใช้เฉพาะเจ้าของ (rules: stockCosts = isOwnerEmail) */
+/** subscribe พร้อมต้นทุน — ใช้เฉพาะเจ้าของ (rules: stockCosts = isOwnerEmail)
+ *  ถ้า token ไม่ผ่าน rules (เช่น role owner แต่ไม่มีอีเมลเจ้าของ) → รายการคลังยังใช้ได้ · unitCost = 0
+ */
 export function subscribeStockItemsWithCosts(
   onData: (items: StockItem[]) => void,
   onError?: (err: Error) => void,
@@ -218,7 +220,20 @@ export function subscribeStockItemsWithCosts(
       );
       emit();
     },
-    (err) => onError?.(err),
+    (err) => {
+      // owner-only collection — อย่าทำให้ทั้งหน้าแดงเมื่อ staff / token ไม่มีอีเมลเจ้าของ
+      const code = (err as { code?: string })?.code || "";
+      const msg = err?.message || "";
+      if (
+        code === "permission-denied" ||
+        /insufficient permissions|permission-denied/i.test(msg)
+      ) {
+        costMap = new Map();
+        emit();
+        return;
+      }
+      onError?.(err);
+    },
   );
   return () => {
     unsubStock();

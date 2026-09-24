@@ -57,7 +57,6 @@ import {
 } from "@/lib/stock-costs";
 import {
   countMenusLinkedToStock,
-  markBakeryCostCatalogNotCounted,
 } from "@/lib/menu-sop";
 import {
   formatDateShort,
@@ -110,9 +109,6 @@ function StockView() {
     setLoading(true);
     void Promise.all([
       seedStockItemsIfEmpty(actorId),
-      isOwner
-        ? markBakeryCostCatalogNotCounted(actorId).catch(() => 0)
-        : Promise.resolve(0),
       listActiveEmployees().then(setEmployees),
     ])
       .catch((err) => setError((err as Error).message || "โหลดข้อมูลไม่สำเร็จ"))
@@ -131,7 +127,7 @@ function StockView() {
       unsubItems();
       unsubSessions();
     };
-  }, [canUseStock, actorId, isOwner]);
+  }, [canUseStock, actorId]);
 
   useEffect(() => {
     if (loading || !canUseStock) return;

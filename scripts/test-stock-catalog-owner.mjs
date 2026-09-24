@@ -33,7 +33,8 @@ assert.match(stockPage, /includeInCount/);
 assert.match(stockPage, /defaultIncludeInCount/);
 assert.match(stockPage, /stockItemsForCount/);
 assert.match(stockPage, /stock-skip-table/);
-assert.match(stockPage, /markBakeryCostCatalogNotCounted/);
+// ไม่ auto-run markBakery บนโหลดหน้า — กันดึงน้ำตาล/น้ำออกจากรอบนับเครื่องดื่ม
+assert.doesNotMatch(stockPage, /markBakeryCostCatalogNotCounted\(/);
 assert.match(hist, /upcomingStockRounds\(2/);
 assert.doesNotMatch(stockPage, /ownerView === "catalog"/);
 assert.doesNotMatch(stockPage, /StockCatalogSetup/);

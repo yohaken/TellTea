@@ -58,9 +58,9 @@ assert.match(lib, /หมั่นโถว โฮมเมด/);
 const page = read("src/app/bakery-sop/page.tsx");
 assert.match(page, /canSeeCost/);
 assert.match(page, /OwnerCostTab/);
-// ต้นทุน = เจ้าของเท่านั้น · พนักงานกรอกชื่อ/ปริมาณ
-assert.match(page, /canSeeCost = isOwner && !isPermPreview/);
-assert.match(page, /OwnerCostTab/);
+// ต้นทุน = อีเมลเจ้าของตาม rules stockCosts (ไม่ใช่แค่ role)
+assert.match(page, /isAppOwnerEmail/);
+assert.match(page, /canSeeCost[\s\S]{0,160}isAppOwnerEmail/);
 assert.match(page, /bakery-sop-cost-owner-only/);
 assert.doesNotMatch(page, /ใช้คำนวณต้นทุนทีหลัง/);
 assert.match(read(".cursor/rules/bakery-sop-cost-owner-only.mdc"), /เจ้าของเท่านั้น/);

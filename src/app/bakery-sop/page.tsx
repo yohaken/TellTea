@@ -69,7 +69,7 @@ import {
 import type { StockItem } from "@/lib/types";
 import { formatPlainNumber } from "@/lib/utils";
 import { getDoc, doc } from "firebase/firestore";
-import { getDb } from "@/lib/firebase";
+import { getDb, isAppOwnerEmail } from "@/lib/firebase";
 import {
   subscribeMenuCategories,
   subscribeMenuItems,
@@ -251,13 +251,16 @@ export default function BakerySopPage() {
 }
 
 function BakerySopView() {
-  const { actorId, staff, isPermPreview, status: authStatus } = useAuth();
+  const { actorId, staff, user, isPermPreview, status: authStatus } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const isOwner = staff?.role === "owner";
   const canWrite = !!actorId && !isPermPreview;
-  /** ต้นทุน (฿) — เจ้าของเท่านั้น · พนักงานกรอกชื่อ/ปริมาณอย่างเดียว (กฎ bakery-sop-cost-owner-only) */
-  const canSeeCost = isOwner && !isPermPreview;
+  /** ต้นทุน (฿) — อีเมลเจ้าของเท่านั้น (กฎ bakery-sop-cost-owner-only · stockCosts) */
+  const canSeeCost =
+    isOwner &&
+    !isPermPreview &&
+    isAppOwnerEmail(user?.email || "");
   /** คอลัมน์เมนู: ชื่อ + ผสม + สถานะ + ข้าม + (โฟกัสถ้าเจ้าของ) */
   const menuTableColCount = isOwner ? 5 : 4;
   /** คอลัมน์เบส: ชื่อ + ได้ + ผสม + สถานะ + ข้าม + (โฟกัสถ้าเจ้าของ) */

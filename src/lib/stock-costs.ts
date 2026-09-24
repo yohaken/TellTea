@@ -115,7 +115,18 @@ export function subscribeStockCostMetaMap(
       }
       onData(map);
     },
-    (err) => onError?.(err),
+    (err) => {
+      const code = (err as { code?: string })?.code || "";
+      const msg = err?.message || "";
+      if (
+        code === "permission-denied" ||
+        /insufficient permissions|permission-denied/i.test(msg)
+      ) {
+        onData(new Map());
+        return;
+      }
+      onError?.(err);
+    },
   );
 }
 

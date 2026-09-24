@@ -125,6 +125,12 @@ assert.equal(
 assert.match(css, /stock-skip-th-name[\s\S]*text-align: left !important/);
 assert.match(css, /stock-skip-name[\s\S]*text-align: left !important/);
 
+// stockCosts owner-only — subscribe ต้อง soft-fail ไม่ทำให้เมนูอื่นแดง
+const stockLib = read("src/lib/stock.ts");
+assert.match(stockLib, /permission-denied/);
+const costLib = read("src/lib/stock-costs.ts");
+assert.match(costLib, /onData\(new Map\(\)\)/);
+
 console.log("OK test-stock-cost-history");
 
 
