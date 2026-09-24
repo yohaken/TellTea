@@ -4298,6 +4298,182 @@ body.modal-open .main-panel {
   color: rgba(28, 42, 31, 0.55);
 }
 
+.ledger-bill-lines {
+  display: grid;
+  gap: 0.28rem;
+  margin: 0.35rem 0 0.35rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  /* อย่าให้แผงนี้บัง sticky ปุ่มบันทึก */
+  position: relative;
+  z-index: 0;
+}
+.ledger-bill-lines-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.ledger-bill-lines-label {
+  font-size: 0.68rem;
+  font-weight: 650;
+  color: color-mix(in srgb, var(--tea-leaf, #2f6b4f) 80%, #3f3f46);
+}
+.ledger-bill-lines-bar-acts {
+  display: flex;
+  align-items: center;
+  gap: 0.28rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.ledger-bill-lines-bar .bakery-sop-fit-btn {
+  flex-shrink: 0;
+  min-height: 1.55rem;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.68rem;
+}
+.ledger-bill-lines-empty,
+.ledger-bill-lines-toast {
+  margin: 0;
+  font-size: 0.66rem;
+  line-height: 1.35;
+}
+.ledger-bill-lines-sheet {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid rgba(28, 42, 31, 0.14);
+  border-radius: 0.4rem;
+  background: #fff;
+  box-sizing: border-box;
+  /* จำกัดสูง — ไม่ดันปุ่มบันทึกพ้นจอ */
+  max-height: 9.5rem;
+  overflow-y: auto;
+}
+.ledger-bill-lines-table {
+  width: 100%;
+  min-width: 16rem;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+.ledger-bill-lines-table th,
+.ledger-bill-lines-table td {
+  font-size: 0.66rem;
+  padding: 0.18rem 0.28rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(28, 42, 31, 0.08);
+  vertical-align: middle;
+}
+.ledger-bill-lines-table th {
+  font-size: 0.58rem;
+  font-weight: 650;
+  background: color-mix(in srgb, var(--tea-leaf, #2f6b4f) 6%, #faf8f3);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.ledger-bill-lines-name,
+.ledger-bill-lines-stock {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ledger-bill-lines-name {
+  font-weight: 600;
+  width: 34%;
+}
+.ledger-bill-lines-stock {
+  width: 28%;
+}
+.ledger-bill-lines-num {
+  width: 18%;
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ledger-bill-lines-act {
+  width: 20%;
+  min-width: 3.6rem;
+  text-align: right !important;
+  overflow: visible !important;
+  white-space: nowrap;
+}
+.ledger-bill-lines-act .bakery-sop-fit-btn {
+  min-height: 1.45rem;
+  padding: 0.15rem 0.35rem;
+  font-size: 0.64rem;
+}
+.ledger-bill-lines-miss td {
+  background: color-mix(in srgb, #fbbf24 10%, transparent);
+}
+.ledger-bill-lines-uncertain td {
+  background: color-mix(in srgb, #a16207 8%, transparent);
+}
+.ledger-bill-lines-skip td {
+  background: color-mix(in srgb, #71717a 8%, transparent);
+  opacity: 0.85;
+}
+.ledger-bill-lines-warn {
+  font-size: 0.55rem;
+  font-weight: 650;
+  color: #a16207;
+}
+.ledger-bill-lines-tier {
+  font-size: 0.55rem;
+  font-weight: 650;
+  margin-left: 0.15rem;
+}
+.ledger-bill-lines-tier.is-ok {
+  color: #166534;
+}
+.ledger-bill-lines-tier.is-low {
+  color: #a16207;
+}
+.ledger-bill-lines-tier.is-skip {
+  color: #52525b;
+}
+.ledger-bill-lines-confirm {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.4rem 0.45rem;
+  border: 1px solid rgba(47, 107, 79, 0.22);
+  border-radius: 0.4rem;
+  background: color-mix(in srgb, var(--tea-leaf, #2f6b4f) 5%, #fff);
+  /* โชว์เหนือตารางเมื่อยืนยัน — ไม่หลุดใต้พับ */
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.ledger-bill-lines-confirm-title {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 650;
+}
+.ledger-bill-lines-confirm-diff {
+  margin: 0;
+  font-size: 0.66rem;
+}
+.ledger-bill-lines-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.ledger-bill-lines-confirm-actions .bakery-sop-fit-btn {
+  min-height: 1.55rem;
+  padding: 0.2rem 0.5rem;
+}
+
+/* ปุ่มบันทึกอยู่เหนือแผงรายการในบิลเสมอ */
+.modal-backdrop.edit-modal .entry-actions {
+  z-index: 3;
+}
+
 .ai-save-progress-root {
   position: fixed;
   inset: 0;
@@ -8858,6 +9034,239 @@ body.has-staff-task-nudge .module-page {
 
 .stock-page .stock-history-wrap {
   margin-top: 0;
+}
+
+.stock-skip-table {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+/* ทับ .stock-history-table ที่จัดกลาง — ชื่อชิดซ้ายตามมาตรฐานแถบนับ */
+.stock-page .stock-history-sheet .stock-skip-table.sheet-table th,
+.stock-page .stock-history-sheet .stock-skip-table.sheet-table td,
+.stock-skip-table th,
+.stock-skip-table td {
+  font-size: 0.7rem;
+  padding: 0.2rem 0.35rem;
+  line-height: 1.2;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-bottom: 1px solid rgba(28, 42, 31, 0.08);
+  text-align: left;
+  width: auto;
+}
+.stock-skip-table th {
+  font-size: 0.6rem;
+  font-weight: 650;
+  color: #3f3f46;
+}
+.stock-skip-th-name,
+.stock-skip-name {
+  text-align: left !important;
+  font-weight: 650;
+  padding-left: 0.22rem;
+}
+.stock-skip-th-name {
+  width: 34%;
+}
+.stock-skip-th-num {
+  width: 14%;
+  text-align: right !important;
+}
+.stock-skip-th-updated,
+.stock-skip-updated {
+  width: 18%;
+  text-align: left !important;
+}
+.stock-skip-th-bill,
+.stock-skip-bill {
+  width: 8%;
+  text-align: left !important;
+}
+.stock-skip-th-note,
+.stock-skip-note {
+  width: 66%;
+  text-align: left !important;
+}
+.stock-skip-th-act,
+.stock-skip-act {
+  width: 12%;
+  white-space: nowrap;
+  text-align: right !important;
+  overflow: visible;
+}
+.stock-skip-row.is-clickable {
+  cursor: pointer;
+}
+.stock-skip-row.is-clickable:active {
+  background: color-mix(in srgb, var(--tea-leaf, #2f6b4f) 6%, transparent);
+}
+.stock-skip-note {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stock-skip-num {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.stock-skip-date {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.22rem;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.stock-skip-date.is-stale {
+  color: #a16207;
+}
+.stock-skip-stale-tag {
+  flex-shrink: 0;
+  font-size: 0.55rem;
+  font-weight: 700;
+  padding: 0.04rem 0.22rem;
+  border-radius: 999px;
+  background: rgba(234, 179, 8, 0.22);
+  color: #854d0e;
+}
+.stock-skip-bill-link {
+  font-size: 0.66rem;
+  font-weight: 650;
+  color: #2f6b4f;
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+}
+.stock-skip-settings-btn {
+  font-size: 0.64rem;
+  padding: 0.12rem 0.3rem;
+}
+
+/* คลัง — กระชับฟิต (dense) */
+.stock-page .check-filter-pill {
+  font-size: 0.68rem;
+  padding: 0.14rem 0.42rem;
+  min-height: 1.35rem;
+  line-height: 1.15;
+}
+.stock-page .stock-history-add-bar {
+  gap: 0.28rem;
+  padding: 0.2rem 0.15rem 0.1rem;
+  min-height: 0;
+}
+.stock-page .stock-history-add-btn {
+  width: 1.35rem;
+  height: 1.35rem;
+  min-width: 1.35rem;
+  padding: 0;
+}
+.stock-page .stock-history-add-link {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.2rem;
+  min-height: 1.3rem;
+  line-height: 1.2;
+}
+.stock-page .stock-item-slim-card {
+  max-width: 20rem;
+  padding: 0.55rem 0.65rem 0.6rem;
+  gap: 0.35rem;
+}
+.stock-page .stock-item-slim-title {
+  font-size: 0.88rem;
+}
+.stock-page .stock-item-slim-form {
+  gap: 0.35rem;
+}
+.stock-page .stock-item-slim-field {
+  gap: 0.18rem;
+  font-size: 0.72rem;
+}
+.stock-page .stock-item-slim-field input,
+.stock-page .stock-item-slim-aliases {
+  font-size: 0.78rem;
+  padding: 0.28rem 0.4rem;
+  min-height: 1.55rem;
+}
+.stock-page .stock-item-slim-unit {
+  width: 100%;
+  font-size: 0.78rem;
+  padding: 0.28rem 0.4rem;
+  min-height: 1.55rem;
+  border: 1px solid rgba(28, 42, 31, 0.18);
+  border-radius: 6px;
+  background: #fff;
+  font-family: inherit;
+}
+.stock-page .stock-item-slim-aliases {
+  width: 100%;
+  resize: vertical;
+  min-height: 3.2rem;
+  border: 1px solid rgba(28, 42, 31, 0.18);
+  border-radius: 6px;
+  background: #fff;
+  font-family: inherit;
+  line-height: 1.35;
+}
+.stock-page .stock-item-slim-alert-check {
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  margin: 0;
+  padding: 0.05rem 0;
+}
+.stock-page .stock-item-slim-actions .ghost-btn,
+.stock-page .stock-item-slim-actions .primary-btn {
+  font-size: 0.72rem;
+  padding: 0.28rem 0.55rem;
+  min-height: 1.55rem;
+}
+.stock-page .stock-item-slim-history {
+  margin-top: 0.15rem;
+  display: grid;
+  gap: 0.2rem;
+}
+.stock-page .stock-item-slim-history-label {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 650;
+  color: #52525b;
+}
+.stock-page .stock-item-slim-history-table th,
+.stock-page .stock-item-slim-history-table td {
+  font-size: 0.66rem;
+  padding: 0.18rem 0.28rem;
+}
+.stock-page .stock-count-form-head {
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+.stock-page .stock-count-clear-btn {
+  font-size: 0.68rem;
+  padding: 0.18rem 0.4rem;
+  min-height: 1.35rem;
+}
+.stock-page .stock-count-line {
+  gap: 0.35rem;
+  padding: 0.22rem 0;
+  align-items: center;
+}
+.stock-page .stock-count-line-name {
+  font-size: 0.78rem;
+}
+.stock-page .stock-count-line input {
+  font-size: 0.78rem;
+  padding: 0.2rem 0.35rem;
+  min-height: 1.45rem;
+  max-width: 4.5rem;
+}
+.stock-page .check-form-actions .ghost-btn,
+.stock-page .check-form-actions .primary-btn {
+  font-size: 0.74rem;
+  padding: 0.32rem 0.65rem;
+  min-height: 1.6rem;
 }
 
 .modal-backdrop.stock-fifo-policy-backdrop {
@@ -34810,3 +35219,1267 @@ a.ghost-btn {
   width: 100%;
 }
 
+
+/* —— SOP เบเกอรี่ — UI แนวคลัง (module-page + sheet-bleed + dense) —— */
+.bakery-sop-page.module-page {
+  --module-dock-h: 2.65rem;
+}
+.bakery-sop-page--tree {
+  padding-top: 0;
+}
+.bakery-sop-page .module-page-head {
+  margin-bottom: 0.08rem;
+}
+.bakery-sop-page .module-page-title {
+  margin-bottom: 0;
+  font-size: 0.98rem;
+}
+.bakery-sop-toolbar {
+  margin-bottom: 0.1rem;
+  gap: 0.22rem;
+}
+.bakery-sop-tree-wrap {
+  margin-top: 0;
+}
+.bakery-sop-list-section {
+  margin-top: 0.65rem;
+}
+.bakery-sop-list-section:first-of-type {
+  margin-top: 0;
+}
+.bakery-sop-list-section-head {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin: 0.2rem 0.15rem 0.28rem;
+  min-height: 1.35rem;
+}
+.bakery-sop-section-title {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--tea-leaf, #2f6b4f) 85%, #18181b);
+}
+.bakery-sop-list-section--base .bakery-sop-section-toggle span:last-child,
+.bakery-sop-list-section--base .bakery-sop-section-toggle {
+  color: #0e7490;
+  font-weight: 700;
+  font-size: 0.72rem;
+}
+.bakery-sop-sheet--base {
+  border: 1px solid color-mix(in srgb, #0891b2 22%, transparent);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.bakery-sop-sheet-table--base thead th {
+  background: color-mix(in srgb, #0891b2 14%, #f3efe4);
+  color: #0e7490;
+}
+.bakery-sop-sheet-table--base .bakery-sop-th-name,
+.bakery-sop-sheet-table--base .bakery-sop-th-sticky {
+  background: color-mix(in srgb, #0891b2 14%, #f3efe4);
+}
+.bakery-sop-yield-hd,
+.bakery-sop-yield-cell {
+  width: 1%;
+  min-width: 3.2rem;
+  text-align: center;
+  white-space: nowrap;
+  padding-left: 0.12rem !important;
+  padding-right: 0.12rem !important;
+  font-size: 0.62rem;
+  font-variant-numeric: tabular-nums;
+}
+.bakery-sop-yield-cell {
+  color: #0e7490;
+  font-weight: 600;
+}
+.bakery-sop-meta-grid--menu {
+  align-items: end;
+}
+.bakery-sop-menu-yield-hint {
+  margin: 0;
+  font-size: 0.62rem;
+  line-height: 1.25;
+  max-width: 16rem;
+}
+.bakery-sop-list-section--menu .bakery-sop-section-title {
+  color: color-mix(in srgb, var(--tea-leaf, #2f6b4f) 90%, #18181b);
+}
+.bakery-sop-page .bakery-sop-sheet.sheet-bleed {
+  margin-top: 0;
+}
+.bakery-sop-page .bakery-sop-sheet .sheet-table--dense th,
+.bakery-sop-page .bakery-sop-sheet .sheet-table--dense td {
+  padding: 0.1rem 0.18rem;
+  line-height: 1.1;
+  border-bottom: 1px solid rgba(28, 42, 31, 0.08);
+  vertical-align: middle;
+}
+.bakery-sop-sheet-table {
+  width: 100%;
+  min-width: 0;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+.bakery-sop-sheet-table th {
+  font-size: 0.58rem;
+  font-weight: 650;
+  color: color-mix(in srgb, var(--tea-leaf, #2f6b4f) 70%, #52525b);
+  background: #f3efe4;
+  white-space: nowrap;
+  text-align: center;
+}
+.bakery-sop-sheet-table .bakery-sop-th-name,
+.bakery-sop-sheet-table .bakery-sop-th-sticky {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  width: 1%;
+  min-width: 7.5rem;
+  max-width: 12rem;
+  padding-left: 0.35rem !important;
+  padding-right: 0.28rem !important;
+  background: #f3efe4;
+  box-shadow: 1px 0 0 rgba(28, 42, 31, 0.08);
+}
+.bakery-sop-sheet-table tbody td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  text-align: left;
+  width: 1%;
+  min-width: 7.5rem;
+  max-width: 12rem;
+  padding-left: 0.35rem !important;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 1px 0 0 rgba(28, 42, 31, 0.08);
+  font-weight: 650;
+  white-space: nowrap;
+}
+.bakery-sop-sheet-table .bakery-sop-mark-hd,
+.bakery-sop-sheet-table .bakery-sop-mark-cell {
+  width: 1%;
+  min-width: 1.55rem;
+  text-align: center;
+  padding-left: 0.06rem !important;
+  padding-right: 0.06rem !important;
+  white-space: nowrap;
+}
+.bakery-sop-row-group td {
+  background: color-mix(in srgb, var(--tea-leaf, #2f6b4f) 8%, #f3efe4) !important;
+  font-weight: 650;
+}
+.bakery-sop-row-group td:first-child {
+  background: color-mix(in srgb, var(--tea-leaf, #2f6b4f) 10%, #f3efe4) !important;
+}
+.bakery-sop-row-item:nth-child(even) td:first-child {
+  background: rgba(248, 246, 241, 0.96);
+}
+.bakery-sop-row-item.is-complete td {
+  background: color-mix(in srgb, #16a34a 5%, transparent);
+}
+.bakery-sop-row-item.is-complete td:first-child {
+  background: color-mix(in srgb, #16a34a 7%, #fff);
+}
+.bakery-sop-row-item.is-skipped td {
+  opacity: 0.72;
+}
+.bakery-sop-row-item.is-hidden-staff td:first-child,
+.bakery-sop-row-item.is-unfocused td:first-child {
+  color: color-mix(in srgb, var(--muted, #71717a) 85%, transparent);
+}
+.bakery-sop-summary-hd,
+.bakery-sop-summary-cell {
+  width: 1%;
+  min-width: 3.4rem;
+  text-align: center;
+  padding-left: 0.12rem !important;
+  padding-right: 0.12rem !important;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.bakery-sop-summary-pill {
+  display: inline-block;
+  font-size: 0.58rem;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 0.12rem 0.28rem;
+  border-radius: 999px;
+  letter-spacing: 0.01em;
+}
+.bakery-sop-summary-pill.is-done {
+  color: #15803d;
+  background: color-mix(in srgb, #16a34a 16%, #fff);
+}
+.bakery-sop-summary-pill.is-pending {
+  color: #a16207;
+  background: color-mix(in srgb, #fbbf24 18%, #fff);
+}
+.bakery-sop-summary-pill.is-skip {
+  color: #57534e;
+  background: color-mix(in srgb, #a8a29e 18%, #fff);
+}
+.bakery-sop-note-hd,
+.bakery-sop-note-cell {
+  min-width: 5.5rem;
+  max-width: 9.5rem;
+  text-align: left;
+  padding-left: 0.2rem !important;
+  padding-right: 0.25rem !important;
+  vertical-align: middle;
+  font-size: 0.58rem;
+  font-weight: 500;
+}
+.bakery-sop-note-text {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.25;
+  max-width: 9.2rem;
+}
+.bakery-sop-note-text.is-hit {
+  color: color-mix(in srgb, var(--tea-leaf, #2f6b4f) 75%, #3f3f46);
+}
+.bakery-sop-note-text.is-wait {
+  color: #a16207;
+}
+.bakery-sop-note-empty {
+  font-size: 0.58rem;
+}
+.bakery-sop-field-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.2rem;
+}
+.bakery-sop-field-head label {
+  margin: 0;
+}
+.bakery-sop-name-with-act {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.bakery-sop-name-with-act .bakery-sop-base-name-btn {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+}
+.bakery-sop-legacy-import-btn {
+  flex-shrink: 0;
+  min-height: 1.45rem;
+  padding: 0.12rem 0.4rem;
+  font-size: 0.62rem;
+  font-weight: 650;
+}
+.bakery-sop-legacy-banner {
+  margin: 0.15rem 0 0.35rem;
+  padding: 0.28rem 0.45rem;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  border-radius: 0.4rem;
+  background: color-mix(in srgb, var(--tea-leaf, #2f6b4f) 6%, #fff);
+  border: 1px solid color-mix(in srgb, var(--tea-leaf, #2f6b4f) 14%, transparent);
+}
+.bakery-sop-group-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+}
+.bakery-sop-group-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-weight: 650;
+  font-size: 0.72rem;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  min-width: 0;
+  flex: 1;
+}
+.bakery-sop-group-toggle span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bakery-sop-group-meta {
+  font-size: 0.58rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  text-align: right !important;
+  padding-right: 0.25rem !important;
+}
+.bakery-sop-indent {
+  padding-left: 1.05rem !important;
+}
+.bakery-sop-base-name-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-weight: 650;
+  font-size: 0.7rem;
+  /* สีใหม่ — แยกเบสจากเมนูปกติ */
+  color: #0e7490;
+  cursor: pointer;
+  text-align: left;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bakery-sop-base-name-btn:hover {
+  color: #155e75;
+  text-decoration: underline;
+}
+.bakery-sop-row-group .bakery-sop-group-toggle span:last-child {
+  color: #0e7490;
+  font-weight: 700;
+}
+.bakery-sop-row-item.is-base:not(.is-skipped) td:first-child {
+  color: #0e7490;
+}
+.bakery-sop-row-item.is-base.is-complete td {
+  background: color-mix(in srgb, #0891b2 6%, transparent);
+}
+.bakery-sop-row-item.is-base.is-complete td:first-child {
+  background: color-mix(in srgb, #0891b2 9%, #fff);
+}
+.bakery-sop-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.95rem;
+  height: 0.95rem;
+  border-radius: 3px;
+  font-size: 0.58rem;
+  line-height: 1;
+}
+.bakery-sop-mark.is-ok {
+  color: #15803d;
+  background: color-mix(in srgb, #16a34a 16%, transparent);
+}
+.bakery-sop-mark.is-ok.is-base {
+  color: #0e7490;
+  background: color-mix(in srgb, #0891b2 18%, transparent);
+}
+.bakery-sop-mark.is-miss {
+  color: #a1a1aa;
+  background: color-mix(in srgb, #a1a1aa 12%, transparent);
+}
+.bakery-sop-mark.is-na {
+  color: #a1a1aa;
+  font-size: 0.68rem;
+}
+.bakery-sop-summary-pill.is-done.is-base {
+  color: #0e7490;
+  background: color-mix(in srgb, #0891b2 16%, #fff);
+}
+.bakery-sop-summary-pill.is-pending.is-base {
+  color: #0e7490;
+  background: color-mix(in srgb, #0891b2 10%, #fff);
+  outline: 1px solid color-mix(in srgb, #0891b2 28%, transparent);
+}
+.bakery-sop-base-opt {
+  color: #0e7490;
+  font-weight: 600;
+}
+.bakery-sop-status-skip-cell {
+  text-align: center !important;
+}
+.bakery-sop-skip-pill {
+  display: inline-block;
+  font-size: 0.55rem;
+  font-weight: 650;
+  padding: 0.06rem 0.28rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, #a16207 14%, transparent);
+  color: #a16207;
+}
+.bakery-sop-ing-ai {
+  display: grid;
+  gap: 0.28rem;
+  margin: 0.15rem 0 0.35rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.bakery-sop-ing-ai-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.bakery-sop-ing-ai-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+.bakery-sop-ing-mode {
+  display: none;
+}
+.bakery-sop-ing-table-block {
+  display: grid;
+  gap: 0.28rem;
+  margin-top: 0.35rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid rgba(28, 42, 31, 0.1);
+}
+.bakery-sop-ing-table-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.bakery-sop-ing-table-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba(28, 42, 31, 0.78);
+}
+.bakery-sop-ing-ai-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.28rem;
+  flex-wrap: wrap;
+}
+.bakery-sop-ing-ai-pending {
+  display: block;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.4rem;
+  border: 1px solid color-mix(in srgb, #405b4a 35%, transparent);
+  background: color-mix(in srgb, #405b4a 8%, #fff);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+.bakery-sop-ing-ai-pending-actions {
+  display: flex;
+  gap: 0.28rem;
+  flex-shrink: 0;
+}
+.bakery-sop-ing-qty-hint {
+  margin: 0;
+  font-size: 0.65rem;
+  line-height: 1.3;
+}
+.bakery-sop-ing-input {
+  width: 100%;
+  min-width: 0;
+  min-height: 1.45rem;
+  padding: 0.1rem 0.25rem;
+  font-size: 0.68rem;
+  border: 1px solid rgba(28, 42, 31, 0.18);
+  border-radius: 0.28rem;
+  background: #fff;
+  box-sizing: border-box;
+}
+.bakery-sop-ing-input--qty {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+.bakery-sop-ing-input.is-invalid {
+  border-color: #dc2626;
+  background: color-mix(in srgb, #dc2626 8%, #fff);
+}
+.bakery-sop-ing-qty-missing td {
+  background: color-mix(in srgb, #dc2626 7%, transparent);
+}
+.bakery-sop-ing-th-act {
+  width: 7%;
+}
+.bakery-sop-ing-act {
+  text-align: center;
+}
+.bakery-sop-ing-del {
+  width: 1.35rem;
+  height: 1.35rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+/* ตารางส่วนผสมในฟอร์ม — ไม่ bleed · กว้างไม่เกินการ์ด · ขอบเท่า textarea */
+.bakery-sop-ing-sheet {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0;
+  overflow-x: auto;
+  border: 1px solid rgba(28, 42, 31, 0.14);
+  border-radius: 0.4rem;
+  background: #fff;
+  box-sizing: border-box;
+}
+.bakery-sop-ing-table {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+.bakery-sop-ing-table th,
+.bakery-sop-ing-table td {
+  font-size: 0.66rem;
+  padding: 0.18rem 0.28rem;
+  line-height: 1.15;
+  vertical-align: middle;
+  border-bottom: 1px solid rgba(28, 42, 31, 0.08);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bakery-sop-ing-table th {
+  font-size: 0.58rem;
+  font-weight: 650;
+  text-align: left;
+  background: color-mix(in srgb, var(--tea-leaf, #2f6b4f) 6%, #faf8f3);
+  color: #3f3f46;
+}
+.bakery-sop-ing-th-name {
+  width: 22%;
+}
+.bakery-sop-ing-th-qty {
+  width: 14%;
+  text-align: right !important;
+}
+.bakery-sop-ing-th-unit {
+  width: 12%;
+}
+.bakery-sop-ing-th-stock {
+  width: 40%;
+}
+.bakery-sop-ing-th-status {
+  width: 12%;
+  text-align: center !important;
+}
+.bakery-sop-ing-qty {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.bakery-sop-ing-unit {
+  white-space: nowrap;
+}
+.bakery-sop-ing-name,
+.bakery-sop-ing-stock {
+  font-weight: 600;
+}
+.bakery-sop-ing-stock-select {
+  width: 100%;
+  max-width: 100%;
+  min-height: 1.45rem;
+  padding: 0.1rem 0.2rem;
+  font-size: 0.68rem;
+  border: 1px solid rgba(28, 42, 31, 0.18);
+  border-radius: 0.28rem;
+  background: #fff;
+  font-weight: 500;
+}
+.bakery-sop-pick-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.22rem;
+  max-width: 100%;
+  min-height: 1.45rem;
+  padding: 0.12rem 0.28rem;
+  font-size: 0.64rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: #0e7490;
+  background: color-mix(in srgb, #0891b2 8%, #fff);
+  border: 1px solid color-mix(in srgb, #0891b2 28%, transparent);
+  border-radius: 0.28rem;
+  cursor: pointer;
+}
+.bakery-sop-pick-trigger.is-paired {
+  color: color-mix(in srgb, var(--tea-leaf, #2f6b4f) 90%, #18181b);
+  background: #fff;
+  border-color: rgba(28, 42, 31, 0.18);
+}
+.bakery-sop-pick-trigger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.bakery-sop-pick-trigger-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 7.5rem;
+}
+.modal-backdrop.bakery-sop-pick-backdrop {
+  place-items: center;
+  padding: calc(0.5rem + var(--safe-top, 0px)) 0.5rem
+    calc(0.5rem + var(--safe-bottom, 0px));
+  background: rgba(20, 32, 24, 0.4);
+  z-index: 80;
+}
+.modal-card.bakery-sop-pick-card {
+  width: min(17.5rem, calc(100vw - 1.4rem));
+  max-height: min(22rem, calc(100vh - 2.4rem));
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.45rem 0.5rem 0.5rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(47, 107, 79, 0.14);
+  background: linear-gradient(180deg, #fbf8f0 0%, #f3efe4 100%);
+  box-shadow:
+    0 0.45rem 1.4rem rgba(20, 32, 24, 0.18),
+    0 0.06rem 0.16rem rgba(20, 32, 24, 0.06);
+  overflow: hidden;
+}
+.bakery-sop-pick-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.3rem;
+}
+.bakery-sop-pick-head strong {
+  font-size: 0.72rem;
+  font-weight: 750;
+  color: var(--tea-leaf, #2f6b4f);
+}
+.bakery-sop-pick-search {
+  display: flex;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0.22rem 0.35rem;
+  border: 1px solid rgba(28, 42, 31, 0.16);
+  border-radius: 0.4rem;
+  background: #fff;
+}
+.bakery-sop-pick-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: 0.78rem;
+  padding: 0.1rem 0;
+}
+.bakery-sop-pick-list {
+  flex: 1;
+  min-height: 0;
+  max-height: 14rem;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.08rem;
+  -webkit-overflow-scrolling: touch;
+}
+.bakery-sop-pick-group {
+  margin-top: 0.2rem;
+  padding: 0.12rem 0.28rem;
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: #0e7490;
+  text-transform: none;
+}
+.bakery-sop-pick-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.28rem 0.35rem;
+  border: 0;
+  border-radius: 0.32rem;
+  background: transparent;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #1c2a1f;
+  cursor: pointer;
+}
+.bakery-sop-pick-row:hover,
+.bakery-sop-pick-row.is-active {
+  background: color-mix(in srgb, var(--tea-leaf, #2f6b4f) 10%, #fff);
+}
+.bakery-sop-pick-row.is-base {
+  color: #0e7490;
+}
+.bakery-sop-pick-row.is-clear {
+  color: var(--muted, #71717a);
+  font-weight: 550;
+}
+.bakery-sop-pick-meta {
+  flex-shrink: 0;
+  font-size: 0.58rem;
+  font-weight: 500;
+}
+.bakery-sop-pick-empty {
+  margin: 0.4rem 0.2rem;
+  font-size: 0.68rem;
+  text-align: center;
+}
+.bakery-sop-ing-status {
+  text-align: center;
+  white-space: nowrap;
+}
+.bakery-sop-ing-missing td {
+  background: color-mix(in srgb, #fbbf24 12%, transparent);
+}
+.bakery-sop-ing-missing .bakery-sop-skip-pill {
+  background: color-mix(in srgb, #dc2626 14%, transparent);
+  color: #b91c1c;
+}
+.bakery-sop-form--fields .bakery-sop-ing-ai {
+  margin-left: 0;
+  margin-right: 0;
+}
+.bakery-sop-flag-btn {
+  border: 1px solid rgba(28, 42, 31, 0.18);
+  background: #fff;
+  border-radius: 4px;
+  width: 1.2rem;
+  height: 1.2rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.68rem;
+  line-height: 1;
+  color: #71717a;
+}
+.bakery-sop-flag-btn.is-on {
+  border-color: color-mix(in srgb, #a16207 45%, transparent);
+  background: color-mix(in srgb, #a16207 12%, #fff);
+  color: #a16207;
+  font-weight: 700;
+}
+.bakery-sop-flag-btn.is-vis {
+  border-color: color-mix(in srgb, var(--tea-leaf, #2f6b4f) 45%, transparent);
+  background: color-mix(in srgb, var(--tea-leaf, #2f6b4f) 12%, #fff);
+  color: var(--tea-leaf, #2f6b4f);
+}
+.bakery-sop-flag-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.bakery-sop-flag-ro {
+  font-size: 0.68rem;
+  color: #71717a;
+}
+.bakery-sop-base-empty {
+  font-size: 0.66rem;
+  font-weight: 500;
+}
+.bakery-sop-fit-btn {
+  font-size: 0.62rem;
+  padding: 0.12rem 0.35rem;
+  min-height: 1.35rem;
+  line-height: 1.1;
+}
+.bakery-sop-cost--sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.15rem;
+}
+.bakery-sop-cost-lines-wrap {
+  margin-top: 0 !important;
+}
+.bakery-sop-cost-sum-table th:nth-child(-n + 4),
+.bakery-sop-cost-sum-table td.bakery-sop-num {
+  width: 3.6rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.bakery-sop-cost-sum-table .bakery-sop-cost-act-hd,
+.bakery-sop-cost-lines-table .bakery-sop-cost-act-hd,
+.bakery-sop-cost-bill-table .bakery-sop-cost-act-hd {
+  width: 1%;
+  white-space: nowrap;
+}
+.bakery-sop-cost-act-cell {
+  text-align: right;
+  white-space: nowrap;
+}
+.bakery-sop-cost-act-cell .btn {
+  margin-left: 0.15rem;
+}
+.bakery-sop-cost-name {
+  max-width: 8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bakery-sop-cost-qty-cell {
+  white-space: nowrap;
+}
+.bakery-sop-cost-qty {
+  width: 3.2rem;
+  font-size: 0.72rem;
+  padding: 0.12rem 0.2rem;
+  border: 1px solid rgba(28, 42, 31, 0.18);
+  border-radius: 4px;
+  background: #fff;
+}
+.bakery-sop-cost-unit {
+  margin-left: 0.15rem;
+  font-size: 0.62rem;
+}
+.bakery-sop-cost-stock {
+  width: 100%;
+  max-width: 9rem;
+  font-size: 0.7rem;
+  padding: 0.12rem 0.15rem;
+  border: 1px solid rgba(28, 42, 31, 0.18);
+  border-radius: 4px;
+  background: #fff;
+}
+.bakery-sop-cost-lines-table th:nth-child(4),
+.bakery-sop-cost-lines-table th:nth-child(5),
+.bakery-sop-cost-lines-table td.bakery-sop-num,
+.bakery-sop-cost-bill-table td.bakery-sop-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.bakery-sop-cost-empty {
+  font-size: 0.7rem;
+  padding: 0.45rem 0.35rem !important;
+}
+.bakery-sop-cost-bill-desc {
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* cost tables: ไม่ต้อง sticky ชื่อ */
+.bakery-sop-cost--sheet .bakery-sop-sheet-table tbody td:first-child,
+.bakery-sop-cost--sheet .bakery-sop-sheet-table th:first-child {
+  position: static;
+  box-shadow: none;
+  min-width: 0;
+  max-width: none;
+  font-weight: inherit;
+  background: transparent;
+}
+.bakery-sop-cost--sheet .bakery-sop-sheet-table th:first-child {
+  text-align: left;
+  background: #f3efe4;
+}
+.bakery-sop-base-yield {
+  font-size: 0.68rem;
+  color: var(--muted, #71717a);
+  white-space: nowrap;
+}
+.bakery-sop-tree-count {
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+.bakery-sop-dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.bakery-sop-dot.is-ok {
+  background: #16a34a;
+}
+.bakery-sop-dot.is-todo {
+  background: color-mix(in srgb, var(--muted, #a1a1aa) 70%, transparent);
+}
+.bakery-sop-edit-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.78rem;
+  line-height: 1.2;
+  font-weight: 650;
+}
+.bakery-sop-fit-btn {
+  padding: 0.22rem 0.45rem !important;
+  font-size: 0.72rem !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  line-height: 1.15 !important;
+  gap: 0.15rem;
+  width: auto !important;
+  flex: 0 0 auto;
+}
+.bakery-sop-fit-btn.ghost {
+  padding: 0.2rem 0.28rem !important;
+}
+/* SOP draft — reuse ผลิต field card pattern (clear borders, slim) */
+.bakery-sop-form--fields.form-card.entry-form {
+  margin: 0;
+  padding: 0.4rem 0.45rem 0.45rem;
+  border: 1px solid rgba(28, 42, 31, 0.22);
+  border-radius: 0.55rem;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: none;
+}
+.bakery-sop-form--fields .field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  margin-bottom: 0.32rem;
+}
+.bakery-sop-form--fields .field:last-child {
+  margin-bottom: 0;
+}
+.bakery-sop-form--fields .field label,
+.bakery-sop-form--fields .field .field-label {
+  font-size: 0.64rem;
+  font-weight: 650;
+  line-height: 1.2;
+  color: color-mix(in srgb, var(--tea-leaf, #2f6b4f) 80%, #3f3f46);
+  margin: 0;
+}
+.bakery-sop-form--fields .field input,
+.bakery-sop-form--fields .field textarea,
+.bakery-sop-form--fields.entry-form .field input,
+.bakery-sop-form--fields.entry-form .field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(28, 42, 31, 0.28);
+  border-radius: 0.4rem;
+  background: #fff;
+  font-size: 0.76rem;
+  line-height: 1.3;
+  padding: 0.28rem 0.4rem;
+  font-family: inherit;
+  min-height: 1.7rem;
+  box-shadow: none;
+}
+.bakery-sop-form--fields .field textarea,
+.bakery-sop-form--fields.entry-form .field textarea {
+  resize: vertical;
+  min-height: 6.5rem;
+  padding: 0.4rem 0.45rem;
+  line-height: 1.4;
+}
+.bakery-sop-form--fields .field textarea.bakery-sop-textarea--tall,
+.bakery-sop-form--fields.entry-form .field textarea.bakery-sop-textarea--tall {
+  min-height: 10rem;
+}
+.bakery-sop-form--fields .field input:focus,
+.bakery-sop-form--fields .field textarea:focus {
+  outline: none;
+  border-color: var(--tea-leaf, #2f6b4f);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--tea-leaf, #2f6b4f) 22%, transparent);
+}
+.bakery-sop-form--fields .field input:disabled,
+.bakery-sop-form--fields .field textarea:disabled {
+  opacity: 0.75;
+  background: #f4f4f5;
+}
+.bakery-sop-meta-grid.stock-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.1fr;
+  gap: 0.28rem;
+  margin-bottom: 0.32rem;
+}
+.bakery-sop-meta-grid .field {
+  margin-bottom: 0;
+}
+.bakery-sop-price-chip {
+  font-size: 0.66rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.bakery-sop-page .page-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 1.05rem;
+  margin: 0;
+}
+.bakery-sop-slim-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+.bakery-sop-slim-actions {
+  display: flex;
+  gap: 0.3rem;
+  margin-left: auto;
+}
+.bakery-sop-slim-btn {
+  padding: 0.28rem 0.55rem !important;
+  font-size: 0.78rem !important;
+  min-height: 0 !important;
+  gap: 0.2rem;
+}
+.bakery-sop-slim-msg {
+  font-size: 0.78rem;
+  margin: 0.25rem 0 0.4rem;
+}
+.bakery-sop-slim-empty {
+  font-size: 0.8rem;
+  padding: 0.75rem 0.2rem;
+}
+.bakery-sop-table-wrap {
+  overflow-x: auto;
+  margin: 0 -0.15rem;
+}
+.bakery-sop-slim-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+.bakery-sop-slim-table th,
+.bakery-sop-slim-table td {
+  border-bottom: 1px solid color-mix(in srgb, var(--border, #d4d4d8) 65%, transparent);
+  padding: 0.28rem 0.3rem;
+  text-align: left;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.bakery-sop-slim-table thead th {
+  font-weight: 600;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--muted, #71717a) 90%, transparent);
+  border-bottom-width: 1.5px;
+}
+.bakery-sop-slim-table tbody tr {
+  cursor: pointer;
+}
+.bakery-sop-slim-table tbody tr:hover {
+  background: color-mix(in srgb, var(--accent, #405b4a) 8%, transparent);
+}
+.bakery-sop-slim-table .name {
+  white-space: normal;
+  font-weight: 550;
+  max-width: 11rem;
+}
+.bakery-sop-slim-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  width: 2.6rem;
+}
+.bakery-sop-slim-table .status {
+  text-align: right;
+  width: 4.2rem;
+}
+.bakery-sop-slim-table .u {
+  margin-left: 0.15rem;
+  font-size: 0.68rem;
+  color: var(--muted, #71717a);
+}
+.bakery-sop-pill {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.08rem 0.35rem;
+  border-radius: 4px;
+  letter-spacing: 0.01em;
+}
+.bakery-sop-pill.is-ok {
+  background: color-mix(in srgb, #16a34a 18%, transparent);
+  color: #166534;
+}
+.bakery-sop-pill.is-todo {
+  background: color-mix(in srgb, #ca8a04 18%, transparent);
+  color: #854d0e;
+}
+
+.bakery-sop-pick-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: color-mix(in srgb, #0a0a0a 45%, transparent);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0.75rem;
+}
+.bakery-sop-pick-sheet {
+  width: min(100%, 28rem);
+  max-height: min(78vh, 36rem);
+  overflow: auto;
+  background: var(--card, #fff);
+  border-radius: 12px 12px 8px 8px;
+  padding: 0.65rem 0.7rem 0.85rem;
+  box-shadow: 0 12px 40px color-mix(in srgb, #000 28%, transparent);
+}
+.bakery-sop-pick-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+}
+.bakery-sop-pick-hint {
+  font-size: 0.72rem;
+  margin: 0.2rem 0 0.45rem;
+}
+.bakery-sop-pick-search {
+  width: 100%;
+  font-size: 0.82rem;
+  padding: 0.4rem 0.55rem;
+  margin-bottom: 0.4rem;
+  border: 1px solid color-mix(in srgb, var(--border, #d4d4d8) 80%, transparent);
+  border-radius: 8px;
+}
+.bakery-sop-pick-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.bakery-sop-pick-list button {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  text-align: left;
+  padding: 0.45rem 0.35rem;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border, #d4d4d8) 60%, transparent);
+  background: transparent;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.bakery-sop-pick-list button:hover {
+  background: color-mix(in srgb, var(--accent, #405b4a) 8%, transparent);
+}
+
+.bakery-sop-detail-bar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.3rem;
+  margin-bottom: 0.35rem;
+}
+.bakery-sop-detail-bar .bakery-sop-fit-btn.primary,
+.bakery-sop-detail-bar > .bakery-sop-fit-btn.primary {
+  margin-left: auto;
+}
+.bakery-sop-tab-pills {
+  display: inline-flex;
+  gap: 0.12rem;
+  margin-left: 0;
+  flex-shrink: 0;
+}
+.bakery-sop-tab-pills button {
+  appearance: none;
+  border: 1px solid rgba(28, 42, 31, 0.14);
+  background: rgba(255, 255, 255, 0.72);
+  color: rgba(28, 42, 31, 0.72);
+  border-radius: 999px;
+  padding: 0.18rem 0.5rem;
+  font-size: 0.66rem;
+  font-weight: 650;
+  cursor: pointer;
+  line-height: 1.2;
+}
+.bakery-sop-tab-pills button.is-active {
+  background: rgba(47, 107, 79, 0.14);
+  border-color: rgba(47, 107, 79, 0.35);
+  color: var(--tea-leaf, #2f6b4f);
+}
+.bakery-sop-section-title {
+  font-size: 0.78rem;
+  margin: 0;
+  font-weight: 650;
+}
+.bakery-sop-section-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.55rem 0 0.25rem;
+}
+.bakery-sop-meta-row {
+  display: grid;
+  grid-template-columns: 1.6fr 0.55fr 0.55fr 0.55fr;
+  gap: 0.3rem;
+}
+.bakery-sop-meta-row .field {
+  margin: 0;
+}
+.bakery-sop-meta-row .field span {
+  font-size: 0.65rem;
+  display: block;
+  margin-bottom: 0.12rem;
+  color: var(--muted, #71717a);
+}
+.bakery-sop-meta-row .field input {
+  width: 100%;
+  font-size: 0.8rem;
+  padding: 0.28rem 0.35rem;
+}
+.bakery-sop-edit-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.76rem;
+}
+.bakery-sop-edit-table th,
+.bakery-sop-edit-table td {
+  border-bottom: 1px solid color-mix(in srgb, var(--border, #d4d4d8) 60%, transparent);
+  padding: 0.15rem 0.15rem;
+  vertical-align: top;
+}
+.bakery-sop-edit-table thead th {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--muted, #71717a);
+  text-align: left;
+}
+.bakery-sop-edit-table .num {
+  width: 3.6rem;
+  text-align: right;
+}
+.bakery-sop-edit-table .act {
+  width: 1.6rem;
+}
+.bakery-sop-edit-table input,
+.bakery-sop-edit-table textarea {
+  width: 100%;
+  font-size: 0.76rem;
+  padding: 0.22rem 0.3rem;
+  border: 1px solid color-mix(in srgb, var(--border, #d4d4d8) 70%, transparent);
+  border-radius: 4px;
+  background: transparent;
+}
+.bakery-sop-edit-table textarea {
+  margin-top: 0.15rem;
+  resize: vertical;
+  min-height: 2.2rem;
+}
+.bakery-sop-edit-table .empty-cell {
+  color: var(--muted, #71717a);
+  font-size: 0.72rem;
+  padding: 0.45rem 0.2rem;
+  text-align: center;
+}
+.bakery-sop-steps-table .step-cell {
+  min-width: 0;
+}
+.bakery-sop-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.65rem;
+}
+@media (max-width: 420px) {
+  .bakery-sop-meta-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .bakery-sop-cost-stock {
+    max-width: 6.5rem;
+  }
+}

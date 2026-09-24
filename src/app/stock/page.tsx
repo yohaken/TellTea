@@ -41,11 +41,32 @@ import {
 import {
   createStockItem,
   deleteStockItem,
+  normalizeStockUnit,
   seedStockItemsIfEmpty,
+  STOCK_UNIT_OPTIONS,
+  stockItemsForCount,
+  stockItemsNotCounted,
   subscribeStockItems,
   updateStockItem,
 } from "@/lib/stock";
-import { formatStockQty, parseDateInput } from "@/lib/utils";
+import {
+  listStockCostHistory,
+  subscribeStockCostMetaMap,
+  type StockCostDoc,
+  type StockCostHistoryRow,
+} from "@/lib/stock-costs";
+import {
+  countMenusLinkedToStock,
+  markBakeryCostCatalogNotCounted,
+} from "@/lib/menu-sop";
+import {
+  formatDateShort,
+  formatPlainNumber,
+  formatStockQty,
+  parseDateInput,
+} from "@/lib/utils";
+
+const COST_STALE_MS = 90 * 24 * 60 * 60 * 1000;
 
 type DraftLine = {
   itemId: string;
@@ -78,6 +99,8 @@ function StockView() {
   const [error, setError] = useState<string | null>(null);
   const [policyOpen, setPolicyOpen] = useState(false);
 
+  const countItems = useMemo(() => stockItemsForCount(items), [items]);
+
   useEffect(() => {
     if (staff && !canUseStock) router.replace(staffHomeHref(staff));
   }, [staff, router, canUseStock]);
@@ -87,6 +110,9 @@ function StockView() {
     setLoading(true);
     void Promise.all([
       seedStockItemsIfEmpty(actorId),
+      isOwner
+        ? markBakeryCostCatalogNotCounted(actorId).catch(() => 0)
+        : Promise.resolve(0),
       listActiveEmployees().then(setEmployees),
     ])
       .catch((err) => setError((err as Error).message || "โหลดข้อมูลไม่สำเร็จ"))
@@ -105,7 +131,7 @@ function StockView() {
       unsubItems();
       unsubSessions();
     };
-  }, [canUseStock, actorId]);
+  }, [canUseStock, actorId, isOwner]);
 
   useEffect(() => {
     if (loading || !canUseStock) return;
@@ -152,7 +178,7 @@ function StockView() {
         >
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <StockCountForm
-              items={items}
+              items={countItems}
               employees={employees}
               createdBy={actorId}
               isOwner={isOwner}
@@ -211,18 +237,48 @@ function StockHistoryView({
   onError: (msg: string | null) => void;
   onCountRound: (row: StockHistoryTimelineRow) => void;
 }) {
+  const [listTab, setListTab] = useState<"count" | "skip">("count");
   const [filter, setFilter] = useState<"all" | "missing">("all");
   const [detail, setDetail] = useState<StockHistoryTimelineRow | null>(null);
   /** null = closed · "new" = เพิ่ม · string = แก้ itemId */
   const [editTarget, setEditTarget] = useState<"new" | string | null>(null);
   const [confirmDeleteSessionId, setConfirmDeleteSessionId] = useState<string | null>(null);
   const [deletingSession, setDeletingSession] = useState(false);
+  const [costMeta, setCostMeta] = useState<Map<string, StockCostDoc>>(new Map());
+  const [menuCounts, setMenuCounts] = useState<Map<string, number>>(new Map());
 
   useBodyScrollLock(!!detail || !!editTarget);
 
+  useEffect(() => {
+    if (!isOwner) {
+      setCostMeta(new Map());
+      return;
+    }
+    return subscribeStockCostMetaMap(setCostMeta, (err) => onError(err.message));
+  }, [isOwner, onError]);
+
+  useEffect(() => {
+    if (!isOwner || listTab !== "skip") return;
+    let cancelled = false;
+    void countMenusLinkedToStock()
+      .then((map) => {
+        if (!cancelled) setMenuCounts(map);
+      })
+      .catch(() => {
+        if (!cancelled) setMenuCounts(new Map());
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOwner, listTab, items.length]);
+
+  const countItems = useMemo(() => stockItemsForCount(items), [items]);
+  const skipItems = useMemo(() => stockItemsNotCounted(items), [items]);
+  const tabItems = listTab === "count" ? countItems : skipItems;
+
   const grid = useMemo(
-    () => buildStockHistoryTimeline(sessions, items),
-    [sessions, items],
+    () => buildStockHistoryTimeline(sessions, countItems),
+    [sessions, countItems],
   );
 
   const rows = useMemo(
@@ -254,30 +310,208 @@ function StockHistoryView({
   return (
     <div className="stock-summary-view">
       <div className="check-history-toolbar stock-history-toolbar ot-toolbar-slim module-toolbar-slim">
-        <div className="check-filter-pills" role="group" aria-label="ตัวกรอง">
+        <div className="check-filter-pills" role="tablist" aria-label="แถบคลัง">
           <button
             type="button"
-            className={filter === "all" ? "check-filter-pill is-active" : "check-filter-pill"}
-            onClick={() => setFilter("all")}
+            role="tab"
+            aria-selected={listTab === "count"}
+            className={
+              listTab === "count" ? "check-filter-pill is-active" : "check-filter-pill"
+            }
+            onClick={() => setListTab("count")}
           >
-            ทั้งหมด
+            นับ
+            {countItems.length ? ` ${countItems.length}` : ""}
           </button>
           <button
             type="button"
-            className={filter === "missing" ? "check-filter-pill is-active" : "check-filter-pill"}
-            onClick={() => setFilter("missing")}
+            role="tab"
+            aria-selected={listTab === "skip"}
+            className={
+              listTab === "skip" ? "check-filter-pill is-active" : "check-filter-pill"
+            }
+            onClick={() => setListTab("skip")}
           >
-            ยังไม่นับ
+            ไม่นับ
+            {skipItems.length ? ` ${skipItems.length}` : ""}
           </button>
         </div>
-        <p className="muted check-history-stats module-slim-stats">
-          {stats.filledRounds}/{stats.totalRounds} รอบ · {stats.itemsTracked} รายการ
-          {stats.rangeLabel !== "—" ? ` · ${stats.rangeLabel}` : ""}
-        </p>
+        {listTab === "count" ? (
+          <>
+            <div className="check-filter-pills" role="group" aria-label="ตัวกรองรอบ">
+              <button
+                type="button"
+                className={
+                  filter === "all" ? "check-filter-pill is-active" : "check-filter-pill"
+                }
+                onClick={() => setFilter("all")}
+              >
+                ทั้งหมด
+              </button>
+              <button
+                type="button"
+                className={
+                  filter === "missing"
+                    ? "check-filter-pill is-active"
+                    : "check-filter-pill"
+                }
+                onClick={() => setFilter("missing")}
+              >
+                ยังไม่นับ
+              </button>
+            </div>
+            <p className="muted check-history-stats module-slim-stats">
+              {stats.filledRounds}/{stats.totalRounds} รอบ · {stats.itemsTracked} รายการ
+              {stats.rangeLabel !== "—" ? ` · ${stats.rangeLabel}` : ""}
+            </p>
+          </>
+        ) : (
+          <p className="muted check-history-stats module-slim-stats">
+            {skipItems.length} รายการ · ไม่โผล่ฟอร์มนับ
+          </p>
+        )}
       </div>
 
-      {items.length === 0 && !isOwner ? (
-        <p className="empty">ยังไม่มีรายการสินค้า — รอเจ้าของเพิ่ม</p>
+      {tabItems.length === 0 && !isOwner ? (
+        <p className="empty">
+          {listTab === "count"
+            ? "ยังไม่มีรายการให้นับ — รอเจ้าของเพิ่ม"
+            : "ยังไม่มีรายการที่ไม่นับ"}
+        </p>
+      ) : listTab === "skip" ? (
+        <>
+          <div className="sheet-wrap stock-history-wrap stock-history-sheet sheet-bleed">
+            <table className="sheet-table stock-history-table sheet-table--dense stock-skip-table">
+              <thead>
+                <tr>
+                  <th className="stock-skip-th-name">วัตถุดิบ</th>
+                  {isOwner ? (
+                    <>
+                      <th className="stock-skip-th-num">ต้นทุน</th>
+                      <th className="stock-skip-th-updated">อัปเดต</th>
+                      <th className="stock-skip-th-num">เมนู</th>
+                      <th className="stock-skip-th-bill">บิล</th>
+                      <th className="stock-skip-th-act" />
+                    </>
+                  ) : (
+                    <th className="stock-skip-th-note">โน้ต</th>
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {skipItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={isOwner ? 6 : 2} className="muted">
+                      ยังไม่มีรายการในแถบนี้
+                    </td>
+                  </tr>
+                ) : (
+                  skipItems.map((item) => {
+                    const meta = costMeta.get(item.id);
+                    const unitCost = meta?.unitCost || 0;
+                    const updatedAt = meta?.updatedAt || 0;
+                    const stale =
+                      updatedAt > 0 && Date.now() - updatedAt > COST_STALE_MS;
+                    const menus = menuCounts.get(item.id) || 0;
+                    const ledgerId = meta?.sourceLedgerId || "";
+                    return (
+                      <tr
+                        key={item.id}
+                        className={isOwner ? "stock-skip-row is-clickable" : undefined}
+                        onClick={
+                          isOwner
+                            ? () => setEditTarget(item.id)
+                            : undefined
+                        }
+                      >
+                        <td className="stock-skip-name" title={item.name}>
+                          {item.name}
+                        </td>
+                        {isOwner ? (
+                          <>
+                            <td className="stock-skip-num">
+                              {unitCost > 0
+                                ? `${formatPlainNumber(unitCost)}/${item.unit}`
+                                : "—"}
+                            </td>
+                            <td className="stock-skip-updated">
+                              {updatedAt > 0 ? (
+                                <span
+                                  className={
+                                    stale
+                                      ? "stock-skip-date is-stale"
+                                      : "stock-skip-date"
+                                  }
+                                >
+                                  {formatDateShort(updatedAt)}
+                                  {stale ? (
+                                    <span className="stock-skip-stale-tag">เก่า</span>
+                                  ) : null}
+                                </span>
+                              ) : (
+                                <span className="muted">—</span>
+                              )}
+                            </td>
+                            <td className="stock-skip-num">{menus || "—"}</td>
+                            <td className="stock-skip-bill">
+                              {ledgerId ? (
+                                <a
+                                  className="stock-skip-bill-link"
+                                  href={`/ledger/?entry=${encodeURIComponent(ledgerId)}`}
+                                  title={meta?.sourceBillLine || ledgerId}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  บิล
+                                </a>
+                              ) : (
+                                <span className="muted">—</span>
+                              )}
+                            </td>
+                            <td className="stock-skip-act">
+                              <button
+                                type="button"
+                                className="ghost-btn stock-skip-settings-btn bakery-sop-fit-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditTarget(item.id);
+                                }}
+                              >
+                                ตั้งค่า
+                              </button>
+                            </td>
+                          </>
+                        ) : (
+                          <td className="muted stock-skip-note">
+                            {item.note?.trim() || "—"}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+          {isOwner ? (
+            <div className="stock-history-add-bar">
+              <button
+                type="button"
+                className="stock-history-add-btn"
+                onClick={() => setEditTarget("new")}
+                aria-label="เพิ่มวัตถุดิบ"
+              >
+                <Plus size={14} aria-hidden />
+              </button>
+              <button
+                type="button"
+                className="stock-history-add-link"
+                onClick={() => setEditTarget("new")}
+              >
+                + เพิ่มรายการ
+              </button>
+            </div>
+          ) : null}
+        </>
       ) : (
         <>
           <div className="sheet-wrap stock-history-wrap stock-history-sheet sheet-bleed">
@@ -334,8 +568,11 @@ function StockHistoryView({
                 ))}
               </tbody>
             </table>
-            {filter === "missing" && rows.length === 0 && items.length > 0 ? (
+            {filter === "missing" && rows.length === 0 && countItems.length > 0 ? (
               <p className="empty">ครบทุกรอบในช่วงนี้แล้ว</p>
+            ) : null}
+            {countItems.length === 0 && isOwner ? (
+              <p className="empty">ยังไม่มีรายการให้นับ — กด + เพิ่ม หรือย้ายจากแถบไม่นับ</p>
             ) : null}
           </div>
 
@@ -366,6 +603,7 @@ function StockHistoryView({
           mode={editTarget === "new" ? "new" : "edit"}
           item={editingItem}
           actorId={actorId}
+          defaultIncludeInCount={listTab === "count"}
           onClose={() => setEditTarget(null)}
           onError={onError}
         />
@@ -407,22 +645,61 @@ function StockItemSlimModal({
   mode,
   item,
   actorId,
+  defaultIncludeInCount = true,
   onClose,
   onError,
 }: {
   mode: "new" | "edit";
   item: StockItem | null;
   actorId: string;
+  /** เมื่อเพิ่มใหม่ — ตามแถบที่เปิดอยู่ */
+  defaultIncludeInCount?: boolean;
   onClose: () => void;
   onError: (msg: string | null) => void;
 }) {
   const [name, setName] = useState(item?.name || "");
+  const [unit, setUnit] = useState(
+    normalizeStockUnit(item?.unit || (defaultIncludeInCount ? "ชิ้น" : "ก.")),
+  );
   const [minQty, setMinQty] = useState(String(item?.minQty ?? 0));
   const [alertEnabled, setAlertEnabled] = useState(item?.alertEnabled === true);
+  const [includeInCount, setIncludeInCount] = useState(
+    item ? item.includeInCount : defaultIncludeInCount,
+  );
+  const [aliasesText, setAliasesText] = useState(
+    (item?.aliases || []).join("\n"),
+  );
+  const [history, setHistory] = useState<StockCostHistoryRow[]>([]);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const iconId = guessStockIconId(name.trim() || item?.name || "");
   const Icon = stockIconComponent(iconId);
+
+  useEffect(() => {
+    if (mode !== "edit" || !item?.id) {
+      setHistory([]);
+      return;
+    }
+    let cancelled = false;
+    void listStockCostHistory(item.id, 8)
+      .then((rows) => {
+        if (!cancelled) setHistory(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setHistory([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, item?.id]);
+
+  function parseAliases(raw: string): string[] {
+    return raw
+      .split(/[\n,;|]+/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, 40);
+  }
 
   async function onSave(e: FormEvent) {
     e.preventDefault();
@@ -432,13 +709,17 @@ function StockItemSlimModal({
     onError(null);
     try {
       const icon = guessStockIconId(trimmed);
+      const aliases = parseAliases(aliasesText);
+      const unitValue = normalizeStockUnit(unit);
       if (mode === "new") {
         await createStockItem({
           name: trimmed,
-          unit: "ชิ้น",
+          unit: unitValue,
           qty: 0,
           minQty: Number(minQty) || 0,
           alertEnabled,
+          includeInCount,
+          aliases,
           safetyStock: 0,
           unitCost: 0,
           icon,
@@ -447,8 +728,11 @@ function StockItemSlimModal({
       } else if (item) {
         await updateStockItem(item.id, {
           name: trimmed,
+          unit: unitValue,
           minQty: Number(minQty) || 0,
           alertEnabled,
+          includeInCount,
+          aliases,
           icon,
           updatedBy: actorId,
         });
@@ -514,6 +798,27 @@ function StockItemSlimModal({
             </span>
           </label>
           <label className="stock-item-slim-field">
+            <span>หน่วย</span>
+            <select
+              className="stock-item-slim-unit"
+              value={
+                STOCK_UNIT_OPTIONS.some((u) => u.value === unit)
+                  ? unit
+                  : unit || "ชิ้น"
+              }
+              onChange={(e) => setUnit(e.target.value)}
+            >
+              {!STOCK_UNIT_OPTIONS.some((u) => u.value === unit) && unit ? (
+                <option value={unit}>{unit}</option>
+              ) : null}
+              {STOCK_UNIT_OPTIONS.map((u) => (
+                <option key={u.value} value={u.value}>
+                  {u.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="stock-item-slim-field">
             <span>แจ้งเตือน</span>
             <span className="stock-item-slim-min-wrap">
               <span className="stock-item-slim-min-prefix" aria-hidden>
@@ -528,6 +833,25 @@ function StockItemSlimModal({
               />
             </span>
           </label>
+          <label className="stock-item-slim-field stock-item-slim-field--aliases">
+            <span>ชื่อบนบิล / aliases</span>
+            <textarea
+              className="stock-item-slim-aliases"
+              rows={3}
+              value={aliasesText}
+              onChange={(e) => setAliasesText(e.target.value)}
+              placeholder="หนึ่งชื่อต่อบรรทัด หรือคั่นด้วย ,"
+              autoComplete="off"
+            />
+          </label>
+          <label className="check-row stock-item-slim-alert-check">
+            <input
+              type="checkbox"
+              checked={includeInCount}
+              onChange={(e) => setIncludeInCount(e.target.checked)}
+            />
+            <span>ให้นับในรอบนับสต็อก</span>
+          </label>
           <label className="check-row stock-item-slim-alert-check">
             <input
               type="checkbox"
@@ -536,6 +860,42 @@ function StockItemSlimModal({
             />
             <span>เปิดแจ้งเตือน LINE เมื่อคงเหลือ ≤ เกณฑ์</span>
           </label>
+          {mode === "edit" && history.length > 0 ? (
+            <div className="stock-item-slim-history">
+              <p className="stock-item-slim-history-label">ประวัติราคา</p>
+              <table className="sheet-table sheet-table--dense stock-item-slim-history-table">
+                <thead>
+                  <tr>
+                    <th>วันที่</th>
+                    <th>ราคา</th>
+                    <th>บิล</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.map((row) => (
+                    <tr key={row.id}>
+                      <td>{row.at ? formatDateShort(row.at) : "—"}</td>
+                      <td>
+                        {formatPlainNumber(row.unitCost)}/{row.baseUnit}
+                      </td>
+                      <td>
+                        {row.ledgerEntryId ? (
+                          <a
+                            className="stock-skip-bill-link"
+                            href={`/ledger/?entry=${encodeURIComponent(row.ledgerEntryId)}`}
+                          >
+                            {row.billLineName || "บิล"}
+                          </a>
+                        ) : (
+                          <span className="muted">{row.note || "แก้มือ"}</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
           <div className="stock-item-slim-actions">
             {mode === "edit" ? (
               <button

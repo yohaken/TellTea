@@ -23,6 +23,16 @@ import {
   listRecentLedgerEntries,
 } from "@/lib/ledger";
 import {
+  extractBillLinesFromPhotos,
+  syncCogsBillLinesIntoStock,
+} from "@/lib/ledger-bill-lines";
+import {
+  subscribeStockItems,
+  subscribeStockItemsWithCosts,
+} from "@/lib/stock";
+import type { LedgerBillLine, StockItem } from "@/lib/types";
+import { LedgerBillLinesPanel } from "@/components/LedgerBillLinesPanel";
+import {
   evidenceAckRequired,
   evidenceDocPolicy,
   evidenceReadyToSave,
@@ -96,14 +106,20 @@ export function LedgerAddOutModal({
   const [extractStatus, setExtractStatus] = useState<"idle" | "loading" | "ready" | "error">(
     "idle",
   );
+  const [billLines, setBillLines] = useState<LedgerBillLine[]>([]);
+  const [stock, setStock] = useState<StockItem[]>([]);
+  const [billLinesMsg, setBillLinesMsg] = useState("");
   const lastExtractKeyRef = useRef("");
   const extractBusyRef = useRef(false);
+  const billLinesGenRef = useRef(0);
   const descriptionRef = useRef(description);
   const amountRef = useRef(amount);
   const vatFirstPhaseRef = useRef(vatFirstPhase);
+  const stockRef = useRef(stock);
   descriptionRef.current = description;
   amountRef.current = amount;
   vatFirstPhaseRef.current = vatFirstPhase;
+  stockRef.current = stock;
 
   const detailsUnlocked = vatFirstDetailsUnlocked(vatFirstPhase);
   /** VAT-first UI for everyone creating cash-out here (owner testing + staff). */
@@ -128,6 +144,13 @@ export function LedgerAddOutModal({
       });
   }, []);
 
+  useEffect(() => {
+    if (isOwner) {
+      return subscribeStockItemsWithCosts(setStock, () => undefined);
+    }
+    return subscribeStockItems(setStock, () => undefined);
+  }, [isOwner]);
+
   function chooseHasVatDocument(yes: boolean) {
     const next = phaseAfterVatAsk(yes);
     setHasVat(yes);
@@ -142,6 +165,9 @@ export function LedgerAddOutModal({
     setExtractDocKind("");
     setEvidenceDocAck(false);
     setExtractStatus("idle");
+    setBillLines([]);
+    setBillLinesMsg("");
+    billLinesGenRef.current += 1;
     lastExtractKeyRef.current = "";
     setVatFirstPhase(next);
   }
@@ -264,6 +290,22 @@ export function LedgerAddOutModal({
         );
       }
       setExtractStatus("ready");
+      // พื้นหลัง — ไม่บล็อก VAT/บันทึก · กันผลเก่าทับด้วย gen
+      if (result.goodsOnly !== false && !result.slipOnly) {
+        const gen = ++billLinesGenRef.current;
+        void extractBillLinesFromPhotos({
+          imageRefs: refs,
+          stock: stockRef.current,
+        })
+          .then((lines) => {
+            if (gen !== billLinesGenRef.current) return;
+            if (lines.length) {
+              setBillLines(lines);
+              setBillLinesMsg(`แยกรายการในบิล ${lines.length} รายการ`);
+            }
+          })
+          .catch(() => undefined);
+      }
     } catch {
       setExtractStatus("error");
       setAiVatReason("อ่านจากรูปไม่สำเร็จ — กรอก VAT เองได้");
@@ -366,6 +408,27 @@ export function LedgerAddOutModal({
         throw new Error("มี VAT — ใส่ยอดภาษีซื้อจากบิล");
       }
       setSaveStage("saving");
+
+      let nextBillLines = billLines;
+      if (billLines.length && createdBy) {
+        try {
+          const synced = await syncCogsBillLinesIntoStock({
+            lines: billLines,
+            stock,
+            ledgerType: type,
+            updatedBy: createdBy,
+          });
+          nextBillLines = synced.lines;
+          if (synced.importResult?.created.length) {
+            setBillLinesMsg(
+              `เข้าคลัง (แถบไม่นับ) ใหม่ ${synced.importResult.created.length} รายการ — ดูที่ /stock/`,
+            );
+          }
+        } catch {
+          /* สร้างคลังไม่บล็อกบันทึกบัญชี */
+        }
+      }
+
       await addLedgerEntry({
         date: parseDateInput(date),
         description,
@@ -384,7 +447,9 @@ export function LedgerAddOutModal({
         vatClaim: hasVat && vatNum > 0 ? vatClaim : false,
         evidenceDocPolicy: evidenceDocPolicy(description),
         evidenceDocAck: true,
+        billLines: nextBillLines,
       });
+      setBillLines(nextBillLines);
       setSaveStage("done");
       onSaved();
     } catch (err) {
@@ -577,6 +642,27 @@ export function LedgerAddOutModal({
                 setOwnerLocked(value !== "auto");
               }}
               onReclassify={() => void runOwnerPreview()}
+            />
+            {billLinesMsg ? (
+              <p className="muted ledger-bill-lines-toast">{billLinesMsg}</p>
+            ) : null}
+            <LedgerBillLinesPanel
+              ledgerEntryId={null}
+              receiptUrls={receiptUrls}
+              billLines={billLines}
+              stock={stock}
+              isOwner={isOwner}
+              actorId={createdBy}
+              formBusy={busy}
+              setFormBusy={setBusy}
+              onLinesChange={setBillLines}
+              onError={(msg) => onError(msg || "")}
+              onMsg={setBillLinesMsg}
+              ledgerType={
+                isOwner && ownerLocked && typeMode !== "auto"
+                  ? typeMode
+                  : previewType || ""
+              }
             />
             <div className="entry-actions">
               <button type="submit" className="primary-btn action-out" disabled={busy}>

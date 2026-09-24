@@ -30,6 +30,7 @@ export const OWNER_QUICK_KEYS = [
   "pnl",
   "ledger",
   "production",
+  "bakerySop",
   "otBonus",
   "bonus",
   "checklist",
@@ -92,6 +93,12 @@ export const OWNER_QUICK_CATALOG: Record<OwnerQuickKey, OwnerQuickItem> = {
     abbr: "ผลิต",
     label: "ผลิต",
     href: "/production/",
+  },
+  bakerySop: {
+    key: "bakerySop",
+    abbr: "SOP",
+    label: "SOP เบเกอรี่",
+    href: "/bakery-sop/",
   },
   otBonus: {
     key: "otBonus",

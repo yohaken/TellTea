@@ -26,7 +26,8 @@ import {
 } from "firebase/firestore";
 import { normalizePurchaseVat, normalizeVatSource } from "./entry-vat";
 import { getDb } from "./firebase";
-import type { LedgerEntry, LedgerEntryInput } from "./types";
+import type { LedgerEntry, LedgerEntryInput, LedgerBillLine } from "./types";
+import { normalizeLedgerBillLines } from "./ledger-bill-lines";
 import {
   bangkokDateKey,
   normalizeAccountingDateKey,
@@ -112,6 +113,9 @@ function mapEntry(d: QueryDocumentSnapshot): LedgerEntry {
     updatedAt: toEpochMs((data as { updatedAt?: unknown }).updatedAt) || createdAt,
     receiptUrl,
     receiptUrls,
+    billLines: normalizeLedgerBillLines(
+      (data as { billLines?: unknown }).billLines,
+    ),
     ...vat,
   };
 }
@@ -442,6 +446,7 @@ export async function addLedgerEntry(input: LedgerEntryInput): Promise<string> {
     vatClaim: vat.vatClaim,
     evidenceDocPolicy: String(input.evidenceDocPolicy || "").trim(),
     evidenceDocAck: Boolean(input.evidenceDocAck),
+    billLines: normalizeLedgerBillLines(input.billLines),
   };
   validateLedgerPayload(payload);
   const ref = await addDoc(collection(getDb(), "ledger"), payload);
@@ -470,6 +475,7 @@ export async function updateLedgerEntry(
       | "vatSource"
       | "vatVerified"
       | "vatClaim"
+      | "billLines"
     >
   >,
 ): Promise<void> {
@@ -480,7 +486,7 @@ export async function updateLedgerEntry(
   const prevIn = Number(prev.amountIn) || 0;
   const prevOut = Number(prev.amountOut) || 0;
 
-  const next: Record<string, string | number | boolean | string[]> = {
+  const next: Record<string, string | number | boolean | string[] | LedgerBillLine[]> = {
     updatedAt: Date.now(),
   };
   if (patch.date != null) next.date = startOfLocalDay(toEpochMs(patch.date) || patch.date);
@@ -500,6 +506,9 @@ export async function updateLedgerEntry(
           });
     next.receiptUrl = normalized.receiptUrl;
     next.receiptUrls = normalized.receiptUrls;
+  }
+  if (patch.billLines != null) {
+    next.billLines = normalizeLedgerBillLines(patch.billLines);
   }
 
   const nextIn = next.amountIn != null ? Number(next.amountIn) : prevIn;

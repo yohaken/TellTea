@@ -1,5 +1,5 @@
 rules_version = '2';
-// TellTea shop · Who×Action×Where (≤50 lines) · UI filters menus
+// TellTea shop · Who×Action×Where (≤55 lines) · UI filters menus
 // Archive: firestore.rules.full.bak · Sibling apps must not deploy rules
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -24,10 +24,18 @@ service cloud.firestore {
     match /weatherDays/{dateId} { allow read: if signedIn(); allow write: if false; }
     match /finpeerSecrets/{docId} { allow read, write: if false; }
     match /stockLowAlerts/{id} { allow read: if isOwnerEmail(); allow write: if false; }
+    // unitCost owner-only (menuSops/menuSopCosts = qty links, no prices)
+    match /stockCosts/{itemId} { allow read, write: if isOwnerEmail(); }
+    match /stockCostHistory/{histId} { allow read, write: if isOwnerEmail(); }
     match /meta/{docId} {
       allow get: if docId == 'brandLogo' || docId == 'businessProfile' || signedIn();
       allow list: if false;
       allow write: if signedIn();
+    }
+    // evidencePhotos: staff get/create; owner list/delete
+    match /evidencePhotos/{photoId} {
+      allow get, create, update: if signedIn();
+      allow list, delete: if isOwnerEmail();
     }
     match /{collection}/{document=**} {
       allow read, write: if signedIn()
@@ -37,6 +45,9 @@ service cloud.firestore {
         && collection != 'weatherDays'
         && collection != 'finpeerSecrets'
         && collection != 'stockLowAlerts'
+        && collection != 'stockCosts'
+        && collection != 'stockCostHistory'
+        && collection != 'evidencePhotos'
         && collection != 'meta';
     }
   }

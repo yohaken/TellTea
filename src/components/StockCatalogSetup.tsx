@@ -8,7 +8,9 @@ import {
   createStockItem,
   deleteStockItem,
   migrateAllLegacyStockCosts,
+  normalizeStockUnit,
   seedStockItemsIfEmpty,
+  STOCK_UNIT_OPTIONS,
   subscribeStockItemsWithCosts,
   updateStockItem,
 } from "@/lib/stock";
@@ -68,7 +70,7 @@ export function StockCatalogSetup({ onError }: { onError: (msg: string | null) =
     try {
       await createStockItem({
         name: trimmed,
-        unit: unit.trim() || "ชิ้น",
+        unit: normalizeStockUnit(unit),
         qty: 0,
         minQty: Number(minQty) || 0,
         alertEnabled,
@@ -78,6 +80,7 @@ export function StockCatalogSetup({ onError }: { onError: (msg: string | null) =
         updatedBy: userEmail,
       });
       setName("");
+      setUnit("ชิ้น");
       setMinQty("0");
       setAlertEnabled(false);
       setIcon("bag");
@@ -152,13 +155,23 @@ export function StockCatalogSetup({ onError }: { onError: (msg: string | null) =
           required
           aria-label="ชื่อวัตถุดิบ"
         />
-        <input
+        <select
           className="stock-catalog-add-unit"
-          value={unit}
+          value={
+            STOCK_UNIT_OPTIONS.some((u) => u.value === unit) ? unit : unit || "ชิ้น"
+          }
           onChange={(e) => setUnit(e.target.value)}
-          placeholder="หน่วย"
           aria-label="หน่วย"
-        />
+        >
+          {!STOCK_UNIT_OPTIONS.some((u) => u.value === unit) && unit ? (
+            <option value={unit}>{unit}</option>
+          ) : null}
+          {STOCK_UNIT_OPTIONS.map((u) => (
+            <option key={u.value} value={u.value}>
+              {u.label}
+            </option>
+          ))}
+        </select>
         <label className="stock-catalog-add-alert">
           ≤
           <input

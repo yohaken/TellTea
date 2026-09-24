@@ -21,6 +21,7 @@ export const DOCK_TAB_MAX = DEFAULT_DOCK_TAB_MAX;
 export const NAV_MODULE_KEYS = [
   "ledger",
   "production",
+  "bakerySop",
   "otBonus",
   "bonus",
   "checklist",
@@ -37,6 +38,7 @@ export type NavTabKey = (typeof NAV_TAB_KEYS)[number];
 export const NAV_TAB_LABELS: Record<NavTabKey, string> = {
   ledger: "บัญชี",
   production: "ผลิต",
+  bakerySop: "SOP",
   otBonus: "ชง",
   bonus: "จ่าย",
   checklist: "เช็ค",
@@ -48,6 +50,7 @@ export const NAV_TAB_LABELS: Record<NavTabKey, string> = {
 export const NAV_MODULE_HREFS: Record<NavModuleKey, string> = {
   ledger: "/ledger/",
   production: "/production/",
+  bakerySop: "/bakery-sop/",
   otBonus: "/ot/",
   bonus: "/bonus/",
   checklist: "/check/",
@@ -58,6 +61,7 @@ export const NAV_MODULE_HREFS: Record<NavModuleKey, string> = {
 const NAV_MODULE_PERMS: Record<NavModuleKey, PermissionKey | "signedIn"> = {
   ledger: "ledger",
   production: "production",
+  bakerySop: "bakerySop",
   otBonus: "otBonus",
   bonus: "bonus",
   checklist: "checklist",
@@ -68,6 +72,7 @@ const NAV_MODULE_PERMS: Record<NavModuleKey, PermissionKey | "signedIn"> = {
 export const NAV_MODULE_DESCRIPTIONS: Record<NavModuleKey, string> = {
   ledger: "เข้า–ออกรายวัน",
   production: "ผลิต / โบนัสเบเกอรี่",
+  bakerySop: "สูตรทำเบเกอรี่ / ต้นทุนเมนู",
   otBonus: "โบนัสชง / OT",
   bonus: "เงินเดือน / โบนัส",
   checklist: "SmartCheck SOP",
@@ -206,6 +211,45 @@ export function moveDockTabKey(keys: NavModuleKey[], key: NavModuleKey, dir: -1 
   const copy = [...keys];
   [copy[idx], copy[next]] = [copy[next], copy[idx]];
   return copy;
+}
+
+/** ลำดับโมดูลบนแถบล่างตามที่ผู้ใช้เห็น (เรียงด้วย navOrder) */
+export function orderedDockKeys(
+  dockTabKeys: NavModuleKey[],
+  navOrder: NavTabKey[],
+): NavModuleKey[] {
+  return sortByNavOrder(
+    dockTabKeys.map((key) => ({ key })),
+    navOrder,
+  ).map((row) => row.key);
+}
+
+/**
+ * เลื่อนโมดูลบนแถบล่าง — ต้องอัปเดต navOrder ด้วย
+ * (resolveNavForUser เรียงแถบล่างจาก navOrder ไม่ใช่ลำดับใน dockTabKeys)
+ */
+export function moveDockModule(
+  ui: NavUiSettings,
+  key: NavModuleKey,
+  dir: -1 | 1,
+): Pick<NavUiSettings, "navOrder" | "dockTabKeys"> | null {
+  const dockOrdered = orderedDockKeys(ui.dockTabKeys, ui.navOrder);
+  const idx = dockOrdered.indexOf(key);
+  if (idx < 0) return null;
+  const swapIdx = idx + dir;
+  if (swapIdx < 0 || swapIdx >= dockOrdered.length) return null;
+  const swapWith = dockOrdered[swapIdx]!;
+
+  const nextDock = [...dockOrdered];
+  [nextDock[idx], nextDock[swapIdx]] = [nextDock[swapIdx]!, nextDock[idx]!];
+
+  const nextNavOrder = [...ui.navOrder];
+  const a = nextNavOrder.indexOf(key);
+  const b = nextNavOrder.indexOf(swapWith);
+  if (a < 0 || b < 0) return null;
+  [nextNavOrder[a], nextNavOrder[b]] = [nextNavOrder[b]!, nextNavOrder[a]!];
+
+  return { navOrder: nextNavOrder, dockTabKeys: nextDock };
 }
 
 export function toggleDockTabKey(
@@ -350,6 +394,7 @@ export function subscribeNavUi(
 export const NAV_TAB_PERMISSION = {
   ledger: "ledger",
   production: "production",
+  bakerySop: "bakerySop",
   otBonus: "otBonus",
   bonus: "bonus",
   checklist: "checklist",

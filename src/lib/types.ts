@@ -58,6 +58,22 @@ export type StaffPersonalData = {
 };
 
 /** สมุดบัญชีเข้า–ออก ตามชีทร้าน */
+/** บรรทัดวัตถุดิบในบิล ledger (รายละเอียดบิล) */
+export type LedgerBillLine = {
+  name: string;
+  packSize: number | null;
+  packUnit: string;
+  price: number | null;
+  unitCost: number | null;
+  baseUnit: string;
+  matchStockItemId: string | null;
+  matchStockName: string | null;
+  confidence: number;
+  note: string;
+  /** เมื่อยืนยันอัปเดตต้นทุนคลังแล้ว */
+  costAppliedAt?: number | null;
+};
+
 export type LedgerEntry = {
   id: string;
   /** วันของรายการ (local midnight ms) */
@@ -96,6 +112,11 @@ export type LedgerEntry = {
   evidenceDocPolicy?: string;
   /** พนักงาน/เจ้าของติ๊กเข้าใจกติกาหลักฐานแล้ว */
   evidenceDocAck?: boolean;
+  /**
+   * รายการในบิล (วัตถุดิบที่ AI แยกจากรูป) — ไม่โชว์ในลิสต์บัญชี
+   * เปิดดูรายการจึงเห็น · เจ้าของยืนยันก่อนอัปเดตต้นทุนคลัง
+   */
+  billLines?: LedgerBillLine[];
 };
 
 export type LedgerEntryInput = {
@@ -118,6 +139,7 @@ export type LedgerEntryInput = {
   vatClaim?: boolean;
   evidenceDocPolicy?: string;
   evidenceDocAck?: boolean;
+  billLines?: LedgerBillLine[];
 };
 
 /** Perpetual inventory — วัตถุดิบร้าน (Products) */
@@ -144,6 +166,14 @@ export type StockItem = {
   /** ไอคอนแสดงในตารางคลัง (ดู STOCK_ICON_OPTIONS) */
   icon?: string;
   note?: string;
+  /**
+   * true = ให้นับในรอบนับสต็อก (แถบ "นับ")
+   * false = อยู่ในคลังแต่ไม่โผล่ฟอร์มนับ (แถบ "ไม่นับ")
+   * เอกสารเก่าไม่มีฟิลด์ → ถือว่า true
+   */
+  includeInCount: boolean;
+  /** ชื่อบนบิล / ยี่ห้ออื่น ที่ชี้มารายการนี้ */
+  aliases: string[];
   updatedAt: number;
   updatedBy: string;
 };
@@ -159,6 +189,9 @@ export type StockItemInput = {
   barcode?: string;
   icon?: string;
   note?: string;
+  /** ค่าเริ่มต้น true ถ้าไม่ส่ง */
+  includeInCount?: boolean;
+  aliases?: string[];
   updatedBy: string;
 };
 

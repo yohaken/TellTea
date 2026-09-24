@@ -14,6 +14,7 @@ import {
   ClipboardList,
   Coffee,
   Download,
+  NotebookPen,
   Receipt,
   Settings,
   Sparkles,
@@ -45,6 +46,7 @@ import type { NavModuleKey } from "@/lib/nav-menu";
 const MODULE_ICONS: Record<NavModuleKey, typeof BookOpen> = {
   ledger: BookOpen,
   production: ChefHat,
+  bakerySop: NotebookPen,
   otBonus: Coffee,
   bonus: CircleDollarSign,
   checklist: ClipboardCheck,

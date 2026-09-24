@@ -157,9 +157,9 @@ export function findLevel(
 
 export function summarizeLevelPermissions(perms: StaffPermissions, hideElevated = false): string {
   const labels: string[] = [];
-  const daily = ["ledger", "stock", "production", "otBonus", "checklist", "bonus"] as const;
+  const daily = ["ledger", "stock", "production", "bakerySop", "otBonus", "checklist", "bonus"] as const;
   const dailyOn = daily.filter((k) => perms[k]).length;
-  if (dailyOn) labels.push(`หน้าหลัก ${dailyOn}/6`);
+  if (dailyOn) labels.push(`หน้าหลัก ${dailyOn}/${daily.length}`);
   if (!hideElevated) {
     const elevOn = ELEVATED_PERMISSION_KEYS.filter((k) => perms[k]).length;
     if (elevOn) labels.push(`พิเศษ ${elevOn}`);

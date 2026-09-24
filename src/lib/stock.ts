@@ -31,6 +31,49 @@ import type {
   StockMovementType,
 } from "./types";
 
+/**
+ * หน่วยมาตรฐานคลัง — ชา/เบเกอรี่/บรรจุภัณฑ์
+ * ค่าที่เก็บใน Firestore = value (สั้น) · label โชว์ใน UI
+ */
+export const STOCK_UNIT_OPTIONS = [
+  { value: "ก.", label: "ก. · กรัม" },
+  { value: "กก.", label: "กก. · กิโลกรัม" },
+  { value: "มล.", label: "มล. · มิลลิลิตร" },
+  { value: "ล.", label: "ล. · ลิตร" },
+  { value: "ชิ้น", label: "ชิ้น" },
+  { value: "ถุง", label: "ถุง" },
+  { value: "ซอง", label: "ซอง" },
+  { value: "ใบ", label: "ใบ (แก้ว)" },
+  { value: "ฝา", label: "ฝา" },
+  { value: "หลอด", label: "หลอด" },
+] as const;
+
+export type StockUnitValue = (typeof STOCK_UNIT_OPTIONS)[number]["value"];
+
+export function normalizeStockUnit(raw: string | undefined | null): string {
+  const t = String(raw || "").trim();
+  if (!t) return "ชิ้น";
+  const exact = STOCK_UNIT_OPTIONS.find((u) => u.value === t);
+  if (exact) return exact.value;
+  const map: Record<string, string> = {
+    กรัม: "ก.",
+    g: "ก.",
+    gram: "ก.",
+    grams: "ก.",
+    กิโลกรัม: "กก.",
+    กิโล: "กก.",
+    kg: "กก.",
+    มิลลิลิตร: "มล.",
+    ml: "มล.",
+    ลิตร: "ล.",
+    liter: "ล.",
+    litre: "ล.",
+    l: "ล.",
+  };
+  const key = t.toLowerCase().replace(/\s+/g, "");
+  return map[key] || map[t] || t;
+}
+
 export { migrateAllLegacyStockCosts };
 
 const STOCK_COL = "stock";
@@ -68,6 +111,11 @@ function mapStockDoc(id: string, data: Record<string, unknown>): StockItem {
     barcode: data.barcode ? String(data.barcode) : undefined,
     icon: data.icon ? String(data.icon) : undefined,
     note: data.note ? String(data.note) : undefined,
+    // เอกสารเก่าไม่มีฟิลด์ → นับเหมือนเดิม
+    includeInCount: data.includeInCount !== false,
+    aliases: Array.isArray(data.aliases)
+      ? data.aliases.map((a) => String(a || "").trim()).filter(Boolean)
+      : [],
     updatedAt: Number(data.updatedAt) || 0,
     updatedBy: String(data.updatedBy || ""),
   };
@@ -108,6 +156,10 @@ function stockPayload(input: StockItemInput, opts?: { stripUnitCost?: boolean })
     barcode: (input.barcode || "").trim() || null,
     icon: (input.icon || "").trim() || null,
     note: (input.note || "").trim(),
+    includeInCount: input.includeInCount !== false,
+    aliases: Array.isArray(input.aliases)
+      ? input.aliases.map((a) => String(a || "").trim()).filter(Boolean).slice(0, 40)
+      : [],
     updatedAt: Date.now(),
     updatedBy: input.updatedBy,
   };
@@ -141,7 +193,7 @@ export function subscribeStockItems(
   );
 }
 
-/** subscribe พร้อมต้นทุน — ใช้เฉพาะเจ้าของ (rules บล็อก stockCosts สำหรับ staff) */
+/** subscribe พร้อมต้นทุน — ใช้เฉพาะเจ้าของ (rules: stockCosts = isOwnerEmail) */
 export function subscribeStockItemsWithCosts(
   onData: (items: StockItem[]) => void,
   onError?: (err: Error) => void,
@@ -333,6 +385,74 @@ export async function createStockItem(input: StockItemInput): Promise<string> {
   return ref.id;
 }
 
+/** รายการที่อยู่ในแถบนับสต็อก */
+export function stockItemsForCount(items: StockItem[]): StockItem[] {
+  return items.filter((i) => i.includeInCount);
+}
+
+/** รายการแถบไม่นับ (ยังอยู่ในคลังสำหรับต้นทุน/สูตร) */
+export function stockItemsNotCounted(items: StockItem[]): StockItem[] {
+  return items.filter((i) => !i.includeInCount);
+}
+
+/** ชื่อสำหรับจับคู่บิล/สูตร (ตัดวงเล็บยี่ห้อ · lower) */
+export function normalizeStockMatchKey(name: string): string {
+  return String(name || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/[^\u0E00-\u0E7fa-z0-9]+/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function findStockByNameOrAlias(
+  items: StockItem[],
+  rawName: string,
+): StockItem | undefined {
+  const key = normalizeStockMatchKey(rawName);
+  if (!key) return undefined;
+  for (const item of items) {
+    if (normalizeStockMatchKey(item.name) === key) return item;
+    for (const a of item.aliases || []) {
+      if (normalizeStockMatchKey(a) === key) return item;
+    }
+  }
+  // partial contains for short keys
+  if (key.length >= 3) {
+    for (const item of items) {
+      const names = [item.name, ...(item.aliases || [])];
+      for (const n of names) {
+        const nk = normalizeStockMatchKey(n);
+        if (nk.includes(key) || key.includes(nk)) return item;
+      }
+    }
+  }
+  return undefined;
+}
+
+export async function addStockAliasIfNew(
+  itemId: string,
+  alias: string,
+  updatedBy: string,
+): Promise<boolean> {
+  const trimmed = String(alias || "").trim();
+  if (!trimmed) return false;
+  const snap = await getDoc(doc(getDb(), STOCK_COL, itemId));
+  if (!snap.exists()) return false;
+  const current = mapStockDoc(snap.id, snap.data() as Record<string, unknown>);
+  const key = normalizeStockMatchKey(trimmed);
+  if (normalizeStockMatchKey(current.name) === key) return false;
+  if ((current.aliases || []).some((a) => normalizeStockMatchKey(a) === key)) {
+    return false;
+  }
+  await updateStockItem(itemId, {
+    aliases: [...(current.aliases || []), trimmed].slice(0, 40),
+    updatedBy,
+  });
+  return true;
+}
+
 export async function updateStockItem(
   id: string,
   patch: Partial<StockItemInput> & { updatedBy: string },
@@ -353,6 +473,11 @@ export async function updateStockItem(
     barcode: patch.barcode ?? current.barcode,
     icon: patch.icon ?? current.icon,
     note: patch.note ?? current.note,
+    includeInCount:
+      patch.includeInCount !== undefined
+        ? patch.includeInCount !== false
+        : current.includeInCount,
+    aliases: patch.aliases !== undefined ? patch.aliases : current.aliases,
     updatedBy: patch.updatedBy,
   };
   await updateDoc(doc(getDb(), STOCK_COL, id), stockPayload(merged, { stripUnitCost: true }));

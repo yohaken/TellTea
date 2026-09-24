@@ -1,0 +1,35 @@
+---
+description: SOP/stock cost data and UI are owner-only; staff enter items and qty only
+alwaysApply: true
+---
+
+# ต้นทุน SOP / คลัง — เจ้าของเท่านั้น (ล็อก)
+
+TellTea: **ข้อมูลและหน้าจอต้นทุน** (unitCost · บิล→ต้นทุน · สรุปต้นทุนสูตร · แท็บ «ต้นทุน») เห็นและแก้ได้เฉพาะ **เจ้าของ**  
+พนักงานมีหน้าที่ **กรอกชื่อส่วนผสม + ปริมาณ + หน่วย** (และจับคู่คลัง/เบสได้) — **ห้ามเห็นตัวเลขต้นทุน**
+
+## แหล่งความจริงในโค้ด
+
+- UI: `canSeeCost = isOwner && !isPermPreview` ใน `src/app/bakery-sop/page.tsx`  
+  แท็บ/คอมโพเนนต์ต้นทุน (`OwnerCostTab`) แสดงเมื่อ `canSeeCost` เท่านั้น
+- ราคาต่อหน่วย: Firestore `stockCosts` / `stockCostHistory` — rules อนุญาต **isOwnerEmail เท่านั้น**
+- สูตรพนักงาน: `menuSops` + ตารางส่วนผสม — **ไม่เก็บ unitCost ในเอกสารที่พนักงานอ่าน**
+- ลิงก์จับคู่: `menuSopCosts.ingredientLinks` = คู่คลัง/ปริมาณเท่านั้น — คำนวณเงินเฉพาะฝั่งเจ้าของด้วย `stockCosts`
+
+## ห้ามทำเอง
+
+- โชว์ unitCost / lineCost / สรุปต้นทุน / มาร์จิ้น ให้ role อื่นนอก owner
+- เรียก `subscribeStockItemsWithCosts` หรืออ่าน `stockCosts` ใน UI ที่พนักงานใช้
+- ส่ง unitCost จริงเข้า AI/UI ฝั่งพนักงาน (ส่ง `0` หรือตัด field)
+- ย้าย unitCost กลับไปเก็บใน `stock` / `menuSops` ที่ staff อ่านได้
+- เปิดแท็บ «ต้นทุน» หรือปุ่มบิล→ต้นทุน ให้พนักงาน (รวม perm preview)
+
+## พนักงานทำได้
+
+- เขียนบรรยายส่วนผสม · ตารางชื่อ/ปริมาณ/หน่วย · AI ช่วยแปลงสูตร
+- จับคู่คลังหรือเบส (ไม่โชว์ราคา)
+- เบส: ใส่ได้/ครั้ง (ลิตร ฯลฯ) — ไม่ใช่ตัวเลขต้นทุน
+
+## เมื่อแก้ bakery-sop / stock cost
+
+ตรวจว่า `canSeeCost` ยังล็อก owner · rules `stockCosts` ยัง owner-only · copy UI พนักงานไม่พูดถึงตัวเลขต้นทุน

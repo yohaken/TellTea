@@ -9,6 +9,7 @@ const classifyLedger = require("./classify-ledger");
 const verifyProdPhotoConflict = require("./verify-prod-photo-conflict");
 const extractOwnerBook = require("./extract-owner-book");
 const extractCashDeposit = require("./extract-cash-deposit");
+const menuSopAi = require("./menu-sop-ai");
 
 initializeApp();
 
@@ -19,6 +20,8 @@ exports.classifyLedgerType = classifyLedger.classifyLedgerType;
 exports.verifyProdPhotoConflict = verifyProdPhotoConflict.verifyProdPhotoConflict;
 exports.extractOwnerBookFromReceipt = extractOwnerBook.extractOwnerBookFromReceipt;
 exports.extractCashDepositSlip = extractCashDeposit.extractCashDepositSlip;
+exports.extractStockCostsFromBill = menuSopAi.extractStockCostsFromBill;
+exports.analyzeMenuSopCost = menuSopAi.analyzeMenuSopCost;
 exports.reportNposDiagnose = require("./npos-diagnose").reportNposDiagnose;
 exports.nposDeviceHeartbeat = require("./npos-heartbeat").nposDeviceHeartbeat;
 exports.reportNposOpsLog = require("./npos-ops-log").reportNposOpsLog;

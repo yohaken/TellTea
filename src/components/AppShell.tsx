@@ -13,6 +13,7 @@ import {
   Coffee,
   LogOut,
   MoreHorizontal,
+  NotebookPen,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { AppBrand } from "@/components/AppBrand";
@@ -64,6 +65,7 @@ const MORE_PREFIXES = [
 const NAV_ICONS: Record<NavTabKey, typeof BookOpen> = {
   ledger: BookOpen,
   production: ChefHat,
+  bakerySop: NotebookPen,
   otBonus: Coffee,
   bonus: CircleDollarSign,
   checklist: ClipboardCheck,

@@ -247,9 +247,28 @@ const sortableSrc = readFileSync(join(root, "src/components/PosSortableList.tsx"
 assert.match(sortableSrc, /ChevronUp/);
 assert.match(sortableSrc, /ChevronDown/);
 assert.match(sortableSrc, /moveBy/);
+assert.match(sortableSrc, /moveIdByDelta/);
 assert.doesNotMatch(sortableSrc, /onPointerDown/);
 assert.doesNotMatch(sortableSrc, /GripVertical/);
 assert.doesNotMatch(sortableSrc, /draggable/);
+// ห้ามใช้ reorderById กับปุ่ม ↓ — แทรกก่อนเป้าทำให้เลื่อนลงไม่ขยับ
+assert.doesNotMatch(sortableSrc, /reorderById/);
+
+function moveIdByDelta(ids, id, delta) {
+  const from = ids.indexOf(id);
+  if (from < 0) return ids;
+  const to = from + delta;
+  if (to < 0 || to >= ids.length) return ids;
+  const next = [...ids];
+  const tmp = next[from];
+  next[from] = next[to];
+  next[to] = tmp;
+  return next;
+}
+assert.deepEqual(moveIdByDelta(["a", "b", "c"], "a", 1), ["b", "a", "c"]);
+assert.deepEqual(moveIdByDelta(["a", "b", "c"], "c", -1), ["a", "c", "b"]);
+assert.deepEqual(moveIdByDelta(["a", "b", "c"], "a", -1), ["a", "b", "c"]);
+assert.deepEqual(moveIdByDelta(["a", "b", "c"], "c", 1), ["a", "b", "c"]);
 assert.match(readFileSync(join(root, "src/app/globals.css"), "utf8"), /pos-sortable-step[\s\S]*touch-action: manipulation/);
 assert.doesNotMatch(readFileSync(join(root, "src/app/globals.css"), "utf8"), /\.pos-sortable-handle\s*\{/);
 

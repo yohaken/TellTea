@@ -10,11 +10,12 @@ import {
   DEFAULT_NAV_ORDER,
   DOCK_TAB_MAX_LIMIT,
   DOCK_TAB_MIN,
-  moveDockTabKey,
+  moveDockModule,
   NAV_MODULE_DESCRIPTIONS,
   NAV_MODULE_KEYS,
   NAV_TAB_LABELS,
   normalizeNavUi,
+  orderedDockKeys,
   saveNavUi,
   subscribeNavUi,
   type NavModuleKey,
@@ -83,9 +84,9 @@ export function NavMenuOrderSetup({ onError }: { onError: (msg: string | null) =
   }
 
   async function move(key: NavModuleKey, dir: -1 | 1) {
-    const next = moveDockTabKey(ui.dockTabKeys, key, dir);
-    if (next.join("|") === ui.dockTabKeys.join("|")) return;
-    await persist({ dockTabKeys: next });
+    const next = moveDockModule(ui, key, dir);
+    if (!next) return;
+    await persist(next);
   }
 
   async function resetDefault() {
@@ -97,8 +98,10 @@ export function NavMenuOrderSetup({ onError }: { onError: (msg: string | null) =
     });
   }
 
-  const dockCount = ui.dockTabKeys.length;
+  const dockOrdered = orderedDockKeys(ui.dockTabKeys, ui.navOrder);
+  const dockCount = dockOrdered.length;
   const moreKeys = NAV_MODULE_KEYS.filter((k) => !ui.dockTabKeys.includes(k));
+  const listKeys: NavModuleKey[] = [...dockOrdered, ...moreKeys];
 
   return (
     <SettingsFold
@@ -143,9 +146,9 @@ export function NavMenuOrderSetup({ onError }: { onError: (msg: string | null) =
           </div>
 
           <ol className="nav-order-list">
-            {NAV_MODULE_KEYS.map((key) => {
+            {listKeys.map((key) => {
               const onDock = ui.dockTabKeys.includes(key);
-              const dockIdx = ui.dockTabKeys.indexOf(key);
+              const dockIdx = dockOrdered.indexOf(key);
               return (
                 <li key={key} className="nav-order-row">
                   <label className="nav-dock-toggle">
@@ -176,7 +179,7 @@ export function NavMenuOrderSetup({ onError }: { onError: (msg: string | null) =
                         type="button"
                         className="ghost-btn icon-btn"
                         aria-label={`เลื่อน ${NAV_TAB_LABELS[key]} ลง`}
-                        disabled={busy || dockIdx === ui.dockTabKeys.length - 1}
+                        disabled={busy || dockIdx === dockOrdered.length - 1}
                         onClick={() => void move(key, 1)}
                       >
                         <ChevronDown size={18} />

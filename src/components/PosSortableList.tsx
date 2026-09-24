@@ -2,7 +2,19 @@
 
 import { useRef, type ReactNode } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { reorderById } from "@/lib/pos-drag-reorder";
+
+/** สลับตำแหน่งติดกัน — ใช้กับปุ่ม ↑↓ (แทรกก่อนเป้าทำให้เลื่อนลงไม่ขยับ) */
+export function moveIdByDelta(ids: string[], id: string, delta: -1 | 1): string[] {
+  const from = ids.indexOf(id);
+  if (from < 0) return ids;
+  const to = from + delta;
+  if (to < 0 || to >= ids.length) return ids;
+  const next = [...ids];
+  const tmp = next[from]!;
+  next[from] = next[to]!;
+  next[to] = tmp;
+  return next;
+}
 
 /** เรียงลำดับด้วยปุ่ม ↑↓ เท่านั้น — ไม่ใช้ลาก (ชัวร์บนแท็บเล็ต) */
 export function PosSortableList({
@@ -21,12 +33,7 @@ export function PosSortableList({
 
   function moveBy(id: string, delta: -1 | 1) {
     const currentIds = idsRef.current;
-    const from = currentIds.indexOf(id);
-    if (from < 0) return;
-    const to = from + delta;
-    if (to < 0 || to >= currentIds.length) return;
-    const targetId = currentIds[to]!;
-    const next = reorderById(currentIds, id, targetId);
+    const next = moveIdByDelta(currentIds, id, delta);
     if (next.join() !== currentIds.join()) onReorder(next);
   }
 

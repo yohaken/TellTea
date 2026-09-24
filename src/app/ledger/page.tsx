@@ -42,7 +42,18 @@ import { BillNoticeLedgerPanel } from "@/components/BillNoticeLedgerPanel";
 import { LedgerAiSettingsPanel } from "@/components/LedgerAiSettingsPanel";
 import { EntryVatFieldset } from "@/components/EntryVatFieldset";
 import { LedgerAddOutModal } from "@/components/LedgerAddOutModal";
+import { LedgerBillLinesPanel } from "@/components/LedgerBillLinesPanel";
 import { LedgerTypeField } from "@/components/LedgerTypeField";
+import {
+  extractBillLinesFromPhotos,
+  normalizeLedgerBillLines,
+  syncCogsBillLinesIntoStock,
+} from "@/lib/ledger-bill-lines";
+import {
+  subscribeStockItems,
+  subscribeStockItemsWithCosts,
+} from "@/lib/stock";
+import type { LedgerBillLine, LedgerEntry, StockItem } from "@/lib/types";
 import { personalProfileLabel } from "@/lib/profile";
 import { AiSaveProgressModal, type AiSaveStage } from "@/components/AiSaveProgressModal";
 import {
@@ -72,7 +83,6 @@ import {
   type PhotoUploadProgress,
   uploadEvidencePhotos,
 } from "@/lib/photo-upload";
-import type { LedgerEntry } from "@/lib/types";
 import { daysAgoMs } from "@/lib/query-window";
 import { filterLedgerRows, sortByDateNewestFirst } from "@/lib/smart-search";
 import { SheetDateCell } from "@/components/SheetDateCell";
@@ -615,10 +625,11 @@ function LedgerView() {
         </>
       ) : null}
 
-      {editing ? (
+      {editing && actorId ? (
         <EditEntryModal
           entry={editing}
           isOwner={isOwner}
+          actorId={actorId}
           onClose={() => setEditing(null)}
           onSaved={() => setEditing(null)}
           onError={setError}
@@ -776,12 +787,14 @@ function AddOutModal(props: {
 function EditEntryModal({
   entry,
   isOwner,
+  actorId,
   onClose,
   onSaved,
   onError,
 }: {
   entry: LedgerEntry;
   isOwner: boolean;
+  actorId: string;
   onClose: () => void;
   onSaved: () => void;
   onError: (msg: string) => void;
@@ -832,6 +845,12 @@ function EditEntryModal({
   descriptionRef.current = description;
   amountRef.current = amount;
   const [receiptUrls, setReceiptUrls] = useState<string[]>(() => getLedgerReceiptUrls(entry));
+  const [billLines, setBillLines] = useState<LedgerBillLine[]>(() =>
+    normalizeLedgerBillLines(entry.billLines),
+  );
+  const [stock, setStock] = useState<StockItem[]>([]);
+  const [billLinesMsg, setBillLinesMsg] = useState("");
+  const billLinesGenRef = useRef(0);
   const [previewType, setPreviewType] = useState(entry.type || "");
   const [previewReason, setPreviewReason] = useState(entry.typeAiReason || "");
   const [previewSource, setPreviewSource] = useState<LedgerTypeSource>(initialSource);
@@ -861,6 +880,34 @@ function EditEntryModal({
         setTypeFreq([]);
       });
   }, []);
+
+  useEffect(() => {
+    if (isIn) return;
+    if (isOwner) {
+      return subscribeStockItemsWithCosts(setStock, () => undefined);
+    }
+    return subscribeStockItems(setStock, () => undefined);
+  }, [isIn, isOwner]);
+
+  const stockRef = useRef(stock);
+  stockRef.current = stock;
+
+  async function runExtractBillLines(refs: string[]) {
+    const gen = ++billLinesGenRef.current;
+    try {
+      const lines = await extractBillLinesFromPhotos({
+        imageRefs: refs,
+        stock: stockRef.current,
+      });
+      if (gen !== billLinesGenRef.current) return;
+      if (lines.length) {
+        setBillLines(lines);
+        setBillLinesMsg(`แยกรายการในบิล ${lines.length} รายการ`);
+      }
+    } catch {
+      /* VAT extract สำคัญกว่า — แยกรายการกดเองได้ · ไม่กระทบ busy ฟอร์ม */
+    }
+  }
 
   async function runExtractFromPhotos(urls: string[]) {
     if (isIn) return;
@@ -897,6 +944,10 @@ function EditEntryModal({
         );
       }
       setExtractStatus("ready");
+      // แยกรายการวัตถุดิบเก็บในรายละเอียดบิล (ไม่โชว์ลิสต์)
+      if (result.goodsOnly !== false && !result.slipOnly) {
+        void runExtractBillLines(refs);
+      }
     } catch {
       setExtractStatus("error");
       setAiVatReason("อ่านจากรูปไม่สำเร็จ — กรอก VAT เองได้");
@@ -970,6 +1021,27 @@ function EditEntryModal({
       if (!isIn && hasVat && vatInputNum <= 0) {
         throw new Error("มี VAT — ใส่ยอดภาษีซื้อจากบิล หรือกดใช้ประมาณ ×7/107");
       }
+
+      let nextBillLines = billLines;
+      if (!isIn && billLines.length && actorId) {
+        try {
+          const synced = await syncCogsBillLinesIntoStock({
+            lines: billLines,
+            stock,
+            ledgerType: type,
+            updatedBy: actorId,
+          });
+          nextBillLines = synced.lines;
+          if (synced.importResult?.created.length) {
+            setBillLinesMsg(
+              `เข้าคลัง (แถบไม่นับ) ใหม่ ${synced.importResult.created.length} รายการ — ดูที่ /stock/`,
+            );
+          }
+        } catch {
+          /* สร้างคลังไม่บล็อกบันทึกบัญชี */
+        }
+      }
+
       await updateLedgerEntry(entry.id, {
         date: parseDateInput(date),
         description,
@@ -987,6 +1059,7 @@ function EditEntryModal({
               vatSource: "",
               vatVerified: false,
               vatClaim: false,
+              billLines: [],
             }
           : {
               hasVat,
@@ -995,8 +1068,10 @@ function EditEntryModal({
               vatSource: hasVat ? vatSource || "manual" : "",
               vatVerified: hasVat ? vatVerified : false,
               vatClaim: hasVat && vatInputNum > 0 ? vatClaim : false,
+              billLines: nextBillLines,
             }),
       });
+      if (!isIn) setBillLines(nextBillLines);
       onSaved();
     } catch (err) {
       onError((err as Error).message || "บันทึกไม่สำเร็จ");
@@ -1236,6 +1311,32 @@ function EditEntryModal({
                   </span>
                 </label>
               ) : null}
+            </>
+          ) : null}
+
+          {!isIn ? (
+            <>
+              {billLinesMsg ? (
+                <p className="muted ledger-bill-lines-toast">{billLinesMsg}</p>
+              ) : null}
+              <LedgerBillLinesPanel
+                ledgerEntryId={entry.id}
+                receiptUrls={receiptUrls}
+                billLines={billLines}
+                stock={stock}
+                isOwner={isOwner}
+                actorId={actorId}
+                formBusy={busy}
+                setFormBusy={setBusy}
+                onLinesChange={setBillLines}
+                onError={(msg) => onError(msg || "")}
+                onMsg={setBillLinesMsg}
+              ledgerType={
+                isOwner && ownerLocked && typeMode !== "auto"
+                  ? typeMode
+                  : previewType || entry.type || ""
+              }
+              />
             </>
           ) : null}
 
