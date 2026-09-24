@@ -213,7 +213,11 @@ assert.match(billLinesLib, /isLikelyNonIngredientFeeBillLine/);
 assert.match(billLinesLib, /ค่าบริการ/);
 assert.match(billLinesLib, /ค่าขนส่ง/);
 
+const billPanel = read("src/components/LedgerBillLinesPanel.tsx");
+assert.match(billPanel, /if \(!isOwner \|\| !line \|\| !actorId\) return/);
+assert.match(billPanel, /isOwner \? <th>฿\/หน่วย<\/th>/);
+
 const version = read("src/lib/version.ts");
-assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 1045);
+assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 1064);
 
 console.log("OK test-ledger-bill-lines");

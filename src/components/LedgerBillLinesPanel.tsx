@@ -194,7 +194,7 @@ export function LedgerBillLinesPanel({
 
   async function confirmApply(idx: number) {
     const line = billLines[idx];
-    if (!line || !actorId) return;
+    if (!isOwner || !line || !actorId) return;
     if (!ledgerEntryId) {
       onMsg?.("บันทึกบัญชีก่อน แล้วเปิดรายละเอียดเพื่ออัปเดตต้นทุน");
       setPendingIdx(null);
@@ -329,7 +329,7 @@ export function LedgerBillLinesPanel({
               <tr>
                 <th>ชื่อบนบิล</th>
                 <th>คลัง</th>
-                <th>฿/หน่วย</th>
+                {isOwner ? <th>฿/หน่วย</th> : null}
                 {isOwner ? <th /> : null}
               </tr>
             </thead>
@@ -374,11 +374,13 @@ export function LedgerBillLinesPanel({
                         <span className="muted">ยังไม่คู่</span>
                       )}
                     </td>
-                    <td className="ledger-bill-lines-num">
-                      {line.unitCost != null
-                        ? `${formatPlainNumber(line.unitCost)}/${line.baseUnit}`
-                        : "—"}
-                    </td>
+                    {isOwner ? (
+                      <td className="ledger-bill-lines-num">
+                        {line.unitCost != null
+                          ? `${formatPlainNumber(line.unitCost)}/${line.baseUnit}`
+                          : "—"}
+                      </td>
+                    ) : null}
                     {isOwner ? (
                       <td className="ledger-bill-lines-act">
                         {applied ? (
