@@ -194,7 +194,7 @@ export function parseIngredientsTextLocal(text: string): {
 
   const out: { name: string; qty: number; unit: string }[] = [];
   for (const chunk of chunks) {
-    let s = chunk
+    const s = chunk
       .replace(/\(.*?\)/g, " ")
       .replace(/\s+/g, " ")
       .trim();

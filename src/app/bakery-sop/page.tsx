@@ -419,6 +419,30 @@ function BakerySopView() {
     );
   }, [selectedBaseId, sops]);
 
+  const baseFilledCount = useMemo(
+    () =>
+      baseSops.filter((s) => menuSopDraftChecks(s).complete || s.skipped)
+        .length,
+    [baseSops],
+  );
+
+  const filledCount = useMemo(() => {
+    let n = 0;
+    for (const branch of tree) {
+      for (const it of branch.items) {
+        const sop = sopByMenuId.get(it.id);
+        if (!sop) continue;
+        if (sop.skipped || menuSopDraftChecks(sop).complete) n += 1;
+      }
+    }
+    return n;
+  }, [tree, sopByMenuId]);
+
+  const totalItems = useMemo(
+    () => tree.reduce((n, b) => n + b.items.length, 0),
+    [tree],
+  );
+
   const showingDetail = !!(selectedItem || selectedBaseId);
 
   if (!can(staff, "bakerySop")) return null;
@@ -532,30 +556,6 @@ function BakerySopView() {
       setBusy(false);
     }
   }
-
-  const baseFilledCount = useMemo(
-    () =>
-      baseSops.filter((s) => menuSopDraftChecks(s).complete || s.skipped)
-        .length,
-    [baseSops],
-  );
-
-  const filledCount = useMemo(() => {
-    let n = 0;
-    for (const branch of tree) {
-      for (const it of branch.items) {
-        const sop = sopByMenuId.get(it.id);
-        if (!sop) continue;
-        if (sop.skipped || menuSopDraftChecks(sop).complete) n += 1;
-      }
-    }
-    return n;
-  }, [tree, sopByMenuId]);
-
-  const totalItems = useMemo(
-    () => tree.reduce((n, b) => n + b.items.length, 0),
-    [tree],
-  );
 
   return (
     <div className="module-page bakery-sop-page bakery-sop-page--tree">
