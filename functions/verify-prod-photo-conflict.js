@@ -203,7 +203,10 @@ async function callGemini({
     body?.candidates?.[0]?.content?.parts?.map((p) => p.text || "").join("") || "";
   const parsed = extractJsonObject(text);
   let conflictLevel = normalizeConflictLevel(parsed?.conflictLevel);
-  if (!conflictLevel) throw new Error("AI ตอบ conflictLevel ไม่ถูกต้อง");
+  // Fail soft — invalid/missing level → uncertain (client may ask staff to confirm).
+  if (!conflictLevel) {
+    conflictLevel = "uncertain";
+  }
 
   if (flavorBlind && conflictLevel === "conflict") {
     conflictLevel = "none";

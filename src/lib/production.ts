@@ -541,7 +541,13 @@ export async function addProdEntry(input: ProdEntryInput): Promise<string> {
       .filter(Boolean)
       .slice(0, PROD_IMAGE_MAX),
     status: "unpaid" as ProdStatus,
-    ...(input.photoQa ? { photoQa: input.photoQa } : {}),
+    ...(input.photoQa
+      ? {
+          photoQa: Object.fromEntries(
+            Object.entries(input.photoQa).filter(([, v]) => v !== undefined),
+          ),
+        }
+      : {}),
     createdBy: input.createdBy,
     createdAt: now,
     updatedAt: now,
@@ -622,7 +628,11 @@ export async function updateProdEntry(
     next.imageUrls = urls;
   }
   if (patch.status != null) next.status = normalizeProdStatus(patch.status);
-  if (patch.photoQa != null) next.photoQa = patch.photoQa;
+  if (patch.photoQa != null) {
+    next.photoQa = Object.fromEntries(
+      Object.entries(patch.photoQa).filter(([, v]) => v !== undefined),
+    );
+  }
   await updateDoc(ref, next);
   // แก้รายการผลิตที่มีอยู่แล้ว — ปัก lastSeenAt เหมือนตอนสร้าง
   const { touchStaffPresenceFromActor } = await import("./staff-presence");

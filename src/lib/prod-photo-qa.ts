@@ -22,6 +22,15 @@ export const PROD_PHOTO_QA_TIMEOUT_MS = 55_000;
 
 export type ProdPhotoQaConfirmKind = "conflict" | "ai_unavailable";
 
+/** Firestore rejects `undefined` in document fields — drop those keys. */
+export function compactProdPhotoQa(qa: ProdPhotoQa): ProdPhotoQa {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(qa)) {
+    if (value !== undefined) out[key] = value;
+  }
+  return out as ProdPhotoQa;
+}
+
 export type ProdConfusionGroup = {
   id: string;
   label: string;
@@ -217,12 +226,14 @@ export function buildProdPhotoQa(input: {
 
   // Staff explicitly confirmed photo ↔ product (heart of the gate).
   if (staffConfirmed) {
-    return {
+    return compactProdPhotoQa({
       verifyStatus: "conflict_confirmed",
       conflictLevel: result.conflictLevel === "conflict" ? "conflict" : "uncertain",
       selectedProductId: input.productId,
       selectedProductName: input.productName,
-      aiSuggestedProductName: result.suggestedProductName || undefined,
+      ...(result.suggestedProductName.trim()
+        ? { aiSuggestedProductName: result.suggestedProductName.trim() }
+        : {}),
       aiReason:
         result.reason ||
         (result.skipped
@@ -231,12 +242,12 @@ export function buildProdPhotoQa(input: {
       staffAction: "confirmed",
       checkedAt: now,
       ...(wasFlagged ? { fixedAt: now } : {}),
-    };
+    });
   }
 
   if (result.skipped) {
     // Confusion-group AI outage without staff confirm → hold bonus until confirmed.
-    return {
+    return compactProdPhotoQa({
       verifyStatus: "pending",
       conflictLevel: "uncertain",
       selectedProductId: input.productId,
@@ -248,41 +259,45 @@ export function buildProdPhotoQa(input: {
       ...(wasFlagged && previous?.flaggedAt
         ? { flaggedAt: previous.flaggedAt, flaggedBy: previous.flaggedBy }
         : {}),
-    };
+    });
   }
 
   if (result.conflictLevel === "conflict") {
-    return {
+    return compactProdPhotoQa({
       verifyStatus: "flagged",
       conflictLevel: "conflict",
       selectedProductId: input.productId,
       selectedProductName: input.productName,
-      aiSuggestedProductName: result.suggestedProductName || undefined,
-      aiReason: result.reason || undefined,
+      ...(result.suggestedProductName.trim()
+        ? { aiSuggestedProductName: result.suggestedProductName.trim() }
+        : {}),
+      ...(result.reason.trim() ? { aiReason: result.reason.trim() } : {}),
       checkedAt: now,
       flaggedAt: now,
       flaggedBy: input.flaggedBy || "ai",
-    };
+    });
   }
 
   // none / uncertain → ok or fixed
   const verifyStatus: ProdPhotoQaVerifyStatus = wasFlagged ? "fixed" : "ok";
-  return {
+  return compactProdPhotoQa({
     verifyStatus,
     conflictLevel: result.conflictLevel,
     selectedProductId: input.productId,
     selectedProductName: input.productName,
-    aiSuggestedProductName: result.suggestedProductName || undefined,
-    aiReason: result.reason || undefined,
+    ...(result.suggestedProductName.trim()
+      ? { aiSuggestedProductName: result.suggestedProductName.trim() }
+      : {}),
+    ...(result.reason.trim() ? { aiReason: result.reason.trim() } : {}),
     checkedAt: now,
     ...(wasFlagged
       ? {
           fixedAt: now,
-          flaggedAt: previous?.flaggedAt,
-          flaggedBy: previous?.flaggedBy,
+          ...(previous?.flaggedAt != null ? { flaggedAt: previous.flaggedAt } : {}),
+          ...(previous?.flaggedBy ? { flaggedBy: previous.flaggedBy } : {}),
         }
       : {}),
-  };
+  });
 }
 
 /** Local skip path — no CF (outside group or flavor-blind). */
@@ -294,7 +309,7 @@ export function buildSkippedOkPhotoQa(input: {
 }): ProdPhotoQa {
   const now = Date.now();
   const wasFlagged = input.previous?.verifyStatus === "flagged";
-  return {
+  return compactProdPhotoQa({
     verifyStatus: wasFlagged ? "fixed" : "ok",
     conflictLevel: "none",
     selectedProductId: input.productId,
@@ -304,11 +319,15 @@ export function buildSkippedOkPhotoQa(input: {
     ...(wasFlagged
       ? {
           fixedAt: now,
-          flaggedAt: input.previous?.flaggedAt,
-          flaggedBy: input.previous?.flaggedBy,
+          ...(input.previous?.flaggedAt != null
+            ? { flaggedAt: input.previous.flaggedAt }
+            : {}),
+          ...(input.previous?.flaggedBy
+            ? { flaggedBy: input.previous.flaggedBy }
+            : {}),
         }
       : {}),
-  };
+  });
 }
 
 export async function runProdPhotoQaForSave(input: {
@@ -602,27 +621,27 @@ export async function runOwnerEntryPhotoQaCheck(input: {
   if (result?.conflictLevel === "conflict" && !result.skipped) {
     return {
       ok: true,
-      photoQa: {
+      photoQa: compactProdPhotoQa({
         ...photoQa,
         verifyStatus: "flagged",
         conflictLevel: "conflict",
         flaggedAt: Date.now(),
         flaggedBy: "ai_owner",
-      },
+      }),
       outcome: "flagged",
     };
   }
   if (result?.skipped || photoQa.verifyStatus === "pending") {
     return {
       ok: true,
-      photoQa: {
+      photoQa: compactProdPhotoQa({
         ...photoQa,
         verifyStatus: "pending",
         conflictLevel: "uncertain",
         flaggedAt: Date.now(),
         flaggedBy: "ai_owner_outage",
         aiReason: result?.reason || result?.skipReason || photoQa.aiReason,
-      },
+      }),
       outcome: "pending",
     };
   }

@@ -11613,6 +11613,24 @@ body.has-staff-task-nudge .module-page {
   font-size: 0.64rem;
 }
 
+/* Sticky gate under scroll body — staff always see confirm after tap บันทึก */
+.modal-backdrop.edit-modal.is-prod-form .prod-form-footer-gate {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-top: 0.12rem;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .prod-form-footer-gate:empty {
+  display: none;
+}
+
+.modal-backdrop.edit-modal.is-prod-form .prod-form-footer-gate .prod-photo-qa-analyzing,
+.modal-backdrop.edit-modal.is-prod-form .prod-form-footer-gate .prod-photo-qa-confirm {
+  margin: 0;
+}
+
 .modal-backdrop.edit-modal.is-prod-form .prod-form-actions {
   flex-shrink: 0;
   position: static;

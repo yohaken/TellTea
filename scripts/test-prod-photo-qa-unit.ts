@@ -40,6 +40,14 @@ const confirmed = buildProdPhotoQa({
 assert.equal(confirmed.verifyStatus, "conflict_confirmed");
 assert.equal(confirmed.staffAction, "confirmed");
 assert.equal(
+  Object.prototype.hasOwnProperty.call(confirmed, "aiSuggestedProductName"),
+  false,
+  "empty AI suggestion must not write undefined field",
+);
+for (const [k, v] of Object.entries(confirmed)) {
+  assert.notEqual(v, undefined, `photoQa.${k} must not be undefined`);
+}
+assert.equal(
   prodEntryCountsTowardBonus({ status: "unpaid", photoQa: confirmed }),
   true,
 );

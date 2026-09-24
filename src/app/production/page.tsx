@@ -3,6 +3,7 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
 } from "react";
@@ -697,8 +698,25 @@ function ProdEntryForm({
       imageUrl: string;
     };
   } | null>(null);
+  /** Abort in-flight photo QA / persist if staff closes the form. */
+  const saveGenRef = useRef(0);
+  const footerGateRef = useRef<HTMLDivElement | null>(null);
 
   const formLocked = locked || analyzing || busy || !!pendingConflict;
+  /** Allow ออก while AI runs — only block during Firestore write. */
+  const closeBlocked = busy && !analyzing;
+
+  useEffect(() => {
+    if (!pendingConflict && !analyzing) return;
+    footerGateRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [pendingConflict, analyzing]);
+
+  useEffect(() => {
+    return () => {
+      saveGenRef.current += 1;
+    };
+  }, []);
+
   const product = products.find((p) => p.id === productId) || null;
   const dateMs = parseDateInput(date);
   const rates = resolveProdEntryRates(entry, productId, product, {
@@ -771,6 +789,7 @@ function ProdEntryForm({
     },
     opts?: { staffConfirmedPhotoMatch?: boolean },
   ) {
+    const gen = ++saveGenRef.current;
     setAnalyzing(true);
     try {
       const { photoQa, needsStaffConfirm, confirmKind, result } =
@@ -783,6 +802,8 @@ function ProdEntryForm({
           staffConfirmedPhotoMatch: opts?.staffConfirmedPhotoMatch,
         });
 
+      if (gen !== saveGenRef.current) return;
+
       if (needsStaffConfirm && result && confirmKind) {
         setPendingConflict({ kind: confirmKind, result, payload });
         return;
@@ -791,8 +812,16 @@ function ProdEntryForm({
       setPendingConflict(null);
       await persistEntry(payload, photoQa);
     } finally {
-      setAnalyzing(false);
+      if (gen === saveGenRef.current) setAnalyzing(false);
     }
+  }
+
+  function requestClose() {
+    if (closeBlocked) return;
+    saveGenRef.current += 1;
+    setAnalyzing(false);
+    setPendingConflict(null);
+    onCancelEdit();
   }
 
   async function onSubmit(e: FormEvent) {
@@ -893,8 +922,8 @@ function ProdEntryForm({
           type="button"
           className="ghost-btn icon-btn"
           aria-label="ปิด"
-          disabled={formLocked}
-          onClick={onCancelEdit}
+          disabled={closeBlocked}
+          onClick={requestClose}
         >
           <X size={18} />
         </button>
@@ -1027,25 +1056,6 @@ function ProdEntryForm({
               </button>
             )}
           </div>
-        ) : null}
-
-        {analyzing ? (
-          <p className="prod-photo-qa-analyzing" role="status">
-            {isOwner ? "กำลังตรวจ AI…" : "กำลังตรวจรูป…"}
-          </p>
-        ) : null}
-
-        {pendingConflict ? (
-          <ProdPhotoQaConfirm
-            kind={pendingConflict.kind}
-            selectedProductName={pendingConflict.payload.productName}
-            suggestedProductName={pendingConflict.result.suggestedProductName}
-            reason={pendingConflict.result.reason}
-            busy={busy || analyzing}
-            onConfirmCorrect={() => void onConfirmCorrect()}
-            onRejectChange={onRejectChangeProduct}
-            onCancel={() => setPendingConflict(null)}
-          />
         ) : null}
 
         {locked ? (
@@ -1203,6 +1213,26 @@ function ProdEntryForm({
         ) : null}
       </div>
 
+      <div className="prod-form-footer-gate" ref={footerGateRef}>
+        {analyzing ? (
+          <p className="prod-photo-qa-analyzing" role="status">
+            {isOwner ? "กำลังตรวจ AI…" : "กำลังตรวจรูป… กดออกได้ถ้าต้องการยกเลิก"}
+          </p>
+        ) : null}
+        {pendingConflict ? (
+          <ProdPhotoQaConfirm
+            kind={pendingConflict.kind}
+            selectedProductName={pendingConflict.payload.productName}
+            suggestedProductName={pendingConflict.result.suggestedProductName}
+            reason={pendingConflict.result.reason}
+            busy={busy || analyzing}
+            onConfirmCorrect={() => void onConfirmCorrect()}
+            onRejectChange={onRejectChangeProduct}
+            onCancel={() => setPendingConflict(null)}
+          />
+        ) : null}
+      </div>
+
       <div className="entry-actions module-form-actions prod-form-actions">
         {!locked && !pendingConflict ? (
           <button
@@ -1216,8 +1246,8 @@ function ProdEntryForm({
         <button
           type="button"
           className="ghost-btn"
-          disabled={analyzing}
-          onClick={onCancelEdit}
+          disabled={closeBlocked}
+          onClick={requestClose}
         >
           {locked ? "ปิด" : "ออก"}
         </button>

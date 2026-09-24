@@ -315,8 +315,12 @@ export function PhotoAttachMultiField({
                 onClick={() => openPreview(values, idx)}
                 aria-label={`ดูรูปที่ ${idx + 1}`}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={thumbSrc[url] || ""} alt="" className="photo-attach-preview" />
+                {thumbSrc[url] ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={thumbSrc[url]} alt="" className="photo-attach-preview" />
+                ) : (
+                  <span className="photo-attach-preview is-loading" aria-hidden />
+                )}
               </button>
               {!readOnly ? (
                 <button

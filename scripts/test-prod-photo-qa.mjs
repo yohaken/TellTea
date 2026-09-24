@@ -10,6 +10,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
 const qa = read("src/lib/prod-photo-qa.ts");
+assert.match(qa, /compactProdPhotoQa/);
 assert.match(qa, /PROD_PHOTO_QA_TIMEOUT_MS = 55_000/);
 assert.match(qa, /void callPromise\.catch/);
 assert.match(qa, /confirmKind: "ai_unavailable"/);
@@ -60,6 +61,24 @@ assert.doesNotMatch(page, />\s*AI\s*</);
 // Staff photo hint has no AI wording
 assert.match(page, /บังคับ ≥1 รูปสดจากกล้อง/);
 
+assert.match(page, /prod-form-footer-gate/);
+assert.match(page, /saveGenRef/);
+assert.match(page, /closeBlocked/);
+assert.match(page, /requestClose/);
+assert.match(page, /กดออกได้ถ้าต้องการยกเลิก/);
+// Confirm lives in sticky footer — not only at top of scroll body
+const footerIdx = page.indexOf("prod-form-footer-gate");
+const confirmInFooter = page.indexOf("<ProdPhotoQaConfirm", footerIdx);
+assert.ok(confirmInFooter > footerIdx, "ProdPhotoQaConfirm must be in footer gate");
+assert.ok(
+  page.indexOf("prod-form-actions", confirmInFooter) > confirmInFooter,
+  "confirm must sit above action buttons",
+);
+// ออก must stay usable while AI analyzes (only blocked during Firestore write)
+assert.match(page, /disabled=\{closeBlocked\}/);
+assert.doesNotMatch(page, /disabled=\{analyzing\}\s*\n\s*onClick=\{onCancelEdit\}/);
+assert.doesNotMatch(page, /disabled=\{formLocked\}\s*\n\s*onClick=\{onCancelEdit\}/);
+
 const batch = read("src/components/ProdPhotoQaBatchPanel.tsx");
 assert.match(batch, /ติดป้ายที่เลือก/);
 assert.match(batch, /buildOwnerManualFlagPhotoQa/);
@@ -68,6 +87,7 @@ assert.match(batch, /เจ้าของสแกน AI/);
 const css = read("src/app/globals.css");
 assert.match(css, /is-prod-form/);
 assert.match(css, /prod-form-card/);
+assert.match(css, /prod-form-footer-gate/);
 assert.match(css, /prod-photo-qa-confirm\.is-slim/);
 
 const cf = read("functions/verify-prod-photo-conflict.js");
