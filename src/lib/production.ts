@@ -545,7 +545,7 @@ export async function addProdEntry(input: ProdEntryInput): Promise<string> {
       ? {
           photoQa: Object.fromEntries(
             Object.entries(input.photoQa).filter(([, v]) => v !== undefined),
-          ),
+          ) as ProdPhotoQa,
         }
       : {}),
     createdBy: input.createdBy,
@@ -631,7 +631,7 @@ export async function updateProdEntry(
   if (patch.photoQa != null) {
     next.photoQa = Object.fromEntries(
       Object.entries(patch.photoQa).filter(([, v]) => v !== undefined),
-    );
+    ) as ProdPhotoQa;
   }
   await updateDoc(ref, next);
   // แก้รายการผลิตที่มีอยู่แล้ว — ปัก lastSeenAt เหมือนตอนสร้าง
