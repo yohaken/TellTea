@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -278,17 +279,20 @@ function ownerFallbackMember(user: User, email: string): StaffMember {
 async function resolveStaffLocal(user: User): Promise<StaffMember | null> {
   const email = emailFromUser(user);
   if (email) {
-    try {
-      const bootstrapped = await ensureOwnerBootstrap(email, user.displayName);
-      if (bootstrapped) return bootstrapped;
-    } catch {
-      /* permission / offline */
-    }
+    // staff/{email} ครั้งเดียว — เดิม ensureOwnerBootstrap + getStaffMemberById อ่าน doc เดิมซ้ำ 2 รอบ
     try {
       const byId = await getStaffMemberById(email);
       if (byId) return byId;
     } catch {
       /* ignore */
+    }
+    if (isAppOwnerEmail(email)) {
+      try {
+        const bootstrapped = await ensureOwnerBootstrap(email, user.displayName);
+        if (bootstrapped) return bootstrapped;
+      } catch {
+        /* permission / offline */
+      }
     }
     try {
       const byIdx = await getStaffByEmailIndex(email);
@@ -321,13 +325,11 @@ async function attachPersonalIfStaff(member: StaffMember): Promise<StaffMember> 
 }
 
 async function resolveStaff(user: User): Promise<StaffMember | null> {
-  const local = await resolveStaffLocal(user);
-  let fromServer: StaffMember | null = null;
-  try {
-    fromServer = await resolveStaffViaCallable(user);
-  } catch {
-    /* callable optional — local roster still valid */
-  }
+  // ยิงขนานกัน — เดิมรอ Firestore เสร็จก่อนแล้วค่อยรอ callable (cold start ≤4s) ต่อท้าย
+  const [local, fromServer] = await Promise.all([
+    resolveStaffLocal(user),
+    resolveStaffViaCallable(user),
+  ]);
   const email = emailFromUser(user);
   const member =
     fromServer ||
@@ -337,11 +339,8 @@ async function resolveStaff(user: User): Promise<StaffMember | null> {
       ? ownerFallbackMember(user, email || OWNER_EMAIL)
       : null);
   if (!member) return null;
-  try {
-    await user.getIdToken(true);
-  } catch {
-    /* rules may still accept email/phone before claim propagates */
-  }
+  // callable รีเฟรช token เองเมื่อ claim เปลี่ยน — ตรงนี้ไม่ต้องบล็อกอีก 1 รอบเน็ต
+  void user.getIdToken(true).catch(() => undefined);
   return attachPersonalIfStaff(member);
 }
 
@@ -565,24 +564,134 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [phoneConfirmation, setPhoneConfirmation] = useState<ConfirmationResult | null>(null);
 
-  const refreshStaff = useCallback(async () => {
-    if (!user) return;
-    setBusyReason("staff");
-    try {
-      const member = await withTimeout(
-        resolveStaff(user),
-        AUTH_STAFF_RESOLVE_TIMEOUT_MS,
-        "ตรวจสิทธิ์หมดเวลา — รีเฟรชแล้วลองใหม่",
-      );
-      setStaff(member);
-      setStatus(member ? "ready" : "denied");
-      setBusyReason(null);
-    } catch (err) {
-      setError(mapAuthError(err));
-      setStatus((prev) => (prev === "ready" ? prev : "denied"));
-      setBusyReason(null);
+  const mountedRef = useRef(true);
+  /** รอบตรวจสิทธิ์ล่าสุด — ผลของรอบเก่าที่กลับมาช้าจะถูกทิ้ง */
+  const resolveGenRef = useRef(0);
+  const userRef = useRef<User | null>(null);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  /** งานหลังล็อกอินสำเร็จครั้งแรก (presence · migrate · prefetch) — ไม่บล็อก UI */
+  const afterStaffReady = useCallback((member: StaffMember) => {
+    // ปักเข้าหลังสุดทันทีตอนล็อกอินสำเร็จ (ไม่รอ heartbeat / visibility)
+    void import("./staff-presence")
+      .then(async ({ touchStaffPresence }) => {
+        if (await touchStaffPresence(member.id)) return;
+        // token/rules ยังไม่พร้อม — ลองใหม่สั้นๆ
+        for (const delay of [2_000, 8_000]) {
+          await new Promise((r) => setTimeout(r, delay));
+          if (await touchStaffPresence(member.id)) return;
+        }
+      })
+      .catch(() => undefined);
+    // ย้ายเงินเดือน/บัญชีออกจาก employees → employeePay (ครั้งแรกหลัง deploy)
+    if (member.role === "owner") {
+      void migrateAllLegacyEmployeePay().catch(() => undefined);
+      void migrateAllLegacyStockCosts().catch(() => undefined);
+      void migrateAllBonusCloseSideDocs().catch(() => undefined);
+    } else {
+      void import("./staff-work-load")
+        .then(({ prefetchStaffIdentity }) => prefetchStaffIdentity(member))
+        .catch(() => undefined);
     }
-  }, [user]);
+  }, []);
+
+  /**
+   * ตรวจสิทธิ์พนักงานหลัง Firebase Auth มี user
+   * - มีแคชของบัญชีนี้ → เปิดใช้ทันที (ready) แล้วตรวจจริงเบื้องหลัง; timeout ไม่เด้งออก
+   * - ไม่มีแคช → loading, timeout ลองซ้ำ 1 รอบก่อนยอมแพ้
+   * ใช้ร่วมกันทั้ง onAuthStateChanged / refreshStaff / ล็อกอินซ้ำ uid เดิม
+   */
+  const runStaffResolve = useCallback(async (next: User, opts?: { silent?: boolean }) => {
+    const gen = ++resolveGenRef.current;
+    const alive = () => mountedRef.current && resolveGenRef.current === gen;
+    // silent = refreshStaff ขณะ ready อยู่แล้ว: ไม่แตะ status/แคช ถ้าล้ม
+    const silent = opts?.silent === true;
+
+    const email = emailFromUser(next);
+    const cached = silent
+      ? null
+      : (cacheKeyFromUser(next) ? loadCachedStaff(cacheKeyFromUser(next)!) : null) ||
+        (next.phoneNumber ? loadCachedStaff(next.phoneNumber) : null) ||
+        (email ? loadCachedStaff(email) : null) ||
+        // custom-token / anonymous (localhost bypass) — ไม่มีอีเมล/เบอร์ → ผูกด้วย uid
+        loadCachedStaff(next.uid);
+
+    if (cached) {
+      setStaff(cached);
+      setBusyReason(null);
+      setStatus("ready");
+    } else if (!silent) {
+      setBusyReason("staff");
+      setStatus("loading");
+    }
+
+    let lastErr: unknown = null;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const member = await withTimeout(
+          resolveStaff(next),
+          AUTH_STAFF_RESOLVE_TIMEOUT_MS,
+          "ตรวจสิทธิ์หมดเวลา — รีเฟรชแล้วลองใหม่",
+        );
+        if (!alive()) return;
+        if (member) {
+          setStaff(member);
+          saveCachedStaff(member, next.uid);
+          setError(null);
+          setBusyReason(null);
+          setStatus("ready");
+          if (!silent) afterStaffReady(member);
+        } else {
+          clearAppCaches();
+          void import("./staff-work-load")
+            .then(({ clearStaffIdentityPrefetch }) => clearStaffIdentityPrefetch())
+            .catch(() => undefined);
+          setStaff(null);
+          setBusyReason(null);
+          setStatus("denied");
+        }
+        return;
+      } catch (err) {
+        if (!alive()) return;
+        lastErr = err;
+        const code = (err as { code?: string })?.code || "";
+        const message = (err as Error)?.message || "";
+        const permissionDenied =
+          code === "permission-denied" || /insufficient permissions/i.test(message);
+        if (permissionDenied) {
+          clearAppCaches();
+          setError(mapAuthError(err));
+          setStaff(null);
+          setBusyReason(null);
+          setStatus("denied");
+          return;
+        }
+        if (/หมดเวลา/.test(message) && attempt < 2) continue;
+        break;
+      }
+    }
+    if (!alive()) return;
+    // มีแคช: ยังเข้าใช้ต่อได้ — รอบหน้าตรวจใหม่เอง ไม่ต้องเด้งออก
+    if (cached) return;
+    setError(mapAuthError(lastErr));
+    if (silent) return;
+    const message = (lastErr as Error)?.message || "";
+    setStaff(null);
+    setBusyReason(null);
+    // timeout: Firebase ยังล็อกอินอยู่ — หน้า login กดเข้าซ้ำจะตรวจสิทธิ์ใหม่โดยไม่รอ event
+    setStatus(/หมดเวลา/.test(message) ? "signedOut" : "denied");
+  }, [afterStaffReady]);
+
+  const refreshStaff = useCallback(async () => {
+    const current = userRef.current;
+    if (!current) return;
+    await runStaffResolve(current, { silent: true });
+  }, [runStaffResolve]);
 
   // แคตตาล็อกลำดับสิทธิ์ — resolve/can/พรีวิวใช้ชุดเดียวกัน
   // เจ้าของ: ซ่อม seed ระบบ (พนักงานร้านไม่มีบช./คลัง) + sync คนที่ผูก
@@ -723,6 +832,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .catch(() => undefined);
         resetPhoneRecaptcha();
         setPhoneConfirmation(null);
+        userRef.current = null;
         setUser(null);
         setStaff(null);
         setPermPreview(null);
@@ -732,77 +842,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       setError(null);
+      userRef.current = next;
       setUser(next);
-
-      const cacheKey = cacheKeyFromUser(next);
-      const cached =
-        (cacheKey ? loadCachedStaff(cacheKey) : null) ||
-        (next.phoneNumber ? loadCachedStaff(next.phoneNumber) : null) ||
-        (emailFromUser(next) ? loadCachedStaff(emailFromUser(next)) : null);
-      setBusyReason("staff");
-      setStatus("loading");
-
-      try {
-        const member = await withTimeout(
-          resolveStaff(next),
-          AUTH_STAFF_RESOLVE_TIMEOUT_MS,
-          "ตรวจสิทธิ์หมดเวลา — รีเฟรชแล้วลองใหม่",
-        );
-        if (cancelled) return;
-        setStaff(member);
-        if (member) {
-          saveCachedStaff(member);
-          setBusyReason(null);
-          setStatus("ready");
-          // ปักเข้าหลังสุดทันทีตอนล็อกอินสำเร็จ (ไม่รอ heartbeat / visibility)
-          void import("./staff-presence")
-            .then(async ({ touchStaffPresence }) => {
-              if (await touchStaffPresence(member.id)) return;
-              // token/rules ยังไม่พร้อม — ลองใหม่สั้นๆ
-              for (const delay of [2_000, 8_000]) {
-                await new Promise((r) => setTimeout(r, delay));
-                if (await touchStaffPresence(member.id)) return;
-              }
-            })
-            .catch(() => undefined);
-          // ย้ายเงินเดือน/บัญชีออกจาก employees → employeePay (ครั้งแรกหลัง deploy)
-          if (member.role === "owner") {
-            void migrateAllLegacyEmployeePay().catch(() => undefined);
-            void migrateAllLegacyStockCosts().catch(() => undefined);
-            void migrateAllBonusCloseSideDocs().catch(() => undefined);
-          } else {
-            void import("./staff-work-load")
-              .then(({ prefetchStaffIdentity }) => prefetchStaffIdentity(member))
-              .catch(() => undefined);
-          }
-        } else {
-          clearAppCaches();
-          void import("./staff-work-load")
-            .then(({ clearStaffIdentityPrefetch }) => clearStaffIdentityPrefetch())
-            .catch(() => undefined);
-          setBusyReason(null);
-          setStatus("denied");
-        }
-      } catch (err) {
-        if (cancelled) return;
-        const code = (err as { code?: string })?.code || "";
-        const message = (err as Error)?.message || "";
-        const timedOut = /หมดเวลา/.test(message);
-        const permissionDenied =
-          code === "permission-denied" || /insufficient permissions/i.test(message);
-        if (permissionDenied) {
-          clearAppCaches();
-          setError(mapAuthError(err));
-          setStaff(null);
-          setBusyReason(null);
-          setStatus("denied");
-          return;
-        }
-        setError(mapAuthError(err));
-        setStaff(null);
-        setBusyReason(null);
-        setStatus(timedOut ? "signedOut" : "denied");
-      }
+      await runStaffResolve(next);
     });
 
     return () => {
@@ -810,7 +852,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.clearTimeout(readyTimeout);
       unsub();
     };
-  }, []);
+  }, [runStaffResolve]);
 
   const signIn = useCallback(async () => {
     if (!isFirebaseConfigured()) {
@@ -833,7 +875,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     provider.setCustomParameters({ prompt: "select_account" });
     try {
       try {
-        await signInWithPopup(auth, provider);
+        // รอ SDK restore session ก่อน — ไม่งั้น prevUid เป็น null ทั้งที่มี user เดิมค้างอยู่
+        await auth.authStateReady();
+        const prevUid = auth.currentUser?.uid || null;
+        const cred = await signInWithPopup(auth, provider);
+        // uid เดิม (เช่น หลัง "ตรวจสิทธิ์หมดเวลา") — SDK ไม่ยิง onAuthStateChanged ซ้ำ ต้องตรวจสิทธิ์เอง
+        if (prevUid && cred.user.uid === prevUid) {
+          userRef.current = cred.user;
+          setUser(cred.user);
+          void runStaffResolve(cred.user);
+        }
         return;
       } catch (popupErr) {
         const code = (popupErr as { code?: string })?.code || "";
@@ -866,7 +917,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setBusyReason(null);
       setError(mapAuthError(err));
     }
-  }, []);
+  }, [runStaffResolve]);
 
   const signInLocalDevOwner = useCallback(async () => {
     if (!isLocalDevOwnerBypassEnabled()) {
@@ -916,6 +967,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       setError(null);
+      const auth = getFirebaseAuth();
+      await auth.authStateReady();
+      const prevUid = auth.currentUser?.uid || null;
       try {
         await confirmPhoneOtp(phoneConfirmation, code);
         setPhoneConfirmation(null);
@@ -923,8 +977,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setError(mapAuthError(err));
         throw err;
       }
+      const current = auth.currentUser;
+      if (current && prevUid && current.uid === prevUid) {
+        userRef.current = current;
+        setUser(current);
+        void runStaffResolve(current);
+      }
     },
-    [phoneConfirmation],
+    [phoneConfirmation, runStaffResolve],
   );
 
   const signInWithStaffEmailPassword = useCallback(async (email: string, password: string) => {
@@ -935,6 +995,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
     setBusyReason("staff");
     setStatus("loading");
+    const auth = getFirebaseAuth();
+    await auth.authStateReady();
+    const prevUid = auth.currentUser?.uid || null;
     try {
       const { signInWithStaffEmailPassword: emailSignIn } = await import("./staff-email-login");
       await emailSignIn(email, password);
@@ -944,7 +1007,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setError(mapAuthError(err));
       throw err;
     }
-  }, []);
+    // uid เดิม — onAuthStateChanged ไม่ยิงซ้ำ ถ้าไม่ตรวจเองจะค้าง "กำลังเข้าสู่ระบบ..." ตลอด
+    const current = auth.currentUser;
+    if (current && prevUid && current.uid === prevUid) {
+      userRef.current = current;
+      setUser(current);
+      void runStaffResolve(current);
+    }
+  }, [runStaffResolve]);
 
   const signOut = useCallback(async () => {
     clearAppCaches();

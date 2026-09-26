@@ -14,14 +14,24 @@ function canUseStorage() {
   return typeof window !== "undefined";
 }
 
+type CachedStaffRecord = StaffMember & { cachedAt?: number; authUid?: string };
+
+/**
+ * @param staffId — staff id / email / phone หรือ Firebase Auth uid ที่บันทึกไว้ตอน save
+ */
 export function loadCachedStaff(staffId: string): StaffMember | null {
   if (!canUseStorage()) return null;
   try {
     const raw = window.localStorage.getItem(STAFF_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as StaffMember & { cachedAt?: number };
+    const parsed = JSON.parse(raw) as CachedStaffRecord;
     if (!parsed?.id) return null;
-    if (parsed.id !== staffId && parsed.email !== staffId && parsed.phone !== staffId) {
+    if (
+      parsed.id !== staffId &&
+      parsed.email !== staffId &&
+      parsed.phone !== staffId &&
+      parsed.authUid !== staffId
+    ) {
       return null;
     }
     return {
@@ -37,19 +47,20 @@ export function loadCachedStaff(staffId: string): StaffMember | null {
       personal: parsed.personal,
       createdAt: parsed.createdAt,
       permissions: parsed.permissions,
+      permissionLevelId: parsed.permissionLevelId,
+      permissionsCustomized: parsed.permissionsCustomized,
     };
   } catch {
     return null;
   }
 }
 
-export function saveCachedStaff(staff: StaffMember) {
+export function saveCachedStaff(staff: StaffMember, authUid?: string) {
   if (!canUseStorage()) return;
   try {
-    window.localStorage.setItem(
-      STAFF_KEY,
-      JSON.stringify({ ...staff, cachedAt: Date.now() }),
-    );
+    const record: CachedStaffRecord = { ...staff, cachedAt: Date.now() };
+    if (authUid) record.authUid = authUid;
+    window.localStorage.setItem(STAFF_KEY, JSON.stringify(record));
   } catch {
     // quota / private mode
   }
