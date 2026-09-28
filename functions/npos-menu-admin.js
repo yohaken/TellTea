@@ -53,6 +53,11 @@ async function rejectIfDeviceNotAllowed(db, installId, res) {
   return gate;
 }
 
+/** Read by menu-price-history trigger — must share the write's updatedAt. */
+function priceEditStamp(installId, now) {
+  return { priceEditedBy: `npos:${installId}`, priceEditedAt: now };
+}
+
 async function bumpMenuVersion(db) {
   const menuVersion = Date.now();
   await db.doc("meta/pos").set({ menuVersion }, { merge: true });
@@ -344,6 +349,7 @@ async function runMutate(db, installId, action, body) {
         createdAt: now,
         updatedAt: now,
         createdBy: installId,
+        ...priceEditStamp(installId, now),
       };
       if (typeof body.deliveryPrice === "number") row.deliveryPrice = numPrice(body.deliveryPrice);
       const ref = await db.collection("menuItems").add(row);
@@ -357,7 +363,10 @@ async function runMutate(db, installId, action, body) {
       if (body.name != null) patch.name = sanitizeLabel(body.name, 120);
       if (body.nameEn != null) patch.nameEn = sanitizeLabel(body.nameEn, 120);
       if (body.description != null) patch.description = asString(body.description, 500);
-      if (body.price != null) patch.price = numPrice(body.price);
+      if (body.price != null) {
+        patch.price = numPrice(body.price);
+        Object.assign(patch, priceEditStamp(installId, now));
+      }
       if (body.deliveryPrice === null) {
         patch.deliveryPrice = FieldValue.delete();
       } else if (typeof body.deliveryPrice === "number") {
@@ -435,6 +444,7 @@ async function runMutate(db, installId, action, body) {
         createdAt: now,
         updatedAt: now,
         createdBy: installId,
+        ...priceEditStamp(installId, now),
       };
       if (typeof x.deliveryPrice === "number") row.deliveryPrice = numPrice(x.deliveryPrice);
       if (x.code) row.code = asString(x.code, 40);
@@ -463,6 +473,7 @@ async function runMutate(db, installId, action, body) {
         createdAt: now,
         updatedAt: now,
         createdBy: installId,
+        ...priceEditStamp(installId, now),
       });
       return { data: { id: ref.id } };
     }
@@ -486,7 +497,10 @@ async function runMutate(db, installId, action, body) {
         if (typeof body.minSelect === "number") patch.minSelect = Math.max(0, body.minSelect);
         if (typeof body.maxSelect === "number") patch.maxSelect = Math.max(0, body.maxSelect);
       }
-      if (Array.isArray(body.options)) patch.options = serializeChoices(body.options);
+      if (Array.isArray(body.options)) {
+        patch.options = serializeChoices(body.options);
+        Object.assign(patch, priceEditStamp(installId, now));
+      }
       if (typeof body.active === "boolean") patch.active = body.active;
       if (typeof body.sortOrder === "number") patch.sortOrder = body.sortOrder;
       await db.doc(`menuOptionGroups/${id}`).set(patch, { merge: true });
@@ -541,6 +555,7 @@ async function runMutate(db, installId, action, body) {
         createdAt: now,
         updatedAt: now,
         createdBy: installId,
+        ...priceEditStamp(installId, now),
       });
       return { data: { id: ref.id } };
     }

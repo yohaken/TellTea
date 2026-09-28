@@ -1170,6 +1170,7 @@ export function PosMenuAdmin({
         >
           <PosMenuItemEditor
             modal
+            showPriceHistory={isBoh}
             item={editItem}
             categories={categories}
             optionGroups={optionGroups}

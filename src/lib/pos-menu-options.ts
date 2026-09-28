@@ -17,6 +17,7 @@ import { getMenuDb, menuErrorHint, type MenuPriceChannel } from "./pos-menu-db";
 import { mapFirestoreError } from "./firestore-errors";
 import { bumpMenuVersion } from "./pos-menu-version";
 import { sanitizeMenuLabel } from "./pos-menu-text";
+import { menuPriceEditStamp } from "./menu-price-history";
 import type { MenuOptionChoice, MenuOptionGroup, MenuOptionSelectionType } from "./types";
 
 export const MENU_OPTION_GROUPS_COL = "menuOptionGroups";
@@ -128,6 +129,7 @@ export async function addMenuOptionGroup(name: string): Promise<string> {
       source: "manual",
       createdAt: now,
       updatedAt: now,
+      ...menuPriceEditStamp(now),
     });
     void bumpMenuVersion();
     return ref.id;
@@ -160,6 +162,7 @@ export async function updateMenuOptionGroup(
   if (patch.maxSelect != null) next.maxSelect = patch.maxSelect;
   if (patch.options != null) {
     next.options = patch.options.map((o) => serializeMenuOptionChoice(o));
+    Object.assign(next, menuPriceEditStamp(next.updatedAt as number));
   }
   if (patch.sortOrder != null) next.sortOrder = patch.sortOrder;
   if (patch.active != null) next.active = patch.active;
@@ -311,8 +314,10 @@ export async function saveMenuOptionGroupFull(id: string, input: MenuOptionGroup
       }),
     );
 
+  const updatedAt = Date.now();
   const next: Record<string, unknown> = {
-    updatedAt: Date.now(),
+    updatedAt,
+    ...menuPriceEditStamp(updatedAt),
     name: input.name.trim(),
     required: input.required,
     selectionType: input.selectionType,

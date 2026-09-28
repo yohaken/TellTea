@@ -20,10 +20,10 @@ service cloud.firestore {
       allow read, write: if isOwnUid(userId);
       match /{document=**} { allow read, write: if isOwnUid(userId); }
     }
-    // Admin-SDK write: weather · secrets · stock low LINE state
+    // Admin-SDK write: weather · secrets · stock low LINE state · menu price history
     match /weatherDays/{dateId} { allow read: if signedIn(); allow write: if false; }
     match /finpeerSecrets/{docId} { allow read, write: if false; }
-    match /stockLowAlerts/{id} { allow read: if isOwnerEmail(); allow write: if false; }
+    match /{c}/{id} { allow read: if c in ['stockLowAlerts', 'menuPriceHistory'] && isOwnerEmail(); }
     // unitCost owner-only (menuSops/menuSopCosts = qty links, no prices)
     match /stockCosts/{itemId} { allow read, write: if isOwnerEmail(); }
     match /stockCostHistory/{histId} { allow read, write: if isOwnerEmail(); }
@@ -47,7 +47,7 @@ service cloud.firestore {
         && collection != 'stockLowAlerts'
         && collection != 'stockCosts'
         && collection != 'stockCostHistory'
-        && collection != 'evidencePhotos'
+        && collection != 'evidencePhotos' && collection != 'menuPriceHistory'
         && collection != 'meta';
     }
   }

@@ -8,6 +8,7 @@ import { PosMenuImageCropModal } from "@/components/PosMenuImageCropModal";
 import { PosMenuPhotoModule } from "@/components/PosMenuPhotoModule";
 import { PosMenuPhotoBackups } from "@/components/PosMenuPhotoBackups";
 import { PosSortableList } from "@/components/PosSortableList";
+import { MenuPriceHistory } from "@/components/MenuPriceHistory";
 import type { MenuCategory, MenuItem, MenuOptionGroup } from "@/lib/types";
 import { formatPlainNumber } from "@/lib/utils";
 import { selectionTypeLabel } from "@/lib/pos-menu-option-summary";
@@ -40,6 +41,8 @@ export function PosMenuItemEditor({
   modal = false,
   /** Prefer this category when opening a freshly created item (avoids select jumping to first/bakery). */
   preferredCategoryId,
+  /** Owner-only: menuPriceHistory rules deny everyone else. */
+  showPriceHistory = false,
 }: {
   item: MenuItem;
   categories: MenuCategory[];
@@ -49,6 +52,7 @@ export function PosMenuItemEditor({
   onDelete: () => void;
   modal?: boolean;
   preferredCategoryId?: string | null;
+  showPriceHistory?: boolean;
 }) {
   const initial = hydrateEditorState(item);
   const [name, setName] = useState(initial.name);
@@ -469,6 +473,10 @@ export function PosMenuItemEditor({
                 ) : null}
               </ul>
             </section>
+
+            {showPriceHistory ? (
+              <MenuPriceHistory itemId={item.id} linkedGroupIds={item.optionGroupIds || []} />
+            ) : null}
           </div>
         </div>
 

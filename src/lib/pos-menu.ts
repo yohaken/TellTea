@@ -21,6 +21,7 @@ import { listMenuOptionGroups, subscribeMenuOptionGroups } from "./pos-menu-opti
 import { bumpMenuVersion } from "./pos-menu-version";
 import { sanitizeMenuLabel } from "./pos-menu-text";
 import { menuMainImageHash } from "./pos-menu-image";
+import { menuPriceEditStamp } from "./menu-price-history";
 import type { MenuCategory, MenuItem, MenuOptionGroup } from "./types";
 
 export { bumpMenuVersion } from "./pos-menu-version";
@@ -295,6 +296,7 @@ export async function addMenuItem(input: {
       source: "manual",
       createdAt: now,
       updatedAt: now,
+      ...menuPriceEditStamp(now),
     };
     if (typeof input.deliveryPrice === "number") {
       row.deliveryPrice = Math.max(0, input.deliveryPrice);
@@ -359,7 +361,10 @@ export async function updateMenuItem(id: string, patch: MenuItemPatch): Promise<
   if (patch.categoryId != null) next.categoryId = patch.categoryId;
   if (patch.name != null) next.name = sanitizeMenuLabel(patch.name);
   if (patch.nameEn != null) next.nameEn = sanitizeMenuLabel(patch.nameEn);
-  if (patch.price != null) next.price = Math.max(0, Number(patch.price) || 0);
+  if (patch.price != null) {
+    next.price = Math.max(0, Number(patch.price) || 0);
+    Object.assign(next, menuPriceEditStamp(next.updatedAt as number));
+  }
   if (patch.deliveryPrice !== undefined) {
     next.deliveryPrice =
       patch.deliveryPrice == null

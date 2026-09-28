@@ -20767,6 +20767,96 @@ body.has-staff-task-nudge .module-page {
   color: #1f2a24;
 }
 
+.menu-price-history:not([open]) {
+  gap: 0;
+}
+
+.menu-price-history-summary {
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.menu-price-history-subtitle {
+  margin: 0.3rem 0 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1f2a24;
+}
+
+.menu-price-history-chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.menu-price-history-grid {
+  stroke: var(--tea-line);
+  stroke-dasharray: 3 3;
+}
+
+.menu-price-history-axis {
+  fill: #6b7a70;
+  font-size: 11px;
+}
+
+.menu-price-history-value {
+  fill: var(--tea-leaf);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.menu-price-history-line {
+  fill: none;
+  stroke: var(--tea-leaf);
+  stroke-width: 2.25;
+}
+
+.menu-price-history-dot {
+  fill: #fff;
+  stroke: var(--tea-leaf);
+  stroke-width: 2;
+}
+
+.menu-price-history-table-wrap {
+  overflow-x: auto;
+}
+
+.menu-price-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.menu-price-history-table th,
+.menu-price-history-table td {
+  padding: 0.35rem 0.45rem;
+  border-bottom: 1px solid #edf0ed;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.menu-price-history-table th {
+  color: #6b7a70;
+  font-weight: 600;
+}
+
+.menu-price-history-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.menu-price-history-table tr.is-up td.num:nth-child(4) {
+  color: var(--danger);
+}
+
+.menu-price-history-table tr.is-down td.num:nth-child(4) {
+  color: var(--tea-leaf);
+}
+
+.menu-price-history-reload {
+  align-self: flex-start;
+}
+
 .pos-menu-editor-name-row,
 .pos-menu-editor-meta-row {
   display: grid;
