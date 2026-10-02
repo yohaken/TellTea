@@ -4086,6 +4086,40 @@ body.modal-open .main-panel {
   font-weight: 700;
 }
 
+/* สีตามประเภท (บัญชีพนักงาน) — แถบซ้าย + พื้นอ่อน เหมือนสินทรัพย์ */
+.ledger-page .ledger-staff-sheet .sheet-table .col-type.is-type-cogs {
+  box-shadow: inset 3px 0 0 0 #d97706;
+  background: rgba(217, 119, 6, 0.1);
+}
+.ledger-page .ledger-staff-sheet .sheet-table .col-type.is-type-cogs .muted {
+  color: #92400e;
+  font-weight: 700;
+}
+.ledger-page .ledger-staff-sheet .sheet-table .col-type.is-type-sga {
+  box-shadow: inset 3px 0 0 0 #2563eb;
+  background: rgba(37, 99, 235, 0.09);
+}
+.ledger-page .ledger-staff-sheet .sheet-table .col-type.is-type-sga .muted {
+  color: #1e40af;
+  font-weight: 700;
+}
+.ledger-page .ledger-staff-sheet .sheet-table .col-type.is-type-other {
+  box-shadow: inset 3px 0 0 0 #9ca3af;
+  background: rgba(107, 114, 128, 0.08);
+}
+.ledger-page .ledger-staff-sheet .sheet-table .col-type.is-type-other .muted {
+  color: #4b5563;
+  font-weight: 600;
+}
+.ledger-page .ledger-staff-sheet .sheet-table .col-type.is-type-in {
+  box-shadow: inset 3px 0 0 0 #2d6a4f;
+  background: rgba(45, 106, 79, 0.08);
+}
+.ledger-page .ledger-staff-sheet .sheet-table .col-type.is-type-in .muted {
+  color: #1b4332;
+  font-weight: 600;
+}
+
 .ledger-page .ledger-staff-sheet .owner-vat-badge,
 .ledger-page .ledger-staff-sheet .owner-vat-empty {
   font-size: 0.6rem;
@@ -4633,12 +4667,35 @@ body.modal-open .main-panel {
   line-height: 1.2;
 }
 
-.ledger-page .ledger-table-search .table-search-clear {
+.ledger-page .ledger-table-search .table-search-clear,
+.ledger-page .ledger-table-search .table-search-add {
   min-height: 1.55rem;
   height: 1.55rem;
   padding: 0.1rem 0.35rem;
   font-size: 0.66rem;
   line-height: 1.2;
+}
+
+.ledger-page .ledger-table-search .table-search-add {
+  flex-shrink: 0;
+  min-width: 1.55rem;
+  font-weight: 700;
+}
+
+/** หลายช่องค้น — ซ้อนกันในคอลัมน์ซ้ายของแถบ */
+.ledger-page .ledger-staff-toolbar .ledger-search-stack {
+  flex: 0 1 46%;
+  max-width: 46%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.ledger-page .ledger-staff-toolbar .ledger-search-stack .ledger-table-search {
+  flex: none;
+  width: 100%;
+  max-width: none;
 }
 
 .ledger-page .ledger-table-search-meta {
@@ -4661,6 +4718,189 @@ body.modal-open .main-panel {
 
 .ledger-page .ledger-bulk-compact .bulk-status-count {
   font-size: 0.66rem;
+}
+
+.ledger-page .ledger-bulk-compact .bulk-status-chip {
+  min-height: 1.4rem;
+  padding: 0.08rem 0.4rem;
+  font-size: 0.66rem;
+}
+
+.ledger-page .ledger-bulk-compact .bulk-status-btn.is-ai {
+  border-color: rgba(37, 99, 235, 0.4);
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+.ledger-page .ledger-bulk-compact .bulk-status-select {
+  min-height: 1.4rem;
+  padding: 0.05rem 0.3rem;
+  font-size: 0.66rem;
+  border-radius: 0.4rem;
+}
+
+.ledger-page .ledger-organize {
+  margin: 0.15rem 0 0.1rem;
+}
+
+.ledger-page .ledger-range-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.66rem;
+}
+
+.ledger-page .ledger-range-picker select,
+.ledger-page .ledger-range-picker input {
+  min-height: 1.45rem;
+  padding: 0.05rem 0.3rem;
+  font-size: 0.68rem;
+  border-radius: 0.4rem;
+  width: auto;
+}
+
+.ledger-page .ledger-range-picker .bulk-status-btn,
+.ledger-page .ledger-range-picker .bulk-status-clear {
+  min-height: 1.4rem;
+  padding: 0.08rem 0.4rem;
+  font-size: 0.66rem;
+}
+
+.ledger-page .ledger-range-meta,
+.ledger-page .ledger-bulk-msg {
+  margin: 0.15rem 0 0;
+  font-size: 0.64rem;
+  text-align: left;
+}
+
+.ledger-page .ledger-ai-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.64rem;
+  margin: 0.15rem 0 0;
+}
+
+.ledger-page .ledger-ai-progress-bar {
+  flex: 0 0 5rem;
+  height: 0.35rem;
+  border-radius: 999px;
+  background: rgba(28, 42, 31, 0.1);
+  overflow: hidden;
+}
+
+.ledger-page .ledger-ai-progress-bar span {
+  display: block;
+  height: 100%;
+  background: #2563eb;
+  transition: width 0.2s ease;
+}
+
+.ledger-page .ledger-ai-progress-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.ledger-page .ledger-staff-sheet .sheet-table .bulk-check-col {
+  width: 1.35rem;
+  min-width: 1.35rem;
+  max-width: 1.35rem;
+}
+
+.ledger-page .ledger-staff-sheet .sheet-table .col-status {
+  width: 2.4rem;
+  min-width: 2.4rem;
+  white-space: nowrap;
+  text-align: center;
+  font-size: 0.58rem;
+}
+
+.ledger-page .col-status-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.ledger-page .col-status-ai-btn {
+  padding: 0 0.22rem;
+  min-height: 0;
+  line-height: 1.3;
+  font-size: 0.56rem;
+  font-weight: 700;
+  border-radius: 0.3rem;
+  border: 1px solid rgba(37, 99, 235, 0.45);
+  background: rgba(37, 99, 235, 0.08);
+  color: #1d4ed8;
+  cursor: pointer;
+}
+
+.ledger-page .col-status-ai-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.ledger-status-badge {
+  display: inline-block;
+  padding: 0 0.25rem;
+  border-radius: 0.3rem;
+  font-size: 0.56rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.ledger-status-badge.is-ai {
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
+}
+
+.ledger-status-badge.is-owner {
+  background: rgba(45, 106, 79, 0.12);
+  color: #1b4332;
+}
+
+.ledger-status-badge.is-guess {
+  background: rgba(234, 88, 12, 0.14);
+  color: #9a3412;
+}
+
+.ledger-status-badge.is-blank {
+  color: rgba(28, 42, 31, 0.45);
+  font-weight: 500;
+}
+
+.ledger-closed-confirm {
+  max-width: 26rem;
+  padding: 1rem;
+  text-align: left;
+}
+
+.ledger-closed-confirm-lead {
+  margin: 0.4rem 0;
+  font-size: 0.85rem;
+}
+
+.ledger-closed-confirm-months {
+  margin: 0 0 0.5rem;
+  padding-left: 1.1rem;
+  font-size: 0.82rem;
+}
+
+.ledger-closed-confirm-notes {
+  margin: 0 0 0.75rem;
+  padding-left: 1.1rem;
+  font-size: 0.74rem;
+}
+
+.ledger-closed-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .bill-notice-ai-toggle {
@@ -13562,6 +13802,11 @@ body.has-staff-task-nudge .module-page {
   margin-top: 0.3rem;
   padding-bottom: 0.1rem;
   -webkit-overflow-scrolling: touch;
+}
+
+.modal-backdrop.edit-modal .suggest-list.type-picker-chips {
+  flex-wrap: wrap;
+  overflow-x: visible;
 }
 
 .modal-backdrop.edit-modal.is-compact-form .suggest-chip {
@@ -30157,6 +30402,51 @@ a.ghost-btn {
   opacity: 0.55;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+}
+
+/* ตารางยอดเดลิเวอรี่: % ซ้อนใต้ตัวเลข — คอลัมน์แคบสุด */
+/* กว้างตามจอ: จอแคบ = ชิดตามเนื้อหา · จอกว้าง = ตัวอักษร/ระยะโตตามสัดส่วน (เพดาน max-width) */
+.vat-month-slim.vat-delivery-compact {
+  width: 100%;
+  min-width: 0;
+  max-width: 48em;
+  font-size: clamp(0.68rem, 0.55rem + 0.55vw, 0.95rem);
+}
+
+.vat-month-slim.vat-delivery-compact th {
+  font-size: 0.94em;
+}
+
+.vat-month-slim.vat-delivery-compact th,
+.vat-month-slim.vat-delivery-compact td {
+  padding: 0.12em 0.3em;
+  height: auto;
+}
+
+.vat-month-slim.vat-delivery-compact .vat-sales-input {
+  font-size: 1em;
+}
+
+.vat-month-slim.vat-delivery-compact .vat-gp-cell {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0;
+}
+
+.vat-month-slim.vat-delivery-compact .vat-gp-pct-hint {
+  font-size: 0.74em;
+  line-height: 1;
+}
+
+.vat-month-slim.vat-delivery-compact .vat-col-head-role {
+  font-size: 0.86em;
+}
+
+.vat-month-slim.vat-delivery-compact .col-input .vat-sales-input {
+  min-width: 5.4em;
+  height: auto;
+  min-height: 1.7em;
 }
 
 .vat-include-input-toggle {

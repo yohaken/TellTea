@@ -37,8 +37,13 @@ import {
   type VatSource,
 } from "@/lib/entry-vat";
 import {
+  billFieldValue,
+  billTypeHintFromExtract,
   classifyLedgerTypeHeuristic,
+  isBillNameSource,
   classifyLedgerTypeWithAi,
+  usableBillTypeHint,
+  type BillTypeHint,
   resolveStoredTypeSource,
   type LedgerTypeSource,
 } from "@/lib/ledger-ai";
@@ -57,7 +62,6 @@ import {
 } from "@/lib/ledger-vat-first";
 import {
   BASE_TYPE_OPTIONS,
-  frequentTypes,
   isLedgerAssetType,
   labelLedgerType,
 } from "@/lib/ledger-labels";
@@ -706,7 +710,6 @@ function OwnerEntryModal({
   const [busy, setBusy] = useState(false);
   const [saveStage, setSaveStage] = useState<AiSaveStage | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [typeFreq, setTypeFreq] = useState<string[]>([]);
   const [previewType, setPreviewType] = useState(entry?.type || "");
   const [previewReason, setPreviewReason] = useState(entry?.typeAiReason || "");
   const [previewSource, setPreviewSource] = useState<LedgerTypeSource>(
@@ -726,6 +729,11 @@ function OwnerEntryModal({
   const amountRef = useRef(amount);
   const noteRef = useRef(note);
   const ownerLockedRef = useRef(ownerLocked);
+  const aiTypeHintRef = useRef<BillTypeHint | null>(null);
+  /** ผู้ใช้พิมพ์/เลือกเอง — อ่านบิลรอบใหม่ห้ามทับ (ไม่งั้นบิลเติมให้ทุกรอบ) */
+  const descTypedRef = useRef(false);
+  const amountTypedRef = useRef(false);
+  const noteTypedRef = useRef(false);
   const vatFirstPhaseRef = useRef(vatFirstPhase);
   descriptionRef.current = description;
   amountRef.current = amount;
@@ -747,11 +755,9 @@ function OwnerEntryModal({
     void listRecentOwnerBookEntries(200)
       .then((rows) => {
         setSuggestions(frequentOwnerDescriptions(rows));
-        setTypeFreq(frequentTypes(rows));
       })
       .catch(() => {
         setSuggestions([]);
-        setTypeFreq([]);
       });
   }, []);
 
@@ -836,6 +842,7 @@ function OwnerEntryModal({
     setPreviewError(null);
     try {
       const result = await classifyLedgerTypeWithAi(text);
+      aiTypeHintRef.current = { type: result.type, reason: result.reason, description: text };
       setPreviewType(result.type);
       setPreviewReason(result.reason);
       setPreviewSource("ai");
@@ -870,27 +877,36 @@ function OwnerEntryModal({
       const result = await extractOwnerBookFromReceipt(refs);
       lastExtractKeyRef.current = key;
       // Keep accounting date — AI must not overwrite (BE years like 2568 broke iOS → 3112).
-      if (result.description) {
-        if (mode === "add" || !descriptionRef.current.trim()) {
-          setDescription(result.description);
-        }
-      }
-      if (result.amountOut != null) {
-        if (mode === "add" || !amountRef.current.trim()) {
-          setAmount(String(result.amountOut));
-        }
-      }
-      if (result.note) {
-        if (mode === "add" || !noteRef.current.trim()) {
-          setNote(result.note);
-        }
-      }
-      if (!ownerLockedRef.current && result.type) {
+      const onlyIfEmpty = mode !== "add";
+      const nextDescription = billFieldValue(descriptionRef.current, result.description, {
+        typedByUser: descTypedRef.current,
+        onlyIfEmpty: onlyIfEmpty || !isBillNameSource(result),
+      });
+      if (nextDescription !== descriptionRef.current) setDescription(nextDescription);
+      const nextAmount = billFieldValue(amountRef.current, result.amountOut, {
+        typedByUser: amountTypedRef.current,
+        onlyIfEmpty,
+      });
+      if (nextAmount !== amountRef.current) setAmount(nextAmount);
+      const nextNote = billFieldValue(noteRef.current, result.note, {
+        typedByUser: noteTypedRef.current,
+        onlyIfEmpty,
+      });
+      if (nextNote !== noteRef.current) setNote(nextNote);
+      const hint = billTypeHintFromExtract(result, nextDescription);
+      aiTypeHintRef.current = hint;
+      if (hint && !ownerLockedRef.current) {
         setTypeMode("auto");
-        setPreviewType(result.type);
-        setPreviewReason(result.reason || "อ่านจากรูปใบเสร็จ");
+        setPreviewType(hint.type);
+        setPreviewReason(hint.reason);
         setPreviewSource("ai");
         setPreviewStatus("ready");
+        setPreviewError(null);
+      } else if (!hint && mode === "add" && !ownerLockedRef.current) {
+        setPreviewType("");
+        setPreviewReason("จะจัดจากชื่อรายการตอนบันทึก");
+        setPreviewSource("heuristic");
+        setPreviewStatus("idle");
         setPreviewError(null);
       }
       // VAT: AI อ่านจากบิลก่อน — ไม่คำนวณ ×7/107
@@ -1001,6 +1017,11 @@ function OwnerEntryModal({
         type = typeMode;
         typeSource = "owner";
         typeAiReason = "";
+      } else if (usableBillTypeHint(aiTypeHintRef.current, description)) {
+        const hint = aiTypeHintRef.current!;
+        type = hint.type;
+        typeSource = "ai";
+        typeAiReason = hint.reason;
       } else {
         setSaveStage("sending");
         await new Promise((r) => setTimeout(r, 30));
@@ -1275,7 +1296,10 @@ function OwnerEntryModal({
             <input
               id="ob-desc"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                descTypedRef.current = true;
+                setDescription(e.target.value);
+              }}
               autoComplete="off"
               required
             />
@@ -1286,7 +1310,10 @@ function OwnerEntryModal({
                     key={item}
                     type="button"
                     className="suggest-chip"
-                    onClick={() => setDescription(item)}
+                    onClick={() => {
+                      descTypedRef.current = true;
+                      setDescription(item);
+                    }}
                   >
                     {item}
                   </button>
@@ -1303,7 +1330,10 @@ function OwnerEntryModal({
               step="0.01"
               inputMode="decimal"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={(e) => {
+                amountTypedRef.current = true;
+                setAmount(e.target.value);
+              }}
               required
             />
           </div>
@@ -1360,8 +1390,11 @@ function OwnerEntryModal({
             aiError={previewError}
             ownerLocked={ownerLocked}
             typeMode={typeMode}
-            frequent={typeFreq}
             onTypeModeChange={(value) => {
+              if (value === "auto" && description.trim()) {
+                void runOwnerPreview();
+                return;
+              }
               setTypeMode(value);
               setOwnerLocked(value !== "auto");
             }}
@@ -1373,7 +1406,10 @@ function OwnerEntryModal({
             <input
               id="ob-note"
               value={note}
-              onChange={(e) => setNote(e.target.value)}
+              onChange={(e) => {
+                noteTypedRef.current = true;
+                setNote(e.target.value);
+              }}
               autoComplete="off"
             />
           </div>

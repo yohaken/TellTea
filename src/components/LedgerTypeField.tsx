@@ -23,7 +23,6 @@ type Props = {
   typeMode: string;
   onTypeModeChange: (value: string) => void;
   onReclassify: () => void;
-  frequent?: string[];
   id?: string;
 };
 
@@ -41,7 +40,6 @@ export function LedgerTypeField({
   typeMode,
   onTypeModeChange,
   onReclassify,
-  frequent = [],
   id = "ledger-type",
 }: Props) {
   const shown =
@@ -124,7 +122,6 @@ export function LedgerTypeField({
         label="แก้ประเภท (เจ้าของ)"
         value={typeMode}
         onChange={onTypeModeChange}
-        frequent={frequent}
         autoHint={aiType}
       />
     </div>

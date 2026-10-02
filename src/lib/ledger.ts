@@ -605,11 +605,35 @@ export async function sumLedgerVatInputByMonth(
   return { vatInput, count };
 }
 
+/**
+ * รายการช่วงวันที่ (YYYY-MM-DD รวมทั้งสองวัน · ขอบเขตตามเวลากรุงเทพฯ) — ใหม่ก่อน
+ * ใช้แทนหน้าต่าง live เมื่อเจ้าของเลือกช่วงจัดระเบียบ
+ */
+export async function loadLedgerRange(fromDateKey: string, toDateKey: string): Promise<LedgerEntry[]> {
+  const isKey = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v);
+  if (!isKey(fromDateKey) || !isKey(toDateKey)) throw new Error("วันที่ไม่ถูกต้อง");
+  const [a, b] = fromDateKey <= toDateKey ? [fromDateKey, toDateKey] : [toDateKey, fromDateKey];
+  const sinceMs = Date.parse(`${a}T00:00:00+07:00`);
+  const untilMs = Date.parse(`${b}T00:00:00+07:00`) + 24 * 60 * 60 * 1000;
+  const rows = await listLedgerEntriesSince(sinceMs, untilMs);
+  return rows.sort((x, y) => y.date - x.date || (y.createdAt || 0) - (x.createdAt || 0));
+}
+
+export const LEDGER_OUT_TYPES = ["cogs", "sga", "asset", "อื่นๆ"] as const;
+
 /** Bulk upsert type on many ledger rows (owner-driven reclassify). */
-export async function bulkUpdateLedgerTypes(ids: string[], type: string): Promise<number> {
+export async function bulkUpdateLedgerTypes(
+  ids: string[],
+  type: string,
+  opts?: { source?: "owner" | "ai"; reasons?: Record<string, string> },
+): Promise<number> {
   const nextType = String(type || "").trim();
   if (!nextType) throw new Error("เลือกประเภทก่อน");
+  if (!(LEDGER_OUT_TYPES as readonly string[]).includes(nextType)) {
+    throw new Error("ประเภทไม่ถูกต้อง");
+  }
   if (!ids.length) return 0;
+  const source = opts?.source || "owner";
 
   const db = getDb();
   let batch = writeBatch(db);
@@ -627,8 +651,9 @@ export async function bulkUpdateLedgerTypes(ids: string[], type: string): Promis
   for (const id of ids) {
     batch.update(doc(db, "ledger", id), {
       type: nextType,
-      typeSource: "owner",
-      typeAiReason: "",
+      typeSource: source,
+      typeAiReason: source === "ai" ? String(opts?.reasons?.[id] || "") : "",
+      typeUpdatedAt: now,
       updatedAt: now,
     });
     ops += 1;

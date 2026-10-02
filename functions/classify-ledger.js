@@ -9,6 +9,15 @@ const { getFirestore } = require("firebase-admin/firestore");
 const ALLOWED_TYPES = new Set(["cogs", "sga", "asset", "อื่นๆ"]);
 const DEFAULT_MODEL = "gemini-2.5-flash";
 const MAX_IMAGES = 2;
+/** Gemini structured output — บังคับให้ตอบได้แค่ 4 ประเภท */
+const RESPONSE_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    type: { type: "STRING", enum: ["cogs", "sga", "asset", "อื่นๆ"] },
+    reason: { type: "STRING" },
+  },
+  required: ["type", "reason"],
+};
 const MAX_IMAGE_BYTES = 3.5 * 1024 * 1024;
 
 /** Bootstrap only via env / owner AI settings — never commit keys. */
@@ -94,11 +103,40 @@ function extractJsonObject(text) {
       try {
         return JSON.parse(raw.slice(start, end + 1));
       } catch {
-        return null;
+        // Gemini บางครั้งต่อขยะหลัง JSON ที่ครบแล้ว (เช่น `}\nเอกสาร"}`) — ใช้ object แรกที่ปิดครบ
+        const first = firstBalancedObject(raw, start);
+        if (!first) return null;
+        try {
+          return JSON.parse(first);
+        } catch {
+          return null;
+        }
       }
     }
     return null;
   }
+}
+
+function firstBalancedObject(raw, start) {
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < raw.length; i++) {
+    const ch = raw[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === "{") depth += 1;
+    else if (ch === "}") {
+      depth -= 1;
+      if (depth === 0) return raw.slice(start, i + 1);
+    }
+  }
+  return null;
 }
 
 function isAllowedImageUrl(raw) {
@@ -161,7 +199,7 @@ async function loadAiSettings(db) {
 
 async function loadBusinessContext(db) {
   const snap = await db.doc("meta/businessProfile").get();
-  if (!snap.exists()) return DEFAULT_BUSINESS_CONTEXT;
+  if (!snap.exists) return DEFAULT_BUSINESS_CONTEXT;
   const formatted = formatBusinessProfile(snap.data());
   return formatted.includes("ประเภทกิจการ: -") && formatted.includes("สินค้า/บริการ: -")
     ? DEFAULT_BUSINESS_CONTEXT
@@ -207,9 +245,10 @@ async function callGemini({ apiKey, model, description, imageUrls, businessConte
       },
       generationConfig: {
         temperature: 0.1,
-        // gemini-2.5* uses thinking tokens — keep headroom for JSON answer
-        maxOutputTokens: 1024,
+        // thinking tokens กินโควตา output — เผื่อพอให้ JSON ไม่ขาดกลาง
+        maxOutputTokens: 4096,
         responseMimeType: "application/json",
+        responseSchema: RESPONSE_SCHEMA,
       },
     }),
   });
@@ -226,10 +265,26 @@ async function callGemini({ apiKey, model, description, imageUrls, businessConte
   const parsed = extractJsonObject(text);
   const type = normalizeType(parsed?.type);
   if (!type) {
-    throw new Error("AI ตอบประเภทไม่ถูกต้อง");
+    console.warn("classifyLedgerType bad answer", {
+      finishReason: body?.candidates?.[0]?.finishReason,
+      text: text.slice(0, 200),
+    });
+    throw new BadAnswerError("AI ตอบประเภทไม่ถูกต้อง");
   }
   const reason = String(parsed?.reason || "").trim().slice(0, 80);
   return { type, reason, usedImages: usedUrls.length };
+}
+
+class BadAnswerError extends Error {}
+
+/** คำตอบผิดรูปแบบ (เช่น JSON ขาด) ลองใหม่ 1 ครั้ง — error อื่นโยนต่อทันที */
+async function callGeminiWithRetry(args) {
+  try {
+    return await callGemini(args);
+  } catch (err) {
+    if (!(err instanceof BadAnswerError)) throw err;
+    return callGemini(args);
+  }
 }
 
 function requireStaff(context) {
@@ -275,7 +330,7 @@ exports.classifyLedgerType = functions
     const businessContext = await loadBusinessContext(db);
 
     try {
-      const result = await callGemini({
+      const result = await callGeminiWithRetry({
         apiKey: settings.apiKey,
         model,
         description,
@@ -308,3 +363,4 @@ exports.DEFAULT_BUSINESS_CONTEXT = DEFAULT_BUSINESS_CONTEXT;
 exports.buildSystemPrompt = buildSystemPrompt;
 exports.formatBusinessProfile = formatBusinessProfile;
 exports.MAX_IMAGES = MAX_IMAGES;
+exports.loadBusinessContext = loadBusinessContext;

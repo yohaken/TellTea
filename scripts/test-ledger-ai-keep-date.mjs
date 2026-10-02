@@ -34,7 +34,7 @@ assert.match(fn, /function toCeYear/);
 assert.match(fn, /while \(y >= 2400 && y < 4000\) y -= 543/);
 assert.match(fn, /ค\.ศ\. YYYY-MM-DD/);
 assert.match(ai, /normalizeAccountingDateKey/);
-assert.match(version, /APP_BUILD = 478/);
+assert.ok(Number(version.match(/APP_BUILD = (\d+)/)[1]) >= 478);
 
 function toCeYear(raw) {
   if (!Number.isFinite(raw)) return null;

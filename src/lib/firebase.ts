@@ -14,7 +14,7 @@ import {
   persistentMultipleTabManager,
   type Firestore,
 } from "firebase/firestore";
-import { getFunctions, type Functions } from "firebase/functions";
+import { connectFunctionsEmulator, getFunctions, type Functions } from "firebase/functions";
 import { getStorage, type FirebaseStorage } from "firebase/storage";
 
 /**
@@ -124,6 +124,12 @@ export function getDb() {
 export function getFirebaseFunctions() {
   if (!functions) {
     functions = getFunctions(getFirebaseApp(), "asia-southeast1");
+    // dev เท่านั้น: ทดสอบ Cloud Functions ตัวในเครื่องก่อน deploy (เช่น 127.0.0.1:5001)
+    const emu = process.env.NEXT_PUBLIC_FUNCTIONS_EMULATOR || "";
+    if (process.env.NODE_ENV === "development" && /^[\w.-]+:\d+$/.test(emu)) {
+      const [host, port] = emu.split(":");
+      connectFunctionsEmulator(functions, host!, Number(port));
+    }
   }
   return functions;
 }

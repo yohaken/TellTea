@@ -50,6 +50,9 @@ export const BASE_TYPE_OPTIONS = [
   { value: "อื่นๆ", label: TYPE_LABELS["อื่นๆ"] },
 ] as const;
 
+/** ตัวเลือกคงที่ใน popup บันทึก/แก้รายการ — ไม่มี «อื่นๆ» · ไม่ให้พิมพ์ประเภทเอง */
+export const SAVE_TYPE_OPTIONS = ["auto", "cogs", "sga", "asset"] as const;
+
 /**
  * Map any stored / display / Excel alias to the canonical key used in Firestore.
  * Unknown strings are returned trimmed as-is (freeform history).
@@ -79,6 +82,17 @@ export function isLedgerAssetType(type: string | undefined | null): boolean {
   return canonicalLedgerType(type) === "asset";
 }
 
+/** คลาสสีของคอลัมน์ประเภท — ต้นทุน / ค่าใช้จ่าย / สินทรัพย์ / อื่นๆ / เงินเข้า */
+export function ledgerTypeColorKey(type: string | undefined | null): string {
+  const key = canonicalLedgerType(type);
+  if (key === "cogs") return "cogs";
+  if (key === "sga") return "sga";
+  if (key === "asset") return "asset";
+  if (key === "อื่นๆ") return "other";
+  if (key === "โอนเข้า" || key === "ยอดยกมา") return "in";
+  return key ? "other" : "";
+}
+
 /** ป้ายสั้นในตารางแคบ (มือถือ) — ไม่ใส่คำอังกฤษในวงเล็บ */
 const TYPE_LABELS_SHORT: Record<string, string> = {
   cogs: "ต้นทุน",
@@ -99,8 +113,13 @@ export function shortLabelLedgerType(type: string) {
 
 /** เดาหมวดจากชื่อรายการ — พนักงานไม่ต้องเลือกเอง */
 export function guessTypeFromDescription(description: string): string {
+  return guessTypeFromDescriptionStrict(description) || "cogs";
+}
+
+/** เหมือน guessTypeFromDescription แต่คืน "" เมื่อไม่มีกฎไหนตรง (ไม่เดาว่าเป็นต้นทุน) */
+export function guessTypeFromDescriptionStrict(description: string): string {
   const text = description.trim().toLowerCase();
-  if (!text) return "cogs";
+  if (!text) return "";
 
   if (text.includes("ยกมา")) return "ยอดยกมา";
   if (text.includes("โอนเข้า")) return "โอนเข้า";
@@ -167,8 +186,7 @@ export function guessTypeFromDescription(description: string): string {
     return "asset";
   }
 
-  // ของใช้ทำเครื่องดื่ม / สั่งซื้อวัตถุดิบ → cogs
-  return "cogs";
+  return "";
 }
 
 /** Frequent non-empty types from history, most used first. */

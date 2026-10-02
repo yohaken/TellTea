@@ -84,13 +84,30 @@ assert.match(ownerBooksPage, /LedgerTypeField/);
 assert.match(ownerBooksLib, /typeSource/);
 assert.match(ownerBooksLib, /typeAiReason/);
 
+// Admin SDK: DocumentSnapshot.exists เป็น property — เรียกเป็นฟังก์ชันจะพังทุกครั้ง
+const classifySrc = readFileSync(join(root, "functions/classify-ledger.js"), "utf8");
+assert.doesNotMatch(classifySrc, /snap\.exists\(\)/);
+const adminLikeDb = (snap) => ({ doc: () => ({ get: async () => snap }) });
+assert.equal(
+  await classify.loadBusinessContext(adminLikeDb({ exists: false, data: () => undefined })),
+  classify.DEFAULT_BUSINESS_CONTEXT,
+);
+assert.equal(
+  typeof (await classify.loadBusinessContext(
+    adminLikeDb({ exists: true, data: () => ({ businessType: "ร้านชา" }) }),
+  )),
+  "string",
+);
+assert.equal(guessFromLabels("ของแปลกไม่มีกฎ"), "");
+assert.equal(guessFromLabels("ค่าไฟเดือนนี้"), "sga");
+
 function guessFromLabels(description) {
   const fnMatch = labels.match(
-    /export function guessTypeFromDescription\(description: string\): string \{([\s\S]*?)\n\}/,
+    /export function guessTypeFromDescriptionStrict\(description: string\): string \{([\s\S]*?)\n\}/,
   );
   assert.ok(fnMatch);
   return vm.runInNewContext(
-    `function guessTypeFromDescription(description) {${fnMatch[1]}}\nguessTypeFromDescription`,
+    `function guessTypeFromDescriptionStrict(description) {${fnMatch[1]}}\nguessTypeFromDescriptionStrict`,
   )(description);
 }
 

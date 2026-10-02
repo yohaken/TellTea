@@ -18,19 +18,34 @@ import { can } from "@/lib/permissions";
 import { staffHomeHref } from "@/lib/nav-menu";
 import {
   addLedgerEntry,
+  bulkUpdateLedgerTypes,
   deleteLedgerEntry,
   frequentDescriptions,
   getLedgerReceiptUrls,
   LEDGER_LIVE_MAX,
+  LEDGER_OUT_TYPES,
   LEDGER_PAGE_SIZE,
   LEDGER_RECEIPT_MAX,
   listLedgerEntriesSince,
   listRecentLedgerEntries,
+  loadLedgerRange,
   recomputeLedgerBalance,
   subscribeLedgerBalance,
   subscribeLedgerPage,
   updateLedgerEntry,
 } from "@/lib/ledger";
+import { appendLedgerAudit } from "@/lib/ledger-audit";
+import { getFiledMonths, ledgerMonthKey } from "@/lib/ledger-closed-months";
+import { formatThaiMonthKey } from "@/lib/vat-monthly";
+import {
+  LedgerAiProgressLine,
+  LedgerClosedMonthDialog,
+  LedgerRangePicker,
+  LedgerStatusBadge,
+  ledgerStatusOf,
+  type ClosedMonthConfirm,
+  type LedgerRange,
+} from "@/components/LedgerOrganizeTools";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { TransferInModal } from "@/components/TransferInModal";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
@@ -57,15 +72,21 @@ import type { LedgerBillLine, LedgerEntry, StockItem } from "@/lib/types";
 import { personalProfileLabel } from "@/lib/profile";
 import { AiSaveProgressModal, type AiSaveStage } from "@/components/AiSaveProgressModal";
 import {
-  frequentTypes,
   isLedgerAssetType,
   labelLedgerType,
+  ledgerTypeColorKey,
 } from "@/lib/ledger-labels";
 import {
+  billTypeHintFromExtract,
   classifyLedgerTypeHeuristic,
   classifyLedgerTypeWithAi,
+  usableBillTypeHint,
+  type BillTypeHint,
+  normalizeLedgerOutType,
+  reclassifyLedgerRowsWithAi,
   resolveStoredTypeSource,
   type LedgerTypeSource,
+  type ReclassifyMonthProgress,
 } from "@/lib/ledger-ai";
 import { loadCachedLedger, saveCachedLedger } from "@/lib/cache";
 import { loadStaffLedgerFromServer } from "@/lib/ledger-staff-load";
@@ -84,7 +105,7 @@ import {
   uploadEvidencePhotos,
 } from "@/lib/photo-upload";
 import { daysAgoMs } from "@/lib/query-window";
-import { filterLedgerRows, sortByDateNewestFirst } from "@/lib/smart-search";
+import { filterLedgerRowsMulti, sortByDateNewestFirst } from "@/lib/smart-search";
 import { SheetDateCell } from "@/components/SheetDateCell";
 import {
   formatPlainNumber,
@@ -147,9 +168,23 @@ function LedgerView() {
     title: string;
     entryDateMs?: number;
   } | null>(null);
-  const [query, setQuery] = useState("");
+  /** หลายช่องค้น — ต้องตรงทุกช่อง */
+  const [queries, setQueries] = useState<string[]>([""]);
   const [searchPool, setSearchPool] = useState<LedgerEntry[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
+  /** เครื่องมือจัดระเบียบประเภท — เจ้าของเท่านั้น (พรีวิวสิทธิ์ = ปิด) */
+  const canOrganize = isOwner && !isPermPreview;
+  const [range, setRange] = useState<LedgerRange | null>(null);
+  const [rangeRows, setRangeRows] = useState<LedgerEntry[] | null>(null);
+  const [rangeLoading, setRangeLoading] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkMsg, setBulkMsg] = useState<string | null>(null);
+  const [aiProgress, setAiProgress] = useState<ReclassifyMonthProgress | null>(null);
+  const aiCancelRef = useRef(false);
+  const [closedConfirm, setClosedConfirm] = useState<
+    (ClosedMonthConfirm & { resolve: (ok: boolean) => void }) | null
+  >(null);
   const photoEntryRef = useRef<LedgerEntry | null>(null);
   const photoCameraRef = useRef<HTMLInputElement>(null);
   const photoGalleryRef = useRef<HTMLInputElement>(null);
@@ -157,7 +192,12 @@ function LedgerView() {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const balanceRef = useRef<number | null>(null);
   const hasRowsRef = useRef(false);
-  const deferredQuery = useDeferredValue(query.trim());
+  const deferredQuery = useDeferredValue(
+    queries
+      .map((q) => q.trim())
+      .filter(Boolean)
+      .join("\n"),
+  );
 
   useBodyScrollLock(
     !!adding ||
@@ -165,7 +205,8 @@ function LedgerView() {
       !!editing ||
       !!photoUploadRowId ||
       !!imagePreview ||
-      !!rowUploadProgress,
+      !!rowUploadProgress ||
+      !!closedConfirm,
   );
 
   const [cashInForceOpen, setCashInForceOpen] = useState(false);
@@ -348,7 +389,7 @@ function LedgerView() {
   }, [canUseLedger, isOwner, liveLimit, persistSnapshot, staff?.role]);
 
   useEffect(() => {
-    if (!canUseLedger || !deferredQuery) {
+    if (!canUseLedger || !deferredQuery || range) {
       setSearchPool(null);
       setSearchLoading(false);
       return;
@@ -368,20 +409,255 @@ function LedgerView() {
     return () => {
       cancelled = true;
     };
-  }, [canUseLedger, deferredQuery]);
+  }, [canUseLedger, deferredQuery, range]);
 
   const filteredEntries = useMemo(() => {
-    const source = deferredQuery ? searchPool ?? entries : entries;
+    const source = range
+      ? rangeRows ?? []
+      : deferredQuery
+        ? searchPool ?? entries
+        : entries;
     // Live list is already date desc; search pool is asc — always show newest→oldest.
-    return sortByDateNewestFirst(filterLedgerRows(source, deferredQuery));
-  }, [entries, searchPool, deferredQuery]);
+    return sortByDateNewestFirst(
+      filterLedgerRowsMulti(source, deferredQuery ? deferredQuery.split("\n") : [], (row) =>
+        row.amountOut > 0 ? ledgerStatusOf(row).label : "",
+      ),
+    );
+  }, [entries, searchPool, deferredQuery, range, rangeRows]);
+
+  const selectableRows = useMemo(
+    () => (canOrganize ? filteredEntries.filter((r) => r.amountOut > 0) : []),
+    [canOrganize, filteredEntries],
+  );
+  const selectedRows = useMemo(
+    () => selectableRows.filter((r) => selectedIds.has(r.id)),
+    [selectableRows, selectedIds],
+  );
+  const allVisibleSelected =
+    selectableRows.length > 0 && selectedRows.length === selectableRows.length;
+  const someVisibleSelected = selectedRows.length > 0;
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAllVisible() {
+    setSelectedIds(allVisibleSelected ? new Set() : new Set(selectableRows.map((r) => r.id)));
+  }
+
+  function selectNeedsReview() {
+    setSelectedIds(
+      new Set(
+        selectableRows
+          .filter((r) => {
+            const key = ledgerStatusOf(r).key;
+            return (
+              (key === "guess" || key === "blank") &&
+              !String(r.typeSource || "").startsWith("payroll")
+            );
+          })
+          .map((r) => r.id),
+      ),
+    );
+  }
+
+  async function applyRange(next: LedgerRange) {
+    setRangeLoading(true);
+    setError(null);
+    setBulkMsg(null);
+    try {
+      const rows = await loadLedgerRange(next.from, next.to);
+      setRange(next);
+      setRangeRows(rows);
+      setSelectedIds(new Set());
+    } catch (err) {
+      setError((err as Error).message || "โหลดช่วงวันที่ไม่สำเร็จ");
+    } finally {
+      setRangeLoading(false);
+    }
+  }
+
+  function clearRange() {
+    setRange(null);
+    setRangeRows(null);
+    setSelectedIds(new Set());
+    setBulkMsg(null);
+  }
+
+  /** อัปเดตเซลล์ทันทีทุกมุมมอง (สด · ค้นหา · ช่วงวันที่) ไม่รอ snapshot/โหลดใหม่ */
+  function patchRowsLocal(patches: Map<string, Partial<LedgerEntry>>) {
+    if (!patches.size) return;
+    const apply = (list: LedgerEntry[] | null) =>
+      list
+        ? list.map((r) => {
+            const p = patches.get(r.id);
+            return p ? { ...r, ...p } : r;
+          })
+        : list;
+    setEntries((prev) => apply(prev) ?? prev);
+    setSearchPool((prev) => apply(prev));
+    setRangeRows((prev) => apply(prev));
+  }
+
+  /** ช่วงวันที่เป็นการอ่านครั้งเดียว — โหลดใหม่หลังแก้ */
+  async function refreshRange() {
+    if (!range) return;
+    try {
+      setRangeRows(await loadLedgerRange(range.from, range.to));
+    } catch {
+      /* แสดงข้อมูลเดิมต่อ */
+    }
+  }
+
+  /** ถามก่อนทุกครั้งถ้ามีแถวในงวด VAT ที่ยื่นแล้ว · คืนรายชื่อเดือนที่ปิด */
+  async function confirmClosedMonths(
+    rows: LedgerEntry[],
+    actionLabel: string,
+    nextType?: string,
+  ): Promise<{ ok: boolean; closed: string[] }> {
+    const byMonth = new Map<string, { count: number; amount: number; types: string[] }>();
+    for (const r of rows) {
+      const key = ledgerMonthKey(r.date);
+      if (!key) continue;
+      const m = byMonth.get(key) || { count: 0, amount: 0, types: [] };
+      m.count += 1;
+      m.amount += Number(r.amountOut) || 0;
+      m.types.push(normalizeLedgerOutType(r.type || ""));
+      byMonth.set(key, m);
+    }
+    const closed = await getFiledMonths([...byMonth.keys()]);
+    if (!closed.length) return { ok: true, closed };
+    const pnlOutside = (t: string) => t === "asset" || t === "อื่นๆ";
+    const closedTypes = closed.flatMap((k) => byMonth.get(k)?.types || []);
+    const touchesOther = nextType
+      ? closedTypes.some((t) => pnlOutside(t) !== pnlOutside(nextType))
+      : true;
+    const ok = await new Promise<boolean>((resolve) => {
+      setClosedConfirm({
+        actionLabel,
+        touchesOther,
+        months: closed.map((key) => ({
+          key,
+          count: byMonth.get(key)?.count || 0,
+          amount: Math.round((byMonth.get(key)?.amount || 0) * 100) / 100,
+        })),
+        resolve,
+      });
+    });
+    setClosedConfirm(null);
+    return { ok, closed };
+  }
+
+  async function onBulkSetType(nextType: string) {
+    const rows = selectedRows;
+    if (!rows.length || bulkBusy) return;
+    setBulkMsg(null);
+    setError(null);
+    try {
+      const { ok, closed } = await confirmClosedMonths(
+        rows,
+        `ตั้ง ${rows.length} รายการเป็น «${labelLedgerType(nextType)}»`,
+        nextType,
+      );
+      if (!ok) return;
+      setBulkBusy(true);
+      const count = await bulkUpdateLedgerTypes(
+        rows.map((r) => r.id),
+        nextType,
+        { source: "owner" },
+      );
+      patchRowsLocal(
+        new Map(
+          rows.map((r) => [r.id, { type: nextType, typeSource: "owner", typeAiReason: "" }]),
+        ),
+      );
+      await appendLedgerAudit({
+        action: "bulk_set_type",
+        actor: actorId || "",
+        closedMonthOverride: closed.length > 0,
+        closedMonths: closed,
+        summary: `ตั้ง ${count} รายการเป็น ${nextType}`,
+        items: rows.map((r) => ({
+          id: r.id,
+          monthKey: ledgerMonthKey(r.date),
+          beforeType: r.type || "",
+          beforeSource: String(r.typeSource || ""),
+          afterType: nextType,
+          afterSource: "owner",
+        })),
+      });
+      setBulkMsg(`ตั้งเป็น «${labelLedgerType(nextType)}» แล้ว ${count} รายการ`);
+      setSelectedIds(new Set());
+      await refreshRange();
+    } catch (err) {
+      setError((err as Error).message || "ตั้งประเภทไม่สำเร็จ");
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
+  async function onBulkAi() {
+    if (!selectedRows.length || bulkBusy) return;
+    const rows = selectedRows.filter(
+      (r) =>
+        ledgerStatusOf(r).key !== "owner" && !String(r.typeSource || "").startsWith("payroll"),
+    );
+    setBulkMsg(null);
+    setError(null);
+    if (!rows.length) {
+      setBulkMsg("แถวที่เลือกเป็น «จัดเอง» ทั้งหมด — AI ไม่ทับ");
+      return;
+    }
+    try {
+      const { ok, closed } = await confirmClosedMonths(rows, `ให้ AI จัด ${rows.length} รายการ`);
+      if (!ok) return;
+      setBulkBusy(true);
+      aiCancelRef.current = false;
+      const { progress, changes } = await reclassifyLedgerRowsWithAi(rows, {
+        onProgress: setAiProgress,
+        onRowChanged: (c) =>
+          patchRowsLocal(
+            new Map([[c.id, { type: c.afterType, typeSource: "ai", typeAiReason: c.reason }]]),
+          ),
+        shouldCancel: () => aiCancelRef.current,
+      });
+      await appendLedgerAudit({
+        action: "ai_reclassify",
+        actor: actorId || "",
+        closedMonthOverride: closed.length > 0,
+        closedMonths: closed,
+        summary: `AI จัด ${changes.length} รายการ`,
+        items: changes.map((c) => ({
+          id: c.id,
+          monthKey: ledgerMonthKey(c.date),
+          beforeType: c.beforeType,
+          beforeSource: c.beforeSource,
+          afterType: c.afterType,
+          afterSource: "ai",
+        })),
+      });
+      if (progress.failed) setError(`AI จัดไม่สำเร็จ ${progress.failed} รายการ`);
+      setSelectedIds(new Set());
+      await refreshRange();
+    } catch (err) {
+      setError((err as Error).message || "AI จัดประเภทไม่สำเร็จ");
+    } finally {
+      setAiProgress(null);
+      setBulkBusy(false);
+    }
+  }
 
   const loadMore = useCallback(() => {
-    if (deferredQuery) return;
+    if (deferredQuery || range) return;
     if (!hasMore || loadingMore || liveLimit >= LEDGER_LIVE_MAX) return;
     setLoadingMore(true);
     setLiveLimit((n) => Math.min(n + LEDGER_PAGE_SIZE, LEDGER_LIVE_MAX));
-  }, [hasMore, loadingMore, liveLimit, deferredQuery]);
+  }, [hasMore, loadingMore, liveLimit, deferredQuery, range]);
 
   async function handleRowPhotoFiles(fileList: FileList | File[] | null) {
     const files = fileList ? [...fileList].filter(Boolean) : [];
@@ -473,26 +749,48 @@ function LedgerView() {
 
       {!loading ? (
         <div className="ledger-staff-toolbar">
-          <div className="table-search ledger-table-search">
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="ค้นหา…"
-              autoComplete="off"
-              enterKeyHint="search"
-              aria-label="ค้นหาในตาราง"
-            />
-            {query.trim() ? (
-              <button
-                type="button"
-                className="ghost-btn table-search-clear"
-                onClick={() => setQuery("")}
-                aria-label="ล้างคำค้น"
-              >
-                ล้าง
-              </button>
-            ) : null}
+          <div className="ledger-search-stack">
+            {queries.map((q, i) => (
+              <div key={i} className="table-search ledger-table-search">
+                <input
+                  type="search"
+                  value={q}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setQueries((prev) => prev.map((p, j) => (j === i ? v : p)));
+                  }}
+                  placeholder={i === 0 ? "ค้นหา… (ชื่อ · ยอด · /10/ · 5/10)" : "และ…"}
+                  autoComplete="off"
+                  enterKeyHint="search"
+                  aria-label={`ค้นหาในตาราง ช่อง ${i + 1}`}
+                />
+                {q.trim() || i > 0 ? (
+                  <button
+                    type="button"
+                    className="ghost-btn table-search-clear"
+                    onClick={() =>
+                      setQueries((prev) =>
+                        i > 0 ? prev.filter((_, j) => j !== i) : prev.map((p, j) => (j === 0 ? "" : p)),
+                      )
+                    }
+                    aria-label={i > 0 ? "ลบช่องค้นหา" : "ล้างคำค้น"}
+                  >
+                    {i > 0 ? "ลบ" : "ล้าง"}
+                  </button>
+                ) : null}
+                {i === queries.length - 1 && queries.length < 4 ? (
+                  <button
+                    type="button"
+                    className="ghost-btn table-search-add"
+                    onClick={() => setQueries((prev) => [...prev, ""])}
+                    aria-label="เพิ่มช่องค้นหา"
+                    title="เพิ่มช่องค้นหา (ต้องตรงทุกช่อง)"
+                  >
+                    +
+                  </button>
+                ) : null}
+              </div>
+            ))}
           </div>
           <div className="ledger-balance-over-in" aria-label="คงเหลือบัญชีพนักงาน">
             <span>
@@ -503,6 +801,95 @@ function LedgerView() {
           </div>
         </div>
       ) : null}
+      {canOrganize && !loading ? (
+        <div className="ledger-organize" aria-label="จัดระเบียบประเภท (เจ้าของ)">
+          <LedgerRangePicker
+            active={range}
+            loading={rangeLoading}
+            onApply={(r) => void applyRange(r)}
+            onClear={clearRange}
+          />
+          {range ? (
+            <p className="muted ledger-range-meta">
+              ช่วง {range.label} · {rangeRows?.length ?? 0} รายการ (ไม่อัปเดตสด)
+            </p>
+          ) : null}
+          <div
+            className="bulk-status-toolbar ledger-bulk-compact"
+            role="group"
+            aria-label="จัดประเภทหลายรายการ"
+          >
+            <button
+              type="button"
+              className="ghost-btn bulk-status-chip"
+              disabled={bulkBusy || !selectableRows.length}
+              onClick={toggleSelectAllVisible}
+            >
+              {allVisibleSelected ? "ยกเลิกที่แสดง" : `เลือกที่แสดง (${selectableRows.length})`}
+            </button>
+            <button
+              type="button"
+              className="ghost-btn bulk-status-chip"
+              disabled={bulkBusy || !selectableRows.length}
+              onClick={selectNeedsReview}
+              title="เลือกแถวที่ผู้จัดเป็น เดา หรือ ว่าง"
+            >
+              เลือกเฉพาะ เดา/ว่าง
+            </button>
+            {someVisibleSelected ? (
+              <div className="bulk-status-actions" role="group" aria-label="ตั้งประเภทกลุ่ม">
+                <span className="bulk-status-count">เลือก {selectedRows.length} รายการ</span>
+                <button
+                  type="button"
+                  className="ghost-btn bulk-status-btn is-ai"
+                  disabled={bulkBusy}
+                  onClick={() => void onBulkAi()}
+                  title="ข้ามแถวที่จัดเอง"
+                >
+                  AI จัด
+                </button>
+                <select
+                  className="bulk-status-select"
+                  value=""
+                  disabled={bulkBusy}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v) void onBulkSetType(v);
+                  }}
+                  aria-label="ตั้งเป็นประเภท"
+                >
+                  <option value="">ตั้งเป็น ▾</option>
+                  {LEDGER_OUT_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {labelLedgerType(t)}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="ghost-btn bulk-status-clear"
+                  disabled={bulkBusy}
+                  onClick={() => setSelectedIds(new Set())}
+                >
+                  ล้าง
+                </button>
+              </div>
+            ) : (
+              <p className="muted bulk-status-hint">ติ๊กแถวเงินออก แล้วกด AI จัด หรือ ตั้งเป็น</p>
+            )}
+          </div>
+          {aiProgress ? (
+            <LedgerAiProgressLine
+              progress={aiProgress}
+              onCancel={() => {
+                aiCancelRef.current = true;
+              }}
+            />
+          ) : null}
+          {bulkMsg ? <p className="muted ledger-bulk-msg">{bulkMsg}</p> : null}
+        </div>
+      ) : null}
+
       {deferredQuery ? (
         <p className="muted table-search-meta ledger-table-search-meta">
           {searchLoading
@@ -511,8 +898,10 @@ function LedgerView() {
         </p>
       ) : null}
 
-      {!loading && entries.length === 0 ? (
+      {!loading && !range && entries.length === 0 ? (
         <p className="empty">ยังไม่มีรายการ — เริ่มจากบันทึกเงินออก</p>
+      ) : !loading && range && !rangeLoading && filteredEntries.length === 0 ? (
+        <p className="empty">{deferredQuery ? "ไม่พบรายการที่ตรงกับคำค้น" : "ไม่มีรายการในช่วงนี้"}</p>
       ) : !loading && deferredQuery && !searchLoading && filteredEntries.length === 0 ? (
         <p className="empty">ไม่พบรายการที่ตรงกับคำค้น</p>
       ) : !loading ? (
@@ -521,20 +910,68 @@ function LedgerView() {
             <table className="sheet-table sheet-table--dense">
               <thead>
                 <tr>
+                  {canOrganize ? (
+                    <th className="bulk-check-col" aria-label="เลือก">
+                      <input
+                        type="checkbox"
+                        checked={allVisibleSelected}
+                        ref={(el) => {
+                          if (el) el.indeterminate = someVisibleSelected && !allVisibleSelected;
+                        }}
+                        disabled={bulkBusy || !selectableRows.length}
+                        onChange={toggleSelectAllVisible}
+                        aria-label="เลือกทั้งหมดที่แสดง"
+                      />
+                    </th>
+                  ) : null}
                   <th className="col-date">วันที่</th>
                   <th className="col-desc">รายการ</th>
                   <th className="col-in">เข้า</th>
                   <th className="col-out">ออก</th>
                   <th className="col-vat" title="ภาษีซื้อ">VAT</th>
                   <th className="col-type">ประเภท</th>
+                  <th className="col-status" title="ผู้จัดประเภท: AI / จัดเอง / เดา / ว่าง">
+                    <span className="col-status-head">
+                      ผู้จัด
+                      {canOrganize ? (
+                        <button
+                          type="button"
+                          className="col-status-ai-btn"
+                          disabled={bulkBusy || !someVisibleSelected}
+                          onClick={() => void onBulkAi()}
+                          title="AI จัดแถวที่ติ๊กไว้ (ข้ามแถวที่จัดเอง)"
+                        >
+                          AI
+                        </button>
+                      ) : null}
+                    </span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {filteredEntries.map((row) => (
                   <tr
                     key={row.id}
-                    className={row.amountIn > 0 ? "row-in" : "row-out"}
+                    className={[
+                      row.amountIn > 0 ? "row-in" : "row-out",
+                      selectedIds.has(row.id) ? "is-bulk-selected" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
                   >
+                    {canOrganize ? (
+                      <td className="bulk-check-col">
+                        {row.amountOut > 0 ? (
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(row.id)}
+                            disabled={bulkBusy}
+                            onChange={() => toggleSelected(row.id)}
+                            aria-label={`เลือก ${row.description}`}
+                          />
+                        ) : null}
+                      </td>
+                    ) : null}
                     <td className="col-date">
                       <SheetDateCell ms={row.date} era="be" />
                     </td>
@@ -594,22 +1031,27 @@ function LedgerView() {
                       )}
                     </td>
                     <td
-                      className={
-                        isLedgerAssetType(row.type)
-                          ? "col-type is-asset-type"
-                          : "col-type"
-                      }
+                      className={[
+                        "col-type",
+                        ledgerTypeColorKey(row.type) ? `is-type-${ledgerTypeColorKey(row.type)}` : "",
+                        isLedgerAssetType(row.type) ? "is-asset-type" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
                     >
                       <span className="muted">
                         {row.type ? labelLedgerType(row.type) : "—"}
                       </span>
+                    </td>
+                    <td className="col-status">
+                      {row.amountOut > 0 ? <LedgerStatusBadge row={row} /> : null}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          {!deferredQuery ? (
+          {!deferredQuery && !range ? (
             <>
               <div ref={sentinelRef} className="load-more-sentinel" aria-hidden />
               {loadingMore ? <p className="empty">กำลังโหลดเพิ่ม...</p> : null}
@@ -631,8 +1073,21 @@ function LedgerView() {
           isOwner={isOwner}
           actorId={actorId}
           onClose={() => setEditing(null)}
-          onSaved={() => setEditing(null)}
+          onSaved={(patch) => {
+            const id = editing.id;
+            setEditing(null);
+            if (patch) patchRowsLocal(new Map([[id, patch]]));
+            void refreshRange();
+          }}
           onError={setError}
+        />
+      ) : null}
+
+      {closedConfirm ? (
+        <LedgerClosedMonthDialog
+          confirm={closedConfirm}
+          onCancel={() => closedConfirm.resolve(false)}
+          onConfirm={() => closedConfirm.resolve(true)}
         />
       ) : null}
 
@@ -796,7 +1251,7 @@ function EditEntryModal({
   isOwner: boolean;
   actorId: string;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (patch?: Partial<LedgerEntry>) => void;
   onError: (msg: string) => void;
 }) {
   const isIn = entry.amountIn > 0;
@@ -815,7 +1270,6 @@ function EditEntryModal({
   const [busy, setBusy] = useState(false);
   const [saveStage, setSaveStage] = useState<AiSaveStage | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [typeFreq, setTypeFreq] = useState<string[]>([]);
   const [hasVat, setHasVat] = useState(Boolean(!isIn && entry.hasVat));
   const [vatInputStr, setVatInputStr] = useState(() =>
     !isIn && entry.hasVat && (entry.vatInput || 0) > 0
@@ -842,8 +1296,11 @@ function EditEntryModal({
   const extractBusyRef = useRef(false);
   const descriptionRef = useRef(description);
   const amountRef = useRef(amount);
+  const ownerLockedRef = useRef(ownerLocked);
+  const aiTypeHintRef = useRef<BillTypeHint | null>(null);
   descriptionRef.current = description;
   amountRef.current = amount;
+  ownerLockedRef.current = ownerLocked;
   const [receiptUrls, setReceiptUrls] = useState<string[]>(() => getLedgerReceiptUrls(entry));
   const [billLines, setBillLines] = useState<LedgerBillLine[]>(() =>
     normalizeLedgerBillLines(entry.billLines),
@@ -873,11 +1330,9 @@ function EditEntryModal({
     void listRecentLedgerEntries(200)
       .then((rows) => {
         setSuggestions(frequentDescriptions(rows));
-        setTypeFreq(frequentTypes(rows));
       })
       .catch(() => {
         setSuggestions([]);
-        setTypeFreq([]);
       });
   }, []);
 
@@ -930,6 +1385,20 @@ function EditEntryModal({
       if (result.amountOut != null && !amountRef.current.trim()) {
         setAmount(String(result.amountOut));
       }
+      const hint = billTypeHintFromExtract(
+        result,
+        descriptionRef.current.trim() || result.description,
+      );
+      aiTypeHintRef.current = hint;
+      if (hint && !ownerLockedRef.current) {
+        setTypeMode("auto");
+        setForceReclassify(true);
+        setPreviewType(hint.type);
+        setPreviewReason(hint.reason);
+        setPreviewSource("ai");
+        setPreviewStatus("ready");
+        setPreviewError(null);
+      }
       setAiVatReason(result.vatReason || result.reason || "");
       if (result.hasVat && result.vatInput != null && result.vatInput > 0) {
         setHasVat(true);
@@ -969,6 +1438,7 @@ function EditEntryModal({
     setPreviewError(null);
     try {
       const result = await classifyLedgerTypeWithAi(text);
+      aiTypeHintRef.current = { type: result.type, reason: result.reason, description: text };
       setPreviewType(result.type);
       setPreviewReason(result.reason);
       setPreviewSource("ai");
@@ -997,6 +1467,11 @@ function EditEntryModal({
           type = typeMode;
           typeSource = "owner";
           typeAiReason = "";
+        } else if (shouldClassifyOnSave && usableBillTypeHint(aiTypeHintRef.current, description)) {
+          const hint = aiTypeHintRef.current!;
+          type = hint.type;
+          typeSource = "ai";
+          typeAiReason = hint.reason;
         } else if (shouldClassifyOnSave) {
           setSaveStage("sending");
           // yield so UI paints "sending" before classify
@@ -1020,6 +1495,23 @@ function EditEntryModal({
       const vatInputNum = parseVatInputStr(vatInputStr);
       if (!isIn && hasVat && vatInputNum <= 0) {
         throw new Error("มี VAT — ใส่ยอดภาษีซื้อจากบิล หรือกดใช้ประมาณ ×7/107");
+      }
+
+      const prevType = (entry.type || "").trim();
+      const typeChanged = !isIn && type.trim() !== prevType;
+      let closedMonths: string[] = [];
+      if (typeChanged) {
+        closedMonths = await getFiledMonths([ledgerMonthKey(entry.date)]);
+        if (
+          closedMonths.length &&
+          !window.confirm(
+            `รายการนี้อยู่ในงบ ${formatThaiMonthKey(closedMonths[0]!)} ที่ยื่น VAT แล้ว\n` +
+              `เปลี่ยนประเภท «${prevType ? labelLedgerType(prevType) : "—"}» → «${labelLedgerType(type)}» ` +
+              "จะทำให้ยอดต้นทุน/ค่าใช้จ่ายของเดือนนั้นเปลี่ยน (ภาษีซื้อไม่เปลี่ยน)\n\nยืนยันแก้งบที่ปิดแล้ว?",
+          )
+        ) {
+          return;
+        }
       }
 
       let nextBillLines = billLines;
@@ -1072,7 +1564,33 @@ function EditEntryModal({
             }),
       });
       if (!isIn) setBillLines(nextBillLines);
-      onSaved();
+      if (typeChanged) {
+        await appendLedgerAudit({
+          action: "edit_type",
+          actor: actorId,
+          closedMonthOverride: closedMonths.length > 0,
+          closedMonths,
+          summary: `แก้ประเภท ${description.trim()}`,
+          items: [
+            {
+              id: entry.id,
+              monthKey: ledgerMonthKey(entry.date),
+              beforeType: prevType,
+              beforeSource: String(entry.typeSource || ""),
+              afterType: type,
+              afterSource: String(typeSource || ""),
+            },
+          ],
+        });
+      }
+      onSaved({
+        description: description.trim(),
+        amountIn: isIn ? value : 0,
+        amountOut: isIn ? 0 : value,
+        type,
+        typeSource,
+        typeAiReason,
+      });
     } catch (err) {
       onError((err as Error).message || "บันทึกไม่สำเร็จ");
     } finally {
@@ -1281,10 +1799,13 @@ function EditEntryModal({
                 aiError={previewError}
                 ownerLocked={ownerLocked}
                 typeMode={typeMode}
-                frequent={typeFreq}
                 onTypeModeChange={(value) => {
+                  if (value === "auto") {
+                    void runOwnerPreview();
+                    return;
+                  }
                   setTypeMode(value);
-                  setOwnerLocked(value !== "auto");
+                  setOwnerLocked(true);
                 }}
                 onReclassify={() => void runOwnerPreview()}
               />

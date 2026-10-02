@@ -116,15 +116,57 @@ function gpPctOfSales(fee: number, sales: number): string | null {
   return `${label}%`;
 }
 
-function GpPctHint({ fee, sales }: { fee: number; sales: number }) {
+function GpPctHint({
+  fee,
+  sales,
+  what = "GP",
+}: {
+  fee: number;
+  sales: number;
+  what?: string;
+}) {
   const label = gpPctOfSales(fee, sales);
   if (!label) return null;
   return (
     <span
       className="muted vat-gp-pct-hint"
-      title={`แพลตฯ คิด GP ≈ ${label} ของยอดขายแอพ`}
+      title={`แพลตฯ คิด ${what} ≈ ${label} ของยอดขายแอพ`}
     >
       {label}
+    </span>
+  );
+}
+
+/** คชจ.อื่นๆ ที่แพลตฯ หักนอกเหนือ GP — ต้องมีทั้งยอดขายและยอดโอนถึงจะคิดได้ */
+function otherFeeOf(sales: number, transfer: number, fee: number): number | null {
+  if (!(sales > 0) || !(transfer > 0)) return null;
+  return Math.round((sales - transfer - (fee || 0)) * 100) / 100;
+}
+
+function OtherFeeCell({ sales, transfer, fee }: { sales: number; transfer: number; fee: number }) {
+  const other = otherFeeOf(sales, transfer, fee);
+  if (other == null) return <span className="muted">—</span>;
+  return (
+    <span className="vat-gp-cell">
+      {fmt(other)}
+      <GpPctHint fee={other} sales={sales} what="คชจ.อื่นๆ" />
+    </span>
+  );
+}
+
+function TransferPctHint({ transfer, sales }: { transfer: number; sales: number }) {
+  if (!(sales > 0) || !(transfer > 0) || !Number.isFinite(transfer) || !Number.isFinite(sales)) {
+    return null;
+  }
+  const pct = (transfer / sales) * 100;
+  const label = `${pct.toFixed(1)}%`;
+  const lost = `${pct < 100 ? "−" : "+"}${Math.abs(100 - pct).toFixed(1)}%`;
+  return (
+    <span
+      className="muted vat-gp-pct-hint"
+      title={`ยอดโอนถึงร้าน ≈ ${label} ของยอดขายแอพ · แพลตฯ หักรวม ${lost}`}
+    >
+      {label} ({lost})
     </span>
   );
 }
@@ -1236,7 +1278,7 @@ export function VatMonthBooks({ actor }: Props) {
           ยอดเดลิเวอรี่ — {formatThaiMonthKey(month)}
         </h2>
         <div className="sheet-wrap vat-month-slim-wrap">
-          <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
+          <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table vat-delivery-compact">
             <thead>
               <tr>
                 <th className="col-seg">ช่องทาง</th>
@@ -1254,6 +1296,11 @@ export function VatMonthBooks({ actor }: Props) {
                   label="คชจ.GP"
                   role={DELIVERY_COL_ROLE.gpFee}
                   info={DELIVERY_COL_INFO.gpFee}
+                />
+                <VatColHead
+                  label="คชจ.อื่นๆ"
+                  role={DELIVERY_COL_ROLE.otherFee}
+                  info={DELIVERY_COL_INFO.otherFee}
                 />
                 <VatColHead
                   label="VAT-ซื้อ"
@@ -1275,12 +1322,18 @@ export function VatMonthBooks({ actor }: Props) {
                     />
                   </td>
                   <td className="col-num col-input">
-                    <MoneyCell
-                      value={moneyFieldValue(draft.transfer[k])}
-                      locked={locked}
-                      ariaLabel={`ยอดโอน ${MONTH_CHANNEL_SHORT[k]}`}
-                      onChange={(v) => setTransferField(k, v)}
-                    />
+                    <span className="vat-gp-cell">
+                      <MoneyCell
+                        value={moneyFieldValue(draft.transfer[k])}
+                        locked={locked}
+                        ariaLabel={`ยอดโอน ${MONTH_CHANNEL_SHORT[k]}`}
+                        onChange={(v) => setTransferField(k, v)}
+                      />
+                      <TransferPctHint
+                        transfer={draft.transfer[k]}
+                        sales={draft.sales[k]}
+                      />
+                    </span>
                   </td>
                   <td className="col-num col-input">
                     <span className="vat-gp-cell">
@@ -1295,6 +1348,13 @@ export function VatMonthBooks({ actor }: Props) {
                         sales={draft.sales[k]}
                       />
                     </span>
+                  </td>
+                  <td className="col-num">
+                    <OtherFeeCell
+                      sales={draft.sales[k]}
+                      transfer={draft.transfer[k]}
+                      fee={draft.gpFee[k]}
+                    />
                   </td>
                   <td className="col-num col-input">
                     <MoneyCell
@@ -1312,7 +1372,13 @@ export function VatMonthBooks({ actor }: Props) {
                   {fmt(monthSources.totals.sales)}
                 </td>
                 <td className="col-num col-net">
-                  {fmt(monthSources.totals.transfer)}
+                  <span className="vat-gp-cell">
+                    {fmt(monthSources.totals.transfer)}
+                    <TransferPctHint
+                      transfer={monthSources.totals.transfer}
+                      sales={monthSources.totals.sales}
+                    />
+                  </span>
                 </td>
                 <td className="col-num col-net">
                   <span className="vat-gp-cell">
@@ -1322,6 +1388,13 @@ export function VatMonthBooks({ actor }: Props) {
                       sales={monthSources.totals.sales}
                     />
                   </span>
+                </td>
+                <td className="col-num col-net">
+                  <OtherFeeCell
+                    sales={monthSources.totals.sales}
+                    transfer={monthSources.totals.transfer}
+                    fee={monthSources.totals.fee}
+                  />
                 </td>
                 <td className="col-num col-net">
                   {fmt(monthSources.totals.gpVat)}

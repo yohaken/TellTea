@@ -9,14 +9,9 @@ import {
   saveLedgerAiSettings,
   type LedgerAiSettings,
 } from "@/lib/ai-settings";
-import { classifyLedgerTypeWithAi, reclassifyLedgerMonthWithAi } from "@/lib/ledger-ai";
-import type { ReclassifyMonthProgress } from "@/lib/ledger-ai";
+import { classifyLedgerTypeWithAi } from "@/lib/ledger-ai";
 import { Sparkles, X } from "lucide-react";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
-
-/** เดือนที่เปิดให้จัดประเภทย้อนหลังด้วย AI (ตามที่เจ้าของขอ) */
-const BACKFILL_YEAR = 2026;
-const BACKFILL_MONTH = 7;
 
 type Props = {
   actorId: string;
@@ -34,8 +29,6 @@ export function LedgerAiSettingsPanel({ actorId }: Props) {
   const [apiKeyDraft, setApiKeyDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [testing, setTesting] = useState(false);
-  const [backfilling, setBackfilling] = useState(false);
-  const [backfillProgress, setBackfillProgress] = useState<ReclassifyMonthProgress | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -101,31 +94,6 @@ export function LedgerAiSettingsPanel({ actorId }: Props) {
     }
   }
 
-  async function onBackfillJuly() {
-    const ok = window.confirm(
-      `จัดประเภทเงินออกใหม่ด้วย AI ทั้งเดือน ก.ค. ${BACKFILL_YEAR}?\n\n` +
-        "ข้ามรายการที่คุณล็อกประเภทเองไว้ · อาจใช้เวลาสักครู่",
-    );
-    if (!ok) return;
-    setBackfilling(true);
-    setMsg(null);
-    setErr(null);
-    setBackfillProgress(null);
-    try {
-      const result = await reclassifyLedgerMonthWithAi(BACKFILL_YEAR, BACKFILL_MONTH, {
-        onProgress: setBackfillProgress,
-      });
-      setMsg(
-        `ก.ค. ${BACKFILL_YEAR} เสร็จ — อัปเดต ${result.updated} · เหมือนเดิม ${result.unchanged} · ` +
-          `ข้ามเจ้าของ ${result.skippedOwner} · ล้มเหลว ${result.failed}`,
-      );
-    } catch (e) {
-      setErr((e as Error).message || "จัดประเภทย้อนหลังไม่สำเร็จ");
-    } finally {
-      setBackfilling(false);
-    }
-  }
-
   return (
     <>
       <button
@@ -156,7 +124,7 @@ export function LedgerAiSettingsPanel({ actorId }: Props) {
                 type="button"
                 className="ghost-btn icon-btn"
                 aria-label="ปิด"
-                disabled={busy || backfilling}
+                disabled={busy}
                 onClick={() => setOpen(false)}
               >
                 <X size={18} />
@@ -215,13 +183,13 @@ export function LedgerAiSettingsPanel({ actorId }: Props) {
               </div>
 
               <div className="ledger-ai-settings-actions">
-                <button type="submit" className="primary-btn" disabled={busy || !loaded || backfilling}>
+                <button type="submit" className="primary-btn" disabled={busy || !loaded}>
                   {busy ? "กำลังบันทึก..." : "บันทึก"}
                 </button>
                 <button
                   type="button"
                   className="ghost-btn"
-                  disabled={testing || !loaded || backfilling}
+                  disabled={testing || !loaded}
                   onClick={() => void onTest()}
                 >
                   {testing ? "กำลังทดสอบ..." : "ทดสอบ AI"}
@@ -230,23 +198,9 @@ export function LedgerAiSettingsPanel({ actorId }: Props) {
 
               <div className="ledger-ai-backfill">
                 <p className="muted ledger-ai-settings-hint">
-                  รายการเก่าก่อนมี AI อาจติดประเภทผิด — จัดใหม่เฉพาะ ก.ค. {BACKFILL_YEAR}
+                  จัดย้อนหลัง: เลือกเดือน/ช่วงเหนือตาราง → «เลือกเฉพาะ เดา/ว่าง» → ปุ่ม AI จัด
+                  (ข้ามแถวที่จัดเอง · ถามก่อนถ้าเป็นงบที่ยื่น VAT แล้ว)
                 </p>
-                <button
-                  type="button"
-                  className="ghost-btn"
-                  disabled={!loaded || backfilling || testing || busy}
-                  onClick={() => void onBackfillJuly()}
-                >
-                  {backfilling
-                    ? `กำลังจัด ก.ค.… ${backfillProgress ? `${backfillProgress.done}/${backfillProgress.total}` : ""}`
-                    : `จัดประเภทใหม่ด้วย AI — ก.ค. ${BACKFILL_YEAR}`}
-                </button>
-                {backfilling && backfillProgress?.currentDescription ? (
-                  <p className="muted" style={{ margin: "0.35rem 0 0", fontSize: "0.75rem", textAlign: "left" }}>
-                    {backfillProgress.currentDescription}
-                  </p>
-                ) : null}
               </div>
 
               {msg ? <p className="ledger-ai-settings-msg">{msg}</p> : null}

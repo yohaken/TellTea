@@ -40,14 +40,20 @@ const EXTRACT_SYSTEM_PROMPT = `คุณเป็นผู้ช่วยอ่�
 - ถ้า docKind=bank_slip → hasVat=false, vatInput=null, vatBase=null เสมอ (อย่าเดา VAT จากยอดโอน)
 - ถ้า docKind=utility_bill → type=sga เสมอ · hasVat=false (ใบแจ้งค่าไฟไทยทั่วไปไม่ใช่ใบกำกับ VAT ซื้อ) · description สั้นๆ เช่น "ค่าไฟ" "ค่าน้ำ"
 - date = วันที่บนเอกสารเป็น **ค.ศ. YYYY-MM-DD เท่านั้น** (เช่น 2025-07-22) — ถ้าบิลเป็นพ.ศ. ให้ลบ 543 ก่อน ห้ามส่งปีพ.ศ. ถ้าไม่ชัดให้ ""
-- description = สรุปสั้น ชัด (เช่น "ท็อปเวิลด์" "แม็คโคร" "ค่าไฟ" "โอนค่าของ")
+- description = ชื่อร้านที่คนเรียก + สินค้าหลัก 1–3 อย่าง (ไม่เกิน ~40 ตัวอักษร) ตัวอย่างที่ถูก:
+  "ท็อปเวิลด์ แป้งสาลี นมข้นหวาน มิตรผลน้ำเชื่อม" · "แม็คโคร ซื้อวัตถุดิบและกระดาษความร้อน" · "ค่าน้ำแข็ง 8ถุง" · "แก้ว 22oz 5ลัง" · "ค่าไฟ"
+  - ชื่อร้านแบบสั้น: ท็อปเวิลด์ · แม็คโคร · ห้ามใส่ บริษัท / จำกัด / (2014) / ใบส่งสินค้า / บิลเงินสด / ใบกำกับภาษี
+  - ไม่มีชื่อร้านชัด → สินค้าหลัก + จำนวนที่เห็นบนบิล (เช่น "ค่าน้ำแข็ง 8ถุง")
+  - สินค้าหลายอย่าง → เลือก 1–3 อย่างที่ยอดสูง/สำคัญ ห้ามไล่รายการยาวในวงเล็บ
+  - สลิปโอนอย่างเดียว → "โอนให้ <ชื่อผู้รับ>"
 - amountOut = ยอดบนเอกสารนั้น (ตัวเลข ไม่มี comma) ถ้าไม่ชัดให้ null
   - **utility_bill (สำคัญมาก):** amountOut = ยอดที่ต้องชำระรอบนี้ / จำนวนเงินที่เรียกเก็บ เท่านั้น
     ใบแจ้งค่าไฟ กฟน./กฟภ. มักมี 2 ส่วนในแผ่นเดียว: บน=ใบแจ้งเรียกเก็บ · ล่าง=ใบเสร็จรับเงิน/ใบกำกับภาษีของรอบก่อน — **ใช้ยอดส่วนบนเท่านั้น**
     ห้ามใช้ยอดจากส่วน "ใบเสร็จรับเงิน" · "ใบกำกับภาษี" · ยอดชำระรอบก่อน · ยอดที่จ่ายไปแล้ว · ยอดหน่วย kWh · ยอดค้างย่อย
     หาป้าย (เรียงความสำคัญ): "รวมเงินที่ต้องชำระทั้งสิ้น" · "จำนวนเงินที่ต้องชำระ" · "ยอดเงินที่ต้องชำระ" · "รวมเงินที่เรียกเก็บ" · "ยอดเรียกเก็บ" · Amount (บนใบแจ้ง ไม่ใช่บนใบเสร็จ)
   - tax_invoice / bank_slip: ยอดรวมที่จ่าย/โอนตามเอกสารนั้น
-- type: cogs=วัตถุดิบ/บรรจุภัณฑ์/ค่าขนส่งวัตถุดิบ · sga=ค่าแรง/ค่าไฟ/ค่าน้ำ/ค่าเช่า/ซ่อม · asset=เครื่องจักร · อื่นๆ=ไม่ชัด
+- type: cogs=วัตถุดิบ/บรรจุภัณฑ์/น้ำแข็ง/ค่าขนส่งวัตถุดิบ · sga=ค่าแรง/ค่าไฟ/ค่าน้ำ/ค่าเช่า/ค่าซ่อม/ของใช้ทำความสะอาด · asset=ซื้อเครื่องจักร/อุปกรณ์ใหม่ใช้หลายปี (ค่าซ่อมไม่ใช่ asset) · อื่นๆ=ไม่ชัด
+  - ดูรายการสินค้าบนบิลเป็นหลัก · สลิปโอนที่ไม่เห็นว่าซื้ออะไร → type=อื่นๆ (ระบบจะจัดจากชื่อรายการแทน)
 - **VAT — อ่านตัวเลขที่พิมพ์บนใบกำกับเท่านั้น ห้ามคำนวณ ×7/107 จากยอดรวม**
   (บางรายการสินค้าไม่มี VAT การคูณยอดรวมจะผิด)
   - โฟกัสท้ายบิลใต้ยอดรวมตัวหนา: หา "ภาษีมูลค่าเพิ่ม" / "ภาษีมูลค่าเพิ่ม 7%" / "VAT" / "VAT 7%"
@@ -248,7 +254,7 @@ async function postGeminiGenerate({ apiKey, model, imageParts, systemText, userT
 
   const generationConfig = {
     temperature: 0.1,
-    maxOutputTokens: 2048,
+    maxOutputTokens: 4096,
     responseMimeType: "application/json",
   };
   if (richVision) {
@@ -272,12 +278,25 @@ async function postGeminiGenerate({ apiKey, model, imageParts, systemText, userT
   return { res, body };
 }
 
-async function callGeminiJson({
+class BadAnswerError extends Error {}
+
+async function callGeminiJson(args) {
+  try {
+    return await callGeminiJsonOnce(args);
+  } catch (err) {
+    if (!(err instanceof BadAnswerError)) throw err;
+    // คำขอเดิมซ้ำมักพังแบบเดิม — รอบสองใช้ค่าภาพปกติ
+    return callGeminiJsonOnce({ ...args, richVision: false });
+  }
+}
+
+async function callGeminiJsonOnce({
   apiKey,
   model,
   imageParts,
   systemText,
   userText,
+  richVision = true,
 }) {
   let { res, body } = await postGeminiGenerate({
     apiKey,
@@ -285,7 +304,7 @@ async function callGeminiJson({
     imageParts,
     systemText,
     userText,
-    richVision: true,
+    richVision,
   });
 
   if (!res.ok) {
@@ -316,7 +335,12 @@ async function callGeminiJson({
     body?.candidates?.[0]?.content?.parts?.map((p) => p.text || "").join("") || "";
   const parsed = extractJsonObject(text);
   if (!parsed || typeof parsed !== "object") {
-    throw new Error("AI ตอบรูปแบบไม่ถูกต้อง");
+    console.warn("extractOwnerBook bad answer", {
+      finishReason: body?.candidates?.[0]?.finishReason,
+      length: text.length,
+      tail: text.slice(-300),
+    });
+    throw new BadAnswerError("AI ตอบรูปแบบไม่ถูกต้อง");
   }
   return parsed;
 }
@@ -440,9 +464,7 @@ async function extractOneImage({ apiKey, model, imagePart, businessContext, imag
   return {
     docKind,
     date: normalizeDate(parsed.date),
-    description: String(parsed.description || "")
-      .trim()
-      .slice(0, 120),
+    description: cleanBillDescription(parsed.description),
     amountOut,
     type,
     note: String(parsed.note || "")
@@ -453,6 +475,16 @@ async function extractOneImage({ apiKey, model, imagePart, businessContext, imag
       .slice(0, 80),
     ...vat,
   };
+}
+
+/** ตัดคำนิติบุคคล/หัวเอกสารที่ AI ชอบติดมา — ชื่อรายการใช้ชื่อร้านที่คนเรียก */
+function cleanBillDescription(raw) {
+  const cleaned = String(raw || "")
+    .replace(/บริษัท|\(มหาชน\)|จำกัด|\(\s*\d{4}\s*\)/g, " ")
+    .replace(/^((ใบส่งสินค้า|บิลเงินสด|ใบกำกับภาษี(อย่างย่อ)?|ใบเสร็จรับเงิน)\s*[/·:-]?\s*)+/, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  return (cleaned || String(raw || "").trim()).slice(0, 120);
 }
 
 async function callGeminiExtract({ apiKey, model, imageParts, businessContext }) {
@@ -556,4 +588,5 @@ exports.extractOwnerBookFromReceipt = functions
 // Test hooks (no firebase)
 exports._mergeExtractResults = mergeExtractResults;
 exports._normalizeDocKind = normalizeDocKind;
+exports._cleanBillDescription = cleanBillDescription;
 exports.EXTRACT_MAX_IMAGES = EXTRACT_MAX_IMAGES;

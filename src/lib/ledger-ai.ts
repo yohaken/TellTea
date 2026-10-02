@@ -1,7 +1,8 @@
 import { httpsCallable } from "firebase/functions";
 import { getFirebaseFunctions } from "./firebase";
-import { guessTypeFromDescription, canonicalLedgerType } from "./ledger-labels";
-import { listLedgerEntriesInMonth, updateLedgerEntry } from "./ledger";
+import { guessTypeFromDescriptionStrict, canonicalLedgerType } from "./ledger-labels";
+import { updateLedgerEntry } from "./ledger";
+import type { LedgerEntry } from "./types";
 
 export type LedgerTypeSource = "ai" | "owner" | "heuristic" | "legacy";
 
@@ -45,11 +46,17 @@ export async function classifyLedgerTypeWithAi(
     { description: string; model?: string; imageUrls?: string[] },
     ClassifyLedgerTypeResult
   >(getFirebaseFunctions(), "classifyLedgerType");
-  const result = await fn({
-    description: text,
-    ...(opts?.model ? { model: opts.model } : {}),
-    ...(imageUrls.length ? { imageUrls } : {}),
-  });
+  let result: Awaited<ReturnType<typeof fn>>;
+  try {
+    result = await fn({
+      description: text,
+      ...(opts?.model ? { model: opts.model } : {}),
+      ...(imageUrls.length ? { imageUrls } : {}),
+    });
+  } catch (err) {
+    console.warn("[classifyLedgerType] AI failed — caller falls back to heuristic", err);
+    throw err;
+  }
   const data = result.data;
   const type = normalizeLedgerOutType(data?.type || "");
   if (!ALLOWED.has(type) && type !== "อื่นๆ") {
@@ -64,12 +71,72 @@ export async function classifyLedgerTypeWithAi(
   };
 }
 
+/** ประเภทที่ได้มาพร้อมการอ่านบิล — ใช้แทนการเรียก AI จัดประเภทซ้ำตอนบันทึก */
+export type BillTypeHint = { type: string; reason: string; description: string };
+
+/**
+ * สลิปโอนอย่างเดียวไม่บอกว่าซื้ออะไร และ «อื่นๆ» = AI ไม่แน่ใจ → ไม่ใช้ (ให้จัดจากชื่อรายการแทน)
+ */
+export function billTypeHintFromExtract(
+  result: { type: string; reason: string; docKind: string; slipOnly: boolean },
+  description: string,
+): BillTypeHint | null {
+  if (result.slipOnly || result.docKind === "bank_slip") return null;
+  const type = normalizeLedgerOutType(result.type);
+  if (!ALLOWED.has(type) || type === "อื่นๆ") return null;
+  const desc = description.trim();
+  if (!desc) return null;
+  return { type, reason: result.reason || "อ่านจากรูปใบเสร็จ", description: desc };
+}
+
+/**
+ * ค่าช่องหลังอ่านบิล: บิลเป็นค่าเริ่มต้น (อ่านรอบใหม่/เพิ่มรูปก็เติมใหม่)
+ * ยกเว้นผู้ใช้พิมพ์เองแล้ว · onlyIfEmpty = แก้รายการเดิม หรือมีแต่รูปสินค้า (ไม่ใช่บิล) — เติมเฉพาะช่องว่าง
+ */
+export function billFieldValue(
+  current: string,
+  fromBill: string | number | null | undefined,
+  opts: { typedByUser: boolean; onlyIfEmpty?: boolean },
+): string {
+  const bill = fromBill == null ? "" : String(fromBill).trim();
+  if (!bill) return current;
+  if (!current.trim()) return bill;
+  if (opts.onlyIfEmpty || opts.typedByUser) return current;
+  return bill;
+}
+
+/**
+ * ชื่อจากเอกสารทับชื่อเดิมได้เฉพาะใบเสร็จ/ใบกำกับ/ใบแจ้งค่าน้ำไฟ
+ * สลิป · รูปสินค้า · อื่นๆ = AI เดาจากภาพ (เคยอ่านมันเป็นกล้วย) → เติมเฉพาะช่องว่าง
+ */
+export function isBillNameSource(result: { docKind: string; slipOnly: boolean; goodsOnly: boolean }) {
+  if (result.slipOnly || result.goodsOnly) return false;
+  return result.docKind === "tax_invoice" || result.docKind === "utility_bill";
+}
+
+/** ใช้ได้เฉพาะเมื่อชื่อรายการยังเหมือนตอนอ่านบิล */
+export function usableBillTypeHint(
+  hint: BillTypeHint | null,
+  description: string,
+): BillTypeHint | null {
+  return hint && hint.description === description.trim() ? hint : null;
+}
+
 /** Fallback เมื่อ AI ใช้ไม่ได้ — keyword heuristic เดิม */
 export function classifyLedgerTypeHeuristic(description: string) {
-  const type = normalizeLedgerOutType(guessTypeFromDescription(description));
+  const matched = guessTypeFromDescriptionStrict(description);
+  const type = matched ? normalizeLedgerOutType(matched) : "";
+  if (type && ALLOWED.has(type)) {
+    return {
+      type,
+      reason: "เดาจากชื่อรายการ (AI ไม่ตอบ) — รอ AI/เจ้าของจัดใหม่",
+      source: "heuristic" as const,
+    };
+  }
+  // ต้องมี type ไว้ก่อนเพื่อให้ P&L นับยอด — ป้าย «เดา» บอกให้จัดใหม่
   return {
-    type: ALLOWED.has(type) || type === "อื่นๆ" ? type : "cogs",
-    reason: "เดาจากชื่อรายการ (สำรอง)",
+    type: "cogs",
+    reason: "เดาไม่ได้ (AI ไม่ตอบ) — ตั้งต้นทุนไว้ชั่วคราว รอ AI/เจ้าของจัดใหม่",
     source: "heuristic" as const,
   };
 }
@@ -85,19 +152,29 @@ export type ReclassifyMonthProgress = {
   currentDescription?: string;
 };
 
+export type LedgerTypeChange = {
+  id: string;
+  date: number;
+  beforeType: string;
+  beforeSource: string;
+  afterType: string;
+  reason: string;
+};
+
 /**
- * จัดประเภทเงินออกใหม่ด้วย AI ทั้งเดือน — ข้ามรายการที่เจ้าของล็อกไว้
+ * จัดประเภทเงินออกด้วย AI เฉพาะแถวที่ส่งมา — ข้ามแถวที่เจ้าของจัดเอง และแถวเงินเข้า
+ * คืนรายการที่เปลี่ยนไว้ทำ audit
  */
-export async function reclassifyLedgerMonthWithAi(
-  year: number,
-  month: number,
+export async function reclassifyLedgerRowsWithAi(
+  rows: Pick<LedgerEntry, "id" | "date" | "description" | "amountOut" | "type" | "typeSource" | "typeAiReason">[],
   opts?: {
     onProgress?: (p: ReclassifyMonthProgress) => void;
-    /** ms ระหว่างแต่ละรายการ ลด rate-limit */
+    /** เรียกทันทีหลังบันทึกแต่ละแถว — ให้ UI อัปเดตเซลล์โดยไม่รอจบทั้งชุด */
+    onRowChanged?: (change: LedgerTypeChange) => void;
+    shouldCancel?: () => boolean;
     delayMs?: number;
   },
-): Promise<ReclassifyMonthProgress> {
-  const rows = await listLedgerEntriesInMonth(year, month);
+): Promise<{ progress: ReclassifyMonthProgress; changes: LedgerTypeChange[]; cancelled: boolean }> {
   const outs = rows.filter((r) => (Number(r.amountOut) || 0) > 0 && (r.description || "").trim());
   const progress: ReclassifyMonthProgress = {
     total: outs.length,
@@ -108,14 +185,22 @@ export async function reclassifyLedgerMonthWithAi(
     unchanged: 0,
     failed: 0,
   };
+  const changes: LedgerTypeChange[] = [];
+  const delayMs = opts?.delayMs ?? 350;
+  let cancelled = false;
   opts?.onProgress?.({ ...progress });
 
-  const delayMs = opts?.delayMs ?? 350;
   for (const row of outs) {
+    if (opts?.shouldCancel?.()) {
+      cancelled = true;
+      break;
+    }
     progress.currentDescription = row.description;
     opts?.onProgress?.({ ...progress });
 
-    if (resolveStoredTypeSource(row.typeSource) === "owner") {
+    const prevSource = resolveStoredTypeSource(row.typeSource);
+    // เงินเดือนจากหน้า payroll ตั้งประเภทเองแล้ว — นับรวมกับที่เจ้าของจัด
+    if (prevSource === "owner" || String(row.typeSource || "").trim().startsWith("payroll")) {
       progress.skippedOwner += 1;
       progress.done += 1;
       opts?.onProgress?.({ ...progress });
@@ -125,11 +210,7 @@ export async function reclassifyLedgerMonthWithAi(
     try {
       const result = await classifyLedgerTypeWithAi(row.description);
       const prevType = normalizeLedgerOutType(row.type || "");
-      if (
-        prevType === result.type &&
-        resolveStoredTypeSource(row.typeSource) === "ai" &&
-        (row.typeAiReason || "") === result.reason
-      ) {
+      if (prevType === result.type && prevSource === "ai" && (row.typeAiReason || "") === result.reason) {
         progress.unchanged += 1;
       } else {
         await updateLedgerEntry(row.id, {
@@ -137,6 +218,16 @@ export async function reclassifyLedgerMonthWithAi(
           typeSource: "ai",
           typeAiReason: result.reason,
         });
+        const change: LedgerTypeChange = {
+          id: row.id,
+          date: row.date,
+          beforeType: row.type || "",
+          beforeSource: String(row.typeSource || ""),
+          afterType: result.type,
+          reason: result.reason,
+        };
+        changes.push(change);
+        opts?.onRowChanged?.(change);
         progress.updated += 1;
       }
     } catch {
@@ -145,12 +236,10 @@ export async function reclassifyLedgerMonthWithAi(
 
     progress.done += 1;
     opts?.onProgress?.({ ...progress });
-    if (delayMs > 0) {
-      await new Promise((r) => setTimeout(r, delayMs));
-    }
+    if (delayMs > 0) await new Promise((r) => setTimeout(r, delayMs));
   }
 
   progress.currentDescription = undefined;
   opts?.onProgress?.({ ...progress });
-  return progress;
+  return { progress, changes, cancelled };
 }

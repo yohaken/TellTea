@@ -12,8 +12,13 @@ import {
   VatFirstFormSummary,
 } from "@/components/VatFirstSteps";
 import {
+  billFieldValue,
+  billTypeHintFromExtract,
   classifyLedgerTypeHeuristic,
+  isBillNameSource,
   classifyLedgerTypeWithAi,
+  usableBillTypeHint,
+  type BillTypeHint,
   type LedgerTypeSource,
 } from "@/lib/ledger-ai";
 import {
@@ -37,7 +42,6 @@ import {
   evidenceDocPolicy,
   evidenceReadyToSave,
 } from "@/lib/ledger-evidence-policy";
-import { frequentTypes } from "@/lib/ledger-labels";
 import {
   parseVatInputStr,
   type VatSource,
@@ -84,7 +88,6 @@ export function LedgerAddOutModal({
   const [busy, setBusy] = useState(false);
   const [saveStage, setSaveStage] = useState<AiSaveStage | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [typeFreq, setTypeFreq] = useState<string[]>([]);
   const [receiptUrls, setReceiptUrls] = useState<string[]>([]);
   const [previewType, setPreviewType] = useState("");
   const [previewReason, setPreviewReason] = useState("");
@@ -112,6 +115,12 @@ export function LedgerAddOutModal({
   const lastExtractKeyRef = useRef("");
   const extractBusyRef = useRef(false);
   const billLinesGenRef = useRef(0);
+  const aiTypeHintRef = useRef<BillTypeHint | null>(null);
+  /** ผู้ใช้พิมพ์/เลือกเอง — อ่านบิลรอบใหม่ห้ามทับ (ไม่งั้นบิลเติมให้ทุกรอบ) */
+  const descTypedRef = useRef(false);
+  const amountTypedRef = useRef(false);
+  const ownerLockedRef = useRef(ownerLocked);
+  ownerLockedRef.current = ownerLocked;
   const descriptionRef = useRef(description);
   const amountRef = useRef(amount);
   const vatFirstPhaseRef = useRef(vatFirstPhase);
@@ -136,11 +145,9 @@ export function LedgerAddOutModal({
     void listRecentLedgerEntries(200)
       .then((rows) => {
         setSuggestions(frequentDescriptions(rows));
-        setTypeFreq(frequentTypes(rows));
       })
       .catch(() => {
         setSuggestions([]);
-        setTypeFreq([]);
       });
   }, []);
 
@@ -236,18 +243,23 @@ export function LedgerAddOutModal({
     try {
       const result = await extractOwnerBookFromReceipt(refs);
       lastExtractKeyRef.current = key;
-      if (result.description && !descriptionRef.current.trim()) {
-        setDescription(result.description);
-      }
-      if (result.amountOut != null && !amountRef.current.trim()) {
-        setAmount(String(result.amountOut));
-      }
-      if (!ownerLocked && result.type) {
+      const nextDescription = billFieldValue(descriptionRef.current, result.description, {
+        typedByUser: descTypedRef.current,
+        onlyIfEmpty: !isBillNameSource(result),
+      });
+      if (nextDescription !== descriptionRef.current) setDescription(nextDescription);
+      const nextAmount = billFieldValue(amountRef.current, result.amountOut, {
+        typedByUser: amountTypedRef.current,
+      });
+      if (nextAmount !== amountRef.current) setAmount(nextAmount);
+      const hint = billTypeHintFromExtract(result, nextDescription);
+      aiTypeHintRef.current = hint;
+      if (!ownerLockedRef.current) {
         setTypeMode("auto");
-        setPreviewType(result.type);
-        setPreviewReason(result.reason || "อ่านจากรูปใบเสร็จ");
-        setPreviewSource("ai");
-        setPreviewStatus("ready");
+        setPreviewType(hint?.type || "");
+        setPreviewReason(hint?.reason || "จะจัดจากชื่อรายการตอนบันทึก");
+        setPreviewSource(hint ? "ai" : "heuristic");
+        setPreviewStatus(hint ? "ready" : "idle");
       }
       setAiVatReason(result.vatReason || result.reason || "");
       setExtractSlipOnly(Boolean(result.slipOnly));
@@ -330,6 +342,7 @@ export function LedgerAddOutModal({
     setPreviewError(null);
     try {
       const result = await classifyLedgerTypeWithAi(text);
+      aiTypeHintRef.current = { type: result.type, reason: result.reason, description: text };
       setPreviewType(result.type);
       setPreviewReason(result.reason);
       setPreviewSource("ai");
@@ -386,6 +399,11 @@ export function LedgerAddOutModal({
         type = typeMode;
         typeSource = "owner";
         typeAiReason = "";
+      } else if (usableBillTypeHint(aiTypeHintRef.current, description)) {
+        const hint = aiTypeHintRef.current!;
+        type = hint.type;
+        typeSource = "ai";
+        typeAiReason = hint.reason;
       } else {
         setSaveStage("sending");
         await new Promise((r) => setTimeout(r, 30));
@@ -572,7 +590,10 @@ export function LedgerAddOutModal({
               <input
                 id="add-out-desc"
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => {
+                  descTypedRef.current = true;
+                  setDescription(e.target.value);
+                }}
                 placeholder="เช่น ค่าน้ำแข็ง / แม็คโคร"
                 autoComplete="off"
                 required
@@ -584,7 +605,10 @@ export function LedgerAddOutModal({
                       key={item}
                       type="button"
                       className="suggest-chip"
-                      onClick={() => setDescription(item)}
+                      onClick={() => {
+                        descTypedRef.current = true;
+                        setDescription(item);
+                      }}
                     >
                       {item}
                     </button>
@@ -601,7 +625,10 @@ export function LedgerAddOutModal({
                 step="0.01"
                 inputMode="decimal"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => {
+                  amountTypedRef.current = true;
+                  setAmount(e.target.value);
+                }}
                 required
               />
             </div>
@@ -636,8 +663,11 @@ export function LedgerAddOutModal({
               aiError={previewError}
               ownerLocked={ownerLocked}
               typeMode={typeMode}
-              frequent={typeFreq}
               onTypeModeChange={(value) => {
+                if (value === "auto" && description.trim()) {
+                  void runOwnerPreview();
+                  return;
+                }
                 setTypeMode(value);
                 setOwnerLocked(value !== "auto");
               }}
