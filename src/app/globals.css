@@ -30358,6 +30358,22 @@ a.ghost-btn {
   }
 }
 
+.vat-pnl-table .col-pct {
+  width: 4.8rem;
+  white-space: nowrap;
+  color: var(--muted, #6b7280);
+}
+
+.vat-pnl-table .vat-sales-totals-row .col-pct {
+  font-weight: 700;
+  color: inherit;
+}
+
+.vat-pnl-table .is-neg,
+.vat-pnl-table .vat-sales-totals-row .col-pct.is-neg {
+  color: #b42318;
+}
+
 .vat-c-real-note {
   font-size: 0.7rem !important;
   line-height: 1.35;
@@ -30447,6 +30463,77 @@ a.ghost-btn {
   min-width: 5.4em;
   height: auto;
   min-height: 1.7em;
+}
+
+/* เดลิเวอรี่: พอดีจอ ไม่เลื่อนข้าง — fixed layout + ช่องกรอกยืดตามคอลัมน์ */
+.vat-month-slim.vat-delivery-compact {
+  table-layout: fixed;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+}
+
+.vat-month-slim.vat-delivery-compact thead th:first-child {
+  width: 15%;
+}
+
+.vat-month-slim.vat-delivery-compact th,
+.vat-month-slim.vat-delivery-compact td {
+  min-width: 0;
+}
+
+.vat-month-slim.vat-delivery-compact .col-input .vat-sales-input,
+.vat-month-slim.vat-delivery-compact .vat-sales-input {
+  width: 100%;
+  min-width: 0;
+}
+
+.vat-month-slim.vat-delivery-compact .vat-gp-cell {
+  width: 100%;
+}
+
+.vat-ch-short {
+  display: none;
+}
+
+@media (max-width: 560px) {
+  .vat-month-slim.vat-delivery-compact {
+    font-size: 0.66rem;
+  }
+
+  .vat-month-slim.vat-delivery-compact thead th:first-child {
+    width: 11%;
+  }
+
+  .vat-month-slim.vat-delivery-compact th {
+    white-space: normal;
+    font-size: 0.9em;
+  }
+
+  .vat-month-slim.vat-delivery-compact .vat-col-head {
+    white-space: normal;
+  }
+
+  .vat-month-slim.vat-delivery-compact .vat-col-head-role {
+    display: none;
+  }
+
+  .vat-month-slim.vat-delivery-compact th,
+  .vat-month-slim.vat-delivery-compact td {
+    padding: 0.1em 0.15em;
+  }
+
+  .vat-month-slim.vat-delivery-compact .vat-sales-input {
+    padding: 0.02rem 0.1rem;
+  }
+
+  .vat-ch-full {
+    display: none;
+  }
+
+  .vat-ch-short {
+    display: inline;
+  }
 }
 
 .vat-include-input-toggle {
@@ -31430,6 +31517,106 @@ a.ghost-btn {
 
 .vat-month-books .vat-books-line-row td {
   font-size: 0.68rem;
+}
+
+/* หน้า VAT เดือน: ตารางกว้างไม่เกินจอ · แถวบิลยาวตัดบรรทัดแทนเลื่อนข้าง */
+.vat-month-books .vat-month-slim {
+  width: 100%;
+}
+
+.vat-month-books .vat-month-slim:not(.vat-delivery-compact) .col-num {
+  width: 1%;
+}
+
+.vat-month-books .vat-month-slim:not(.vat-delivery-compact) .vat-sales-input {
+  width: 7em;
+  min-width: 0;
+}
+
+/* หน้า VAT เดือน: ตัวหนังสือเล็กชุดเดียวทุกตาราง (รวม .muted / memo / input) */
+.vat-month-books .vat-month-slim,
+.vat-month-books .vat-month-slim.vat-delivery-compact {
+  font-size: 0.64rem;
+}
+
+.vat-month-books .vat-month-slim th,
+.vat-month-books .vat-month-slim.vat-delivery-compact th {
+  font-size: 0.6rem;
+}
+
+.vat-month-books .vat-month-slim td,
+.vat-month-books .vat-month-slim td.muted,
+.vat-month-books .vat-month-slim .vat-memo-row td,
+.vat-month-books .vat-month-slim .vat-books-line-row td,
+.vat-month-books .vat-month-slim .vat-sales-input,
+.vat-month-books .vat-month-slim.vat-delivery-compact .vat-sales-input {
+  font-size: 0.64rem;
+}
+
+.vat-month-books .vat-month-slim th,
+.vat-month-books .vat-month-slim td {
+  height: 1.12rem;
+  padding-top: 0.02rem;
+  padding-bottom: 0.02rem;
+  line-height: 1.15;
+}
+
+.vat-month-books .vat-month-slim .vat-sales-input {
+  height: 1.22rem;
+  min-height: 1.22rem;
+}
+
+.vat-month-books .vat-month-slim .vat-col-head-role,
+.vat-month-books .vat-month-slim .vat-gp-pct-hint {
+  font-size: 0.82em;
+}
+
+.vat-month-books .vat-table-title {
+  font-size: 0.72rem;
+}
+
+@media (max-width: 560px) {
+  .vat-month-books .vat-month-slim,
+  .vat-month-books .vat-month-slim td,
+  .vat-month-books .vat-month-slim td.muted,
+  .vat-month-books .vat-month-slim .vat-memo-row td,
+  .vat-month-books .vat-month-slim .vat-books-line-row td,
+  .vat-month-books .vat-month-slim .vat-sales-input,
+  .vat-month-books .vat-month-slim.vat-delivery-compact,
+  .vat-month-books .vat-month-slim.vat-delivery-compact .vat-sales-input {
+    font-size: 0.6rem;
+  }
+
+  .vat-month-books .vat-month-slim th,
+  .vat-month-books .vat-month-slim.vat-delivery-compact th {
+    font-size: 0.56rem;
+  }
+}
+
+.vat-month-books .vat-books-line-row .col-seg,
+.vat-month-books .vat-books-breakdown .col-seg {
+  white-space: normal;
+  min-width: 0;
+}
+
+.vat-month-books .vat-books-line-row .vat-claim-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.3rem;
+}
+
+.vat-month-books .vat-books-line-row .vat-books-line-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  white-space: normal;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.vat-month-books .vat-books-line-row .vat-claim-line-mode {
+  flex-basis: 100%;
+  padding-left: 1.15rem;
 }
 
 .vat-month-books .vat-claim-check {

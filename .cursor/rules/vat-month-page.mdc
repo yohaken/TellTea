@@ -1,0 +1,84 @@
+---
+description: หน้า VAT เดือน (/vat-sales) — โครงหน้า สูตร แหล่งข้อมูล จุดแก้ อ่านก่อนแตะ VatMonthBooks / vat-month-*
+globs: src/components/vat-sales/**,src/lib/vat-month-books.ts,src/lib/vat-month-sources.ts,src/lib/vat-storefront-send.ts,src/lib/vat-storefront-pos.ts,src/lib/vat-monthly.ts,src/lib/books-vat-month.ts,src/app/vat-sales/**
+alwaysApply: false
+---
+
+# หน้า VAT เดือน — โน้ตสำหรับ AI
+
+หน้า: `/vat-sales` → `src/components/vat-sales/VatMonthBooks.tsx` (เจ้าของเท่านั้น) 
+หน้านี้**ไม่โชว์คำอธิบายสูตร** (เจ้าของสั่งเอาออก 2026-10) — หลักการอยู่ในไฟล์นี้ · ถ้าต้องอธิบายบนจอ ใช้ `title=` (tooltip) ไม่ใส่ `<p>` บรรยาย
+
+## โครงหน้า (บนลงล่าง)
+
+| ส่วน | ทำอะไร | ค่าหลัก |
+|---|---|---|
+| หัว | เลือกเดือน · สถานะ (บันทึกแล้ว/ปิดงบ) · เซฟอัตโนมัติ (จุด · = กำลังเซฟ) | `period.labelInclusive` อยู่ใน tooltip ของ select |
+| ยอดเดลิเวอรี่ | SF/GB/LM: ยอดขายแอพ · ยอดโอน · คชจ.GP · คชจ.อื่นๆ | `draft.sales / transfer / gpFee` · `DELIVERY_COL_INFO` |
+| A) รายได้ถึงร้าน | ยอดโอน 3 แอพ + หน้าร้าน | `view.incomeTotal` |
+| แถบลอย «ส่งหน้าร้าน» | ติ๊ก nPOS ดึงสด/โอนตามวันบิล หรือใส่มือ → × % → เข้า A (รายได้) + D (ยอดขาย) | `vat-storefront-send.ts` · `vat-storefront-pos.ts` · `patchSfSendIntoDraft` |
+| B) คชจ. | GP อ้างอิง + คชจ.สองบช. (พนง.+เจ้าของ) · สินทรัพย์โชว์ไม่หัก | `booksCombo` · `view.booksOpex` |
+| C) งบกำไรขาดทุน | ตาราง + คอลัมน์ % ของรายได้ถึงร้าน | `buildMonthPnlStatement` |
+| D) VAT | ภาษีขาย − ภาษีซื้อ (GP + บช.ที่ติ๊ก) · ภ.พ.30 คัดลอก · ปิดงบ | `view.outputVat / inputVat / netVat` · `buildPp30Filing` |
+
+## หลักการ (ห้ามทำผิด)
+
+1. **ขายแอพ → VAT · ยอดโอน → รายได้/กำไร** — สองชั้นแยกกัน
+2. **GP อยู่ในยอดโอนแล้ว ห้ามหักซ้ำ** ในกำไร — GP โชว์อ้างอิง + ใช้เป็นภาษีซื้อ GP ใน D เท่านั้น
+3. รายได้ = ยอดโอนหลังหัก GP (SF+GB+LM+หน้าร้าน) — **ไม่ใช่ยอดขาย** · ไม่บวกคชจ.กลับ
+4. คชจ.บช. = ต้นทุนหลังตัด VAT ที่ติ๊ก «หักภาษีซื้อ» · VAT ที่ตัดไปหักภาษีขายใน D · ไม่ติ๊ก = คชจ.บิลเต็ม (`applyClaimCostDelta`)
+5. ภาษีขาย = ยอดขายรวม VAT × 7% (`outputVatFromSalesInclusive` · สูตรที่สรรพากรคิด **ไม่ใช่** 7/107) — ยอดขายรวม = ยอดเต็ม
+6. ยอดซื้อ ภ.พ.30 = ภาษีซื้อ × 100/7 **รายใบ** (`purchaseBaseFromVat`) — ไม่ใช้ยอดบิล (บิลปนของไม่มี VAT ได้)
+7. ติ๊กหักภาษีซื้อ **ไม่เปลี่ยนภาษีขาย** · `includeInputVat=false` → ภาษีซื้อไม่หัก
+8. แถบส่งหน้าร้าน **ไม่แตะภาษีซื้อ**
+
+## สูตรกำไร (C)
+
+```
+รายได้ถึงร้าน
+− ต้นทุนขาย (COGS สองบช.)        = กำไรขั้นต้น
+− คชจ.ขาย/บริหาร + อื่นๆ          = กำไรประมาณการเดือน  (= view.monthProfit = income − booksOpex)
+− VAT สุทธิ                       = กำไรสุทธิหลัง VAT    (= view.profitAfterVat)
+```
+
+- แถว memo «GP แพลตฯ» และ «กำไรจริง (+ ค้างหน้าร้าน)» ถูกเอาออกจาก C แล้ว (2026-10) — GP ดูในตารางเดลิเวอรี่ / B · ค้างหน้าร้านดูในแถบลอย
+
+- `buildMonthPnlStatement` **โชว์อย่างเดียว** — กำไรประมาณการ/สุทธิ รับค่าจาก `deriveMonthBooksView` ตรง ๆ ไม่คิดใหม่
+- % = ยอด ÷ รายได้ถึงร้าน (`pctOfIncome`) · รายได้ ≤ 0 → `—`
+- ตาราง ภ.ง.ด./ค่าลดหย่อน **ถูกเอาออกจากหน้า** (2026-10) · lib `personal-income-tax.ts` + Firestore ยังอยู่
+
+## แหล่งข้อมูล
+
+- Firestore `vatMonthlyReturns/{YYYY-MM}` — draft เดือน (`loadVatMonthlyReturn` / `saveVatMonthlyReturn`) · `status: "filed"` = ปิดงบ ล็อกแก้
+- `vatMonthlySettings` — `periodStartDay` (รอบตัดยอด)
+- คชจ.: `loadStaffMonthBreakdown` + `loadOwnerMonthBreakdown` (`src/lib/pnl.ts`) → `booksCombo`
+- ภาษีซื้อบช. รายใบ: `loadBothBooksVatByMonth` (`books-vat-month.ts`) → `booksLines` (ติ๊ก `vatClaim`)
+- ยอดเดลิเวอรี่จากนำเข้า: `subscribeVatImportMonthMerged` (`vat-import-month-sync.ts`) — ดู `docs/vat-month-sources.md`
+- เข้า P&L: «รายได้ทดลอง → P&L» `saveMonthlyIncome` · «ปิดงบจริง» `fileVatMonthlyReturn`
+
+## จุดแก้
+
+- สูตรรวม / view: `deriveMonthBooksView` (`src/lib/vat-month-books.ts`) — **แตะแล้วกระทบ VAT/กำไร/ปิดงบ** ต้องเทสครบ
+- แก้แค่การแสดง: ทำใน `VatMonthBooks.tsx` หรือ helper โชว์อย่างเดียวใน `vat-storefront-send.ts`
+- หัวคอลัมน์เดลิเวอรี่ + tooltip: `DELIVERY_COL_INFO` / `DELIVERY_COL_ROLE` (`vat-month-sources.ts`)
+- CSS: `globals.css` ค้น `.vat-month-slim` / `.vat-delivery-compact` / `.vat-pnl-table`
+- **ตารางต้องพอดีจอ ไม่เลื่อนข้าง** (ทดสอบที่ 412px + จอคอม): เดลิเวอรี่ = `table-layout: fixed` + input `width:100%` · จอ ≤560px ใช้ชื่อสั้น `.vat-ch-short` (SF/GB/LM) และซ่อนบรรทัดย่อยใต้หัวคอลัมน์ · ตารางอื่น `.vat-month-books .vat-month-slim` กว้าง 100% · `.col-num` 1% · input 6.6em · แถวบิลตัดบรรทัด · ห้าม input `width:auto` (เบราว์เซอร์ให้ ~124px แล้วดันตารางล้น)
+- **ตัวหนังสือเล็กชุดเดียวทุกตาราง**: td/input 0.64rem (จอ ≤560px 0.6rem) · th 0.6rem · แถวสูง 1.12rem · หัวกล่อง 0.72rem — override `.muted` (ที่ทำให้แถว memo ใหญ่ 15px) ไว้แล้ว อย่าเพิ่มขนาดเฉพาะแถว
+- bump `APP_BUILD` (`src/lib/version.ts`) ทุกครั้งที่แก้ UI
+
+## เทส
+
+```bash
+npx tsx scripts/test-vat-pnl-statement.ts      # C งบกำไรขาดทุน + ไม่เปลี่ยน view
+npx tsx scripts/test-vat-sf-month-persist.mjs  # แถบส่งหน้าร้าน (ต้องรันด้วย tsx)
+node scripts/test-vat-storefront-send.mjs
+npx tsx scripts/test-vat-month-sources.ts
+npx tsx scripts/test-vat-pp30.ts
+npx tsx scripts/test-vat-close-month.ts
+```
+
+เทสที่พังอยู่ก่อนแล้ว (ไม่เกี่ยว): `test-vat-include-input` (pin APP_BUILD 528) · `test-vat-delivery-ingest-draft` · `test-vat-import-ai-notes` · `test-vat-import-scaffold`
+
+## เอกสารลึก
+
+`docs/vat-table-structure.md` · `docs/vat-month-sources.md` · `docs/books-vat-into-month.md` · `docs/vat-monthly-play-safe.md`

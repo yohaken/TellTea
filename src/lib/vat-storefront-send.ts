@@ -59,6 +59,69 @@ export function computeNetProfitMarginPct(
   return Math.round((profitAfterVat / incomeTotal) * 10000) / 100;
 }
 
+export type MonthPnlLine = { amount: number | null; pct: number | null };
+
+export type MonthPnlStatement = {
+  income: MonthPnlLine;
+  cogs: MonthPnlLine;
+  grossProfit: MonthPnlLine;
+  otherOpex: MonthPnlLine;
+  operatingProfit: MonthPnlLine;
+  netVat: MonthPnlLine;
+  netProfit: MonthPnlLine;
+};
+
+/** % ของรายได้ถึงร้าน · รายได้ ≤ 0 → null */
+export function pctOfIncome(
+  amount: number | null,
+  incomeTotal: number,
+): number | null {
+  if (amount == null || !Number.isFinite(amount)) return null;
+  if (!Number.isFinite(incomeTotal) || incomeTotal <= 0) return null;
+  return Math.round((amount / incomeTotal) * 10000) / 100;
+}
+
+/**
+ * งบกำไรขาดทุนเดือน (โชว์อย่างเดียว) — แตกคชจ.บช. เป็นต้นทุนขาย / คชจ.อื่น
+ * กำไรดำเนินงาน + สุทธิ ใช้ค่าจาก deriveMonthBooksView ตรง ๆ ไม่คิดใหม่
+ */
+export function buildMonthPnlStatement(input: {
+  incomeTotal: number;
+  cogs: number | null | undefined;
+  booksOpex: number | null;
+  monthProfit: number | null;
+  netVat: number;
+  profitAfterVat: number | null;
+}): MonthPnlStatement {
+  const income = input.incomeTotal;
+  const hasBooks =
+    input.booksOpex != null &&
+    input.cogs != null &&
+    Number.isFinite(input.cogs);
+  const cogs = hasBooks ? Number(input.cogs) : null;
+  const grossProfit =
+    cogs == null ? null : Math.round((income - cogs) * 100) / 100;
+  const otherOpex =
+    cogs == null || input.booksOpex == null
+      ? null
+      : Math.round((input.booksOpex - cogs) * 100) / 100;
+  const operatingProfit = input.monthProfit;
+  const netProfit = input.profitAfterVat;
+  const line = (amount: number | null): MonthPnlLine => ({
+    amount,
+    pct: pctOfIncome(amount, income),
+  });
+  return {
+    income: line(income),
+    cogs: line(cogs),
+    grossProfit: line(grossProfit),
+    otherOpex: line(otherOpex),
+    operatingProfit: line(operatingProfit),
+    netVat: line(input.netVat),
+    netProfit: line(netProfit),
+  };
+}
+
 export function loadSfSendPct(): number {
   if (typeof window === "undefined") return 100;
   try {

@@ -2,25 +2,18 @@
 
 /**
  * หน้าเดือน VAT — สรุปรายเดือน (งบ)
- * ยอดเดลิเวอรี่ → A รายได้ · B คชจ. · C กำไร+ภ.ง.ด. · D VAT
+ * ยอดเดลิเวอรี่ → A รายได้ · B คชจ. · C งบกำไรขาดทุน · D VAT
  * ตารางยอดเดลิเวอรี่รายเดือน (หน้าที่มายอดพักแล้ว — ไม่ลิงก์ไป sources)
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDateShort } from "@/lib/utils";
 import {
   loadOwnerMonthBreakdown,
-  loadPnlReport,
   loadStaffMonthBreakdown,
   saveMonthlyIncome,
   emptyMonthCategoryRow,
   type MonthCategoryRow,
 } from "@/lib/pnl";
-import {
-  computePersonalIncomeTax,
-  DEFAULT_PERSONAL_ALLOWANCE,
-  loadPersonalTaxSettings,
-  savePersonalTaxSettings,
-} from "@/lib/personal-income-tax";
 import {
   formatVatMoney,
   moneyFieldValue,
@@ -76,7 +69,6 @@ import { updateOwnerBookEntry } from "@/lib/owner-books";
 import { BooksVatEntryDetailModal } from "@/components/vat-sales/BooksVatEntryDetailModal";
 import { VatColHead } from "@/components/vat-sales/VatColHead";
 import { VatSalesSubNav } from "@/components/vat-sales/VatSalesSubNav";
-import { exportPersonalTaxYearXlsx } from "@/lib/xlsx-export";
 import {
   fileVatMonthlyReturn,
   formatThaiMonthKey,
@@ -90,8 +82,8 @@ import {
 } from "@/lib/vat-monthly";
 import { bangkokMonthKey } from "@/lib/vat-sales";
 import {
-  computeNetProfitMarginPct,
-  computeRealProfitAfterVat,
+  buildMonthPnlStatement,
+  type MonthPnlLine,
   computeSfSendAmount,
   computeSfUnsentAmount,
   loadSfSendPct,
@@ -238,6 +230,33 @@ function applyClaimCostDelta(
   };
 }
 
+function PnlRow({
+  label,
+  title,
+  line,
+  total,
+}: {
+  label: string;
+  title: string;
+  line: MonthPnlLine;
+  total?: boolean;
+}) {
+  const neg = (line.amount ?? 0) < 0;
+  return (
+    <tr className={total ? "vat-sales-totals-row" : undefined}>
+      <td className="col-seg" title={title}>
+        {label}
+      </td>
+      <td className={`col-num${total ? " col-net" : ""}${neg ? " is-neg" : ""}`}>
+        {line.amount == null ? "—" : fmt(line.amount)}
+      </td>
+      <td className={`col-num col-pct${neg ? " is-neg" : ""}`}>
+        {line.pct == null ? "—" : `${fmt(line.pct)}%`}
+      </td>
+    </tr>
+  );
+}
+
 function ExpandBtn({
   open,
   onToggle,
@@ -288,20 +307,6 @@ export function VatMonthBooks({ actor }: Props) {
   const [pp30Copied, setPp30Copied] = useState(false);
   const [monthNote, setMonthNote] = useState("");
   const [noteBusy, setNoteBusy] = useState(false);
-
-  const [allowanceStr, setAllowanceStr] = useState(
-    String(DEFAULT_PERSONAL_ALLOWANCE),
-  );
-  const [otherDeductStr, setOtherDeductStr] = useState("");
-  const [taxNote, setTaxNote] = useState("");
-  const [yearBusy, setYearBusy] = useState(false);
-  const [yearProfit, setYearProfit] = useState<number | null>(null);
-  const [yearTax, setYearTax] = useState<ReturnType<
-    typeof computePersonalIncomeTax
-  > | null>(null);
-  const [yearMonths, setYearMonths] = useState<
-    { month: string; income: number; opex: number; profit: number }[]
-  >([]);
 
   const [openDeliverySales, setOpenDeliverySales] = useState(true);
   const [openStorefrontSales, setOpenStorefrontSales] = useState(true);
@@ -502,18 +507,12 @@ export function VatMonthBooks({ actor }: Props) {
       setBooksLines([]);
       setOpenBooksLines(false);
       try {
-        const [ret, settings, tax] = await Promise.all([
+        const [ret, settings] = await Promise.all([
           loadVatMonthlyReturn(m),
           loadVatMonthlySettings(),
-          loadPersonalTaxSettings(),
         ]);
         if (gen !== loadGen.current) return;
         setPeriodStartDay(settings.periodStartDay);
-        setAllowanceStr(String(tax.personalAllowance));
-        setOtherDeductStr(
-          tax.otherDeductions > 0 ? moneyFieldValue(tax.otherDeductions) : "",
-        );
-        setTaxNote(tax.note || "");
         const draft0 = retToMonthBooksDraft(ret);
         hydrateFromReturn(ret);
         setHydrated(true);
@@ -624,7 +623,6 @@ export function VatMonthBooks({ actor }: Props) {
           );
           dirtyRef.current = false;
           setDirty(false);
-          setMsg("เซฟอัตโนมัติแล้ว");
           setError("");
         } catch (e) {
           if (draftRef.current.monthKey !== monthKey) return;
@@ -931,13 +929,17 @@ export function VatMonthBooks({ actor }: Props) {
     sfSendSourceNum,
     sfSendPct,
   ]);
-  const realProfitAfterVat = useMemo(
-    () => computeRealProfitAfterVat(view.profitAfterVat, sfUnsent),
-    [view.profitAfterVat, sfUnsent],
-  );
-  const netProfitMarginPct = useMemo(
-    () => computeNetProfitMarginPct(view.profitAfterVat, view.incomeTotal),
-    [view.profitAfterVat, view.incomeTotal],
+  const pnl = useMemo(
+    () =>
+      buildMonthPnlStatement({
+        incomeTotal: view.incomeTotal,
+        cogs: booksCombo?.cogs,
+        booksOpex: view.booksOpex,
+        monthProfit: view.monthProfit,
+        netVat: view.netVat,
+        profitAfterVat: view.profitAfterVat,
+      }),
+    [view, booksCombo?.cogs],
   );
 
   function setGpField(key: MonthChannel, raw: string) {
@@ -1124,102 +1126,6 @@ export function VatMonthBooks({ actor }: Props) {
     }
   };
 
-  const saveTaxSettings = async () => {
-    setBusy(true);
-    setError("");
-    try {
-      const saved = await savePersonalTaxSettings(
-        {
-          personalAllowance:
-            parseVatMoneyInput(allowanceStr) || DEFAULT_PERSONAL_ALLOWANCE,
-          otherDeductions: parseVatMoneyInput(otherDeductStr),
-          note: taxNote,
-        },
-        actor,
-      );
-      setAllowanceStr(String(saved.personalAllowance));
-      setOtherDeductStr(
-        saved.otherDeductions > 0
-          ? moneyFieldValue(saved.otherDeductions)
-          : "",
-      );
-      setTaxNote(saved.note);
-      if (yearProfit != null) {
-        setYearTax(
-          computePersonalIncomeTax(yearProfit, {
-            personalAllowance: saved.personalAllowance,
-            otherDeductions: saved.otherDeductions,
-          }),
-        );
-      }
-      setMsg("บันทึกค่าลดหย่อนแล้ว");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const pullYearSummary = async () => {
-    setYearBusy(true);
-    setError("");
-    try {
-      const report = await loadPnlReport();
-      const year = month.slice(0, 4);
-      const months = report.combined
-        .filter((r) => r.month.startsWith(year))
-        .map((r) => {
-          const income = Number(report.incomeByMonth[r.month]) || 0;
-          const opex = r.cogs + r.sga + r.other;
-          return {
-            month: r.month,
-            income,
-            opex,
-            profit: income - opex,
-          };
-        })
-        .filter((m) => m.income > 0 || m.opex > 0);
-      const profit = months.reduce((s, m) => s + m.profit, 0);
-      const allowance =
-        parseVatMoneyInput(allowanceStr) || DEFAULT_PERSONAL_ALLOWANCE;
-      const other = parseVatMoneyInput(otherDeductStr);
-      setYearMonths(months);
-      setYearProfit(profit);
-      setYearTax(
-        computePersonalIncomeTax(profit, {
-          personalAllowance: allowance,
-          otherDeductions: other,
-        }),
-      );
-      setMsg(
-        `ดึงสรุปปี ${Number(year) + 543} · กำไร ${formatVatMoney(profit)}`,
-      );
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setYearBusy(false);
-    }
-  };
-
-  const exportYearTax = () => {
-    if (!yearTax || yearProfit == null) return;
-    try {
-      exportPersonalTaxYearXlsx({
-        yearCe: Number(month.slice(0, 4)),
-        months: yearMonths,
-        personalAllowance: yearTax.personalAllowance,
-        otherDeductions: yearTax.otherDeductions,
-        taxable: yearTax.taxable,
-        tax: yearTax.tax,
-        slices: yearTax.slices,
-        note: taxNote,
-      });
-      setMsg("ส่งออกไฟล์ ภ.ง.ด. แล้ว");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    }
-  };
-
   const statusLabel =
     draft.status === "filed"
       ? "ปิดงบแล้ว · ล็อก"
@@ -1239,6 +1145,7 @@ export function VatMonthBooks({ actor }: Props) {
           <span className="muted">เดือน</span>
           <select
             value={month}
+            title={`รอบตัดยอด ${period.labelInclusive}`}
             disabled={busy}
             onChange={(e) => {
               void changeMonth(e.target.value);
@@ -1264,10 +1171,6 @@ export function VatMonthBooks({ actor }: Props) {
           ) : null}
         </span>
       </div>
-
-      <p className="muted vat-sales-hint vat-hint-one-line">
-        รอบตัดยอด {period.labelInclusive}
-      </p>
 
       {error ? <p className="error-text">{error}</p> : null}
       {msg ? <p className="muted vat-sales-msg">{msg}</p> : null}
@@ -1312,7 +1215,10 @@ export function VatMonthBooks({ actor }: Props) {
             <tbody>
               {MONTH_CHANNELS.map((k) => (
                 <tr key={k}>
-                  <td className="col-seg">{MONTH_CHANNEL_LABEL[k]}</td>
+                  <td className="col-seg" title={MONTH_CHANNEL_LABEL[k]}>
+                    <span className="vat-ch-full">{MONTH_CHANNEL_LABEL[k]}</span>
+                    <span className="vat-ch-short">{MONTH_CHANNEL_SHORT[k]}</span>
+                  </td>
                   <td className="col-num col-input">
                     <MoneyCell
                       value={moneyFieldValue(draft.sales[k])}
@@ -1367,7 +1273,10 @@ export function VatMonthBooks({ actor }: Props) {
                 </tr>
               ))}
               <tr className="vat-sales-totals-row">
-                <td className="col-seg">รวมเดลิเวอรี่</td>
+                <td className="col-seg">
+                  <span className="vat-ch-full">รวมเดลิเวอรี่</span>
+                  <span className="vat-ch-short">รวม</span>
+                </td>
                 <td className="col-num col-net">
                   {fmt(monthSources.totals.sales)}
                 </td>
@@ -1403,12 +1312,6 @@ export function VatMonthBooks({ actor }: Props) {
             </tbody>
           </table>
         </div>
-        <p
-          className="muted vat-sales-hint vat-hint-one-line"
-          title="หลักแยกชั้น: ขาย→VAT · โอน→รายได้/กำไร · GP ไม่หักซ้ำ"
-        >
-          ขายแอพ → VAT · ยอดโอน → รายได้/กำไร · GP อยู่ในโอนแล้ว ไม่หักซ้ำ
-        </p>
       </section>
 
       {loading && !hydrated ? (
@@ -1420,9 +1323,6 @@ export function VatMonthBooks({ actor }: Props) {
             <h2 className="vat-table-title">
               A) รายได้ถึงร้าน — {formatThaiMonthKey(month)}
             </h2>
-            <p className="muted vat-sales-hint vat-sf-send-hint">
-              แถบลอย「ส่งหน้าร้าน」· ติ๊ก nPOS ดึงตามวันบิล (สด/โอน) หรือใส่ยอดมือ → ×% เข้า A+D · ไม่แตะภาษีซื้อ
-            </p>
             <div className="sheet-wrap vat-month-slim-wrap">
               <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
                 <thead>
@@ -1497,18 +1397,18 @@ export function VatMonthBooks({ actor }: Props) {
                 </tbody>
               </table>
             </div>
-            <p
-              className="muted vat-sales-hint vat-hint-one-line"
-              title="ที่มาของรายได้สุทธิ"
-            >
-              รายได้ = ยอดโอนหลังหัก GP แล้ว · {incomeHint} ={" "}
-              {fmt(view.incomeTotal)} · ไม่ใช่ยอดขาย · ไม่ต้องบวกคชจ.กลับ
-            </p>
           </section>
 
           {/* B) คชจ. */}
           <section className="vat-table-block">
-            <h2 className="vat-table-title">
+            <h2
+              className="vat-table-title"
+              title={
+                booksPulledAt
+                  ? `คชจ.บช. อัปเดต ${formatDateShort(booksPulledAt)}`
+                  : undefined
+              }
+            >
               B) คชจ. — {formatThaiMonthKey(month)}
             </h2>
             <div className="sheet-wrap vat-month-slim-wrap">
@@ -1655,215 +1555,66 @@ export function VatMonthBooks({ actor }: Props) {
                 </tbody>
               </table>
             </div>
-            <p className="muted vat-sales-hint vat-hint-one-line">
-              คชจ.บช. = ต้นทุนหลังตัด VAT ที่ติ๊กหัก · VAT ที่ตัดไปหักภาษีขายใน D ·
-              ไม่ติ๊ก = คชจ.บิลเต็ม
-              {booksPulledAt
-                ? ` · อัปเดต ${formatDateShort(booksPulledAt)}`
-                : ""}
-            </p>
           </section>
 
-          {/* C) กำไร + ภ.ง.ด. */}
+          {/* C) งบกำไรขาดทุน — โชว์อย่างเดียว ไม่แก้ VAT / P&L */}
           <section className="vat-table-block vat-personal-pnl">
             <h2 className="vat-table-title">
-              C) กำไรเดือน + ภ.ง.ด. — {formatThaiMonthKey(month)}
+              C) งบกำไรขาดทุน — {formatThaiMonthKey(month)}
             </h2>
             <div className="sheet-wrap vat-month-slim-wrap">
-              <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
+              <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table vat-pnl-table">
                 <thead>
                   <tr>
                     <th className="col-seg">รายการ</th>
                     <th className="col-num">ยอด</th>
+                    <th className="col-num col-pct" title="% ของรายได้ถึงร้าน">
+                      %
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td
-                      className="col-seg"
-                      title="ยอดโอน SF/GB/LM + หน้าร้าน — หลังหัก GP แพลตฯ แล้ว"
-                    >
-                      รายได้ถึงร้าน (ยอดโอน)
-                    </td>
-                    <td className="col-num">{fmt(view.incomeTotal)}</td>
-                  </tr>
-                  <tr>
-                    <td
-                      className="col-seg"
-                      title="หักแค่คชจ.สองบช. — ไม่หัก GP ซ้ำ"
-                    >
-                      − คชจ. บช. (ไม่รวม GP)
-                    </td>
-                    <td className="col-num">
-                      {view.booksOpex == null ? "—" : fmt(view.booksOpex)}
-                    </td>
-                  </tr>
-                  <tr className="vat-row-child vat-memo-row">
-                    <td
-                      className="col-seg col-child muted"
-                      title="อ้างอิงเท่านั้น — หักจากยอดโอนแล้ว · ไม่ลบจากกำไร"
-                    >
-                      GP แพลตฯ (อ้างอิง · ไม่หัก)
-                    </td>
-                    <td className="col-num muted">
-                      <span className="vat-gp-cell">
-                        {fmt(view.gpCostTotal)}
-                        <GpPctHint
-                          fee={view.gpCostTotal}
-                          sales={monthSources.totals.sales}
-                        />
-                      </span>
-                    </td>
-                  </tr>
-                  <tr className="vat-sales-totals-row">
-                    <td
-                      className="col-seg"
-                      title="รายได้ถึงร้าน − คชจ.บช. · ยังไม่หัก VAT · ไม่หัก GP"
-                    >
-                      = กำไรประมาณการเดือน
-                    </td>
-                    <td className="col-num col-net">
-                      {view.monthProfit == null ? "—" : fmt(view.monthProfit)}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td
-                      className="col-seg"
-                      title="จากกล่อง D · ยอดบวก = ต้องนำส่ง · ติดลบ = ได้คืน"
-                    >
-                      − VAT สุทธิ
-                    </td>
-                    <td className="col-num">{fmt(view.netVat)}</td>
-                  </tr>
-                  <tr className="vat-sales-totals-row">
-                    <td
-                      className="col-seg"
-                      title="กำไรประมาณการ − VAT สุทธิ = เงินเหลือโดยประมาณหลังนำส่ง VAT"
-                    >
-                      = กำไรสุทธิ (หลังหัก VAT)
-                    </td>
-                    <td className="col-num col-net">
-                      {view.profitAfterVat == null
-                        ? "—"
-                        : fmt(view.profitAfterVat)}
-                    </td>
-                  </tr>
+                  <PnlRow
+                    label="รายได้ถึงร้าน (ยอดโอน)"
+                    title="ยอดโอน SF/GB/LM + หน้าร้าน — หลังหัก GP แพลตฯ แล้ว"
+                    line={pnl.income}
+                  />
+                  <PnlRow
+                    label="− ต้นทุนขาย"
+                    title="COGS สองบช. หลังตัด VAT ที่ติ๊กหักภาษีซื้อ"
+                    line={pnl.cogs}
+                  />
+                  <PnlRow
+                    label="= กำไรขั้นต้น"
+                    title="รายได้ถึงร้าน − ต้นทุนขาย"
+                    line={pnl.grossProfit}
+                    total
+                  />
+                  <PnlRow
+                    label="− คชจ.ขาย/บริหาร + อื่นๆ"
+                    title="SGA + อื่นๆ สองบช. · ไม่รวม GP (หักในยอดโอนแล้ว)"
+                    line={pnl.otherOpex}
+                  />
+                  <PnlRow
+                    label="= กำไรประมาณการเดือน"
+                    title="กำไรขั้นต้น − คชจ.ขาย/บริหาร + อื่นๆ = รายได้ถึงร้าน − คชจ.บช. · ยังไม่หัก VAT"
+                    line={pnl.operatingProfit}
+                    total
+                  />
+                  <PnlRow
+                    label="− VAT สุทธิ"
+                    title="จากกล่อง D · ยอดบวก = ต้องนำส่ง · ติดลบ = ได้คืน"
+                    line={pnl.netVat}
+                  />
+                  <PnlRow
+                    label="= กำไรสุทธิ (หลังหัก VAT)"
+                    title="กำไรประมาณการ − VAT สุทธิ"
+                    line={pnl.netProfit}
+                    total
+                  />
                 </tbody>
               </table>
             </div>
-            <p
-              className="muted vat-sales-hint vat-hint-one-line"
-              title="สูตรกำไร — GP ไม่เข้าสมการ"
-            >
-              กำไร ≈ ยอดโอน − คชจ.บช. · GP หักในโอนแล้ว ไม่ลบซ้ำ
-            </p>
-            <p
-              className="muted vat-sales-hint vat-hint-one-line vat-c-real-note"
-              title="โน้ตดูเอง — ไม่แก้ VAT / ภ.ง.ด. / P&L"
-            >
-              อัตรากำไรสุทธิ{" "}
-              {netProfitMarginPct == null ? "—" : `${fmt(netProfitMarginPct)}%`}
-              <span className="vat-c-real-sep">·</span>
-              กำไรจริง{" "}
-              {realProfitAfterVat == null ? "—" : fmt(realProfitAfterVat)}
-              <span className="muted">
-                {" "}
-                (= สุทธิหลัง VAT
-                {view.profitAfterVat == null
-                  ? ""
-                  : ` ${fmt(view.profitAfterVat)}`}{" "}
-                + ค้างหน้าร้าน {fmt(sfUnsent)})
-              </span>
-            </p>
-
-            <h2 className="vat-table-title" style={{ marginTop: "0.55rem" }}>
-              ค่าลดหย่อน + ภาษีเงินได้ (ภ.ง.ด.) · ปี{" "}
-              {Number(month.slice(0, 4)) + 543}
-            </h2>
-            <div className="sheet-wrap vat-month-slim-wrap">
-              <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
-                <thead>
-                  <tr>
-                    <th className="col-seg">รายการ</th>
-                    <th className="col-num">ค่า</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td className="col-seg">ค่าลดหย่อนผู้มีเงินได้</td>
-                    <td className="col-num col-input">
-                      <MoneyCell
-                        value={allowanceStr}
-                        locked={locked}
-                        ariaLabel="ค่าลดหย่อน"
-                        onChange={setAllowanceStr}
-                      />
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="col-seg">ลดหย่อนอื่น</td>
-                    <td className="col-num col-input">
-                      <MoneyCell
-                        value={otherDeductStr}
-                        locked={locked}
-                        ariaLabel="ลดหย่อนอื่น"
-                        onChange={setOtherDeductStr}
-                      />
-                    </td>
-                  </tr>
-                  {yearProfit != null && yearTax ? (
-                    <>
-                      <tr>
-                        <td className="col-seg">กำไรปี (จาก P&L)</td>
-                        <td className="col-num">{fmt(yearProfit)}</td>
-                      </tr>
-                      <tr>
-                        <td className="col-seg">เงินได้สุทธิภาษี</td>
-                        <td className="col-num">{fmt(yearTax.taxable)}</td>
-                      </tr>
-                      <tr className="vat-sales-totals-row">
-                        <td className="col-seg">ภาษีประมาณการ</td>
-                        <td className="col-num col-net">{fmt(yearTax.tax)}</td>
-                      </tr>
-                    </>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
-            <div className="vat-month-actions vat-month-actions--mini">
-              <button
-                type="button"
-                className="vat-mini-btn"
-                disabled={busy || locked}
-                onClick={() => void saveTaxSettings()}
-              >
-                บันทึกค่าลดหย่อน
-              </button>
-              <button
-                type="button"
-                className="vat-mini-btn"
-                disabled={yearBusy}
-                onClick={() => void pullYearSummary()}
-              >
-                {yearBusy ? "…" : "ดึงสรุปปี"}
-              </button>
-              <button
-                type="button"
-                className="vat-mini-btn"
-                disabled={!yearTax}
-                onClick={exportYearTax}
-              >
-                ส่งออก ภ.ง.ด.
-              </button>
-            </div>
-            <label className="vat-note-slim">
-              <span className="muted">โน้ตภาษี</span>
-              <input
-                value={taxNote}
-                disabled={locked}
-                onChange={(e) => setTaxNote(e.target.value)}
-              />
-            </label>
           </section>
 
           {/* D) VAT */}
@@ -1874,9 +1625,6 @@ export function VatMonthBooks({ actor }: Props) {
 
             <section className="vat-table-block">
               <h3 className="vat-table-subtitle">ยอดขาย → ภาษีขาย</h3>
-              <p className="muted vat-sales-hint">
-                ยอดขายรวม VAT = ยอดเต็ม · ภาษีขาย = ยอดนั้น × 7% (สูตรสรรพากร)
-              </p>
               <div className="sheet-wrap vat-month-slim-wrap">
                 <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
                   <thead>
@@ -2029,11 +1777,6 @@ export function VatMonthBooks({ actor }: Props) {
 
             <section className="vat-table-block">
               <h3 className="vat-table-subtitle">ภาษีซื้อ — GP + สองบช.</h3>
-              <p className="muted vat-sales-hint vat-books-claim-hint">
-                ยอดซื้อ ภ.พ.30 = ภาษีซื้อ × 100/7 รายใบ · ไม่ใช้ยอดบิล
-                (บิลปนของไม่มีแวทได้) · ติ๊กหัก = VAT ไปหักภาษีขาย ·{" "}
-                <strong>ภาษีขายด้านบนไม่เปลี่ยนจากติ๊กนี้</strong>
-              </p>
               <div className="sheet-wrap vat-month-slim-wrap">
                 <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
                   <thead>
@@ -2287,10 +2030,6 @@ export function VatMonthBooks({ actor }: Props) {
                   {pp30Copied ? "คัดลอกแล้ว" : "คัดลอก"}
                 </button>
               </div>
-              <p className="muted vat-sales-hint">
-                ยอดขายรวม VAT ตรงตารางด้านบน · ภาษีขาย = ยอดนั้น × 7% ·
-                ยอดซื้อไม่ใช่ยอดบิล (คิดจากภาษีซื้อ ×100/7 รายใบ)
-              </p>
               <div className="sheet-wrap vat-month-slim-wrap">
                 <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
                   <thead>
