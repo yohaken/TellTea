@@ -53,7 +53,7 @@ assert.match(page, /แดชบอร์ด/);
 assert.match(page, /รอบขาย/);
 
 const css = read("src/app/globals.css");
-assert.match(css, /\.pos-dash-top-grid/);
+assert.match(css, /\.pos-dash-flow/);
 assert.match(css, /\.pos-dash-card--net/);
 assert.match(css, /\.pos-dash-donut/);
 

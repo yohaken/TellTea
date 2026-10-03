@@ -292,10 +292,6 @@ export function PosOpsCorrelationChart({ points }: { points: PosOpsDayPoint[] })
     setTipLeftPx(Math.min(maxLeft, Math.max(margin, anchor - tipW / 2)));
   }, [hoverIdx, hoverX, hoverPoint, activeSeries]);
 
-  const noteText = absoluteMode
-    ? `แกน Y = ค่าจริงของ${singleSeries?.label ?? "ชุดนี้"} · ตัวเลขบนเส้น · แตะคำอธิบายเพื่อเปิด/ปิดเส้น · ตั้งค่าจำอัตโนมัติในเครื่องนี้`
-    : "หลายเส้นเทียบสัดส่วนสูงสุดของตัวเองในช่วง (แกน %) · tooltip แสดงค่าจริง · แตะคำอธิบายเพื่อเปิด/ปิดเส้น · ตั้งค่าจำอัตโนมัติในเครื่องนี้ · ชี้หรือลากบนกราฟดูค่ารายวัน";
-
   const ariaLabel = absoluteMode
     ? `กราฟความสัมพันธ์ยอดขายชงผลิตรายวัน แกนค่าจริง ${singleSeries?.label ?? ""}`
     : "กราฟความสัมพันธ์ยอดขายชงผลิตรายวัน แกนสัมพัทธ์ร้อยละ";
@@ -309,7 +305,6 @@ export function PosOpsCorrelationChart({ points }: { points: PosOpsDayPoint[] })
     <section className="pos-ops-corr-card" aria-label="ความสัมพันธ์ยอดขาย ชง ผลิต">
       <div className="pos-ops-corr-head">
         <h3 className="pos-dash-card-title">ความสัมพันธ์ · หน้าร้าน × ชง × ผลิต</h3>
-        <p className="muted pos-ops-corr-note">{noteText}</p>
       </div>
       <ul className="pos-ops-corr-legend" aria-label="เปิดปิดเส้นกราฟ">
         {SERIES.map((s) => {

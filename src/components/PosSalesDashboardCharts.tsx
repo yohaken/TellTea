@@ -1,14 +1,16 @@
 "use client";
 
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
-import type {
-  PosDashDayPoint,
-  PosDashHourPoint,
-  PosDashWeekdayPoint,
+import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import {
+  bangkokWeekday,
+  POS_DASH_WEEKDAY_TH_SHORT,
+  type PosDashDayPoint,
+  type PosDashHourPoint,
+  type PosDashWeekdayPoint,
 } from "@/lib/pos-sales-dashboard";
 import type { WeatherDayDoc } from "@/lib/pos-weather";
 import { weatherCellTitle } from "@/lib/pos-weather";
-import { formatPlainNumber } from "@/lib/utils";
+import { bangkokDateKey, formatPlainNumber, startOfLocalDay } from "@/lib/utils";
 
 function niceMax(raw: number): number {
   if (!(raw > 0)) return 1;
@@ -34,92 +36,178 @@ function formatAxisBaht(n: number): string {
   return String(Math.round(n));
 }
 
-/** Numbers-first daily sales box — date + weather + amount (newest first). */
+const POS_DASH_DAY_TILES_COLLAPSED = 31;
+
+function DayWeather({
+  w,
+  loading,
+  withPeriods,
+}: {
+  w?: WeatherDayDoc;
+  loading: boolean;
+  withPeriods?: boolean;
+}) {
+  if (!w || !(w.labelTh || w.emoji)) {
+    return <span className="pos-dash-dt-wx muted">{loading ? "…" : ""}</span>;
+  }
+  const hasTemp =
+    Number.isFinite(Number(w.tempMin)) && Number.isFinite(Number(w.tempMax));
+  const periods = w.periods;
+  return (
+    <span className="pos-dash-dt-wx" title={weatherCellTitle(w)}>
+      <span className="pos-dash-dt-wx-emoji">{w.emoji}</span>
+      <span className="pos-dash-dt-wx-label">{w.labelTh}</span>
+      {hasTemp ? (
+        <span className="pos-dash-dt-wx-temp">
+          {Math.round(Number(w.tempMin))}–{Math.round(Number(w.tempMax))}°
+        </span>
+      ) : null}
+      {withPeriods &&
+      (periods?.day?.emoji ||
+        periods?.evening?.emoji ||
+        periods?.night?.emoji) ? (
+        <span className="pos-dash-dt-wx-periods">
+          {periods.day?.emoji ? (
+            <span title={`กลางวัน ${periods.day.labelTh}`}>
+              วัน{periods.day.emoji}
+            </span>
+          ) : null}
+          {periods.evening?.emoji ? (
+            <span title={`เย็น ${periods.evening.labelTh}`}>
+              เย็น{periods.evening.emoji}
+            </span>
+          ) : null}
+          {periods.night?.emoji ? (
+            <span title={`ดึก ${periods.night.labelTh}`}>
+              ดึก{periods.night.emoji}
+            </span>
+          ) : null}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+/**
+ * Numbers-first daily sales box — today on top, other days as 2–3 column tiles (newest first).
+ * เขียว = วันขายดีสุด · ส้ม = น้อยสุด · อากาศเมืองอุดรฯ (วันผ่านมาเซฟถาวร · วันนี้รีเฟรชไม่เกินทุก 45 นาที)
+ */
 export function PosDashDailyTotalsTable({
   points,
   weatherByDay = {},
   weatherLoading = false,
+  nowMs,
 }: {
   points: PosDashDayPoint[];
   weatherByDay?: Record<string, WeatherDayDoc>;
   weatherLoading?: boolean;
+  nowMs?: number;
 }) {
-  const rows = useMemo(() => [...points].reverse(), [points]);
+  const [expanded, setExpanded] = useState(false);
+  const todayKey = bangkokDateKey(startOfLocalDay(nowMs ?? Date.now()));
+  const today = points.find((p) => p.dateKey === todayKey) ?? null;
+  const rows = useMemo(
+    () => [...points].reverse().filter((p) => p.dateKey !== todayKey),
+    [points, todayKey],
+  );
+  const shown = expanded ? rows : rows.slice(0, POS_DASH_DAY_TILES_COLLAPSED);
+  const sold = rows.filter((p) => p.total > 0);
+  const best = sold.length > 1 ? Math.max(...sold.map((p) => p.total)) : null;
+  const worst = sold.length > 1 ? Math.min(...sold.map((p) => p.total)) : null;
+  const pastAvg = sold.length
+    ? sold.reduce((s, p) => s + p.total, 0) / sold.length
+    : 0;
+  const wd = (p: PosDashDayPoint) =>
+    POS_DASH_WEEKDAY_TH_SHORT[bangkokWeekday(p.dateMs)];
+
   return (
-    <section className="pos-dash-day-table-card" aria-label="ยอดขายรายวันตัวเลข">
-      <h3 className="pos-dash-card-title">ยอดขายรายวัน</h3>
-      <p className="muted pos-dash-day-weather-note">
-        อากาศเมืองอุดรฯ · วันผ่านมาเซฟถาวร · วันนี้รีเฟรชไม่เกินทุก 45 นาที
-      </p>
-      {rows.length ? (
-        <div className="pos-dash-day-table-scroll">
-          <table className="pos-dash-day-table">
-            <thead>
-              <tr>
-                <th scope="col">วันที่</th>
-                <th scope="col">อากาศ</th>
-                <th scope="col" className="is-num">
-                  ยอดขาย
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((p) => {
-                const w = weatherByDay[p.dateKey];
-                return (
-                  <tr key={p.dateKey} className={p.total <= 0 ? "is-zero" : undefined}>
-                    <td>{p.label}</td>
-                    <td className="pos-dash-day-weather" title={weatherCellTitle(w)}>
-                      {w && (w.labelTh || w.emoji) ? (
-                        <>
-                          <span className="pos-dash-day-weather-main">
-                            <span className="pos-dash-day-weather-emoji">{w.emoji}</span>
-                            <span className="pos-dash-day-weather-label">{w.labelTh}</span>
-                            {Number.isFinite(Number(w.tempMin)) &&
-                            Number.isFinite(Number(w.tempMax)) ? (
-                              <span className="pos-dash-day-weather-temp">
-                                {Math.round(Number(w.tempMin))}–{Math.round(Number(w.tempMax))}°
-                              </span>
-                            ) : null}
-                          </span>
-                          {w.periods?.day?.emoji ||
-                          w.periods?.evening?.emoji ||
-                          w.periods?.night?.emoji ? (
-                            <span className="pos-dash-day-weather-periods">
-                              {w.periods.day?.emoji ? (
-                                <span title={`กลางวัน ${w.periods.day.labelTh}`}>
-                                  วัน{w.periods.day.emoji}
-                                </span>
-                              ) : null}
-                              {w.periods.evening?.emoji ? (
-                                <span title={`เย็น ${w.periods.evening.labelTh}`}>
-                                  เย็น{w.periods.evening.emoji}
-                                </span>
-                              ) : null}
-                              {w.periods.night?.emoji ? (
-                                <span title={`ดึก ${w.periods.night.labelTh}`}>
-                                  ดึก{w.periods.night.emoji}
-                                </span>
-                              ) : null}
-                            </span>
-                          ) : null}
-                        </>
-                      ) : (
-                        <span className="muted">{weatherLoading ? "…" : "—"}</span>
-                      )}
-                    </td>
-                    <td className="is-num">
-                      <strong>{formatPlainNumber(p.total)}</strong>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+    <section
+      className="pos-dash-day-table-card"
+      aria-label="ยอดขายรายวันตัวเลข"
+    >
+      <div className="pos-dash-card-head">
+        <h3 className="pos-dash-card-title">ยอดขายรายวัน</h3>
+        {rows.length > POS_DASH_DAY_TILES_COLLAPSED ? (
+          <button
+            type="button"
+            className="npos-slim-text-btn pos-dash-more"
+            aria-expanded={expanded}
+            onClick={() => setExpanded((v) => !v)}
+          >
+            {expanded ? "ย่อ" : `ดูทั้งหมด (${rows.length})`}
+          </button>
+        ) : null}
+      </div>
+
+      {today ? (
+        <div className="pos-dash-dt-today" aria-label="ยอดวันนี้">
+          <div className="pos-dash-dt-today-head">
+            <span className="pos-dash-dt-today-tag">วันนี้</span>
+            <span className="pos-dash-dt-date">
+              {today.label} <small>{wd(today)}</small>
+            </span>
+            <DayWeather
+              w={weatherByDay[today.dateKey]}
+              loading={weatherLoading}
+              withPeriods
+            />
+          </div>
+          <div className="pos-dash-dt-today-body">
+            <strong className="pos-dash-dt-today-amt">
+              {formatPlainNumber(today.total)}
+            </strong>
+            <span className="pos-dash-dt-today-meta">
+              {today.count.toLocaleString("th-TH")} บิล · ยังไม่จบวัน
+              {pastAvg > 0
+                ? ` · เฉลี่ยวันก่อน ${formatPlainNumber(pastAvg)}`
+                : ""}
+            </span>
+          </div>
         </div>
-      ) : (
+      ) : null}
+
+      {shown.length ? (
+        <ul
+          className="pos-dash-dt-grid"
+          style={
+            {
+              "--dt-rows-2": Math.ceil(shown.length / 2),
+              "--dt-rows-3": Math.ceil(shown.length / 3),
+            } as CSSProperties
+          }
+        >
+          {shown.map((p) => {
+            const tag =
+              p.total <= 0
+                ? "is-zero"
+                : p.total === best
+                  ? "is-best"
+                  : p.total === worst
+                    ? "is-worst"
+                    : "";
+            return (
+              <li key={p.dateKey} className={`pos-dash-dt-tile ${tag}`}>
+                <span className="pos-dash-dt-date">
+                  {p.label} <small>{wd(p)}</small>
+                </span>
+                <strong className="pos-dash-dt-amt">
+                  {formatPlainNumber(p.total)}
+                </strong>
+                <DayWeather
+                  w={weatherByDay[p.dateKey]}
+                  loading={weatherLoading}
+                />
+                <span className="pos-dash-dt-bills">
+                  {p.count.toLocaleString("th-TH")} บิล
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      ) : !today ? (
         <p className="muted pos-dash-day-table-empty">ยังไม่มียอดในช่วงนี้</p>
-      )}
+      ) : null}
+
     </section>
   );
 }
@@ -226,9 +314,6 @@ export function PosDashDailyAreaChart({ points }: { points: PosDashDayPoint[] })
   return (
     <div className="pos-dash-chart-card">
       <h3 className="pos-dash-card-title">กราฟรายวัน</h3>
-      <p className="muted pos-ops-corr-note">
-        แกน Y = ยอดขายจริง · ตัวเลขบนเส้น · ชี้หรือลากบนกราฟดูค่ารายวัน
-      </p>
       <div className="pos-dash-chart-svg-wrap pos-ops-corr-svg-wrap" ref={wrapRef}>
         {hoverPoint ? (
           <div

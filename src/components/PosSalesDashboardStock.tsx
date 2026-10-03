@@ -4,6 +4,7 @@ import { ArrowDownToLine, PackageX } from "lucide-react";
 import type { PosDashStockSummary } from "@/lib/pos-sales-dashboard";
 import { formatPlainNumber } from "@/lib/utils";
 
+/** มูลค่าเติม/เบิกคำนวณจากประวัติสต็อก × ต้นทุนต่อหน่วย — ไม่แยกประเภทเสียหาย */
 export function PosSalesDashboardStock({
   stock,
   onOpenStock,
@@ -50,9 +51,6 @@ export function PosSalesDashboardStock({
           </span>
         </div>
       </div>
-      <p className="muted pos-dash-footnote">
-        คำนวณจากประวัติสต็อก × ต้นทุนต่อหน่วย — ไม่แยกประเภทเสียหาย
-      </p>
     </article>
   );
 }

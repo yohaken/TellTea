@@ -38,8 +38,33 @@ assert.match(dash, /ไม่ใช่ยอดขายบวกแต้ม/);
 assert.match(dash, /แลกแต้มไม่เข้าเงินสด/);
 assert.match(dash, /ไม่เข้าลิ้นชัก/);
 
+// Member box sits at the end of the page (after products/stock) and owns the points block.
+// Render order comes from pos-dash-layout default order (owner can drag to change).
+const layout = read("src/lib/pos-dash-layout.ts");
+const defaultIds = [...layout.matchAll(/\{ id: "(\w+)", label:/g)].map((m) => m[1]);
+assert.equal(defaultIds.at(-1), "void", "void bills is the very last card by default");
+assert.equal(defaultIds.at(-2), "members", "members right before void");
+for (const id of ["products", "stock", "stats", "activity"]) {
+  assert.ok(defaultIds.indexOf(id) < defaultIds.indexOf("members"), `members after ${id}`);
+}
+assert.equal(dash.split("<PosSalesDashboardMembers").length - 1, 1);
+assert.match(dash, /members: \(\s*<PosSalesDashboardMembers/);
+assert.match(dash, /void: \(\s*<article className="pos-dash-card pos-dash-card--void">/);
+assert.doesNotMatch(dash, /pos-dash-card-title">แต้มสมาชิก/);
+for (const p of ["totalBills", "totalSales", "pointsEarned", "pointsRedeemed", "redeemBaht", "redeemBillCount"]) {
+  assert.match(ui, new RegExp(`${p}:`), p);
+}
+assert.match(ui, /การซื้อของสมาชิก/);
+assert.match(ui, /แต้มสมาชิก/);
+// Super-compact: one card, slim rows, chart folded by default.
+assert.equal(ui.split("<article").length - 1, 1);
+assert.match(ui, /useState\(false\)/);
+assert.match(ui, /aria-expanded=\{showChart\}/);
+assert.equal(ui.split('className="pos-dash-mem-col"').length - 1, 3);
+
 const css = read("src/app/globals.css");
-assert.match(css, /\.pos-dash-member-stats/);
+assert.match(css, /\.pos-dash-mem-grid/);
+assert.doesNotMatch(css, /\.pos-dash-member-stats/);
 assert.match(css, /\.pos-dash-member-bar/);
 assert.match(css, /\.pos-dash-member-line/);
 

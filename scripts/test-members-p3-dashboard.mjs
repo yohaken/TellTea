@@ -18,10 +18,14 @@ assert.match(report, /pointsEarnedTotal/);
 
 const dash = read("src/components/PosSalesDashboard.tsx");
 assert.match(dash, /แลกแต้ม/);
-assert.match(dash, /แต้มสมาชิก/);
-assert.match(dash, /pointsEarnedTotal/);
-assert.match(dash, /pointsRedeemedTotal/);
+assert.match(dash, /pointsEarned=\{summary\.pointsEarnedTotal\}/);
+assert.match(dash, /pointsRedeemed=\{summary\.pointsRedeemedTotal\}/);
 assert.match(dash, /manualDiscountTotal/);
+const membersCard = read("src/components/PosSalesDashboardMembers.tsx");
+assert.match(membersCard, /แต้มสมาชิก/);
+assert.match(membersCard, /แต้มที่ได้/);
+assert.match(membersCard, /ตัด/);
+assert.match(membersCard, /redeemBaht/);
 
 const sessions = read("src/components/PosSalesReport.tsx");
 assert.match(sessions, /redeemTotal/);

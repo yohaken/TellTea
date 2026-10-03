@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { useAuth } from "@/lib/auth";
+import { Calendar, ChevronLeft, ChevronRight, LayoutList } from "lucide-react";
 import {
   averagePerBill,
   averagePerDay,
@@ -14,8 +15,10 @@ import {
   summarizeMemberSalesTouch,
   summarizePosSalesByDay,
   summarizePosSalesByHour,
-  summarizePosSalesByWeekday,
+  summarizePosSalesByTimeBand,
   summarizePosSalesProducts,
+  summarizePosProductHours,
+  summarizePosSaleOptions,
   summarizeStockMovementsForDashboard,
 } from "@/lib/pos-sales-dashboard";
 import {
@@ -41,6 +44,7 @@ import {
 } from "@/lib/pos-sales-report";
 import { bangkokMonthKey } from "@/lib/vat-sales";
 import { subscribeMenuCategories, subscribeMenuItems } from "@/lib/pos-menu";
+import { setMenuDbMode } from "@/lib/pos-menu-db";
 import { subscribeStockMovements } from "@/lib/stock";
 import type { MenuCategory, MenuItem, PosSale, StockMovement } from "@/lib/types";
 import {
@@ -55,11 +59,22 @@ import {
   PosDashDailyAreaChart,
   PosDashDailyTotalsTable,
   PosDashHourBarChart,
-  PosDashWeekdayBarChart,
 } from "@/components/PosSalesDashboardCharts";
 import { PosSalesDashboardProducts } from "@/components/PosSalesDashboardProducts";
+import { PosSalesDashboardProductHours } from "@/components/PosSalesDashboardProductHours";
+import { PosSalesDashboardTimeTotals } from "@/components/PosSalesDashboardTimeTotals";
+import { PosSalesDashboardWeekdays } from "@/components/PosSalesDashboardWeekdays";
+import { PosSalesDashboardOptions } from "@/components/PosSalesDashboardOptions";
 import { PosSalesDashboardStock } from "@/components/PosSalesDashboardStock";
 import { PosSalesDashboardMembers } from "@/components/PosSalesDashboardMembers";
+import { PosSalesDashboardLayoutSettings } from "@/components/PosSalesDashboardLayoutSettings";
+import {
+  layoutPosDashCards,
+  POS_DASH_DEFAULT_ORDER,
+  savePosDashOrder,
+  subscribePosDashOrder,
+  type PosDashCardId,
+} from "@/lib/pos-dash-layout";
 import { collection, onSnapshot } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import {
@@ -70,6 +85,8 @@ import { subscribeOtEntries, type OtEntry } from "@/lib/ot";
 import { subscribeProdEntries, type ProdEntry } from "@/lib/production";
 import { subscribeProdPolicy, DEFAULT_PROD_POLICY } from "@/lib/prod-policy";
 import { summarizeOpsCorrelationByDay } from "@/lib/pos-ops-correlation";
+
+const ANCHOR_RELEASE_EVENTS = ["wheel", "touchstart", "pointerdown", "keydown"] as const;
 
 function pct(part: number, whole: number): number {
   if (!(whole > 0) || !(part > 0)) return 0;
@@ -105,6 +122,14 @@ function conicFromTenders(cashPct: number, ppPct: number, transferPct: number): 
   return `conic-gradient(#7eb8d8 0deg ${cEnd}deg, #5bc0de ${cEnd}deg ${pEnd}deg, #f0a06a ${pEnd}deg 360deg)`;
 }
 
+/**
+ * BO sales dashboard (owner). Definitions shown nowhere in the UI:
+ * - ยอดรับเงินจริง = หลังหักส่วนลดมือ + แลกแต้ม (ไม่ใช่ยอดขายบวกแต้ม)
+ * - ช่องทางชำระแยกจากยอดรับเงินหลังหักแลกแต้ม · แลกแต้มไม่เข้าเงินสด/ลิ้นชัก
+ * - ส่วนลด = หักจากยอดขาย ไม่ใช่ช่องทางชำระ
+ * - เวลาทั้งหมดคือเวลาปิดบิล (ไม่มีเวลาเปิดบิลแยก)
+ * - จ่ายเงินเฉลี่ยคิดต่อบิล ไม่ใช่ต่อลูกค้า · รายได้ต่อชิ้น = ยอดสุทธิ ÷ จำนวนชิ้น (หน้าร้าน)
+ */
 export function PosSalesDashboard({
   onError,
   onOpenSessions,
@@ -113,7 +138,86 @@ export function PosSalesDashboard({
   onOpenSessions?: (opts?: { voided?: boolean }) => void;
 }) {
   const router = useRouter();
-  const [range, setRange] = useState<PosDateRange>(() => defaultPosDashboardRange());
+  const { user, staff } = useAuth();
+  const [range, setRangeState] = useState<PosDateRange>(() => defaultPosDashboardRange());
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const scrollAnchor = useRef<{ id: string; top: number } | null>(null);
+  const anchorHold = useRef<(() => void) | null>(null);
+  const hasShownCards = useRef(false);
+  const [stickyTop, setStickyTop] = useState(0);
+
+  useEffect(() => {
+    const bar = document.querySelector<HTMLElement>(".topbar");
+    if (!bar) return;
+    const measure = () => {
+      const pos = getComputedStyle(bar).position;
+      setStickyTop(pos === "sticky" || pos === "fixed" ? Math.round(bar.offsetHeight) : 0);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(bar);
+    return () => ro.disconnect();
+  }, []);
+
+  /** Range changes keep the card at the top of the view in place (no jump back to the toolbar). */
+  function setRange(next: PosDateRange) {
+    if (next.startMs === range.startMs && next.endMs === range.endMs) return;
+    const stickyBottom = toolbarRef.current?.getBoundingClientRect().bottom ?? 0;
+    const slot = Array.from(document.querySelectorAll<HTMLElement>(".pos-dash-slot")).find(
+      (el) => el.getBoundingClientRect().bottom > stickyBottom + 8,
+    );
+    anchorHold.current?.();
+    scrollAnchor.current = slot?.dataset.card
+      ? { id: slot.dataset.card, top: slot.getBoundingClientRect().top }
+      : null;
+    if (scrollAnchor.current) {
+      // User scrolls while the range loads → their position wins over the anchor.
+      const drop = () => {
+        scrollAnchor.current = null;
+        anchorHold.current?.();
+      };
+      ANCHOR_RELEASE_EVENTS.forEach((t) => window.addEventListener(t, drop, { passive: true }));
+      anchorHold.current = () => {
+        ANCHOR_RELEASE_EVENTS.forEach((t) => window.removeEventListener(t, drop));
+        anchorHold.current = null;
+      };
+    }
+    setRangeState(next);
+  }
+  const [cardOrder, setCardOrder] = useState<PosDashCardId[]>(() => [...POS_DASH_DEFAULT_ORDER]);
+  const [layoutOpen, setLayoutOpen] = useState(false);
+  const [layoutStatus, setLayoutStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const layoutSaveSeq = useRef(0);
+
+  useEffect(
+    () =>
+      subscribePosDashOrder(
+        (order) => {
+          if (layoutSaveSeq.current === 0) setCardOrder(order);
+        },
+        () => setLayoutStatus("error"),
+      ),
+    [],
+  );
+
+  function changeCardOrder(next: PosDashCardId[]) {
+    setCardOrder(next);
+    setLayoutStatus("saving");
+    const seq = ++layoutSaveSeq.current;
+    savePosDashOrder(next, user?.uid || staff?.id || "")
+      .then(() => {
+        if (seq === layoutSaveSeq.current) {
+          layoutSaveSeq.current = 0;
+          setLayoutStatus("saved");
+        }
+      })
+      .catch(() => {
+        if (seq === layoutSaveSeq.current) {
+          layoutSaveSeq.current = 0;
+          setLayoutStatus("error");
+        }
+      });
+  }
   const [draftStart, setDraftStart] = useState(() => posRangeDayInputValue(range.startMs));
   const [draftEnd, setDraftEnd] = useState(() => posRangeDayInputValue(range.endMs));
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -136,6 +240,9 @@ export function PosSalesDashboard({
   const clamped = useMemo(() => clampPosDateRange(range), [range]);
   const dayCount = useMemo(() => posDateRangeDayCount(clamped), [clamped]);
   const rangeTooLong = dayCount > POS_DASHBOARD_MAX_RANGE_DAYS;
+  /** Range the loaded `sales` belong to — sales-derived cards use it so dimmed stale cards stay self-consistent. */
+  const [salesRange, setSalesRange] = useState<PosDateRange>(clamped);
+  const salesDayCount = useMemo(() => posDateRangeDayCount(salesRange), [salesRange]);
   const monthOptions = useMemo(() => listPosDashboardMonthOptions(Date.now(), 24), []);
   const matchedMonthKey = useMemo(() => posRangeMatchedMonthKey(clamped), [clamped]);
   const currentMonthKey = bangkokMonthKey();
@@ -148,6 +255,7 @@ export function PosSalesDashboard({
   useEffect(() => {
     if (rangeTooLong) {
       setSales([]);
+      setSalesRange(clamped);
       setLoading(false);
       return;
     }
@@ -156,6 +264,7 @@ export function PosSalesDashboard({
       clamped,
       (list) => {
         setSales(list);
+        setSalesRange(clamped);
         setLoading(false);
         onError?.(null);
       },
@@ -167,18 +276,55 @@ export function PosSalesDashboard({
             ? "ไม่มีสิทธิ์อ่านยอดขายในช่วงวันที่นี้ (ต้องเป็นเจ้าของ) — ลองรีเฟรชหรือเข้าสู่ระบบใหม่"
             : msg,
         );
+        setSales([]);
+        setSalesRange(clamped);
         setLoading(false);
       },
     );
   }, [clamped, rangeTooLong, onError]);
 
   useEffect(() => {
+    if (!loading && !rangeTooLong) hasShownCards.current = true;
+  }, [loading, rangeTooLong]);
+
+  useLayoutEffect(() => {
+    const anchor = scrollAnchor.current;
+    if (!anchor || loading) return;
+    scrollAnchor.current = null;
+    anchorHold.current?.();
+    const correct = () => {
+      const slot = document.querySelector<HTMLElement>(`.pos-dash-slot[data-card="${anchor.id}"]`);
+      if (!slot) return;
+      const delta = slot.getBoundingClientRect().top - anchor.top;
+      if (Math.abs(delta) > 1) window.scrollBy(0, delta);
+    };
+    correct();
+    // Stock / members / weather / ops land after sales and resize cards above — keep holding briefly.
+    const ro = new ResizeObserver(correct);
+    document.querySelectorAll(".pos-dash, .pos-dash-flow").forEach((el) => ro.observe(el));
+    const release = () => {
+      ro.disconnect();
+      clearTimeout(timer);
+      ANCHOR_RELEASE_EVENTS.forEach((t) => window.removeEventListener(t, release));
+      anchorHold.current = null;
+    };
+    const timer = setTimeout(release, 2500);
+    ANCHOR_RELEASE_EVENTS.forEach((t) => window.addEventListener(t, release, { passive: true }));
+    anchorHold.current = release;
+  }, [loading, sales]);
+
+  useEffect(() => () => anchorHold.current?.(), []);
+
+  useEffect(() => {
     // Menu is optional for product join — do not block the date toolbar on denial.
+    // Owner-only page: read menu* from owner app (default "pos" needs POS device auth → silent deny).
+    setMenuDbMode("owner");
     const unsubItems = subscribeMenuItems(setMenuItems);
     const unsubCats = subscribeMenuCategories(setMenuCategories);
     return () => {
       unsubItems();
       unsubCats();
+      setMenuDbMode("pos");
     };
   }, []);
 
@@ -296,17 +442,17 @@ export function PosSalesDashboard({
     };
   }, [clamped, rangeTooLong]);
 
-  const byDay = useMemo(() => summarizePosSalesByDay(sales, clamped), [sales, clamped]);
+  const byDay = useMemo(() => summarizePosSalesByDay(sales, salesRange), [sales, salesRange]);
   const opsPoints = useMemo(
     () =>
       summarizeOpsCorrelationByDay({
-        range: clamped,
+        range: salesRange,
         salesByDay: byDay,
         otEntries,
         prodEntries,
         wasteBonusPct,
       }),
-    [clamped, byDay, otEntries, prodEntries, wasteBonusPct],
+    [salesRange, byDay, otEntries, prodEntries, wasteBonusPct],
   );
   const memberGrowth = useMemo(
     () => summarizeMemberGrowth(members, clamped),
@@ -344,9 +490,17 @@ export function PosSalesDashboard({
   }, [weatherDateKeys]);
 
   const byHour = useMemo(() => summarizePosSalesByHour(sales), [sales]);
-  const byWeekday = useMemo(() => summarizePosSalesByWeekday(sales), [sales]);
+  const timeTotals = useMemo(
+    () => summarizePosSalesByTimeBand(sales, salesDayCount),
+    [sales, salesDayCount],
+  );
   const products = useMemo(
-    () => summarizePosSalesProducts(sales, menuItems, menuCategories, 10),
+    () => summarizePosSalesProducts(sales, menuItems, menuCategories, 20),
+    [sales, menuItems, menuCategories],
+  );
+  const saleOptions = useMemo(() => summarizePosSaleOptions(sales), [sales]);
+  const productHours = useMemo(
+    () => summarizePosProductHours(sales, menuItems, menuCategories),
     [sales, menuItems, menuCategories],
   );
   const stockSummary = useMemo(
@@ -356,7 +510,7 @@ export function PosSalesDashboard({
   const label = formatPosDateRangeLabel(clamped);
   const unitCount = useMemo(() => countSaleUnits(sales), [sales]);
   const avgBill = averagePerBill(summary.total, summary.activeCount);
-  const avgDay = averagePerDay(summary.total, clamped);
+  const avgDay = averagePerDay(summary.total, salesRange);
   const avgUnit = averagePerUnit(summary.total, unitCount);
   const avgUnitsBill = averageUnitsPerBill(unitCount, summary.activeCount);
   const discountBillPct = pct(summary.discountCount, summary.activeCount);
@@ -430,8 +584,274 @@ export function PosSalesDashboard({
     !!monthOptions.length &&
     (matchedMonthKey || bangkokMonthKey(clamped.startMs)) < monthOptions[0].monthKey;
 
+  const cards: Record<PosDashCardId, ReactNode> = {
+    daily: (
+      <div className="pos-dash-daily-block">
+        <PosDashDailyTotalsTable
+          points={byDay}
+          weatherByDay={weatherByDay}
+          weatherLoading={weatherLoading}
+        />
+        <PosDashDailyAreaChart points={byDay} />
+      </div>
+    ),
+    ops: <PosOpsCorrelationChart points={opsPoints} />,
+    net: (
+      <article className="pos-dash-card pos-dash-card--net">
+        <h3 className="pos-dash-card-title">ยอดรับเงินจริง</h3>
+        <p className="pos-dash-net-value">
+          {formatPlainNumber(summary.total)} <span>บาท</span>
+        </p>
+        <div className="pos-dash-net-body">
+          <div className="pos-dash-tender">
+            <div
+              className="pos-dash-tender-bar"
+              role="img"
+              aria-label={`เงินสด ${tenders.cashPct}% · อื่นๆ ${tenders.otherPct}%`}
+            >
+              <span
+                className="pos-dash-tender-seg pos-dash-tender-seg--cash"
+                style={{ width: `${tenders.cashPct}%` }}
+              />
+              <span
+                className="pos-dash-tender-seg pos-dash-tender-seg--other"
+                style={{ width: `${tenders.otherPct}%` }}
+              />
+            </div>
+            <div className="pos-dash-tender-legend">
+              <span>
+                เงินสด {tenders.cashPct.toFixed(2)}%
+                <br />
+                <strong>{formatPlainNumber(tenders.cash)} บาท</strong>
+              </span>
+              <span>
+                อื่นๆ {tenders.otherPct.toFixed(2)}%
+                <br />
+                <strong>{formatPlainNumber(tenders.other)} บาท</strong>
+                <span className="muted pos-dash-tender-sub">
+                  {" "}
+                  (PP {formatPlainNumber(tenders.promptpay)} · โอน{" "}
+                  {formatPlainNumber(tenders.transfer)})
+                </span>
+              </span>
+            </div>
+          </div>
+          <dl className="pos-dash-breakdown">
+            <div>
+              <dt>ยอดขาย</dt>
+              <dd>{formatPlainNumber(summary.grossTotal)} บาท</dd>
+            </div>
+            <div>
+              <dt>ส่วนลดมือ</dt>
+              <dd>−{formatPlainNumber(summary.manualDiscountTotal)} บาท</dd>
+            </div>
+            <div>
+              <dt>แลกแต้ม (ส่วนลด)</dt>
+              <dd>−{formatPlainNumber(summary.redeemTotal)} บาท</dd>
+            </div>
+            <div className="pos-dash-breakdown--total">
+              <dt>ยอดรับเงิน</dt>
+              <dd>{formatPlainNumber(summary.total)} บาท</dd>
+            </div>
+          </dl>
+        </div>
+      </article>
+    ),
+    bills: (
+      <article className="pos-dash-card pos-dash-card--bills">
+        <div className="pos-dash-card-head">
+          <h3 className="pos-dash-card-title">บิลที่ปิดไปแล้ว</h3>
+          <button
+            type="button"
+            className="npos-slim-text-btn pos-dash-more"
+            onClick={() => onOpenSessions?.()}
+          >
+            ดูเพิ่มเติม
+          </button>
+        </div>
+        <div className="pos-dash-bills-body">
+          <div className="pos-dash-donut-wrap">
+            <div className="pos-dash-donut" style={donutStyle} aria-hidden>
+              <div className="pos-dash-donut-hole">
+                <span className="pos-dash-donut-label">ทั้งหมด</span>
+                <strong>{summary.activeCount.toLocaleString("th-TH")}</strong>
+                <span className="pos-dash-donut-label">บิล</span>
+              </div>
+            </div>
+          </div>
+          <ul className="pos-dash-bill-channels">
+            <li>
+              <span className="pos-dash-dot pos-dash-dot--cash" />
+              <span className="pos-dash-channel-name">เงินสด</span>
+              <span className="pos-dash-channel-count">
+                {summary.cashCount.toLocaleString("th-TH")} บิล
+              </span>
+              <span className="pos-dash-channel-amt">
+                {formatPlainNumber(summary.cashTotal)} บาท
+              </span>
+            </li>
+            <li>
+              <span className="pos-dash-dot pos-dash-dot--pp" />
+              <span className="pos-dash-channel-name">PromptPay</span>
+              <span className="pos-dash-channel-count">
+                {summary.promptpayCount.toLocaleString("th-TH")} บิล
+              </span>
+              <span className="pos-dash-channel-amt">
+                {formatPlainNumber(summary.promptpayTotal)} บาท
+              </span>
+            </li>
+            <li>
+              <span className="pos-dash-dot pos-dash-dot--transfer" />
+              <span className="pos-dash-channel-name">โอนธนาคาร</span>
+              <span className="pos-dash-channel-count">
+                {summary.transferCount.toLocaleString("th-TH")} บิล
+              </span>
+              <span className="pos-dash-channel-amt">
+                {formatPlainNumber(summary.transferTotal)} บาท
+              </span>
+            </li>
+          </ul>
+        </div>
+      </article>
+    ),
+    hour: <PosDashHourBarChart points={byHour} />,
+    weekday: <PosSalesDashboardWeekdays sales={sales} range={salesRange} />,
+    timeTotals: <PosSalesDashboardTimeTotals data={timeTotals} dayCount={salesDayCount} />,
+    productHours: <PosSalesDashboardProductHours data={productHours} />,
+    products: <PosSalesDashboardProducts products={products} />,
+    options: <PosSalesDashboardOptions options={saleOptions} />,
+    stock: (
+      <PosSalesDashboardStock
+        stock={stockSummary}
+        onOpenStock={() => router.push("/stock/")}
+      />
+    ),
+    discount: (
+      <article className="pos-dash-card">
+        <h3 className="pos-dash-card-title">ส่วนลด / แลกแต้ม</h3>
+        <p className="pos-dash-side-value">{formatPlainNumber(summary.discountTotal)} บาท</p>
+        <p className="muted pos-dash-side-meta">
+          บิลที่มีลด{" "}
+          {summary.discountCount.toLocaleString("th-TH")} · {discountBillPct.toFixed(2)}%
+        </p>
+        <dl className="pos-dash-breakdown pos-dash-breakdown--compact">
+          <div>
+            <dt>ส่วนลดมือ</dt>
+            <dd>−{formatPlainNumber(summary.manualDiscountTotal)}</dd>
+          </div>
+          <div>
+            <dt>แลกแต้ม (ไม่เข้าลิ้นชัก)</dt>
+            <dd>−{formatPlainNumber(summary.redeemTotal)}</dd>
+          </div>
+          <div>
+            <dt>บิลแลกแต้ม</dt>
+            <dd>{summary.redeemBillCount.toLocaleString("th-TH")}</dd>
+          </div>
+        </dl>
+      </article>
+    ),
+    stats: (
+      <article className="pos-dash-card">
+        <h3 className="pos-dash-card-title">สถิติบิล</h3>
+        <div className="pos-dash-stat-pair">
+          <div>
+            <span className="muted">จำนวนบิล</span>
+            <strong>{summary.activeCount.toLocaleString("th-TH")}</strong>
+            <span className="muted">เฉลี่ย {formatPlainNumber(avgDay)} บาท/วัน</span>
+          </div>
+          <div>
+            <span className="muted">จ่ายเงินเฉลี่ย</span>
+            <strong>{formatPlainNumber(avgBill)} บาท/บิล</strong>
+          </div>
+          <div>
+            <span className="muted">จำนวนชิ้นที่ขาย</span>
+            <strong>{formatStockQty(unitCount)} ชิ้น</strong>
+            <span className="muted">
+              เฉลี่ย {formatPlainNumber(avgUnitsBill)} ชิ้น/บิล
+            </span>
+          </div>
+          <div>
+            <span className="muted">รายได้เฉลี่ยต่อชิ้น</span>
+            <strong>{formatPlainNumber(avgUnit)} บาท/ชิ้น</strong>
+          </div>
+        </div>
+      </article>
+    ),
+    activity: (
+      <article className="pos-dash-card">
+        <h3 className="pos-dash-card-title">กิจกรรม</h3>
+        <ul className="pos-dash-activity">
+          <li>
+            <span>บิลสำเร็จ</span>
+            <strong>{summary.activeCount.toLocaleString("th-TH")}</strong>
+          </li>
+          <li>
+            <span>บิลทำลาย</span>
+            <strong>{summary.voidedCount.toLocaleString("th-TH")}</strong>
+          </li>
+          <li className="pos-dash-activity--total">
+            <span>รวมบิล</span>
+            <strong>
+              {(summary.activeCount + summary.voidedCount).toLocaleString("th-TH")}
+            </strong>
+          </li>
+        </ul>
+      </article>
+    ),
+    members: (
+      <PosSalesDashboardMembers
+        members={memberGrowth}
+        memberBillCount={memberSalesTouch.memberBillCount}
+        memberSalesTotal={memberSalesTouch.memberSalesTotal}
+        totalBills={summary.activeCount}
+        totalSales={summary.total}
+        pointsEarned={summary.pointsEarnedTotal}
+        pointsRedeemed={summary.pointsRedeemedTotal}
+        redeemBaht={summary.redeemTotal}
+        redeemBillCount={summary.redeemBillCount}
+        onOpenMembers={() => router.push("/members/")}
+      />
+    ),
+    void: (
+      <article className="pos-dash-card pos-dash-card--void">
+        <div className="pos-dash-card-head">
+          <h3 className="pos-dash-card-title">บิลที่ยกเลิก</h3>
+          <button
+            type="button"
+            className="npos-slim-text-btn pos-dash-more"
+            onClick={() => onOpenSessions?.({ voided: true })}
+          >
+            ดูเพิ่มเติม
+          </button>
+        </div>
+        <div className="pos-dash-void-box">
+          <div>
+            <span className="pos-dash-void-label">ทำลาย</span>
+            <p className="pos-dash-void-value pos-dash-void-value--void">
+              {formatPlainNumber(summary.voidedTotal)} บาท
+            </p>
+            <span className="muted">
+              จำนวน {summary.voidedCount.toLocaleString("th-TH")} บิล
+            </span>
+          </div>
+          <div className="pos-dash-void-note">
+            <span className="muted">คืนเงิน</span>
+            <p className="muted">ยังไม่มีในระบบ</p>
+          </div>
+        </div>
+      </article>
+    ),
+  };
+
   return (
-    <div className="pos-dash">
+    <div
+      className="pos-dash"
+      style={{ "--pos-dash-sticky-top": `${stickyTop}px` } as CSSProperties}
+    >
+      <div
+        ref={toolbarRef}
+        className={`pos-dash-sticky${loading && hasShownCards.current ? " is-loading" : ""}`}
+      >
       <div className="pos-dash-toolbar">
         <div className="pos-dash-month-nav" role="group" aria-label="เลือกเดือน">
           <button
@@ -478,12 +898,35 @@ export function PosSalesDashboard({
         <button
           type="button"
           className="pos-dash-range-btn"
-          onClick={() => setPickerOpen((v) => !v)}
+          onClick={() => {
+            anchorHold.current?.();
+            setPickerOpen((v) => !v);
+          }}
           aria-expanded={pickerOpen}
           aria-label="เลือกช่วงวันที่"
         >
           <Calendar size={16} strokeWidth={1.75} aria-hidden />
           <span>{label}</span>
+        </button>
+        <button
+          type="button"
+          className={`npos-slim-text-btn pos-dash-layout-btn${layoutOpen ? " is-active" : ""}`}
+          onClick={() => {
+            anchorHold.current?.();
+            if (!layoutOpen) {
+              requestAnimationFrame(() => {
+                const panel = document.querySelector(".pos-dash-layout");
+                const barBottom = toolbarRef.current?.getBoundingClientRect().bottom ?? 0;
+                const gap = panel ? panel.getBoundingClientRect().top - barBottom - 8 : 0;
+                if (gap < 0) window.scrollBy({ top: gap, behavior: "smooth" });
+              });
+            }
+            setLayoutOpen((v) => !v);
+          }}
+          aria-expanded={layoutOpen}
+        >
+          <LayoutList size={15} strokeWidth={1.75} aria-hidden />
+          จัดกล่อง
         </button>
         <div className="pos-dash-presets" role="group" aria-label="ช่วงลัด">
           <button type="button" className="npos-slim-text-btn" onClick={() => setPreset("today")}>
@@ -527,6 +970,16 @@ export function PosSalesDashboard({
           <p className="muted pos-dash-range-hint">สูงสุด {POS_DASHBOARD_MAX_RANGE_DAYS} วัน</p>
         </div>
       ) : null}
+      </div>
+
+      {layoutOpen ? (
+        <PosSalesDashboardLayoutSettings
+          order={cardOrder}
+          status={layoutStatus}
+          onChange={changeCardOrder}
+          onClose={() => setLayoutOpen(false)}
+        />
+      ) : null}
 
       {stockNote ? <p className="muted pos-dash-stock-note">{stockNote}</p> : null}
       {membersNote ? <p className="muted pos-dash-stock-note">{membersNote}</p> : null}
@@ -535,296 +988,20 @@ export function PosSalesDashboard({
       {rangeTooLong ? (
         <p className="error-text">ช่วงวันที่ยาวเกิน {POS_DASHBOARD_MAX_RANGE_DAYS} วัน — ย่อช่วงก่อน</p>
       ) : null}
-      {loading ? <p className="empty">กำลังโหลดแดชบอร์ด...</p> : null}
+      {loading && !hasShownCards.current ? <p className="empty">กำลังโหลดแดชบอร์ด...</p> : null}
 
-      {!loading && !rangeTooLong ? (
-        <>
-          <div className="pos-dash-daily-block">
-            <PosDashDailyTotalsTable
-              points={byDay}
-              weatherByDay={weatherByDay}
-              weatherLoading={weatherLoading}
-            />
-            <PosDashDailyAreaChart points={byDay} />
-          </div>
-
-          <PosOpsCorrelationChart points={opsPoints} />
-
-          <div className="pos-dash-top-grid">
-            <article className="pos-dash-card pos-dash-card--net">
-              <h3 className="pos-dash-card-title">ยอดรับเงินจริง</h3>
-              <p className="pos-dash-net-value">
-                {formatPlainNumber(summary.total)} <span>บาท</span>
-              </p>
-              <p className="muted pos-dash-footnote">
-                หลังหักส่วนลดมือ + แลกแต้ม · ไม่ใช่ยอดขายบวกแต้ม
-              </p>
-              <div className="pos-dash-net-body">
-                <div className="pos-dash-tender">
-                  <div
-                    className="pos-dash-tender-bar"
-                    role="img"
-                    aria-label={`เงินสด ${tenders.cashPct}% · อื่นๆ ${tenders.otherPct}%`}
-                  >
-                    <span
-                      className="pos-dash-tender-seg pos-dash-tender-seg--cash"
-                      style={{ width: `${tenders.cashPct}%` }}
-                    />
-                    <span
-                      className="pos-dash-tender-seg pos-dash-tender-seg--other"
-                      style={{ width: `${tenders.otherPct}%` }}
-                    />
-                  </div>
-                  <div className="pos-dash-tender-legend">
-                    <span>
-                      เงินสด {tenders.cashPct.toFixed(2)}%
-                      <br />
-                      <strong>{formatPlainNumber(tenders.cash)} บาท</strong>
-                    </span>
-                    <span>
-                      อื่นๆ {tenders.otherPct.toFixed(2)}%
-                      <br />
-                      <strong>{formatPlainNumber(tenders.other)} บาท</strong>
-                      <span className="muted pos-dash-tender-sub">
-                        {" "}
-                        (PP {formatPlainNumber(tenders.promptpay)} · โอน{" "}
-                        {formatPlainNumber(tenders.transfer)})
-                      </span>
-                    </span>
-                  </div>
-                </div>
-                <dl className="pos-dash-breakdown">
-                  <div>
-                    <dt>ยอดขาย</dt>
-                    <dd>{formatPlainNumber(summary.grossTotal)} บาท</dd>
-                  </div>
-                  <div>
-                    <dt>ส่วนลดมือ</dt>
-                    <dd>−{formatPlainNumber(summary.manualDiscountTotal)} บาท</dd>
-                  </div>
-                  <div>
-                    <dt>แลกแต้ม (ส่วนลด)</dt>
-                    <dd>−{formatPlainNumber(summary.redeemTotal)} บาท</dd>
-                  </div>
-                  <div className="pos-dash-breakdown--total">
-                    <dt>ยอดรับเงิน</dt>
-                    <dd>{formatPlainNumber(summary.total)} บาท</dd>
-                  </div>
-                </dl>
-              </div>
-            </article>
-
-            <article className="pos-dash-card pos-dash-card--bills">
-              <div className="pos-dash-card-head">
-                <h3 className="pos-dash-card-title">บิลที่ปิดไปแล้ว</h3>
-                <button
-                  type="button"
-                  className="npos-slim-text-btn pos-dash-more"
-                  onClick={() => onOpenSessions?.()}
-                >
-                  ดูเพิ่มเติม
-                </button>
-              </div>
-              <div className="pos-dash-bills-body">
-                <div className="pos-dash-donut-wrap">
-                  <div className="pos-dash-donut" style={donutStyle} aria-hidden>
-                    <div className="pos-dash-donut-hole">
-                      <span className="pos-dash-donut-label">ทั้งหมด</span>
-                      <strong>{summary.activeCount.toLocaleString("th-TH")}</strong>
-                      <span className="pos-dash-donut-label">บิล</span>
-                    </div>
-                  </div>
-                </div>
-                <ul className="pos-dash-bill-channels">
-                  <li>
-                    <span className="pos-dash-dot pos-dash-dot--cash" />
-                    <span className="pos-dash-channel-name">เงินสด</span>
-                    <span className="pos-dash-channel-count">
-                      {summary.cashCount.toLocaleString("th-TH")} บิล
-                    </span>
-                    <span className="pos-dash-channel-amt">
-                      {formatPlainNumber(summary.cashTotal)} บาท
-                    </span>
-                  </li>
-                  <li>
-                    <span className="pos-dash-dot pos-dash-dot--pp" />
-                    <span className="pos-dash-channel-name">PromptPay</span>
-                    <span className="pos-dash-channel-count">
-                      {summary.promptpayCount.toLocaleString("th-TH")} บิล
-                    </span>
-                    <span className="pos-dash-channel-amt">
-                      {formatPlainNumber(summary.promptpayTotal)} บาท
-                    </span>
-                  </li>
-                  <li>
-                    <span className="pos-dash-dot pos-dash-dot--transfer" />
-                    <span className="pos-dash-channel-name">โอนธนาคาร</span>
-                    <span className="pos-dash-channel-count">
-                      {summary.transferCount.toLocaleString("th-TH")} บิล
-                    </span>
-                    <span className="pos-dash-channel-amt">
-                      {formatPlainNumber(summary.transferTotal)} บาท
-                    </span>
-                  </li>
-                </ul>
-              </div>
-              <p className="muted pos-dash-footnote">
-                แยกตามช่องทางชำระจากยอดรับเงินหลังหักแลกแต้ม · แลกแต้มไม่เข้าเงินสด/ลิ้นชัก
-              </p>
-            </article>
-
-            <article className="pos-dash-card pos-dash-card--void">
-              <div className="pos-dash-card-head">
-                <h3 className="pos-dash-card-title">บิลที่ยกเลิก</h3>
-                <button
-                  type="button"
-                  className="npos-slim-text-btn pos-dash-more"
-                  onClick={() => onOpenSessions?.({ voided: true })}
-                >
-                  ดูเพิ่มเติม
-                </button>
-              </div>
-              <div className="pos-dash-void-box">
-                <div>
-                  <span className="pos-dash-void-label">ทำลาย</span>
-                  <p className="pos-dash-void-value pos-dash-void-value--void">
-                    {formatPlainNumber(summary.voidedTotal)} บาท
-                  </p>
-                  <span className="muted">
-                    จำนวน {summary.voidedCount.toLocaleString("th-TH")} บิล
-                  </span>
-                </div>
-                <div className="pos-dash-void-note">
-                  <span className="muted">คืนเงิน</span>
-                  <p className="muted">ยังไม่มีในระบบ</p>
-                </div>
-              </div>
-            </article>
-          </div>
-
-          <PosSalesDashboardMembers
-            members={memberGrowth}
-            memberBillCount={memberSalesTouch.memberBillCount}
-            memberSalesTotal={memberSalesTouch.memberSalesTotal}
-            onOpenMembers={() => router.push("/members/")}
-          />
-
-          <div className="pos-dash-chart-row">
-            <div className="pos-dash-chart-row__hour">
-              <PosDashHourBarChart points={byHour} />
-              <p className="muted pos-dash-footnote">ตามเวลาขาย (ปิดบิล) — ไม่มีเวลาเปิดบิลแยก</p>
+      {(!loading || hasShownCards.current) && !rangeTooLong ? (
+        <div className={`pos-dash-flow${loading ? " is-loading" : ""}`} aria-busy={loading}>
+          {layoutPosDashCards(cardOrder).map(({ id, span }) => (
+            <div
+              key={id}
+              className={`pos-dash-slot${span === 2 ? " pos-dash-slot--full" : ""}`}
+              data-card={id}
+            >
+              {cards[id]}
             </div>
-            <div className="pos-dash-chart-row__weekday">
-              <PosDashWeekdayBarChart points={byWeekday} />
-            </div>
-          </div>
-
-          <div className="pos-dash-bottom-grid">
-            <PosSalesDashboardProducts
-              products={products}
-              onOpenMenu={() => router.push("/menu/")}
-            />
-
-            <div className="pos-dash-bottom-side">
-              <PosSalesDashboardStock
-                stock={stockSummary}
-                onOpenStock={() => router.push("/stock/")}
-              />
-
-              <article className="pos-dash-card">
-                <h3 className="pos-dash-card-title">ส่วนลด / แลกแต้ม</h3>
-                <p className="pos-dash-side-value">{formatPlainNumber(summary.discountTotal)} บาท</p>
-                <p className="muted pos-dash-side-meta">
-                  รวมส่วนลดที่หักจากยอดขาย · ไม่ใช่ช่องทางชำระ · บิลที่มีลด{" "}
-                  {summary.discountCount.toLocaleString("th-TH")} · {discountBillPct.toFixed(2)}%
-                </p>
-                <dl className="pos-dash-breakdown pos-dash-breakdown--compact">
-                  <div>
-                    <dt>ส่วนลดมือ</dt>
-                    <dd>−{formatPlainNumber(summary.manualDiscountTotal)}</dd>
-                  </div>
-                  <div>
-                    <dt>แลกแต้ม (ไม่เข้าลิ้นชัก)</dt>
-                    <dd>−{formatPlainNumber(summary.redeemTotal)}</dd>
-                  </div>
-                  <div>
-                    <dt>บิลแลกแต้ม</dt>
-                    <dd>{summary.redeemBillCount.toLocaleString("th-TH")}</dd>
-                  </div>
-                </dl>
-              </article>
-
-              <article className="pos-dash-card">
-                <h3 className="pos-dash-card-title">แต้มสมาชิก</h3>
-                <div className="pos-dash-stat-pair">
-                  <div>
-                    <span className="muted">แต้มที่ได้</span>
-                    <strong>+{summary.pointsEarnedTotal.toLocaleString("th-TH")}</strong>
-                    <span className="muted">จากยอดรับเงินหลังลด</span>
-                  </div>
-                  <div>
-                    <span className="muted">แต้มที่ตัด</span>
-                    <strong>−{summary.pointsRedeemedTotal.toLocaleString("th-TH")}</strong>
-                    <span className="muted">
-                      ส่วนลด ≈ {formatPlainNumber(summary.redeemTotal)} บาท
-                    </span>
-                  </div>
-                </div>
-                <p className="muted pos-dash-footnote">
-                  แลกแต้มลดยอดก่อนรับเงิน — เงินสด/PP/โอนนับเฉพาะยอดที่รับจริง
-                </p>
-              </article>
-
-              <article className="pos-dash-card">
-                <h3 className="pos-dash-card-title">สถิติบิล</h3>
-                <div className="pos-dash-stat-pair">
-                  <div>
-                    <span className="muted">จำนวนบิล</span>
-                    <strong>{summary.activeCount.toLocaleString("th-TH")}</strong>
-                    <span className="muted">เฉลี่ย {formatPlainNumber(avgDay)} บาท/วัน</span>
-                  </div>
-                  <div>
-                    <span className="muted">จ่ายเงินเฉลี่ย</span>
-                    <strong>{formatPlainNumber(avgBill)} บาท/บิล</strong>
-                    <span className="muted">เฉลี่ยต่อบิล (ไม่ใช่ต่อลูกค้า)</span>
-                  </div>
-                  <div>
-                    <span className="muted">จำนวนชิ้นที่ขาย</span>
-                    <strong>{formatStockQty(unitCount)} ชิ้น</strong>
-                    <span className="muted">
-                      เฉลี่ย {formatPlainNumber(avgUnitsBill)} ชิ้น/บิล
-                    </span>
-                  </div>
-                  <div>
-                    <span className="muted">รายได้เฉลี่ยต่อชิ้น</span>
-                    <strong>{formatPlainNumber(avgUnit)} บาท/ชิ้น</strong>
-                    <span className="muted">ยอดสุทธิ ÷ จำนวนชิ้น (หน้าร้าน)</span>
-                  </div>
-                </div>
-              </article>
-
-              <article className="pos-dash-card">
-                <h3 className="pos-dash-card-title">กิจกรรม</h3>
-                <ul className="pos-dash-activity">
-                  <li>
-                    <span>บิลสำเร็จ</span>
-                    <strong>{summary.activeCount.toLocaleString("th-TH")}</strong>
-                  </li>
-                  <li>
-                    <span>บิลทำลาย</span>
-                    <strong>{summary.voidedCount.toLocaleString("th-TH")}</strong>
-                  </li>
-                  <li className="pos-dash-activity--total">
-                    <span>รวมบิล</span>
-                    <strong>
-                      {(summary.activeCount + summary.voidedCount).toLocaleString("th-TH")}
-                    </strong>
-                  </li>
-                </ul>
-              </article>
-            </div>
-          </div>
-        </>
+          ))}
+        </div>
       ) : null}
 
       {!loading && !rangeTooLong && summary.activeCount === 0 && summary.voidedCount === 0 ? (

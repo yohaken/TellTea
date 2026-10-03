@@ -38,7 +38,8 @@ assert.match(charts, /ยอดขายแยกตามช่วงวัน/
 assert.match(charts, /pos-dash-area-fill|pos-dash-bar--hour/);
 
 const products = read("src/components/PosSalesDashboardProducts.tsx");
-assert.match(products, /10 อันดับสินค้าขายดี/);
+assert.match(products, /อันดับสินค้าขายดี/);
+assert.match(products, /สินค้าขายทั้งหมด/);
 assert.match(products, /เมนูที่มีขาย|ขายดีสุด|หมวดขายดี/);
 
 const dash = read("src/components/PosSalesDashboard.tsx");
@@ -55,7 +56,7 @@ assert.doesNotMatch(dash, /โต๊ะอาหาร|อัตราการ�
 const css = read("src/app/globals.css");
 assert.match(css, /\.pos-dash-daily-block/);
 assert.match(css, /\.pos-dash-day-table\b/);
-assert.match(css, /\.pos-dash-chart-row/);
+assert.match(css, /\.pos-dash-slot--full/);
 assert.match(css, /\.pos-dash-top-items/);
 assert.match(css, /\.pos-dash-bar--hour/);
 

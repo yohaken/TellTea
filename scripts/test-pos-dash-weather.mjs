@@ -42,7 +42,7 @@ assert.match(fn, /staff\.get\("role"\) === "owner"/);
 
 const charts = read("src/components/PosSalesDashboardCharts.tsx");
 assert.match(charts, /weatherByDay/);
-assert.match(charts, /pos-dash-day-weather/);
+assert.match(charts, /pos-dash-dt-wx/);
 assert.match(charts, /กลางวัน|เย็น|ดึก|periods/);
 assert.match(charts, /weatherLoading/);
 
@@ -58,7 +58,7 @@ assert.match(rules, /allow write: if false/);
 assert.match(rules, /collection != 'weatherDays'/);
 
 const css = read("src/app/globals.css");
-assert.match(css, /minmax\(20rem/);
+assert.match(css, /\.pos-dash-dt-wx \{/);
 assert.match(css, /pos-dash-daily-block/);
 
 assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)[1]) >= 877);
