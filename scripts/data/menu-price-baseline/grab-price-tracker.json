@@ -1,5 +1,5 @@
 {
-  "round": 20,
+  "round": 23,
   "items": {
     "THITE2025071208361503136": {
       "name": "(สมูทตี้) มันม่วง แก้วใหญ่ 22 ออนซ์",
@@ -1070,7 +1070,7 @@
     "THITE2025031410234653483": {
       "name": "0% แคล ชาน้ำผึ้ง",
       "itemId": "THITE2025031410234653483",
-      "targetPrice": 27,
+      "targetPrice": 25,
       "rounds": [
         {
           "round": 3,
@@ -1100,11 +1100,21 @@
           "after": 27,
           "changed": true,
           "status": "bulk_uploaded"
+        },
+        {
+          "round": 22,
+          "at": "2026-09-12T08:18:24.476Z",
+          "before": 24,
+          "attempted": 25,
+          "after": 25,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
         }
       ],
-      "currentLive": 27,
+      "currentLive": 25,
       "reachedTarget": true,
-      "source": "hub-bulk-zip"
+      "source": "hub"
     },
     "THITE2024040707292383933": {
       "name": "ชาดำเย็น",
@@ -1235,7 +1245,7 @@
     "THITE2025031410255226364": {
       "name": "0% แคล ชาน้ำผึ้งมะนาว",
       "itemId": "THITE2025031410255226364",
-      "targetPrice": 27,
+      "targetPrice": 25,
       "rounds": [
         {
           "round": 3,
@@ -1265,16 +1275,26 @@
           "after": 27,
           "changed": true,
           "status": "bulk_uploaded"
+        },
+        {
+          "round": 22,
+          "at": "2026-09-12T08:18:25.031Z",
+          "before": 24,
+          "attempted": 25,
+          "after": 25,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
         }
       ],
-      "currentLive": 27,
+      "currentLive": 25,
       "reachedTarget": true,
-      "source": "hub-bulk-zip"
+      "source": "hub"
     },
     "THITE2025031615083861257": {
       "name": "0% แคล ชาแคนตาลูป",
       "itemId": "THITE2025031615083861257",
-      "targetPrice": 24,
+      "targetPrice": 25,
       "rounds": [
         {
           "round": 3,
@@ -1324,10 +1344,20 @@
           "changed": false,
           "status": "blocked_menu_ui",
           "popupText": ""
+        },
+        {
+          "round": 22,
+          "at": "2026-09-12T08:18:24.316Z",
+          "before": 24,
+          "attempted": 25,
+          "after": 25,
+          "changed": true,
+          "status": "reached_target",
+          "popupText": ""
         }
       ],
-      "currentLive": 27,
-      "reachedTarget": false,
+      "currentLive": 25,
+      "reachedTarget": true,
       "source": "hub"
     },
     "THITE2025031313362137067": {
@@ -3945,7 +3975,7 @@
     "THITE2026021907084210490": {
       "name": "มันไทยอบ ดั้งเดิม",
       "itemId": "THITE2026021907084210490",
-      "targetPrice": 19,
+      "targetPrice": 17,
       "rounds": [
         {
           "round": 3,
@@ -3981,11 +4011,21 @@
           "after": 19,
           "changed": true,
           "status": "bulk_uploaded"
+        },
+        {
+          "round": 23,
+          "at": "2026-09-21T09:34:37.093Z",
+          "before": 18,
+          "attempted": 17,
+          "after": 18,
+          "changed": false,
+          "status": "no_change",
+          "popupText": "แก้ไขรายการ\nBrand\nPlease Choose\nDietary preferences\nPlease Choose\nย้อนกลับ\nตรวจสอบรายการ"
         }
       ],
-      "reachedTarget": true,
-      "currentLive": 19,
-      "source": "hub-bulk-zip"
+      "reachedTarget": false,
+      "currentLive": 18,
+      "source": "hub"
     },
     "THITE2025080402183651028": {
       "name": "มัทฉะเลม่อนเย็น (Matcha Lemon)",
@@ -4570,7 +4610,7 @@
     "THITE2024040707263973803": {
       "name": "นมสดไข่มุกบราวน์ชูการ์ (เย็น/ปั่น)",
       "itemId": "THITE2024040707263973803",
-      "targetPrice": 63,
+      "targetPrice": 59,
       "rounds": [
         {
           "round": 3,
@@ -4600,11 +4640,17 @@
           "after": 63,
           "changed": true,
           "status": "bulk_uploaded"
+        },
+        {
+          "round": 21,
+          "at": "2026-09-04T17:26:46.288Z",
+          "status": "error",
+          "popupText": ""
         }
       ],
-      "currentLive": 63,
+      "currentLive": 59,
       "reachedTarget": true,
-      "source": "hub-bulk-zip"
+      "source": "hub"
     },
     "THITE2025062904281409246": {
       "name": "(สมูทตี้) สตรอเบอร์รี่ แก้วใหญ่ 22 ออนซ์",
@@ -7344,5 +7390,5 @@
       "currentLive": 36
     }
   },
-  "updatedAt": "2026-09-03T08:31:18.381Z"
+  "updatedAt": "2026-09-21T09:34:37.093Z"
 }

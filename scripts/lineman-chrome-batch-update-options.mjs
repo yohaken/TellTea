@@ -12,7 +12,7 @@ import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
-import { applyChannelRule } from "./lib/hub-channel-targets.mjs";
+import { resolveHubOptionTarget } from "./lib/hub-channel-targets.mjs";
 import { getSeedDb } from "./lib/pos-firebase-seed.mjs";
 import { collection, getDocs, getDoc, doc } from "firebase/firestore";
 import { findWongnaiTab, mapPool, sleep as lmSleep } from "./lib/lineman-chrome.mjs";
@@ -125,7 +125,8 @@ async function buildDiffs() {
     const ov = overrides[pos.key]?.lineman;
     if (ov) overrideN += 1;
     else columnN += 1;
-    const target = applyChannelRule(pos.store, ov || rule);
+    const resolved = resolveHubOptionTarget(pos.store, "lineman", settings, pos.key);
+    const target = resolved.target;
     const current = Number(o.price);
     const priceMiss = current !== target;
     if (!priceMiss) {
@@ -148,7 +149,7 @@ async function buildDiffs() {
       posKey: pos.key,
       fromOverride: !!ov,
       refreshOnly: !priceMiss,
-      rule: ov || rule,
+      rule: resolved.rule,
     });
   }
 

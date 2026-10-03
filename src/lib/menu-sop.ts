@@ -1091,14 +1091,14 @@ export async function seedBakerySopAndCosts(updatedBy: string): Promise<{
       },
     ];
     const sopId = await createMenuSop({
-      name: "หมั่นโถว โฮมเมด",
+      name: "บิ๊กหมั่นโถว โฮมเมด",
       category: "bakery",
       menuItemId,
       prodProductId,
       yieldQty: 9,
       yieldUnit: "ชิ้น",
       pieceWeightG: 80,
-      description: "หมั่นโถวโฮมเมด · สูตร 9 ชิ้น × 80 กรัม",
+      description: "บิ๊กหมั่นโถวโฮมเมด · สูตร 9 ชิ้น × 80 กรัม",
       ingredientsText: ingredients
         .map((i) => `${i.nameFreeText} ${i.qty}${i.unit}`)
         .join("\n"),

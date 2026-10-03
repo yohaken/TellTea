@@ -1,125 +1,15 @@
 {
-  "at": "2026-09-02T10:03:18.191Z",
+  "at": "2026-09-12T12:52:26.559Z",
   "counts": {
-    "groups": 29,
-    "items": 167,
+    "groups": 30,
+    "items": 164,
     "keep": 20,
-    "skip": 1,
-    "delete": 8
+    "skip": 0,
+    "delete": 10
   },
   "keep": [
     {
-      "id": "THMOG20260902091802016537",
-      "name": "โปรโมชั่น ปังมันม่วง",
-      "fold": "โปรโมชั่น ปังมันม่วง",
-      "related": 1,
-      "linkedOnItem": true,
-      "used": true,
-      "usedSiblingCount": 0,
-      "usedSiblingIds": [],
-      "verdict": "keep",
-      "reason": "KEEP used related=1 linkedOnItem=true"
-    },
-    {
-      "id": "THMOG20260902091756011181",
-      "name": "โปรโมชั่น ชิโอปัง",
-      "fold": "โปรโมชั่น ชิโอปัง",
-      "related": 1,
-      "linkedOnItem": true,
-      "used": true,
-      "usedSiblingCount": 0,
-      "usedSiblingIds": [],
-      "verdict": "keep",
-      "reason": "KEEP used related=1 linkedOnItem=true"
-    },
-    {
-      "id": "THMOG20260902085056017168",
-      "name": "ท็อปปิ้ง",
-      "fold": "ท็อปปิ้ง",
-      "related": 1,
-      "linkedOnItem": true,
-      "used": true,
-      "usedSiblingCount": 1,
-      "usedSiblingIds": [
-        "THMOG20260901152504029308"
-      ],
-      "verdict": "keep",
-      "reason": "KEEP used related=1 linkedOnItem=true"
-    },
-    {
-      "id": "THMOG20260901163848015258",
-      "name": "ท็อปปิ้งขนมปัง",
-      "fold": "ท็อปปิ้งขนมปัง",
-      "related": 2,
-      "linkedOnItem": true,
-      "used": true,
-      "usedSiblingCount": 0,
-      "usedSiblingIds": [],
-      "verdict": "keep",
-      "reason": "KEEP used related=2 linkedOnItem=true"
-    },
-    {
-      "id": "THMOG20260901152516017143",
-      "name": "โปรโมชั่น บราวนี่",
-      "fold": "โปรโมชั่น บราวนี่",
-      "related": 1,
-      "linkedOnItem": true,
-      "used": true,
-      "usedSiblingCount": 0,
-      "usedSiblingIds": [],
-      "verdict": "keep",
-      "reason": "KEEP used related=1 linkedOnItem=true"
-    },
-    {
-      "id": "THMOG20260901152511144499",
-      "name": "โปรโมชั่น เค้กกล้วยหอม",
-      "fold": "โปรโมชั่น เค้กกล้วยหอม",
-      "related": 1,
-      "linkedOnItem": true,
-      "used": true,
-      "usedSiblingCount": 0,
-      "usedSiblingIds": [],
-      "verdict": "keep",
-      "reason": "KEEP used related=1 linkedOnItem=true"
-    },
-    {
-      "id": "THMOG20260901152511129759",
-      "name": "ชิโอปัง เพิ่มไส้พิเศษ",
-      "fold": "ชิโอปัง เพิ่มไส้พิเศษ",
-      "related": 1,
-      "linkedOnItem": true,
-      "used": true,
-      "usedSiblingCount": 0,
-      "usedSiblingIds": [],
-      "verdict": "keep",
-      "reason": "KEEP used related=1 linkedOnItem=true"
-    },
-    {
-      "id": "THMOG20260901152510117972",
-      "name": "โปรโมชั่น วาฟเฟิลเบลเยียมโฮมเมด ดั้งเดิม",
-      "fold": "โปรโมชั่น วาฟเฟิลเบลเยียมโฮมเมด ดั้งเดิม",
-      "related": 1,
-      "linkedOnItem": true,
-      "used": true,
-      "usedSiblingCount": 0,
-      "usedSiblingIds": [],
-      "verdict": "keep",
-      "reason": "KEEP used related=1 linkedOnItem=true"
-    },
-    {
-      "id": "THMOG20260901152510108859",
-      "name": "ขนาด ปริมาณ แก้วกาแฟ",
-      "fold": "ขนาด ปริมาณ แก้วกาแฟ",
-      "related": 3,
-      "linkedOnItem": true,
-      "used": true,
-      "usedSiblingCount": 0,
-      "usedSiblingIds": [],
-      "verdict": "keep",
-      "reason": "KEEP used related=3 linkedOnItem=true"
-    },
-    {
-      "id": "THMOG20260901152509093681",
+      "id": "THMOG20260912112159155301",
       "name": "โปรโมชั่น ปังเนยกรอบอบไอน้ำ",
       "fold": "โปรโมชั่น ปังเนยกรอบอบไอน้ำ",
       "related": 1,
@@ -131,7 +21,7 @@
       "reason": "KEEP used related=1 linkedOnItem=true"
     },
     {
-      "id": "THMOG20260901152507066419",
+      "id": "THMOG20260912112159149733",
       "name": "โปรโมชั่น มันไทยอบ ดั้งเดิม",
       "fold": "โปรโมชั่น มันไทยอบ ดั้งเดิม",
       "related": 1,
@@ -143,7 +33,79 @@
       "reason": "KEEP used related=1 linkedOnItem=true"
     },
     {
-      "id": "THMOG20260901152507057587",
+      "id": "THMOG20260912112159132042",
+      "name": "โปรโมชั่น ปังมันม่วง",
+      "fold": "โปรโมชั่น ปังมันม่วง",
+      "related": 1,
+      "linkedOnItem": true,
+      "used": true,
+      "usedSiblingCount": 0,
+      "usedSiblingIds": [],
+      "verdict": "keep",
+      "reason": "KEEP used related=1 linkedOnItem=true"
+    },
+    {
+      "id": "THMOG20260912112158122778",
+      "name": "โปรโมชั่น เค้กกล้วยหอม",
+      "fold": "โปรโมชั่น เค้กกล้วยหอม",
+      "related": 1,
+      "linkedOnItem": true,
+      "used": true,
+      "usedSiblingCount": 0,
+      "usedSiblingIds": [],
+      "verdict": "keep",
+      "reason": "KEEP used related=1 linkedOnItem=true"
+    },
+    {
+      "id": "THMOG20260912112158110881",
+      "name": "ขนาด ปริมาณ แก้วกาแฟ",
+      "fold": "ขนาด ปริมาณ แก้วกาแฟ",
+      "related": 3,
+      "linkedOnItem": true,
+      "used": true,
+      "usedSiblingCount": 0,
+      "usedSiblingIds": [],
+      "verdict": "keep",
+      "reason": "KEEP used related=3 linkedOnItem=true"
+    },
+    {
+      "id": "THMOG20260912112157106783",
+      "name": "โปรโมชั่น บราวนี่",
+      "fold": "โปรโมชั่น บราวนี่",
+      "related": 1,
+      "linkedOnItem": true,
+      "used": true,
+      "usedSiblingCount": 0,
+      "usedSiblingIds": [],
+      "verdict": "keep",
+      "reason": "KEEP used related=1 linkedOnItem=true"
+    },
+    {
+      "id": "THMOG20260912112156081337",
+      "name": "ชิโอปัง เพิ่มไส้พิเศษ",
+      "fold": "ชิโอปัง เพิ่มไส้พิเศษ",
+      "related": 1,
+      "linkedOnItem": true,
+      "used": true,
+      "usedSiblingCount": 0,
+      "usedSiblingIds": [],
+      "verdict": "keep",
+      "reason": "KEEP used related=1 linkedOnItem=true"
+    },
+    {
+      "id": "THMOG20260912112156092695",
+      "name": "โปรโมชั่น ชิโอปัง",
+      "fold": "โปรโมชั่น ชิโอปัง",
+      "related": 1,
+      "linkedOnItem": true,
+      "used": true,
+      "usedSiblingCount": 0,
+      "usedSiblingIds": [],
+      "verdict": "keep",
+      "reason": "KEEP used related=1 linkedOnItem=true"
+    },
+    {
+      "id": "THMOG20260912112154079874",
       "name": "ช็อตมัทฉะ",
       "fold": "ช็อตมัทฉะ",
       "related": 7,
@@ -155,19 +117,7 @@
       "reason": "KEEP used related=7 linkedOnItem=true"
     },
     {
-      "id": "THMOG20260901152504042931",
-      "name": "ประเภท",
-      "fold": "ประเภท",
-      "related": 43,
-      "linkedOnItem": true,
-      "used": true,
-      "usedSiblingCount": 0,
-      "usedSiblingIds": [],
-      "verdict": "keep",
-      "reason": "KEEP used related=43 linkedOnItem=true"
-    },
-    {
-      "id": "THMOG20260901152504032778",
+      "id": "THMOG20260912112153064646",
       "name": "ช็อตมะนาว",
       "fold": "ช็อตมะนาว",
       "related": 9,
@@ -179,23 +129,57 @@
       "reason": "KEEP used related=9 linkedOnItem=true"
     },
     {
-      "id": "THMOG20260901152504029308",
-      "name": "ท็อปปิ้ง",
-      "fold": "ท็อปปิ้ง",
-      "related": 132,
+      "id": "THMOG20260912112153058076",
+      "name": "โปรโมชั่น วาฟเฟิลเบลเยียมโฮมเมด ดั้งเดิม",
+      "fold": "โปรโมชั่น วาฟเฟิลเบลเยียมโฮมเมด ดั้งเดิม",
+      "related": 1,
       "linkedOnItem": true,
       "used": true,
-      "usedSiblingCount": 1,
-      "usedSiblingIds": [
-        "THMOG20260902085056017168"
-      ],
+      "usedSiblingCount": 0,
+      "usedSiblingIds": [],
       "verdict": "keep",
-      "reason": "KEEP used related=132 linkedOnItem=true"
+      "reason": "KEEP used related=1 linkedOnItem=true"
     },
     {
-      "id": "THMOG20260901152504018148",
-      "name": "กาแฟ",
-      "fold": "กาแฟ",
+      "id": "THMOG20260912112152045705",
+      "name": "ประเภท",
+      "fold": "ประเภท",
+      "related": 43,
+      "linkedOnItem": true,
+      "used": true,
+      "usedSiblingCount": 0,
+      "usedSiblingIds": [],
+      "verdict": "keep",
+      "reason": "KEEP used related=43 linkedOnItem=true"
+    },
+    {
+      "id": "THMOG20260912112152036910",
+      "name": "โปรโมชั่น Soft Cookie โฮมเมด",
+      "fold": "โปรโมชั่น Soft Cookie โฮมเมด",
+      "related": 1,
+      "linkedOnItem": true,
+      "used": true,
+      "usedSiblingCount": 0,
+      "usedSiblingIds": [],
+      "verdict": "keep",
+      "reason": "KEEP used related=1 linkedOnItem=true"
+    },
+    {
+      "id": "THMOG20260912112152022321",
+      "name": "ท้อปปิ้ง",
+      "fold": "ท้อปปิ้ง",
+      "related": 130,
+      "linkedOnItem": true,
+      "used": true,
+      "usedSiblingCount": 0,
+      "usedSiblingIds": [],
+      "verdict": "keep",
+      "reason": "KEEP used related=130 linkedOnItem=true"
+    },
+    {
+      "id": "THMOG20260912112152012688",
+      "name": "ช็อตกาแฟ",
+      "fold": "ช็อตกาแฟ",
       "related": 42,
       "linkedOnItem": true,
       "used": true,
@@ -203,6 +187,30 @@
       "usedSiblingIds": [],
       "verdict": "keep",
       "reason": "KEEP used related=42 linkedOnItem=true"
+    },
+    {
+      "id": "THMOG20260903085647036804",
+      "name": "ท็อปปิ้งขนมปัง",
+      "fold": "ท็อปปิ้งขนมปัง",
+      "related": 2,
+      "linkedOnItem": true,
+      "used": true,
+      "usedSiblingCount": 0,
+      "usedSiblingIds": [],
+      "verdict": "keep",
+      "reason": "KEEP used related=2 linkedOnItem=true"
+    },
+    {
+      "id": "THMOG20260903085635029706",
+      "name": "แยกน้ำแข็ง",
+      "fold": "แยกน้ำแข็ง",
+      "related": 114,
+      "linkedOnItem": true,
+      "used": true,
+      "usedSiblingCount": 0,
+      "usedSiblingIds": [],
+      "verdict": "keep",
+      "reason": "KEEP used related=114 linkedOnItem=true"
     },
     {
       "id": "THMOG2026020709285098452",
@@ -229,132 +237,22 @@
       "reason": "KEEP used related=1 linkedOnItem=true"
     },
     {
-      "id": "THMOG2024042503491672826",
-      "name": "แยกน้ำแข็ง",
-      "fold": "แยกน้ำแข็ง",
-      "related": 117,
-      "linkedOnItem": true,
-      "used": true,
-      "usedSiblingCount": 0,
-      "usedSiblingIds": [],
-      "verdict": "keep",
-      "reason": "KEEP used related=117 linkedOnItem=true"
-    },
-    {
       "id": "THMOG2024042503485734937",
       "name": "ความหวาน",
       "fold": "ความหวาน",
-      "related": 146,
+      "related": 143,
       "linkedOnItem": true,
       "used": true,
       "usedSiblingCount": 0,
       "usedSiblingIds": [],
       "verdict": "keep",
-      "reason": "KEEP used related=146 linkedOnItem=true"
+      "reason": "KEEP used related=143 linkedOnItem=true"
     }
   ],
-  "skip": [
-    {
-      "id": "THMOG2025111605564276064",
-      "name": "โปรโมชั่น Soft Cookie โฮมเมด",
-      "fold": "โปรโมชั่น Soft Cookie โฮมเมด",
-      "related": 0,
-      "linkedOnItem": false,
-      "used": false,
-      "usedSiblingCount": 0,
-      "usedSiblingIds": [],
-      "verdict": "skip",
-      "reason": "SKIP unused with no used sibling — only copy of this name"
-    }
-  ],
+  "skip": [],
   "delete": [
     {
-      "id": "THMOG20260901152511130752",
-      "name": "โปรโมชั่น ชิโอปัง",
-      "fold": "โปรโมชั่น ชิโอปัง",
-      "related": 0,
-      "linkedOnItem": false,
-      "used": false,
-      "usedSiblingCount": 1,
-      "usedSiblingIds": [
-        "THMOG20260902091756011181"
-      ],
-      "verdict": "delete",
-      "reason": "DELETE unused clone; keep used THMOG20260902091756011181"
-    },
-    {
-      "id": "THMOG20260901152509087319",
-      "name": "ท็อปปิ้งขนมปัง",
-      "fold": "ท็อปปิ้งขนมปัง",
-      "related": 0,
-      "linkedOnItem": false,
-      "used": false,
-      "usedSiblingCount": 1,
-      "usedSiblingIds": [
-        "THMOG20260901163848015258"
-      ],
-      "verdict": "delete",
-      "reason": "DELETE unused clone; keep used THMOG20260901163848015258"
-    },
-    {
-      "id": "THMOG20260901152509072432",
-      "name": "โปรโมชั่น ปังมันม่วง",
-      "fold": "โปรโมชั่น ปังมันม่วง",
-      "related": 0,
-      "linkedOnItem": false,
-      "used": false,
-      "usedSiblingCount": 1,
-      "usedSiblingIds": [
-        "THMOG20260902091802016537"
-      ],
-      "verdict": "delete",
-      "reason": "DELETE unused clone; keep used THMOG20260902091802016537"
-    },
-    {
-      "id": "THMOG20260901151829025647",
-      "name": "ท็อปปิ้ง",
-      "fold": "ท็อปปิ้ง",
-      "related": 0,
-      "linkedOnItem": false,
-      "used": false,
-      "usedSiblingCount": 2,
-      "usedSiblingIds": [
-        "THMOG20260902085056017168",
-        "THMOG20260901152504029308"
-      ],
-      "verdict": "delete",
-      "reason": "DELETE unused clone; keep used THMOG20260902085056017168,THMOG20260901152504029308"
-    },
-    {
-      "id": "THMOG20260901151829018881",
-      "name": "กาแฟ",
-      "fold": "กาแฟ",
-      "related": 0,
-      "linkedOnItem": false,
-      "used": false,
-      "usedSiblingCount": 1,
-      "usedSiblingIds": [
-        "THMOG20260901152504018148"
-      ],
-      "verdict": "delete",
-      "reason": "DELETE unused clone; keep used THMOG20260901152504018148"
-    },
-    {
-      "id": "THMOG20260717152959026797",
-      "name": "โปรโมชั่น มันไทยอบ ดั้งเดิม",
-      "fold": "โปรโมชั่น มันไทยอบ ดั้งเดิม",
-      "related": 0,
-      "linkedOnItem": false,
-      "used": false,
-      "usedSiblingCount": 1,
-      "usedSiblingIds": [
-        "THMOG20260901152507066419"
-      ],
-      "verdict": "delete",
-      "reason": "DELETE unused clone; keep used THMOG20260901152507066419"
-    },
-    {
-      "id": "THMOG20260717152956018042",
+      "id": "THMOG20260908021655013332",
       "name": "ชิโอปัง เพิ่มไส้พิเศษ",
       "fold": "ชิโอปัง เพิ่มไส้พิเศษ",
       "related": 0,
@@ -362,24 +260,136 @@
       "used": false,
       "usedSiblingCount": 1,
       "usedSiblingIds": [
-        "THMOG20260901152511129759"
+        "THMOG20260912112156081337"
       ],
       "verdict": "delete",
-      "reason": "DELETE unused clone; keep used THMOG20260901152511129759"
+      "reason": "DELETE unused clone; keep used THMOG20260912112156081337"
     },
     {
-      "id": "THMOG20260717152944025236",
-      "name": "กาแฟ",
-      "fold": "กาแฟ",
+      "id": "THMOG20260907175122016945",
+      "name": "ท้อปปิ้ง",
+      "fold": "ท้อปปิ้ง",
       "related": 0,
       "linkedOnItem": false,
       "used": false,
       "usedSiblingCount": 1,
       "usedSiblingIds": [
-        "THMOG20260901152504018148"
+        "THMOG20260912112152022321"
       ],
       "verdict": "delete",
-      "reason": "DELETE unused clone; keep used THMOG20260901152504018148"
+      "reason": "DELETE unused clone; keep used THMOG20260912112152022321"
+    },
+    {
+      "id": "THMOG20260903090524028526",
+      "name": "ช็อตมัทฉะ",
+      "fold": "ช็อตมัทฉะ",
+      "related": 0,
+      "linkedOnItem": false,
+      "used": false,
+      "usedSiblingCount": 1,
+      "usedSiblingIds": [
+        "THMOG20260912112154079874"
+      ],
+      "verdict": "delete",
+      "reason": "DELETE unused clone; keep used THMOG20260912112154079874"
+    },
+    {
+      "id": "THMOG20260903085648056969",
+      "name": "โปรโมชั่น ปังเนยกรอบอบไอน้ำ",
+      "fold": "โปรโมชั่น ปังเนยกรอบอบไอน้ำ",
+      "related": 0,
+      "linkedOnItem": false,
+      "used": false,
+      "usedSiblingCount": 1,
+      "usedSiblingIds": [
+        "THMOG20260912112159155301"
+      ],
+      "verdict": "delete",
+      "reason": "DELETE unused clone; keep used THMOG20260912112159155301"
+    },
+    {
+      "id": "THMOG20260903085647045302",
+      "name": "โปรโมชั่น วาฟเฟิลเบลเยียมโฮมเมด ดั้งเดิม",
+      "fold": "โปรโมชั่น วาฟเฟิลเบลเยียมโฮมเมด ดั้งเดิม",
+      "related": 0,
+      "linkedOnItem": false,
+      "used": false,
+      "usedSiblingCount": 1,
+      "usedSiblingIds": [
+        "THMOG20260912112153058076"
+      ],
+      "verdict": "delete",
+      "reason": "DELETE unused clone; keep used THMOG20260912112153058076"
+    },
+    {
+      "id": "THMOG20260903085646020848",
+      "name": "โปรโมชั่น มันไทยอบ ดั้งเดิม",
+      "fold": "โปรโมชั่น มันไทยอบ ดั้งเดิม",
+      "related": 0,
+      "linkedOnItem": false,
+      "used": false,
+      "usedSiblingCount": 1,
+      "usedSiblingIds": [
+        "THMOG20260912112159149733"
+      ],
+      "verdict": "delete",
+      "reason": "DELETE unused clone; keep used THMOG20260912112159149733"
+    },
+    {
+      "id": "THMOG20260903085645014758",
+      "name": "โปรโมชั่น บราวนี่",
+      "fold": "โปรโมชั่น บราวนี่",
+      "related": 0,
+      "linkedOnItem": false,
+      "used": false,
+      "usedSiblingCount": 1,
+      "usedSiblingIds": [
+        "THMOG20260912112157106783"
+      ],
+      "verdict": "delete",
+      "reason": "DELETE unused clone; keep used THMOG20260912112157106783"
+    },
+    {
+      "id": "THMOG20260903085642129472",
+      "name": "โปรโมชั่น ชิโอปัง",
+      "fold": "โปรโมชั่น ชิโอปัง",
+      "related": 0,
+      "linkedOnItem": false,
+      "used": false,
+      "usedSiblingCount": 1,
+      "usedSiblingIds": [
+        "THMOG20260912112156092695"
+      ],
+      "verdict": "delete",
+      "reason": "DELETE unused clone; keep used THMOG20260912112156092695"
+    },
+    {
+      "id": "THMOG20260903085639115566",
+      "name": "โปรโมชั่น Soft Cookie โฮมเมด",
+      "fold": "โปรโมชั่น Soft Cookie โฮมเมด",
+      "related": 0,
+      "linkedOnItem": false,
+      "used": false,
+      "usedSiblingCount": 1,
+      "usedSiblingIds": [
+        "THMOG20260912112152036910"
+      ],
+      "verdict": "delete",
+      "reason": "DELETE unused clone; keep used THMOG20260912112152036910"
+    },
+    {
+      "id": "THMOG20260903085639101802",
+      "name": "ขนาด ปริมาณ แก้วกาแฟ",
+      "fold": "ขนาด ปริมาณ แก้วกาแฟ",
+      "related": 0,
+      "linkedOnItem": false,
+      "used": false,
+      "usedSiblingCount": 1,
+      "usedSiblingIds": [
+        "THMOG20260912112158110881"
+      ],
+      "verdict": "delete",
+      "reason": "DELETE unused clone; keep used THMOG20260912112158110881"
     }
   ]
 }

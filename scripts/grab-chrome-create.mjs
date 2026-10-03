@@ -19,7 +19,7 @@ import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { getSeedDb } from "./lib/pos-firebase-seed.mjs";
 import { isStoreOnlyName } from "./lib/name-sync-match.mjs";
 import { namesEqual, normName } from "./lib/grab-csv.mjs";
-import { applyChannelRule } from "./lib/hub-channel-targets.mjs";
+import { applyChannelRule, resolveHubItemTarget } from "./lib/hub-channel-targets.mjs";
 import { writeHubChannelLiveRow, writeMenuItemHubNote } from "./lib/hub-live-write.mjs";
 import {
   fetchGrabMenuApi,
@@ -118,6 +118,10 @@ async function loadContext(menu) {
   ]);
   const settings = settingsSnap.exists() ? settingsSnap.data() : {};
   const rule = settings.channels?.grab || { mode: "gp", value: 30 };
+  const itemOverrides = settings.itemOverrides || {};
+  const channels = settings.channels || {};
+  const followerAdd = settings.followerAdd || {};
+  const mainChannel = settings.mainChannel || "shopee";
   const cats = new Map();
   for (const d of catsSnap.docs) cats.set(d.id, d.data()?.name || d.id);
   const groups = new Map();
@@ -143,7 +147,7 @@ async function loadContext(menu) {
       hubNote: data.hubNote || "",
     };
   });
-  return { grabRule: rule, items, menu };
+  return { grabRule: rule, itemOverrides, channels, followerAdd, mainChannel, items, menu };
 }
 
 function wantedGrabGroups(pos, canon, siblingGrab) {
@@ -211,7 +215,12 @@ function buildPlan(ctx, grab) {
     const want = wantedGrabGroups(row.pos, grab.canon, sibling?.grab);
     const linked = new Set(row.grab?.linkedModifierGroupIDs || []);
     const attach = want.filter((g) => !linked.has(g.modifierGroupID)).map((g) => g.modifierGroupName);
-    const target = applyChannelRule(row.pos.price, ctx.grabRule);
+    const target = resolveHubItemTarget(row.pos, "grab", {
+      itemOverrides: ctx.itemOverrides,
+      channels: ctx.channels,
+      followerAdd: ctx.followerAdd,
+      mainChannel: ctx.mainChannel,
+    }).target;
     rows.push({
       posId: row.pos.id,
       name: row.pos.name,

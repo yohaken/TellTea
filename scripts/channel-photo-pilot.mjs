@@ -395,6 +395,7 @@ function grabHeadersJs() {
       const sel = JSON.parse(localStorage.getItem('merchantSelector') || '[]');
       if (sel[0]?.id) merchantGroupID = sel[0].id;
     } catch {}
+    const jti = (document.cookie.match(/mexusers_authn_token_jti=([^;]+)/) || [])[1] || '';
     return {
       'Content-Type': 'application/json',
       Accept: 'application/json',
@@ -403,6 +404,7 @@ function grabHeadersJs() {
       'x-client-id': 'GrabMerchant-Portal',
       merchantID,
       merchantGroupID,
+      'X-CSRF-Token': jti,
     };
   }`;
 }

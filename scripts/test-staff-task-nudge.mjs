@@ -63,7 +63,7 @@ assert.match(tasksSrc, /งานส่ง/);
 assert.match(tasksSrc, /แจ้งเบา/);
 assert.match(tasksSrc, /มีกำหนด/);
 assert.match(tasksSrc, /วันครบ/);
-assert.match(tasksSrc, /ทำหมั่นโถว|มอบหมาย/);
+assert.match(tasksSrc, /ทำบิ๊กหมั่นโถว|มอบหมาย/);
 assert.match(tasksSrc, /reportTaskNotifyAck/);
 assert.match(tasksSrc, /isPermPreview/);
 assert.doesNotMatch(tasksSrc, /สูงสุด 3/);

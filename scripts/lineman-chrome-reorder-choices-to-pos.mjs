@@ -248,9 +248,10 @@ async function main() {
       }
       const extras = [...byName.values()];
       if (missing.length) {
-        throw new Error(`missing on LM: ${missing.join(", ")}`);
+        console.log(`  missing on LM (order the rest): ${missing.join(" · ")}`);
       }
       const finalValues = [...ordered, ...extras];
+      const wantPresent = item.pos.filter((n) => !missing.includes(n));
       if (extras.length) {
         console.log(
           `  extras kept at end: ${extras.map((v) => v.name?.primary).join(" · ")}`,
@@ -259,8 +260,12 @@ async function main() {
 
       const updated = await updatePropertyOrder(prop, finalValues);
       const afterNames = (updated?.values || []).map((v) => v.name?.primary || "");
-      const okExact = item.pos.every((n, i) => namesEqual(n, afterNames[i]));
-      console.log(`  → ${okExact ? "ok" : "check"} ${afterNames.join(" · ")}`);
+      const okExact = wantPresent.every((n, i) => namesEqual(n, afterNames[i]));
+      const priceSame = (prop.values || []).every((v) => {
+        const a = (updated?.values || []).find((x) => x.name?.primary === v.name?.primary);
+        return a && Number(a.additionalPrice ?? 0) === Number(v.additionalPrice ?? 0);
+      });
+      console.log(`  → ${okExact ? "ok" : "check"} prices=${priceSame} ${afterNames.join(" · ")}`);
       log.results.push({
         id: item.id,
         name: item.name,

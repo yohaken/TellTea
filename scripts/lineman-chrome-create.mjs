@@ -16,7 +16,7 @@ import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { getSeedDb } from "./lib/pos-firebase-seed.mjs";
 import { isStoreOnlyName } from "./lib/name-sync-match.mjs";
 import { namesEqual, normName } from "./lib/grab-csv.mjs";
-import { applyChannelRule } from "./lib/hub-channel-targets.mjs";
+import { applyChannelRule, resolveHubItemTarget } from "./lib/hub-channel-targets.mjs";
 import { writeHubChannelLiveRow, writeMenuItemHubNote } from "./lib/hub-live-write.mjs";
 import {
   findWongnaiTab,
@@ -90,6 +90,10 @@ async function loadContext() {
   ]);
   const settings = settingsSnap.exists() ? settingsSnap.data() : {};
   const linemanRule = settings.channels?.lineman || { mode: "gp", value: 30 };
+  const itemOverrides = settings.itemOverrides || {};
+  const channels = settings.channels || {};
+  const followerAdd = settings.followerAdd || {};
+  const mainChannel = settings.mainChannel || "shopee";
   const cats = new Map();
   for (const d of catsSnap.docs) cats.set(d.id, d.data()?.name || d.id);
   const groups = new Map();
@@ -134,11 +138,11 @@ async function loadContext() {
   } catch (e) {
     console.warn("Wongnai API list skip:", e.message || e);
   }
-  return { linemanRule, items, lmItems: [...lmByName.values()], lmByName };
+  return { linemanRule, itemOverrides, channels, followerAdd, mainChannel, items, lmItems: [...lmByName.values()], lmByName };
 }
 
-function planRow(pos, linemanRule, sibling, lm) {
-  const target = applyChannelRule(pos.price, linemanRule);
+function planRow(pos, hubCtx, sibling, lm) {
+  const target = resolveHubItemTarget(pos, "lineman", hubCtx).target;
   return {
     posId: pos.id,
     name: pos.name,
@@ -176,7 +180,8 @@ function pickSibling(pos, siblingsByKey) {
 }
 
 function buildPlan(ctx) {
-  const { linemanRule, items, lmByName } = ctx;
+  const { linemanRule, items, lmByName, itemOverrides, channels, followerAdd, mainChannel } = ctx;
+  const hubCtx = { itemOverrides, channels, followerAdd, mainChannel };
   const eligible = items.filter((i) => i.active && !i.storeOnly);
   const onLm = [];
   const missing = [];
@@ -193,10 +198,10 @@ function buildPlan(ctx) {
     siblingsByKey.get(key).push(row);
   }
 
-  const rows = missing.map((pos) => planRow(pos, linemanRule, pickSibling(pos, siblingsByKey), null));
+  const rows = missing.map((pos) => planRow(pos, hubCtx, pickSibling(pos, siblingsByKey), null));
   const noteExisting = onLm
     .filter(({ pos }) => isCreateNote(pos.hubNote))
-    .map(({ pos, lm }) => planRow(pos, linemanRule, pickSibling(pos, siblingsByKey), lm));
+    .map(({ pos, lm }) => planRow(pos, hubCtx, pickSibling(pos, siblingsByKey), lm));
 
   rows.sort((a, b) => {
     if (a.fromNote !== b.fromNote) return a.fromNote ? -1 : 1;
@@ -206,6 +211,7 @@ function buildPlan(ctx) {
   return {
     at: new Date().toISOString(),
     linemanRule,
+    hubCtx,
     lmCount: ctx.lmItems.length,
     posDelivery: eligible.length,
     matchedExact: onLm.length,
@@ -519,7 +525,7 @@ async function main() {
       if (!fold(it.name).includes(fold(only))) continue;
       const lm = ctx.lmByName.get(normName(it.name));
       extra.push(
-        planRow(it, plan.linemanRule, null, lm?.id ? lm : null),
+        planRow(it, plan.hubCtx || { itemOverrides: ctx.itemOverrides, channels: ctx.channels, followerAdd: ctx.followerAdd, mainChannel: ctx.mainChannel }, null, lm?.id ? lm : null),
       );
     }
     rows = [...pool, ...extra].filter((r) => {

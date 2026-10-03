@@ -21,6 +21,7 @@ import {
   findGrabTab,
   fetchGrabMenuApi,
   chromeJsOnTab as grabGo,
+  grabWriteHeadersJs,
   GRAB_STORE_ID,
 } from "./lib/grab-chrome.mjs";
 import { wongnaiGql, WONGNAI_GQL, BUSINESS } from "./lib/lineman-chrome.mjs";
@@ -220,8 +221,8 @@ function applyGrabCat(catId, want) {
       const x = new XMLHttpRequest();
       x.open('PUT', 'https://api.grab.com/food/merchant/items-sort', false);
       x.withCredentials = true;
-      x.setRequestHeader('Content-Type','application/json');
-      x.setRequestHeader('merchantID', ${JSON.stringify(GRAB_STORE_ID)});
+      const headers = (() => ${grabWriteHeadersJs()})();
+      for (const [k, v] of Object.entries(headers)) x.setRequestHeader(k, v);
       x.send(JSON.stringify({ categoryID: ${JSON.stringify(catId)}, sorts: ${JSON.stringify(sorts)} }));
       return x.status + '\\n' + (x.responseText || '').slice(0, 300);
     })()`,

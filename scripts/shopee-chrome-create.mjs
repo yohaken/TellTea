@@ -18,7 +18,7 @@ import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { getSeedDb } from "./lib/pos-firebase-seed.mjs";
 import { isStoreOnlyName } from "./lib/name-sync-match.mjs";
 import { namesEqual, normName } from "./lib/grab-csv.mjs";
-import { applyChannelRule } from "./lib/hub-channel-targets.mjs";
+import { applyChannelRule, resolveHubItemTarget } from "./lib/hub-channel-targets.mjs";
 import { writeHubChannelLiveRow, writeMenuItemHubNote } from "./lib/hub-live-write.mjs";
 import {
   findShopeeTab,
@@ -142,6 +142,10 @@ async function loadContext() {
   ]);
   const settings = settingsSnap.exists() ? settingsSnap.data() : {};
   const shopeeRule = settings.channels?.shopee || { mode: "gp", value: 22 };
+  const itemOverrides = settings.itemOverrides || {};
+  const channels = settings.channels || {};
+  const followerAdd = settings.followerAdd || {};
+  const mainChannel = settings.mainChannel || "shopee";
   const cats = new Map();
   for (const d of catsSnap.docs) cats.set(d.id, d.data()?.name || d.id);
   const groups = new Map();
@@ -195,6 +199,10 @@ async function loadContext() {
   }));
   return {
     shopeeRule,
+    itemOverrides,
+    channels,
+    followerAdd,
+    mainChannel,
     items,
     scanItems: scan.items || [],
     shopeeItems,
@@ -229,7 +237,8 @@ function mapOptionGroupIds(optionNames, shopeeGroups) {
 }
 
 function buildPlan(ctx) {
-  const { shopeeRule, items, shopeeItems, catalogs, optionGroups } = ctx;
+  const { shopeeRule, items, shopeeItems, catalogs, optionGroups, itemOverrides, channels, followerAdd, mainChannel } = ctx;
+  const hubCtx = { itemOverrides, channels, followerAdd, mainChannel };
   const byName = new Map(shopeeItems.map((x) => [fold(x.name), x]));
   const posById = new Map(items.map((i) => [i.id, i]));
   const eligible = items.filter((i) => i.active && !i.storeOnly);
@@ -250,7 +259,7 @@ function buildPlan(ctx) {
       category: pos.categoryName,
       mode: modeKey(pos),
       storePrice: pos.price,
-      target: applyChannelRule(pos.price, shopeeRule),
+      target: resolveHubItemTarget(pos, "shopee", hubCtx).target,
       description: (pos.description || "").trim() || sibling?.shopee.description || pos.name,
       imageUrl: pos.imageUrl || "",
       picture: sibling?.shopee.picture || "",

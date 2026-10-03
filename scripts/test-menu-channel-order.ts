@@ -18,6 +18,7 @@ import {
   rowMatchesFilter,
   channelOptionStatusFor,
   channelOptionOrderStatusFor,
+  categoryNameStatusFor,
   type ChannelPriceCell,
 } from "../src/lib/menu-channel-price";
 
@@ -170,6 +171,11 @@ assert(lib.includes("order_issue"), "lib HubStatusFilter order_issue");
 assert(lib.includes("option_issue"), "lib HubStatusFilter option_issue");
 assert(lib.includes("channelOptionStatusFor"), "option bind status helper");
 assert(lib.includes("categoryNameStatusFor"), "category name compare");
+assert(
+  categoryNameStatusFor("* กาแฟสด อื่น ๆ ร้อน", "กาแฟสด อื่น ๆ ร้อน") === "exact",
+  "leading * on POS category ignored (LINE MAN bans special chars)",
+);
+assert(categoryNameStatusFor("ชานม", "ชาไทย") === "near", "different category still near");
 assert(lib.includes("liveOrdinalMap"), "live ordinal helper");
 assert(hub.includes("HubNameMarks"), "name marks in menu column");
 assert(hub.includes("HubCatMarks"), "cat marks in category column");

@@ -30,8 +30,8 @@ import archiver from "archiver";
 import { getDocs, collection } from "firebase/firestore";
 import { getSeedDb } from "./lib/pos-firebase-seed.mjs";
 import {
-  applyChannelRule,
   loadHubChannelContext,
+  resolveHubOptionTarget,
 } from "./lib/hub-channel-targets.mjs";
 import { loadGrabExportCsv, namesEqual, normName, parseOptionGroup } from "./lib/grab-csv.mjs";
 import {
@@ -159,8 +159,8 @@ function patchOptionGroupCell(cell, priceByKey) {
 
 async function loadPosChoices() {
   const db = await getSeedDb();
-  const { channels, optionOverrides } = await loadHubChannelContext();
-  const grabRule = channels.grab || { mode: "gp", value: 30 };
+  const ctx = await loadHubChannelContext();
+  const grabRule = ctx.channels.grab || { mode: "gp", value: 30 };
   const groupsSnap = await getDocs(collection(db, "menuOptionGroups"));
   const posChoices = [];
   for (const d of groupsSnap.docs) {
@@ -169,9 +169,8 @@ async function loadPosChoices() {
     for (const c of g.options || []) {
       if (c.active === false) continue;
       const key = `${d.id}::${c.id}`;
-      const override = optionOverrides?.[key]?.grab;
-      const rule = override || grabRule;
       const store = Math.max(0, Number(c.priceDelta) || 0);
+      const { target, rule } = resolveHubOptionTarget(store, "grab", ctx, key);
       posChoices.push({
         key,
         groupId: d.id,
@@ -179,7 +178,7 @@ async function loadPosChoices() {
         choiceId: c.id,
         name: c.name || "",
         priceDelta: store,
-        target: applyChannelRule(store, rule),
+        target,
         rule,
       });
     }

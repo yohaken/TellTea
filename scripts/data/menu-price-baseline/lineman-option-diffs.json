@@ -1,35 +1,394 @@
 {
-  "at": "2026-09-03T12:04:01.868Z",
+  "at": "2026-10-02T02:29:27.451Z",
   "rule": {
-    "mode": "gp",
-    "value": 30
+    "value": 30,
+    "mode": "gp"
   },
+  "overrideN": 10,
+  "columnN": 55,
+  "atTarget": 55,
+  "refresh": false,
+  "refreshN": 0,
   "diffs": [
     {
-      "group": "ช็อตมัทฉะ",
-      "name": "เพิ่มช็อตมัทฉะ 1 กรัม",
-      "current": 9,
-      "target": 25,
-      "store": 6,
-      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoMOXeLjn3KnhhbtX5SLMPuLfGVL/edit",
-      "id": "0leoMOXeLjn3KnhhbtX5SLMPuLfGVL",
-      "posKey": "fs_opt_41309539::fs_c_41756674"
+      "group": "โปรโมชั่น Soft Cookie โฮมเมด",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้นแบบเดียวกัน",
+      "current": 14,
+      "target": 17,
+      "store": 12,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoT4RRn8viUDqbpj8WPfp2JDHIZr/edit",
+      "id": "0leoT4RRn8viUDqbpj8WPfp2JDHIZr",
+      "posKey": "fs_opt_42442642::fs_c_43294499",
+      "fromOverride": true,
+      "refreshOnly": false,
+      "rule": {
+        "mode": "absolute",
+        "value": 17
+      }
+    },
+    {
+      "group": "โปรโมชั่น ชิโอปัง",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+      "current": 21,
+      "target": 22,
+      "store": 15,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoPQ76xbG3f7NOTSwg2Exk5o8cuk/edit",
+      "id": "0leoPQ76xbG3f7NOTSwg2Exk5o8cuk",
+      "posKey": "fs_opt_41868133::fs_c_42528783",
+      "fromOverride": true,
+      "refreshOnly": false,
+      "rule": {
+        "value": 22,
+        "mode": "absolute"
+      }
+    },
+    {
+      "group": "โปรโมชั่น บราวนี่",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+      "current": 14,
+      "target": 15,
+      "store": 10,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoRkV2Pdu2tKzEWlyf0fIji5KxBU/edit",
+      "id": "0leoRkV2Pdu2tKzEWlyf0fIji5KxBU",
+      "posKey": "fs_opt_42275931::fs_c_43027563",
+      "fromOverride": true,
+      "refreshOnly": false,
+      "rule": {
+        "mode": "absolute",
+        "value": 15
+      }
+    },
+    {
+      "group": "โปรโมชั่น บิ๊กซาลาเปาไส้หมูแดง",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+      "current": 21,
+      "target": 22,
+      "store": 15,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leohYkKY0dYVH4cOrTJJkZpnC20Rj/edit",
+      "id": "0leohYkKY0dYVH4cOrTJJkZpnC20Rj",
+      "posKey": "hX9LzF0GSUckiT8PuUAU::manual_c_salapao_extra",
+      "fromOverride": true,
+      "refreshOnly": false,
+      "rule": {
+        "value": 22,
+        "mode": "absolute"
+      }
+    },
+    {
+      "group": "โปรโมชั่น บิ๊กหมั่นโถว",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+      "current": 14,
+      "target": 15,
+      "store": 10,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoh9aGn74AB3Gzix8YtvNMJnUsX6/edit",
+      "id": "0leoh9aGn74AB3Gzix8YtvNMJnUsX6",
+      "posKey": "kNI8SNCaCP4fmzyJq9EV::manual_c_mantou_extra",
+      "fromOverride": true,
+      "refreshOnly": false,
+      "rule": {
+        "value": 15,
+        "mode": "absolute"
+      }
+    },
+    {
+      "group": "โปรโมชั่น ปังมันม่วง",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+      "current": 21,
+      "target": 22,
+      "store": 15,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoPQwedaiCmwYxcp1UY2LtuYwEjT/edit",
+      "id": "0leoPQwedaiCmwYxcp1UY2LtuYwEjT",
+      "posKey": "fs_opt_41872596::fs_c_42534741",
+      "fromOverride": true,
+      "refreshOnly": false,
+      "rule": {
+        "value": 22,
+        "mode": "absolute"
+      }
+    },
+    {
+      "group": "โปรโมชั่น ปังเนยกรอบอบไอน้ำ",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+      "current": 14,
+      "target": 22,
+      "store": 15,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoO0SAeVyeGpiq0n14BLQyE3jxiW/edit",
+      "id": "0leoO0SAeVyeGpiq0n14BLQyE3jxiW",
+      "posKey": "fs_opt_41562159::fs_c_42141132",
+      "fromOverride": true,
+      "refreshOnly": false,
+      "rule": {
+        "mode": "absolute",
+        "value": 22
+      }
+    },
+    {
+      "group": "โปรโมชั่น มันไทยอบ ดั้งเดิม",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+      "current": 14,
+      "target": 15,
+      "store": 10,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoXRo4JyMwgZ4PKOkVqXBwonmTTB/edit",
+      "id": "0leoXRo4JyMwgZ4PKOkVqXBwonmTTB",
+      "posKey": "fs_opt_43146917::fs_c_44306539",
+      "fromOverride": true,
+      "refreshOnly": false,
+      "rule": {
+        "mode": "absolute",
+        "value": 15
+      }
+    },
+    {
+      "group": "โปรโมชั่น วาฟเฟิลเบลเยียมโฮมเมด ดั้งเดิม",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+      "current": 14,
+      "target": 15,
+      "store": 10,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leocrvG1exIm991mgKkbKMbyyOVaf/edit",
+      "id": "0leocrvG1exIm991mgKkbKMbyyOVaf",
+      "posKey": "fs_opt_44058440::fs_c_45742031",
+      "fromOverride": true,
+      "refreshOnly": false,
+      "rule": {
+        "mode": "absolute",
+        "value": 15
+      }
+    },
+    {
+      "group": "โปรโมชั่น เค้กกล้วยหอม",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้นแบบเดียวกัน",
+      "current": 14,
+      "target": 15,
+      "store": 10,
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoYBNOeRgb6dPGTPX6RHWZpZ79Af/edit",
+      "id": "0leoYBNOeRgb6dPGTPX6RHWZpZ79Af",
+      "posKey": "fs_opt_43240306::fs_c_44445505",
+      "fromOverride": true,
+      "refreshOnly": false,
+      "rule": {
+        "value": 15,
+        "mode": "absolute"
+      }
     }
   ],
   "byUrl": [
     {
-      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoMOXeLjn3KnhhbtX5SLMPuLfGVL/edit",
-      "group": "ช็อตมัทฉะ",
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoT4RRn8viUDqbpj8WPfp2JDHIZr/edit",
+      "group": "โปรโมชั่น Soft Cookie โฮมเมด",
       "rows": [
         {
-          "group": "ช็อตมัทฉะ",
-          "name": "เพิ่มช็อตมัทฉะ 1 กรัม",
-          "current": 9,
-          "target": 25,
-          "store": 6,
-          "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoMOXeLjn3KnhhbtX5SLMPuLfGVL/edit",
-          "id": "0leoMOXeLjn3KnhhbtX5SLMPuLfGVL",
-          "posKey": "fs_opt_41309539::fs_c_41756674"
+          "group": "โปรโมชั่น Soft Cookie โฮมเมด",
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้นแบบเดียวกัน",
+          "current": 14,
+          "target": 17,
+          "store": 12,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoT4RRn8viUDqbpj8WPfp2JDHIZr/edit",
+          "id": "0leoT4RRn8viUDqbpj8WPfp2JDHIZr",
+          "posKey": "fs_opt_42442642::fs_c_43294499",
+          "fromOverride": true,
+          "refreshOnly": false,
+          "rule": {
+            "mode": "absolute",
+            "value": 17
+          }
+        }
+      ]
+    },
+    {
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoPQ76xbG3f7NOTSwg2Exk5o8cuk/edit",
+      "group": "โปรโมชั่น ชิโอปัง",
+      "rows": [
+        {
+          "group": "โปรโมชั่น ชิโอปัง",
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+          "current": 21,
+          "target": 22,
+          "store": 15,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoPQ76xbG3f7NOTSwg2Exk5o8cuk/edit",
+          "id": "0leoPQ76xbG3f7NOTSwg2Exk5o8cuk",
+          "posKey": "fs_opt_41868133::fs_c_42528783",
+          "fromOverride": true,
+          "refreshOnly": false,
+          "rule": {
+            "value": 22,
+            "mode": "absolute"
+          }
+        }
+      ]
+    },
+    {
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoRkV2Pdu2tKzEWlyf0fIji5KxBU/edit",
+      "group": "โปรโมชั่น บราวนี่",
+      "rows": [
+        {
+          "group": "โปรโมชั่น บราวนี่",
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+          "current": 14,
+          "target": 15,
+          "store": 10,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoRkV2Pdu2tKzEWlyf0fIji5KxBU/edit",
+          "id": "0leoRkV2Pdu2tKzEWlyf0fIji5KxBU",
+          "posKey": "fs_opt_42275931::fs_c_43027563",
+          "fromOverride": true,
+          "refreshOnly": false,
+          "rule": {
+            "mode": "absolute",
+            "value": 15
+          }
+        }
+      ]
+    },
+    {
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leohYkKY0dYVH4cOrTJJkZpnC20Rj/edit",
+      "group": "โปรโมชั่น บิ๊กซาลาเปาไส้หมูแดง",
+      "rows": [
+        {
+          "group": "โปรโมชั่น บิ๊กซาลาเปาไส้หมูแดง",
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+          "current": 21,
+          "target": 22,
+          "store": 15,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leohYkKY0dYVH4cOrTJJkZpnC20Rj/edit",
+          "id": "0leohYkKY0dYVH4cOrTJJkZpnC20Rj",
+          "posKey": "hX9LzF0GSUckiT8PuUAU::manual_c_salapao_extra",
+          "fromOverride": true,
+          "refreshOnly": false,
+          "rule": {
+            "value": 22,
+            "mode": "absolute"
+          }
+        }
+      ]
+    },
+    {
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoh9aGn74AB3Gzix8YtvNMJnUsX6/edit",
+      "group": "โปรโมชั่น บิ๊กหมั่นโถว",
+      "rows": [
+        {
+          "group": "โปรโมชั่น บิ๊กหมั่นโถว",
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+          "current": 14,
+          "target": 15,
+          "store": 10,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoh9aGn74AB3Gzix8YtvNMJnUsX6/edit",
+          "id": "0leoh9aGn74AB3Gzix8YtvNMJnUsX6",
+          "posKey": "kNI8SNCaCP4fmzyJq9EV::manual_c_mantou_extra",
+          "fromOverride": true,
+          "refreshOnly": false,
+          "rule": {
+            "value": 15,
+            "mode": "absolute"
+          }
+        }
+      ]
+    },
+    {
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoPQwedaiCmwYxcp1UY2LtuYwEjT/edit",
+      "group": "โปรโมชั่น ปังมันม่วง",
+      "rows": [
+        {
+          "group": "โปรโมชั่น ปังมันม่วง",
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+          "current": 21,
+          "target": 22,
+          "store": 15,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoPQwedaiCmwYxcp1UY2LtuYwEjT/edit",
+          "id": "0leoPQwedaiCmwYxcp1UY2LtuYwEjT",
+          "posKey": "fs_opt_41872596::fs_c_42534741",
+          "fromOverride": true,
+          "refreshOnly": false,
+          "rule": {
+            "value": 22,
+            "mode": "absolute"
+          }
+        }
+      ]
+    },
+    {
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoO0SAeVyeGpiq0n14BLQyE3jxiW/edit",
+      "group": "โปรโมชั่น ปังเนยกรอบอบไอน้ำ",
+      "rows": [
+        {
+          "group": "โปรโมชั่น ปังเนยกรอบอบไอน้ำ",
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+          "current": 14,
+          "target": 22,
+          "store": 15,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoO0SAeVyeGpiq0n14BLQyE3jxiW/edit",
+          "id": "0leoO0SAeVyeGpiq0n14BLQyE3jxiW",
+          "posKey": "fs_opt_41562159::fs_c_42141132",
+          "fromOverride": true,
+          "refreshOnly": false,
+          "rule": {
+            "mode": "absolute",
+            "value": 22
+          }
+        }
+      ]
+    },
+    {
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoXRo4JyMwgZ4PKOkVqXBwonmTTB/edit",
+      "group": "โปรโมชั่น มันไทยอบ ดั้งเดิม",
+      "rows": [
+        {
+          "group": "โปรโมชั่น มันไทยอบ ดั้งเดิม",
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+          "current": 14,
+          "target": 15,
+          "store": 10,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoXRo4JyMwgZ4PKOkVqXBwonmTTB/edit",
+          "id": "0leoXRo4JyMwgZ4PKOkVqXBwonmTTB",
+          "posKey": "fs_opt_43146917::fs_c_44306539",
+          "fromOverride": true,
+          "refreshOnly": false,
+          "rule": {
+            "mode": "absolute",
+            "value": 15
+          }
+        }
+      ]
+    },
+    {
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leocrvG1exIm991mgKkbKMbyyOVaf/edit",
+      "group": "โปรโมชั่น วาฟเฟิลเบลเยียมโฮมเมด ดั้งเดิม",
+      "rows": [
+        {
+          "group": "โปรโมชั่น วาฟเฟิลเบลเยียมโฮมเมด ดั้งเดิม",
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+          "current": 14,
+          "target": 15,
+          "store": 10,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leocrvG1exIm991mgKkbKMbyyOVaf/edit",
+          "id": "0leocrvG1exIm991mgKkbKMbyyOVaf",
+          "posKey": "fs_opt_44058440::fs_c_45742031",
+          "fromOverride": true,
+          "refreshOnly": false,
+          "rule": {
+            "mode": "absolute",
+            "value": 15
+          }
+        }
+      ]
+    },
+    {
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoYBNOeRgb6dPGTPX6RHWZpZ79Af/edit",
+      "group": "โปรโมชั่น เค้กกล้วยหอม",
+      "rows": [
+        {
+          "group": "โปรโมชั่น เค้กกล้วยหอม",
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้นแบบเดียวกัน",
+          "current": 14,
+          "target": 15,
+          "store": 10,
+          "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoYBNOeRgb6dPGTPX6RHWZpZ79Af/edit",
+          "id": "0leoYBNOeRgb6dPGTPX6RHWZpZ79Af",
+          "posKey": "fs_opt_43240306::fs_c_44445505",
+          "fromOverride": true,
+          "refreshOnly": false,
+          "rule": {
+            "value": 15,
+            "mode": "absolute"
+          }
         }
       ]
     }

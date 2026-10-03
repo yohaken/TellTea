@@ -53,7 +53,7 @@ assert.match(lib, /BAKERY_LEGACY_NAME_MAP/);
 assert.match(lib, /countMenusLinkedToStock/);
 assert.match(lib, /findStockByNameOrAlias/);
 assert.match(lib, /แป้งสาลี/);
-assert.match(lib, /หมั่นโถว โฮมเมด/);
+assert.match(lib, /บิ๊กหมั่นโถว โฮมเมด/);
 
 const page = read("src/app/bakery-sop/page.tsx");
 assert.match(page, /canSeeCost/);

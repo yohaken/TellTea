@@ -450,7 +450,9 @@ async function ingestChannel(channel, db, posItems, posChoices, current, posCatN
     const name = c.name || c.categoryName || "";
     if (!name) continue;
     const itemCount = Number(c.itemCount ?? c.n) || 0;
-    const posHit = posCatNames.some((p) => namesEqual(p, name));
+    // LINE MAN rejects '*' in category names; POS uses a leading '* ' prefix.
+    const stripStar = (s) => String(s || "").replace(/^\s*\*+\s*/, "");
+    const posHit = posCatNames.some((p) => namesEqual(p, name) || namesEqual(stripStar(p), stripStar(name)));
     if (posHit && itemCount > 0) continue;
     unmatchedEntries.push({
       id: unmatchedId(channel, "category", c.id || c.categoryID, name, "", unmatchedSeen),

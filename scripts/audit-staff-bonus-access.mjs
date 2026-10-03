@@ -20,6 +20,7 @@ const PERMISSION_KEYS = [
   "ledger",
   "stock",
   "production",
+  "bakerySop",
   "otBonus",
   "checklist",
   "assignTasks",
@@ -39,6 +40,7 @@ const EMPTY_PERMS = Object.fromEntries(PERMISSION_KEYS.map((k) => [k, false]));
 const DEFAULT_STAFF_PERMS = {
   ...EMPTY_PERMS,
   production: true,
+  bakerySop: true,
   otBonus: true,
   checklist: true,
   bonus: true,

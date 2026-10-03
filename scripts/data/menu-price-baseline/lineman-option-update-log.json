@@ -1,19 +1,212 @@
 {
-  "at": "2026-09-03T12:04:02.094Z",
+  "at": "2026-10-02T02:30:20.280Z",
   "dryRun": false,
+  "workers": 4,
+  "deliveryOnly": true,
+  "refresh": false,
   "results": [
     {
-      "group": "ช็อตมัทฉะ",
-      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoMOXeLjn3KnhhbtX5SLMPuLfGVL/edit",
+      "group": "โปรโมชั่น Soft Cookie โฮมเมด",
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoT4RRn8viUDqbpj8WPfp2JDHIZr/edit",
       "rows": [
         {
-          "name": "เพิ่มช็อตมัทฉะ 1 กรัม",
-          "from": 9,
-          "to": 25,
-          "store": 6,
-          "draftSnippet": "เพิ่มช็อตมัทฉะ 1 กรัม\n\n+฿25\n\n+฿25\n\n+฿6\n\nมีจำหน่าย\nเพิ่มช้อยส์\nบันทึก",
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้นแบบเดียวกัน",
+          "from": 14,
+          "to": 17,
+          "store": 12,
+          "refreshOnly": false,
+          "draftSnippet": "สุดคุ้ม เพิ่มอีก 1 ชิ้นแบบเดียวกัน\n\n+฿17\n\n+฿17\n\n+฿17\n\nมีจำหน่าย\nเพิ่มช้อยส์\nบันทึก\n\nเพิ่มช้อยส์\n\nชื่อช้อ",
           "draftOk": true,
-          "liveSnippet": "เพิ่มช็อตมัทฉะ 1 กรัม\n\n+฿25\n\n+฿25\n\n+฿6\n\nมีจำหน่าย\nเพิ่มช้อยส์\nบันทึก",
+          "liveSnippet": "สุดคุ้ม เพิ่มอีก 1 ชิ้นแบบเดียวกัน\n\n+฿17\n\n+฿17\n\n+฿17\n\nมีจำหน่าย\nเพิ่มช้อยส์\nบันทึก",
+          "liveOk": true
+        }
+      ],
+      "ok": true,
+      "save": {
+        "ok": true
+      }
+    },
+    {
+      "group": "โปรโมชั่น ชิโอปัง",
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoPQ76xbG3f7NOTSwg2Exk5o8cuk/edit",
+      "rows": [
+        {
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+          "from": 21,
+          "to": 22,
+          "store": 15,
+          "refreshOnly": false,
+          "draftSnippet": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน\n\n+฿22\n\n+฿22\n\n+฿22\n\nมีจำหน่าย\nเพิ่มช้อยส์\nบันทึก",
+          "draftOk": true,
+          "liveSnippet": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน\n\n+฿22\n\n+฿22\n\n+฿22\n\nมีจำหน่าย\nเพิ่มช้อยส์\nบันทึก",
+          "liveOk": true
+        }
+      ],
+      "ok": true,
+      "save": {
+        "ok": true
+      }
+    },
+    {
+      "group": "โปรโมชั่น บราวนี่",
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoRkV2Pdu2tKzEWlyf0fIji5KxBU/edit",
+      "rows": [
+        {
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+          "from": 14,
+          "to": 15,
+          "store": 10,
+          "refreshOnly": false,
+          "draftSnippet": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน\n\n+฿15\n\n+฿15\n\n+฿15\n\nมีจำหน่าย\nเพิ่มช้อยส์\nบันทึก",
+          "draftOk": true,
+          "liveSnippet": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน\n\n+฿15\n\n+฿15\n\n+฿15\n\nมีจำหน่าย\nเพิ่มช้อยส์\nบันทึก",
+          "liveOk": true
+        }
+      ],
+      "ok": true,
+      "save": {
+        "ok": true
+      }
+    },
+    {
+      "group": "โปรโมชั่น บิ๊กซาลาเปาไส้หมูแดง",
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leohYkKY0dYVH4cOrTJJkZpnC20Rj/edit",
+      "rows": [
+        {
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+          "from": 21,
+          "to": 22,
+          "store": 15,
+          "refreshOnly": false,
+          "draftSnippet": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน\n\n+฿22\n\n+฿22\n\n+฿22\n\nมีจำหน่าย\nเพิ่มช้อยส์\nบันทึก",
+          "draftOk": true,
+          "liveSnippet": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน\n\n+฿22\n\n+฿22\n\n+฿22\n\nมีจำหน่าย\nเพิ่มช้อยส์\nบันทึก",
+          "liveOk": true
+        }
+      ],
+      "ok": true,
+      "save": {
+        "ok": true
+      }
+    },
+    {
+      "group": "โปรโมชั่น บิ๊กหมั่นโถว",
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoh9aGn74AB3Gzix8YtvNMJnUsX6/edit",
+      "rows": [
+        {
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+          "from": 14,
+          "to": 15,
+          "store": 10,
+          "refreshOnly": false,
+          "draftSnippet": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน\n\n+฿15\n\n+฿15\n\n+฿15\n\nมีจำหน่าย\nเพิ่มช้อยส์\nบันทึก",
+          "draftOk": true,
+          "liveSnippet": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน\n\n+฿15\n\n+฿15\n\n+฿15\n\nมีจำหน่าย\nเพิ่มช้อยส์\nบันทึก",
+          "liveOk": true
+        }
+      ],
+      "ok": true,
+      "save": {
+        "ok": true
+      }
+    },
+    {
+      "group": "โปรโมชั่น ปังมันม่วง",
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoPQwedaiCmwYxcp1UY2LtuYwEjT/edit",
+      "rows": [
+        {
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+          "from": 21,
+          "to": 22,
+          "store": 15,
+          "refreshOnly": false,
+          "draftSnippet": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน\n\n+฿22\n\n+฿22\n\n+฿22\n\nมีจำหน่าย\nเพิ่มช้อยส์\nบันทึก",
+          "draftOk": true,
+          "liveSnippet": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน\n\n+฿22\n\n+฿22\n\n+฿22\n\nมีจำหน่าย\nเพิ่มช้อยส์\nบันทึก",
+          "liveOk": true
+        }
+      ],
+      "ok": true,
+      "save": {
+        "ok": true
+      }
+    },
+    {
+      "group": "โปรโมชั่น ปังเนยกรอบอบไอน้ำ",
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoO0SAeVyeGpiq0n14BLQyE3jxiW/edit",
+      "rows": [
+        {
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+          "from": 14,
+          "to": 22,
+          "store": 15,
+          "refreshOnly": false,
+          "draftSnippet": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน\n\n+฿22\n\n+฿22\n\n+฿22\n\nมีจำหน่าย\nเพิ่มช้อยส์\nบันทึก",
+          "draftOk": true,
+          "liveSnippet": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน\n\n+฿22\n\n+฿22\n\n+฿22\n\nมีจำหน่าย\nเพิ่มช้อยส์\nบันทึก",
+          "liveOk": true
+        }
+      ],
+      "ok": true,
+      "save": {
+        "ok": true
+      }
+    },
+    {
+      "group": "โปรโมชั่น มันไทยอบ ดั้งเดิม",
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoXRo4JyMwgZ4PKOkVqXBwonmTTB/edit",
+      "rows": [
+        {
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+          "from": 14,
+          "to": 15,
+          "store": 10,
+          "refreshOnly": false,
+          "draftSnippet": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน\n\n+฿15\n\n+฿15\n\n+฿15\n\nมีจำหน่าย\nเพิ่มช้อยส์\nบันทึก",
+          "draftOk": true,
+          "liveSnippet": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน\n\n+฿15\n\n+฿15\n\n+฿15\n\nมีจำหน่าย\nเพิ่มช้อยส์\nบันทึก",
+          "liveOk": true
+        }
+      ],
+      "ok": true,
+      "save": {
+        "ok": true
+      }
+    },
+    {
+      "group": "โปรโมชั่น วาฟเฟิลเบลเยียมโฮมเมด ดั้งเดิม",
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leocrvG1exIm991mgKkbKMbyyOVaf/edit",
+      "rows": [
+        {
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+          "from": 14,
+          "to": 15,
+          "store": 10,
+          "refreshOnly": false,
+          "draftSnippet": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน\n\n+฿15\n\n+฿15\n\n+฿15\n\nมีจำหน่าย\nเพิ่มช้อยส์\nบันทึก\n\nเพิ่มช้อยส์\n\nชื่อช้อ",
+          "draftOk": true,
+          "liveSnippet": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน\n\n+฿15\n\n+฿15\n\n+฿15\n\nมีจำหน่าย\nเพิ่มช้อยส์\nบันทึก",
+          "liveOk": true
+        }
+      ],
+      "ok": true,
+      "save": {
+        "ok": true
+      }
+    },
+    {
+      "group": "โปรโมชั่น เค้กกล้วยหอม",
+      "url": "https://merchant.wongnai.com/businesses/2688343/menu-option/0leoYBNOeRgb6dPGTPX6RHWZpZ79Af/edit",
+      "rows": [
+        {
+          "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้นแบบเดียวกัน",
+          "from": 14,
+          "to": 15,
+          "store": 10,
+          "refreshOnly": false,
+          "draftSnippet": "สุดคุ้ม เพิ่มอีก 1 ชิ้นแบบเดียวกัน\n\n+฿15\n\n+฿15\n\n+฿15\n\nมีจำหน่าย\nเพิ่มช้อยส์\nบันทึก",
+          "draftOk": true,
+          "liveSnippet": "สุดคุ้ม เพิ่มอีก 1 ชิ้นแบบเดียวกัน\n\n+฿15\n\n+฿15\n\n+฿15\n\nมีจำหน่าย\nเพิ่มช้อยส์\nบันทึก",
           "liveOk": true
         }
       ],

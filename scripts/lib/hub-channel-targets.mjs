@@ -126,6 +126,27 @@ export function resolveHubItemTarget(pos, channel, ctx) {
   };
 }
 
+/** เป้าตัวเลือก hub — ตรงกับ resolveOptionChannelTarget ในตาราง (main + add หรือ override เซลล์) */
+export function resolveHubOptionTarget(base, channel, settings, optionKey) {
+  const store = Math.max(0, Number(base) || 0);
+  const overrides = settings?.optionOverrides || {};
+  const channels = settings?.channels || {};
+  const override = optionKey ? overrides[optionKey]?.[channel] : undefined;
+  if (override) {
+    return { target: applyChannelRule(store, override), rule: override, fromOverride: true, viaFollower: false };
+  }
+  const main = resolveMainChannel(settings);
+  if (channel === main) {
+    const rule = channels[channel] || DEFAULT_CHANNEL_RULES[channel];
+    return { target: applyChannelRule(store, rule), rule, fromOverride: false, viaFollower: false };
+  }
+  const mainOverride = optionKey ? overrides[optionKey]?.[main] : undefined;
+  const mainRule = channels[main] || DEFAULT_CHANNEL_RULES[main];
+  const mainTarget = applyChannelRule(store, mainOverride || mainRule);
+  const add = resolveFollowerAdd(settings, channel);
+  return { target: applyFollowerAdd(mainTarget, add), rule: add, fromOverride: false, viaFollower: true };
+}
+
 export async function loadHubChannelContext() {
   const db = await getSeedDb();
   const [settingsSnap, itemsSnap, catsSnap] = await Promise.all([

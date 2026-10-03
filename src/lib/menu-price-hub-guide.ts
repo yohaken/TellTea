@@ -128,6 +128,14 @@ ingest: node scripts/shopee-ingest-export.mjs --zip="…" แล้ว --channel
   · ตัวเลือกติดเมนู = POS เป็นหลัก · หมวดท็อปปิ้งไม่ก็อปกลุ่มเครื่องดื่มถ้าพี่น้องบน Grab ไม่มี
   · เปลี่ยนชื่อตัวเลือกในกลุ่มหลักเท่านั้น: node scripts/grab-chrome-rename-options.mjs --apply
   · ลำดับตัวเลือกในกลุ่ม Grab ตรวจจาก choiceIndex ใน grab-live-scan — ตรง POS แล้ว (Sep 2026) · ถ้าเพี้ยนค่อยทำสคริปต์ reorder ในกลุ่ม (ห้าม ZIP สร้าง THMOG* ซ้ำ)
+ลำดับเมนู/หมวดเมื่อ JWT ว่าง: PUT items-sort / categories-sort ด้วย cookie auth
+  · หัวข้อ X-CSRF-Token = cookie mexusers_authn_token_jti (+ merchantID / troyPortal headers) · ดู grabWriteHeadersJs()
+  · สคริปต์: channel-reorder-items-to-pos.mjs / channel-reorder-categories-to-pos.mjs --apply --channel=grab
+รูปหลักเมื่อ JWT ว่าง (upload-file/upsert 403): ใช้ UI ไม่ต้อง JWT
+  · เปิดแก้ไขรายการ → เพิ่มรูป → DataTransfer setFile บน input[type=file] ใน photoUploadDrawer
+  · รอครอป (ปุ่ม หมุน/ลบรูป + temporary food-cms) → กด เพิ่มรูป ใน drawer
+  · บันทึก: บันทึกและเพิ่มข้อมูลหมวดหมู่ → ตรวจสอบรายการ → บันทึกการเปลี่ยนแปลง → ตรวจ imageURL จาก GET menu
+  · รายละเอียดล่าสุดอยู่ใน settings.tableNote หัวข้อ «Grab photo UI (no JWT)» / «Grab write CSRF»
 
 == LINE MAN (Wongnai business 2688343) ==
 merchant.wongnai.com · สแกนด้วย scripts/lineman-chrome-scan.mjs และ -scan-options.mjs

@@ -929,7 +929,11 @@ export function categoryNameStatusFor(
   if (storeOnly) return "skip";
   const live = (liveCategory || "").trim();
   if (!live) return "missing";
-  return namesEqual(posCategory, live) ? "exact" : "near";
+  // POS ใช้ «* » นำหน้าหมวด — LINE MAN ห้ามอักษรพิเศษจึงตั้งชื่อไม่มี *
+  const stripStar = (s: string) => s.replace(/^\s*\*+\s*/, "");
+  return namesEqual(posCategory, live) || namesEqual(stripStar(posCategory), stripStar(live))
+    ? "exact"
+    : "near";
 }
 
 export function rowHasNameIssue(

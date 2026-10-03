@@ -1,34 +1,244 @@
 {
-  "at": "2026-09-03T09:05:11.661Z",
+  "at": "2026-10-01T16:44:34.614Z",
   "apply": true,
-  "sourceCsv": "scripts/data/menu-price-baseline/grab-export-fresh-1788426287422.csv",
+  "sourceCsv": "/var/folders/ts/5b4_c2pn3w9__87zmd7c87dc0000gn/T/grab-csv-1790873069967/3-C6J1BCNXTYKTLX_20261002_9fc09e412f4141488944f9f1522c1b00.csv",
   "grabRule": {
     "mode": "gp",
     "value": 30
   },
   "diffs": [
     {
-      "grabGroup": "ท็อปปิ้ง",
-      "name": "วุ้นกบไต้หวัน",
-      "live": 9,
-      "store": 6,
-      "target": 8,
-      "posKey": "fs_opt_27722806::fs_c_41662758",
-      "posGroup": "ท้อปปิ้ง",
-      "verifyLive": 8
+      "grabGroup": "ประเภท",
+      "name": "ปั่น สูตรเข้ม",
+      "live": 13,
+      "store": 10,
+      "target": 14,
+      "posKey": "fs_opt_41288493::fs_c_41720069",
+      "posGroup": "ประเภท",
+      "verifyLive": 14
     },
     {
-      "grabGroup": "ช็อตมัทฉะ",
-      "name": "เพิ่มช็อตมัทฉะ 1 กรัม",
-      "live": 9,
+      "grabGroup": "ท้อปปิ้ง",
+      "name": "วุ้นกบไต้หวัน",
+      "live": 8,
       "store": 6,
-      "target": 8,
-      "posKey": "fs_opt_41309539::fs_c_41756674",
-      "posGroup": "ช็อตมัทฉะ",
-      "verifyLive": 8
+      "target": 9,
+      "posKey": "fs_opt_27722806::fs_c_41662758",
+      "posGroup": "ท้อปปิ้ง",
+      "verifyLive": 9
+    },
+    {
+      "grabGroup": "ท้อปปิ้ง",
+      "name": "เฉาก๊วยหนึบเนื้อแน่น",
+      "live": 13,
+      "store": 10,
+      "target": 14,
+      "posKey": "fs_opt_27722806::fs_c_41429429",
+      "posGroup": "ท้อปปิ้ง",
+      "verifyLive": 14
+    },
+    {
+      "grabGroup": "ท้อปปิ้ง",
+      "name": "บุกน้ำตาล",
+      "live": 13,
+      "store": 10,
+      "target": 14,
+      "posKey": "fs_opt_27722806::fs_c_23981613",
+      "posGroup": "ท้อปปิ้ง",
+      "verifyLive": 14
+    },
+    {
+      "grabGroup": "ท้อปปิ้ง",
+      "name": "บุกน้ำผึ้ง",
+      "live": 13,
+      "store": 10,
+      "target": 14,
+      "posKey": "fs_opt_27722806::fs_c_23981612",
+      "posGroup": "ท้อปปิ้ง",
+      "verifyLive": 14
+    },
+    {
+      "grabGroup": "ท้อปปิ้ง",
+      "name": "บุกบราวน์",
+      "live": 13,
+      "store": 10,
+      "target": 14,
+      "posKey": "fs_opt_27722806::fs_c_23981611",
+      "posGroup": "ท้อปปิ้ง",
+      "verifyLive": 14
+    },
+    {
+      "grabGroup": "ท้อปปิ้ง",
+      "name": "ชีส",
+      "live": 28,
+      "store": 20,
+      "target": 29,
+      "posKey": "fs_opt_27722806::fs_c_23981609",
+      "posGroup": "ท้อปปิ้ง",
+      "verifyLive": 29
+    },
+    {
+      "grabGroup": "แยกน้ำแข็ง",
+      "name": "แยกน้ำแข็ง",
+      "live": 3,
+      "store": 3,
+      "target": 4,
+      "posKey": "fs_opt_27772164::fs_c_24070680",
+      "posGroup": "แยกน้ำแข็ง",
+      "verifyLive": 4
+    },
+    {
+      "grabGroup": "ชิโอปัง เพิ่มไส้พิเศษ",
+      "name": "ช็อคโกแลต",
+      "live": 6,
+      "store": 5,
+      "target": 7,
+      "posKey": "fs_opt_42031501::fs_c_42718721",
+      "posGroup": "ชิโอปัง เพิ่มไส้พิเศษ",
+      "verifyLive": 7
+    },
+    {
+      "grabGroup": "ขนาด ปริมาณ แก้วกาแฟ",
+      "name": "แก้วใหญ่ 22oz เข้ม +1 ช๊อต ซีลแน่น",
+      "live": 13,
+      "store": 10,
+      "target": 14,
+      "posKey": "fs_opt_41341093::fs_c_41807696",
+      "posGroup": "ขนาด ปริมาณ แก้วกาแฟ",
+      "verifyLive": 14
+    },
+    {
+      "grabGroup": "โปรโมชั่น Soft Cookie โฮมเมด",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้นแบบเดียวกัน",
+      "live": 13,
+      "store": 10,
+      "target": 14,
+      "posKey": "fs_opt_42442642::fs_c_43294499",
+      "posGroup": "โปรโมชั่น Soft Cookie โฮมเมด",
+      "verifyLive": 14
+    },
+    {
+      "grabGroup": "ช็อตมะนาว",
+      "name": "เพิ่ม 1 ช็อต",
+      "live": 6,
+      "store": 5,
+      "target": 7,
+      "posKey": "fs_opt_41721290::fs_c_42341777",
+      "posGroup": "ช็อตมะนาว",
+      "verifyLive": 7
+    },
+    {
+      "grabGroup": "ท็อปปิ้งขนมปัง",
+      "name": "โรยผงโกโก้ + ซอสช็อกโกแลต",
+      "live": 3,
+      "store": 3,
+      "target": 4,
+      "posKey": "fs_opt_41544856::fs_c_42307782",
+      "posGroup": "ท็อปปิ้งขนมปัง",
+      "verifyLive": 4
+    },
+    {
+      "grabGroup": "ท็อปปิ้งขนมปัง",
+      "name": "ราดคาราเมล ฉ่ำๆ",
+      "live": 3,
+      "store": 3,
+      "target": 4,
+      "posKey": "fs_opt_41544856::fs_c_42117582",
+      "posGroup": "ท็อปปิ้งขนมปัง",
+      "verifyLive": 4
+    },
+    {
+      "grabGroup": "ท็อปปิ้งขนมปัง",
+      "name": "ราดน้ำผึ้ง",
+      "live": 3,
+      "store": 3,
+      "target": 4,
+      "posKey": "fs_opt_41544856::fs_c_42136056",
+      "posGroup": "ท็อปปิ้งขนมปัง",
+      "verifyLive": 4
+    },
+    {
+      "grabGroup": "ท็อปปิ้งขนมปัง",
+      "name": "แยมสตรอว์เบอร์รี่",
+      "live": 3,
+      "store": 3,
+      "target": 4,
+      "posKey": "fs_opt_41544856::fs_c_42327807",
+      "posGroup": "ท็อปปิ้งขนมปัง",
+      "verifyLive": 4
+    },
+    {
+      "grabGroup": "ท็อปปิ้งขนมปัง",
+      "name": "แยมส้ม",
+      "live": 3,
+      "store": 3,
+      "target": 4,
+      "posKey": "fs_opt_41544856::fs_c_42327808",
+      "posGroup": "ท็อปปิ้งขนมปัง",
+      "verifyLive": 4
+    },
+    {
+      "grabGroup": "ท็อปปิ้งขนมปัง",
+      "name": "แยมบลูเบอร์รี่",
+      "live": 3,
+      "store": 3,
+      "target": 4,
+      "posKey": "fs_opt_41544856::fs_c_42327809",
+      "posGroup": "ท็อปปิ้งขนมปัง",
+      "verifyLive": 4
+    },
+    {
+      "grabGroup": "โปรโมชั่น วาฟเฟิลเบลเยียมโฮมเมด ดั้งเดิม",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+      "live": 13,
+      "store": 10,
+      "target": 14,
+      "posKey": "fs_opt_44058440::fs_c_45742031",
+      "posGroup": "โปรโมชั่น วาฟเฟิลเบลเยียมโฮมเมด ดั้งเดิม",
+      "verifyLive": 14
+    },
+    {
+      "grabGroup": "โปรโมชั่น มันไทยอบ ดั้งเดิม",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+      "live": 13,
+      "store": 10,
+      "target": 14,
+      "posKey": "fs_opt_43146917::fs_c_44306539",
+      "posGroup": "โปรโมชั่น มันไทยอบ ดั้งเดิม",
+      "verifyLive": 14
+    },
+    {
+      "grabGroup": "โปรโมชั่น บราวนี่",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+      "live": 13,
+      "store": 10,
+      "target": 14,
+      "posKey": "fs_opt_42275931::fs_c_43027563",
+      "posGroup": "โปรโมชั่น บราวนี่",
+      "verifyLive": 14
+    },
+    {
+      "grabGroup": "โปรโมชั่น เค้กกล้วยหอม",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้นแบบเดียวกัน",
+      "live": 13,
+      "store": 10,
+      "target": 14,
+      "posKey": "fs_opt_43240306::fs_c_44445505",
+      "posGroup": "โปรโมชั่น เค้กกล้วยหอม",
+      "verifyLive": 14
+    },
+    {
+      "grabGroup": "โปรโมชั่น ปังเนยกรอบอบไอน้ำ",
+      "name": "สุดคุ้ม เพิ่มอีก 1 ชิ้น แบบเดียวกัน",
+      "live": 13,
+      "store": 10,
+      "target": 14,
+      "posKey": "fs_opt_41562159::fs_c_42141132",
+      "posGroup": "โปรโมชั่น ปังเนยกรอบอบไอน้ำ",
+      "verifyLive": 14
     }
   ],
-  "cellPatches": 140,
+  "cellPatches": 975,
   "skippedOver100": 0,
   "optionCols": [
     "OptionGroup1",
@@ -41,21 +251,21 @@
     "inject": {
       "ok": true,
       "name": "grab-hub-opt-fix.zip",
-      "size": 7181,
+      "size": 7040,
       "sellDisabled": false
     },
     "submit": {
       "clicked": true
     },
     "status": {
-      "slice": "grab-hub-opt-fix.zip\t\n167\n\t\nสำเร็จ\n\t\n03 Sep 26 16:05\n\t\nyohaken@gmail.com\n\tดาวน์โหลด\ngrab-hub-opt-price.zip\t\n167\n\t\nสำเร็จ\n\t\n03 Sep 26 15:56\n\t\nyohaken@gmail.com\n\tดาวน์โหลด\ngrab-hub-price-update.zip\t\n167\n\t\nสำเร็จ\n\t\n03 Sep 26 15:44\n\t\nyohaken@gm",
+      "slice": "grab-hub-opt-fix.zip\t\n166\n\t\nสำเร็จ\n\t\n01 Oct 26 23:44\n\t\nyohaken@gmail.com\n\tดาวน์โหลด\ngrab-rename-big-mantou.zip\t\n165\n\t\nสำเร็จ\n\t\n25 Sep 26 11:51\n\t\nyohaken@gmail.com\n\tดาวน์โหลด\ngrab-hub-og-order.zip\t\n164\n\t\nสำเร็จ\n\t\n12 Sep 26 23:37\n\t\nyohaken@gm",
       "processing": false,
       "success": true
     }
   },
   "verify": {
-    "matched": 2,
+    "matched": 23,
     "stillOff": 0,
-    "csv": "/var/folders/ts/5b4_c2pn3w9__87zmd7c87dc0000gn/T/grab-csv-1788426360020/3-C6J1BCNXTYKTLX_20260903_b6ed368374e849659dc744205f18c6d1.csv"
+    "csv": "/var/folders/ts/5b4_c2pn3w9__87zmd7c87dc0000gn/T/grab-csv-1790873122092/3-C6J1BCNXTYKTLX_20261002_3620fab4d46f4fbd833e0503c911a769.csv"
   }
 }

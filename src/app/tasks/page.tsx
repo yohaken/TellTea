@@ -1022,7 +1022,7 @@ function TemplateFormModal({
               id="task-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="เช่น ทำหมั่นโถว"
+              placeholder="เช่น ทำบิ๊กหมั่นโถว"
               required
             />
           </div>

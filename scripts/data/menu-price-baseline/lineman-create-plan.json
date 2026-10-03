@@ -1,342 +1,2410 @@
 {
-  "at": "2026-09-03T02:50:55.438Z",
+  "at": "2026-09-30T06:45:25.447Z",
   "linemanRule": {
-    "mode": "gp",
-    "value": 30
+    "value": 30,
+    "mode": "gp"
   },
-  "lmCount": 168,
-  "posDelivery": 167,
-  "matchedExact": 167,
+  "hubCtx": {
+    "itemOverrides": {
+      "fs_item_41574233": {
+        "lineman": {
+          "value": 27,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "value": 24,
+          "mode": "absolute"
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 27
+        }
+      },
+      "fs_item_41638755": {
+        "lineman": {
+          "value": 27,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 24
+        },
+        "grab": {
+          "value": 27,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_41589715": {
+        "grab": {
+          "mode": "absolute",
+          "value": 27
+        },
+        "lineman": {
+          "value": 27,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 24
+        }
+      },
+      "fs_item_42571194": {
+        "shopee": {
+          "value": 55,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "value": 61,
+          "mode": "absolute"
+        },
+        "grab": {
+          "value": 61,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_33559311": {
+        "shopee": {
+          "mode": "absolute",
+          "value": 19
+        },
+        "grab": {
+          "value": 21,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 21
+        }
+      },
+      "fs_item_43337115": {
+        "grab": {
+          "value": 41,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "value": 37,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 41
+        }
+      },
+      "fs_item_41574401": {
+        "lineman": {
+          "value": 41,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "value": 37,
+          "mode": "absolute"
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 41
+        }
+      },
+      "fs_item_41277718": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 50
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 45
+        },
+        "grab": {
+          "value": 50,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_33559300": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 27
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 27
+        },
+        "shopee": {
+          "value": 24,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_33559337": {
+        "lineman": {
+          "value": 32,
+          "mode": "absolute"
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 32
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 29
+        }
+      },
+      "fs_item_41589757": {
+        "shopee": {
+          "value": 24,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "value": 27,
+          "mode": "absolute"
+        },
+        "grab": {
+          "value": 27,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_33559287": {
+        "grab": {
+          "value": 27,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "value": 24,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 27
+        }
+      },
+      "fs_item_41411727": {
+        "shopee": {
+          "value": 37,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 41
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 41
+        }
+      },
+      "fs_item_43051427": {
+        "lineman": {
+          "value": 9,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 8
+        },
+        "grab": {
+          "value": 9,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_41574263": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 50
+        },
+        "grab": {
+          "value": 50,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 45
+        }
+      },
+      "fs_item_41574255": {
+        "grab": {
+          "mode": "absolute",
+          "value": 50
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 50
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 45
+        }
+      },
+      "fs_item_41589746": {
+        "shopee": {
+          "mode": "absolute",
+          "value": 24
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 27
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 27
+        }
+      },
+      "fs_item_41444824": {
+        "shopee": {
+          "mode": "absolute",
+          "value": 32
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 36
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 36
+        }
+      },
+      "fs_item_33559309": {
+        "grab": {
+          "mode": "absolute",
+          "value": 49
+        },
+        "lineman": {
+          "value": 49,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "value": 44,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_41655299": {
+        "lineman": {
+          "value": 27,
+          "mode": "absolute"
+        },
+        "grab": {
+          "value": 27,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "value": 24,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_44909012": {
+        "shopee": {
+          "value": 15,
+          "mode": "absolute"
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 17
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 17
+        }
+      },
+      "fs_item_41321144": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 41
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 37
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 41
+        }
+      },
+      "fs_item_42571021": {
+        "lineman": {
+          "value": 61,
+          "mode": "absolute"
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 61
+        },
+        "shopee": {
+          "value": 55,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_33559308": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 32
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 32
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 29
+        }
+      },
+      "fs_item_42221555": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 65
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 65
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 59
+        }
+      },
+      "fs_item_41608527": {
+        "shopee": {
+          "value": 24,
+          "mode": "absolute"
+        },
+        "grab": {
+          "value": 27,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 27
+        }
+      },
+      "fs_item_33559305": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 49
+        },
+        "grab": {
+          "value": 49,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 44
+        }
+      },
+      "fs_item_43406368": {
+        "shopee": {
+          "value": 54,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 60
+        },
+        "grab": {
+          "value": 60,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_42818456": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 32
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 29
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 32
+        }
+      },
+      "fs_item_33559304": {
+        "grab": {
+          "mode": "absolute",
+          "value": 41
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 41
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 37
+        }
+      },
+      "fs_item_33559274": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 28
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 28
+        },
+        "shopee": {
+          "value": 25,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_41486422": {
+        "shopee": {
+          "value": 32,
+          "mode": "absolute"
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 36
+        },
+        "lineman": {
+          "value": 36,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_33559280": {
+        "grab": {
+          "value": 32,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 29
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 32
+        }
+      },
+      "fs_item_33559291": {
+        "grab": {
+          "value": 27,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "value": 27,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "value": 24,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_33559296": {
+        "lineman": {
+          "value": 27,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "value": 24,
+          "mode": "absolute"
+        },
+        "grab": {
+          "value": 27,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_33559328": {
+        "grab": {
+          "value": 32,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "value": 29,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 32
+        }
+      },
+      "fs_item_41836328": {
+        "shopee": {
+          "value": 24,
+          "mode": "absolute"
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 27
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 27
+        }
+      },
+      "fs_item_41574254": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 50
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 50
+        },
+        "shopee": {
+          "value": 45,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_41456676": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 41
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 41
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 37
+        }
+      },
+      "fs_item_41638888": {
+        "grab": {
+          "value": 27,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "value": 24,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 27
+        }
+      },
+      "fs_item_41331368": {
+        "grab": {
+          "mode": "absolute",
+          "value": 50
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 45
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 50
+        }
+      },
+      "fs_item_33559272": {
+        "shopee": {
+          "value": 29,
+          "mode": "absolute"
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 32
+        },
+        "lineman": {
+          "value": 32,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_41322288": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 41
+        },
+        "grab": {
+          "value": 41,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "value": 37,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_41638902": {
+        "lineman": {
+          "value": 27,
+          "mode": "absolute"
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 27
+        },
+        "shopee": {
+          "value": 24,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_33559286": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 32
+        },
+        "shopee": {
+          "value": 29,
+          "mode": "absolute"
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 32
+        }
+      },
+      "fs_item_41391572": {
+        "lineman": {
+          "value": 50,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 45
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 50
+        }
+      },
+      "fs_item_33559307": {
+        "shopee": {
+          "mode": "absolute",
+          "value": 29
+        },
+        "lineman": {
+          "value": 32,
+          "mode": "absolute"
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 32
+        }
+      },
+      "fs_item_45717125": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 19
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 19
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 17
+        }
+      },
+      "fs_item_33559326": {
+        "shopee": {
+          "value": 49,
+          "mode": "absolute"
+        },
+        "grab": {
+          "value": 54,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 54
+        }
+      },
+      "fs_item_42221869": {
+        "grab": {
+          "mode": "absolute",
+          "value": 41
+        },
+        "shopee": {
+          "value": 37,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "value": 41,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_43406465": {
+        "grab": {
+          "mode": "absolute",
+          "value": 71
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 71
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 64
+        }
+      },
+      "fs_item_33559295": {
+        "lineman": {
+          "value": 49,
+          "mode": "absolute"
+        },
+        "grab": {
+          "value": 49,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 44
+        }
+      },
+      "fs_item_42818404": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 49
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 44
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 49
+        }
+      },
+      "fs_item_42818345": {
+        "shopee": {
+          "mode": "absolute",
+          "value": 29
+        },
+        "lineman": {
+          "value": 32,
+          "mode": "absolute"
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 32
+        }
+      },
+      "fs_item_33559281": {
+        "shopee": {
+          "value": 37,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 41
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 41
+        }
+      },
+      "dpKmpJczaArdvY97C48T": {
+        "shopee": {
+          "value": 15,
+          "mode": "absolute"
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 17
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 17
+        }
+      },
+      "fs_item_33559331": {
+        "shopee": {
+          "value": 24,
+          "mode": "absolute"
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 27
+        },
+        "lineman": {
+          "value": 27,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_33559268": {
+        "lineman": {
+          "value": 41,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "value": 37,
+          "mode": "absolute"
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 41
+        }
+      },
+      "fs_item_33559267": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 32
+        },
+        "shopee": {
+          "value": 29,
+          "mode": "absolute"
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 32
+        }
+      },
+      "fs_item_41574397": {
+        "grab": {
+          "value": 50,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 50
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 45
+        }
+      },
+      "fs_item_41486377": {
+        "grab": {
+          "mode": "absolute",
+          "value": 36
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 32
+        },
+        "lineman": {
+          "value": 36,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_41608489": {
+        "grab": {
+          "value": 27,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "value": 27,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 24
+        }
+      },
+      "fs_item_33559282": {
+        "grab": {
+          "value": 41,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "value": 37,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "value": 41,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_41574391": {
+        "grab": {
+          "value": 41,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "value": 37,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "value": 41,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_33768547": {
+        "grab": {
+          "mode": "absolute",
+          "value": 54
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 49
+        },
+        "lineman": {
+          "value": 54,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_33559278": {
+        "grab": {
+          "mode": "absolute",
+          "value": 27
+        },
+        "lineman": {
+          "value": 27,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 24
+        }
+      },
+      "fs_item_33559276": {
+        "grab": {
+          "value": 27,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 27
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 24
+        }
+      },
+      "fs_item_43052296": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 21
+        },
+        "grab": {
+          "value": 21,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 19
+        }
+      },
+      "fs_item_33559288": {
+        "shopee": {
+          "mode": "absolute",
+          "value": 37
+        },
+        "grab": {
+          "value": 41,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "value": 41,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_43461330": {
+        "shopee": {
+          "mode": "absolute",
+          "value": 64
+        },
+        "grab": {
+          "value": 71,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 71
+        }
+      },
+      "fs_item_33559303": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 41
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 37
+        },
+        "grab": {
+          "value": 41,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_42217588": {
+        "shopee": {
+          "value": 49,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 54
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 54
+        }
+      },
+      "fs_item_44722774": {
+        "shopee": {
+          "value": 24,
+          "mode": "absolute"
+        },
+        "grab": {
+          "value": 24,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "value": 24,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_41444782": {
+        "shopee": {
+          "value": 32,
+          "mode": "absolute"
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 36
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 36
+        }
+      },
+      "fs_item_41411740": {
+        "lineman": {
+          "value": 41,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "value": 37,
+          "mode": "absolute"
+        },
+        "grab": {
+          "value": 41,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_41655205": {
+        "shopee": {
+          "mode": "absolute",
+          "value": 24
+        },
+        "lineman": {
+          "value": 27,
+          "mode": "absolute"
+        },
+        "grab": {
+          "value": 27,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_49538393": {
+        "grab": {
+          "value": 17,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 17
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 15
+        }
+      },
+      "fs_item_43577356": {
+        "grab": {
+          "value": 65,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 59
+        },
+        "lineman": {
+          "value": 65,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_33768746": {
+        "grab": {
+          "mode": "absolute",
+          "value": 60
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 54
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 60
+        }
+      },
+      "fs_item_44722799": {
+        "grab": {
+          "mode": "absolute",
+          "value": 29
+        },
+        "shopee": {
+          "value": 29,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "value": 29,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_43577260": {
+        "grab": {
+          "mode": "absolute",
+          "value": 54
+        },
+        "shopee": {
+          "value": 49,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "value": 54,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_41836317": {
+        "shopee": {
+          "mode": "absolute",
+          "value": 24
+        },
+        "grab": {
+          "value": 27,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "value": 27,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_43577310": {
+        "grab": {
+          "value": 54,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "value": 54,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 49
+        }
+      },
+      "fs_item_41321907": {
+        "grab": {
+          "mode": "absolute",
+          "value": 41
+        },
+        "lineman": {
+          "value": 41,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 37
+        }
+      },
+      "fs_item_33768707": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 54
+        },
+        "grab": {
+          "value": 54,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "value": 49,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_41456560": {
+        "grab": {
+          "value": 41,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 37
+        },
+        "lineman": {
+          "value": 41,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_43337275": {
+        "shopee": {
+          "mode": "absolute",
+          "value": 49
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 54
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 54
+        }
+      },
+      "fs_item_33559329": {
+        "grab": {
+          "value": 27,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 27
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 24
+        }
+      },
+      "fs_item_41444851": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 36
+        },
+        "shopee": {
+          "value": 32,
+          "mode": "absolute"
+        },
+        "grab": {
+          "value": 36,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_47343036": {
+        "lineman": {
+          "value": 17,
+          "mode": "absolute"
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 17
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 15
+        }
+      },
+      "fs_item_33559332": {
+        "grab": {
+          "value": 49,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 49
+        },
+        "shopee": {
+          "value": 44,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_41457162": {
+        "lineman": {
+          "value": 41,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 37
+        },
+        "grab": {
+          "value": 41,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_41277766": {
+        "shopee": {
+          "mode": "absolute",
+          "value": 45
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 50
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 50
+        }
+      },
+      "fs_item_33559325": {
+        "shopee": {
+          "value": 6,
+          "mode": "absolute"
+        },
+        "grab": {
+          "value": 7,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 7
+        }
+      },
+      "fs_item_43461233": {
+        "shopee": {
+          "value": 44,
+          "mode": "absolute"
+        },
+        "grab": {
+          "value": 49,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "value": 49,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_41638745": {
+        "lineman": {
+          "value": 27,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "value": 24,
+          "mode": "absolute"
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 27
+        }
+      },
+      "fs_item_33559270": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 41
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 37
+        },
+        "grab": {
+          "value": 41,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_33768729": {
+        "grab": {
+          "value": 65,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 59
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 65
+        }
+      },
+      "fs_item_43979100": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 50
+        },
+        "grab": {
+          "value": 50,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 45
+        }
+      },
+      "fs_item_41467100": {
+        "grab": {
+          "value": 41,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 37
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 41
+        }
+      },
+      "fs_item_33559290": {
+        "shopee": {
+          "value": 24,
+          "mode": "absolute"
+        },
+        "grab": {
+          "value": 27,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 27
+        }
+      },
+      "fs_item_42692654": {
+        "grab": {
+          "value": 10,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 9
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 10
+        }
+      },
+      "fs_item_43412845": {
+        "shopee": {
+          "value": 59,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 65
+        },
+        "grab": {
+          "value": 65,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_33559312": {
+        "grab": {
+          "mode": "absolute",
+          "value": 27
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 24
+        },
+        "lineman": {
+          "value": 27,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_41391600": {
+        "shopee": {
+          "mode": "absolute",
+          "value": 37
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 41
+        },
+        "grab": {
+          "value": 41,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_33768737": {
+        "shopee": {
+          "value": 49,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 54
+        },
+        "grab": {
+          "value": 54,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_33559336": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 49
+        },
+        "shopee": {
+          "value": 44,
+          "mode": "absolute"
+        },
+        "grab": {
+          "value": 49,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_41322135": {
+        "grab": {
+          "value": 41,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 41
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 37
+        }
+      },
+      "fs_item_33768723": {
+        "shopee": {
+          "value": 49,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "value": 54,
+          "mode": "absolute"
+        },
+        "grab": {
+          "value": 54,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_41321830": {
+        "grab": {
+          "mode": "absolute",
+          "value": 36
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 36
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 32
+        }
+      },
+      "fs_item_43772079": {
+        "shopee": {
+          "mode": "absolute",
+          "value": 20
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 22
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 22
+        }
+      },
+      "fs_item_41574246": {
+        "grab": {
+          "value": 36,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "value": 32,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 36
+        }
+      },
+      "fs_item_43577153": {
+        "grab": {
+          "mode": "absolute",
+          "value": 54
+        },
+        "shopee": {
+          "value": 49,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 54
+        }
+      },
+      "fs_item_41486430": {
+        "grab": {
+          "mode": "absolute",
+          "value": 36
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 36
+        },
+        "shopee": {
+          "value": 32,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_33559338": {
+        "shopee": {
+          "mode": "absolute",
+          "value": 29
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 32
+        },
+        "lineman": {
+          "value": 32,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_33559271": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 41
+        },
+        "shopee": {
+          "value": 37,
+          "mode": "absolute"
+        },
+        "grab": {
+          "value": 41,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_41322247": {
+        "shopee": {
+          "value": 32,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 36
+        },
+        "grab": {
+          "value": 36,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_41411718": {
+        "lineman": {
+          "value": 41,
+          "mode": "absolute"
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 41
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 37
+        }
+      },
+      "fs_item_33559277": {
+        "grab": {
+          "mode": "absolute",
+          "value": 27
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 27
+        },
+        "shopee": {
+          "value": 24,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_47385144": {
+        "lineman": {
+          "value": 60,
+          "mode": "absolute"
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 60
+        },
+        "shopee": {
+          "value": 54,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_33559314": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 32
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 29
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 32
+        }
+      },
+      "fs_item_33559333": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 27
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 24
+        },
+        "grab": {
+          "value": 27,
+          "mode": "absolute"
+        }
+      },
+      "ptSl9HZ4s6VOpYpaZ8xq": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 22
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 20
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 22
+        }
+      },
+      "fs_item_33559301": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 60
+        },
+        "shopee": {
+          "value": 54,
+          "mode": "absolute"
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 60
+        }
+      },
+      "fs_item_33559298": {
+        "shopee": {
+          "mode": "absolute",
+          "value": 29
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 32
+        },
+        "grab": {
+          "value": 32,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_33559324": {
+        "grab": {
+          "value": 7,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "value": 6,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 7
+        }
+      },
+      "fs_item_41486445": {
+        "shopee": {
+          "mode": "absolute",
+          "value": 32
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 36
+        },
+        "grab": {
+          "value": 36,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_41608475": {
+        "shopee": {
+          "value": 24,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "value": 27,
+          "mode": "absolute"
+        },
+        "grab": {
+          "value": 27,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_47068210": {
+        "shopee": {
+          "mode": "absolute",
+          "value": 37
+        },
+        "lineman": {
+          "value": 41,
+          "mode": "absolute"
+        },
+        "grab": {
+          "value": 41,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_33559335": {
+        "grab": {
+          "value": 27,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 24
+        },
+        "lineman": {
+          "value": 27,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_33559334": {
+        "shopee": {
+          "mode": "absolute",
+          "value": 24
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 27
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 27
+        }
+      },
+      "fs_item_41460373": {
+        "shopee": {
+          "value": 37,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 41
+        },
+        "grab": {
+          "value": 41,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_41276630": {
+        "grab": {
+          "mode": "absolute",
+          "value": 41
+        },
+        "lineman": {
+          "value": 41,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "value": 37,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_42221669": {
+        "shopee": {
+          "mode": "absolute",
+          "value": 55
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 61
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 61
+        }
+      },
+      "fs_item_33559279": {
+        "shopee": {
+          "value": 24,
+          "mode": "absolute"
+        },
+        "grab": {
+          "value": 27,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 27
+        }
+      },
+      "fs_item_41391590": {
+        "shopee": {
+          "mode": "absolute",
+          "value": 49
+        },
+        "grab": {
+          "value": 54,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 54
+        }
+      },
+      "fs_item_42817721": {
+        "shopee": {
+          "mode": "absolute",
+          "value": 29
+        },
+        "grab": {
+          "value": 32,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 32
+        }
+      },
+      "fs_item_41638847": {
+        "shopee": {
+          "value": 24,
+          "mode": "absolute"
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 27
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 27
+        }
+      },
+      "fs_item_33559284": {
+        "lineman": {
+          "value": 32,
+          "mode": "absolute"
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 32
+        },
+        "shopee": {
+          "value": 29,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_33752414": {
+        "grab": {
+          "value": 54,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "value": 54,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 49
+        }
+      },
+      "fs_item_41321986": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 41
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 37
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 41
+        }
+      },
+      "fs_item_33559327": {
+        "shopee": {
+          "value": 24,
+          "mode": "absolute"
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 27
+        },
+        "lineman": {
+          "value": 27,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_33559297": {
+        "grab": {
+          "mode": "absolute",
+          "value": 27
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 24
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 27
+        }
+      },
+      "fs_item_44722825": {
+        "grab": {
+          "value": 29,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "value": 29,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 29
+        }
+      },
+      "fs_item_44595674": {
+        "shopee": {
+          "value": 29,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 32
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 32
+        }
+      },
+      "fs_item_33559269": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 41
+        },
+        "shopee": {
+          "value": 37,
+          "mode": "absolute"
+        },
+        "grab": {
+          "value": 41,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_33559319": {
+        "lineman": {
+          "value": 49,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "value": 44,
+          "mode": "absolute"
+        },
+        "grab": {
+          "value": 49,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_41456583": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 41
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 37
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 41
+        }
+      },
+      "fs_item_33559322": {
+        "grab": {
+          "mode": "absolute",
+          "value": 13
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 13
+        },
+        "shopee": {
+          "value": 12,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_44359362": {
+        "shopee": {
+          "mode": "absolute",
+          "value": 22
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 24
+        },
+        "lineman": {
+          "value": 24,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_33559294": {
+        "grab": {
+          "mode": "absolute",
+          "value": 32
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 32
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 29
+        }
+      },
+      "fs_item_41655229": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 27
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 24
+        },
+        "grab": {
+          "value": 27,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_33559306": {
+        "lineman": {
+          "value": 49,
+          "mode": "absolute"
+        },
+        "grab": {
+          "value": 49,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 44
+        }
+      },
+      "fs_item_33559289": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 41
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 41
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 37
+        }
+      },
+      "fs_item_33559321": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 13
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 12
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 13
+        }
+      },
+      "fs_item_43412772": {
+        "shopee": {
+          "mode": "absolute",
+          "value": 44
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 49
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 49
+        }
+      },
+      "fs_item_41321223": {
+        "grab": {
+          "mode": "absolute",
+          "value": 50
+        },
+        "shopee": {
+          "value": 45,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "value": 50,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_33559323": {
+        "grab": {
+          "mode": "absolute",
+          "value": 13
+        },
+        "shopee": {
+          "value": 12,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 13
+        }
+      },
+      "fs_item_33559318": {
+        "shopee": {
+          "mode": "absolute",
+          "value": 49
+        },
+        "lineman": {
+          "value": 54,
+          "mode": "absolute"
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 54
+        }
+      },
+      "fs_item_44187147": {
+        "shopee": {
+          "value": 20,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "value": 22,
+          "mode": "absolute"
+        },
+        "grab": {
+          "mode": "absolute",
+          "value": 22
+        }
+      },
+      "fs_item_33559299": {
+        "grab": {
+          "mode": "absolute",
+          "value": 41
+        },
+        "lineman": {
+          "value": 41,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 37
+        }
+      },
+      "fs_item_41638761": {
+        "grab": {
+          "value": 27,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "value": 27,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "value": 24,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_41279794": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 50
+        },
+        "grab": {
+          "value": 50,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "value": 45,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_41486436": {
+        "grab": {
+          "mode": "absolute",
+          "value": 36
+        },
+        "lineman": {
+          "value": 36,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 32
+        }
+      },
+      "fs_item_42818071": {
+        "grab": {
+          "mode": "absolute",
+          "value": 32
+        },
+        "lineman": {
+          "value": 32,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 29
+        }
+      },
+      "fs_item_41638870": {
+        "lineman": {
+          "mode": "absolute",
+          "value": 27
+        },
+        "shopee": {
+          "value": 24,
+          "mode": "absolute"
+        },
+        "grab": {
+          "value": 27,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_33559283": {
+        "shopee": {
+          "mode": "absolute",
+          "value": 29
+        },
+        "lineman": {
+          "mode": "absolute",
+          "value": 32
+        },
+        "grab": {
+          "value": 32,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_41466326": {
+        "shopee": {
+          "value": 37,
+          "mode": "absolute"
+        },
+        "grab": {
+          "value": 41,
+          "mode": "absolute"
+        },
+        "lineman": {
+          "value": 41,
+          "mode": "absolute"
+        }
+      },
+      "fs_item_47642235": {
+        "lineman": {
+          "value": 17,
+          "mode": "absolute"
+        },
+        "grab": {
+          "value": 17,
+          "mode": "absolute"
+        },
+        "shopee": {
+          "mode": "absolute",
+          "value": 15
+        }
+      }
+    },
+    "channels": {
+      "grab": {
+        "mode": "gp",
+        "value": 30
+      },
+      "lineman": {
+        "value": 30,
+        "mode": "gp"
+      },
+      "shopee": {
+        "value": 22,
+        "mode": "gp"
+      }
+    },
+    "followerAdd": {
+      "lineman": {
+        "mode": "percent",
+        "value": 11
+      },
+      "grab": {
+        "value": 11,
+        "mode": "percent"
+      }
+    },
+    "mainChannel": "shopee"
+  },
+  "lmCount": 167,
+  "posDelivery": 166,
+  "matchedExact": 166,
   "missing": 0,
-  "noteExisting": 12,
-  "noteExistingRows": [
-    {
-      "posId": "fs_item_41391600",
-      "name": "กาแฟสด เอสเปรสโซ่ไทยสไตล์ เย็น 16 ออนซ์",
-      "nameEn": "Thai Style Iced Espresso",
-      "category": "* กาแฟสดนมนุ่มละมุน",
-      "mode": "cold",
-      "storePrice": 29,
-      "onlinePrice": 41,
-      "pickupPrice": 41,
-      "offlinePrice": 29,
-      "optionNames": [
-        "แยกน้ำแข็ง",
-        "ความหวาน",
-        "ช็อตกาแฟ",
-        "ท้อปปิ้ง"
-      ],
-      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250305173931689000S",
-      "recommended": false,
-      "hubNote": "สร้างเมนู ไลน์แมน",
-      "fromNote": true,
-      "lmId": "0leDkkVreUaMa5JzU30GmqLnNKcThL",
-      "siblingName": "กาแฟสด ลาเต้ เย็น 16 ออนซ์",
-      "siblingLmId": "0leDkTI75bRTRmyna4UB6lnY6TRFfh",
-      "siblingOptions": [
-        "ช็อตกาแฟ",
-        "แยกน้ำแข็ง",
-        "ความหวาน",
-        "ท้อปปิ้ง"
-      ]
-    },
-    {
-      "posId": "fs_item_41486445",
-      "name": "กาแฟสดโซดา เอสเปรสโซ่มะม่วง เย็น 16 ออนซ์",
-      "nameEn": "Fresh Coffee Soda, Iced Mango Espresso",
-      "category": "* กาแฟสดฟิวชันสดชื่น",
-      "mode": "cold",
-      "storePrice": 25,
-      "onlinePrice": 36,
-      "pickupPrice": 36,
-      "offlinePrice": 25,
-      "optionNames": [
-        "แยกน้ำแข็ง",
-        "ความหวาน",
-        "ท้อปปิ้ง",
-        "ช็อตกาแฟ"
-      ],
-      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250310145249705000S",
-      "recommended": false,
-      "hubNote": "สร้างเมนู ไลน์แมน",
-      "fromNote": true,
-      "lmId": "0leDkyJ6oxa8N2J44Dyrwsw6ynGxml",
-      "siblingName": "กาแฟสด บลูฮาวายเอสเปรสโซ่ เย็น 16 ออนซ์",
-      "siblingLmId": "0leDksd9jEMeNFcfxJxAi0dB6Il0gE",
-      "siblingOptions": [
-        "แยกน้ำแข็ง",
-        "ความหวาน",
-        "ช็อตกาแฟ",
-        "ท้อปปิ้ง"
-      ]
-    },
-    {
-      "posId": "fs_item_41574391",
-      "name": "กาแฟสด โกโก้มอคค่าร้อน",
-      "nameEn": "Fresh Coffee, Hot Cocoa Mocha",
-      "category": "* กาแฟสด อื่นๆ ร้อน",
-      "mode": "hot",
-      "storePrice": 29,
-      "onlinePrice": 41,
-      "pickupPrice": 41,
-      "offlinePrice": 29,
-      "optionNames": [
-        "ความหวาน",
-        "ช็อตกาแฟ"
-      ],
-      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250312161229150000S",
-      "recommended": false,
-      "hubNote": "สร้างเมนู ไลน์แมน",
-      "fromNote": true,
-      "lmId": "0leDl472vuUBVR2Ke1XVTS8NhKdeSP",
-      "siblingName": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
-      "siblingLmId": "0leDkaOg5qRX5k5YUc9Hx5Ej5RNvM8",
-      "siblingOptions": [
-        "ความหวาน",
-        "ช็อตกาแฟ"
-      ]
-    },
-    {
-      "posId": "fs_item_41574254",
-      "name": "กาแฟสด คาราเมลลาเต้ร้อน 12 ออนซ์",
-      "nameEn": "Hot Caramel Latte",
-      "category": "* กาแฟสด อื่นๆ ร้อน",
-      "mode": "hot",
-      "storePrice": 35,
-      "onlinePrice": 50,
-      "pickupPrice": 50,
-      "offlinePrice": 35,
-      "optionNames": [
-        "ความหวาน",
-        "ช็อตกาแฟ"
-      ],
-      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250312160931810000S",
-      "recommended": false,
-      "hubNote": "สร้างเมนู ไลน์แมน",
-      "fromNote": true,
-      "lmId": "0leDl46gUnDMTZClJSCQYLyn6ykyfP",
-      "siblingName": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
-      "siblingLmId": "0leDkaOg5qRX5k5YUc9Hx5Ej5RNvM8",
-      "siblingOptions": [
-        "ความหวาน",
-        "ช็อตกาแฟ"
-      ]
-    },
-    {
-      "posId": "fs_item_41574401",
-      "name": "กาแฟสด เผือกลาเต้ร้อน",
-      "nameEn": "Fresh Coffee Hot Taro Latte",
-      "category": "* กาแฟสด อื่นๆ ร้อน",
-      "mode": "hot",
-      "storePrice": 29,
-      "onlinePrice": 41,
-      "pickupPrice": 41,
-      "offlinePrice": 29,
-      "optionNames": [
-        "ความหวาน",
-        "ช็อตกาแฟ"
-      ],
-      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250312161433575000S",
-      "recommended": false,
-      "hubNote": "สร้างเมนู ไลน์แมน",
-      "fromNote": true,
-      "lmId": "0leDl47ITNhj1hE9s3ERnCXrT2AfaW",
-      "siblingName": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
-      "siblingLmId": "0leDkaOg5qRX5k5YUc9Hx5Ej5RNvM8",
-      "siblingOptions": [
-        "ความหวาน",
-        "ช็อตกาแฟ"
-      ]
-    },
-    {
-      "posId": "fs_item_41574397",
-      "name": "กาแฟสด มอคค่ามิ้นต์ร้อน",
-      "nameEn": "Hot Mint Mocha Coffee",
-      "category": "* กาแฟสด อื่นๆ ร้อน",
-      "mode": "hot",
-      "storePrice": 35,
-      "onlinePrice": 50,
-      "pickupPrice": 50,
-      "offlinePrice": 35,
-      "optionNames": [
-        "ความหวาน",
-        "ช็อตกาแฟ"
-      ],
-      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250312161332629000S",
-      "recommended": false,
-      "hubNote": "สร้างเมนู ไลน์แมน",
-      "fromNote": true,
-      "lmId": "0leDl47Ako8qcHdMynDLKOOdhB8ew5",
-      "siblingName": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
-      "siblingLmId": "0leDkaOg5qRX5k5YUc9Hx5Ej5RNvM8",
-      "siblingOptions": [
-        "ความหวาน",
-        "ช็อตกาแฟ"
-      ]
-    },
-    {
-      "posId": "fs_item_41574263",
-      "name": "กาแฟสด โอวัลตินเอสเปรสโซ่ร้อน",
-      "nameEn": "Fresh Coffee, Hot Ovaltine Espresso",
-      "category": "* กาแฟสด อื่นๆ ร้อน",
-      "mode": "hot",
-      "storePrice": 35,
-      "onlinePrice": 50,
-      "pickupPrice": 50,
-      "offlinePrice": 35,
-      "optionNames": [
-        "ความหวาน",
-        "ช็อตกาแฟ"
-      ],
-      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250312161125632000S",
-      "recommended": false,
-      "hubNote": "สร้างเมนู ไลน์แมน",
-      "fromNote": true,
-      "lmId": "0leDl46umYFn7RtZJ3HKnpBzxprqlA",
-      "siblingName": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
-      "siblingLmId": "0leDkaOg5qRX5k5YUc9Hx5Ej5RNvM8",
-      "siblingOptions": [
-        "ความหวาน",
-        "ช็อตกาแฟ"
-      ]
-    },
-    {
-      "posId": "fs_item_41574255",
-      "name": "กาแฟสด เฮเซลนัทมอคค่าร้อน 12 ออนซ์",
-      "nameEn": "Hot Hazelnut Mocha Coffee",
-      "category": "* กาแฟสด อื่นๆ ร้อน",
-      "mode": "hot",
-      "storePrice": 35,
-      "onlinePrice": 50,
-      "pickupPrice": 50,
-      "offlinePrice": 35,
-      "optionNames": [
-        "ความหวาน",
-        "ช็อตกาแฟ"
-      ],
-      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250312161035078000S",
-      "recommended": false,
-      "hubNote": "สร้างเมนู ไลน์แมน",
-      "fromNote": true,
-      "lmId": "0leDl46oXNVidJ1Do2a4xGjjkMwaU2",
-      "siblingName": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
-      "siblingLmId": "0leDkaOg5qRX5k5YUc9Hx5Ej5RNvM8",
-      "siblingOptions": [
-        "ความหวาน",
-        "ช็อตกาแฟ"
-      ]
-    },
-    {
-      "posId": "fs_item_41574246",
-      "name": "ช็อกโกแลตมิลค์ร้อน 12 ออนซ์",
-      "nameEn": "Hot Chocolate Milk",
-      "category": "* กาแฟสด อื่นๆ ร้อน",
-      "mode": "hot",
-      "storePrice": 25,
-      "onlinePrice": 36,
-      "pickupPrice": 36,
-      "offlinePrice": 25,
-      "optionNames": [
-        "ความหวาน",
-        "ช็อตกาแฟ"
-      ],
-      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250312160823289000S",
-      "recommended": false,
-      "hubNote": "สร้างเมนู ไลน์แมน",
-      "fromNote": true,
-      "lmId": "0leDl46XoAjHPuVyDDSQg1uhRPkEk4",
-      "siblingName": "กาแฟสด อเมริกาโน่ (Americano) ร้อน 12 ออนซ์",
-      "siblingLmId": "0leDkaOg5qRX5k5YUc9Hx5Ej5RNvM8",
-      "siblingOptions": [
-        "ความหวาน",
-        "ช็อตกาแฟ"
-      ]
-    },
-    {
-      "posId": "fs_item_33559311",
-      "name": "ซอสบราวน์ชูการ์",
-      "nameEn": "Brown Sugar Sauce",
-      "category": "ทัอปปิ้ง",
-      "mode": "topping",
-      "storePrice": 15,
-      "onlinePrice": 21,
-      "pickupPrice": 21,
-      "offlinePrice": 15,
-      "optionNames": [
-        "แยกน้ำแข็ง",
-        "ท้อปปิ้ง",
-        "ความหวาน"
-      ],
-      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20250417084106880000S",
-      "recommended": false,
-      "hubNote": "สร้างเมนู ไลน์แมน",
-      "fromNote": true,
-      "lmId": "0leDVTbMBa8dxcayIEcvvDGmIuJDac",
-      "siblingName": "ซอสบราวน์ชูการ์",
-      "siblingLmId": "0leDVTbMBa8dxcayIEcvvDGmIuJDac",
-      "siblingOptions": [
-        "แยกน้ำแข็ง",
-        "ท้อปปิ้ง",
-        "ความหวาน"
-      ]
-    },
-    {
-      "posId": "fs_item_43577310",
-      "name": "นมสดมันม่วง",
-      "nameEn": "",
-      "category": "นม (เย็น, ปั่น)",
-      "mode": "other",
-      "storePrice": 39,
-      "onlinePrice": 56,
-      "pickupPrice": 56,
-      "offlinePrice": 39,
-      "optionNames": [
-        "ท้อปปิ้ง",
-        "ความหวาน",
-        "แยกน้ำแข็ง"
-      ],
-      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20260308053646256000S",
-      "recommended": false,
-      "hubNote": "สร้างเมนู ไลน์แมน",
-      "fromNote": true,
-      "lmId": "0leDqbo3uFMpMjHF1eNukS5omMG5Nk",
-      "siblingName": "นมสดมันม่วง",
-      "siblingLmId": "0leDqbo3uFMpMjHF1eNukS5omMG5Nk",
-      "siblingOptions": [
-        "ท้อปปิ้ง",
-        "ความหวาน",
-        "แยกน้ำแข็ง"
-      ]
-    },
-    {
-      "posId": "fs_item_33559335",
-      "name": "แดงโซดา",
-      "nameEn": "Red Soda",
-      "category": "อิตาเลียน โซดา",
-      "mode": "other",
-      "storePrice": 19,
-      "onlinePrice": 27,
-      "pickupPrice": 27,
-      "offlinePrice": 19,
-      "optionNames": [
-        "ความหวาน",
-        "ท้อปปิ้ง",
-        "แยกน้ำแข็ง"
-      ],
-      "imageUrl": "https://images.foodstory.co/restaurant/f73e1436-a786-457b-8797-3f2a8a8a57f4/92effc0b-ca8c-4459-a499-20f844adbdc9/menu/20260308092058709000S",
-      "recommended": false,
-      "hubNote": "สร้างเมนู ไลน์แมน",
-      "fromNote": true,
-      "lmId": "0leDVTdmgbwt9P2DYXGMz7TCf5zsfG",
-      "siblingName": "เขียวโซดา",
-      "siblingLmId": "0leDVTYBKP4C777yEB40elhWQITet3",
-      "siblingOptions": [
-        "ความหวาน",
-        "ท้อปปิ้ง",
-        "แยกน้ำแข็ง"
-      ]
-    }
-  ],
+  "noteExisting": 0,
+  "noteExistingRows": [],
   "rows": [],
-  "selected": 12
+  "selected": 1
 }

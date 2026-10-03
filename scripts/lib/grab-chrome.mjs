@@ -287,6 +287,32 @@ export function chromeJsJsonOnTab(tabIndex, js, opts) {
   }
 }
 
+/**
+ * JS expression (object) for Grab Food cookie-auth writes.
+ * When localStorage.JWT is empty, PUT/POST still work with credentials + X-CSRF-Token
+ * from cookie mexusers_authn_token_jti (troy portal cookie auth).
+ */
+export function grabWriteHeadersJs() {
+  return `{
+    const jti = (document.cookie.match(/mexusers_authn_token_jti=([^;]+)/) || [])[1] || '';
+    let merchantGroupID = 'THMG20240329102133012624';
+    try {
+      const sel = JSON.parse(localStorage.getItem('merchantSelector') || '[]');
+      if (sel[0]?.id) merchantGroupID = sel[0].id;
+    } catch {}
+    return {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      requestSource: 'troyPortal',
+      'x-grabkit-clientid': 'grabmerchant-portal',
+      'x-client-id': 'GrabMerchant-Portal',
+      merchantID: ${JSON.stringify(GRAB_STORE_ID)},
+      merchantGroupID,
+      'X-CSRF-Token': jti,
+    };
+  }`;
+}
+
 /** GET https://api.grab.com/food/merchant/v2/menu from the logged-in merchant tab. */
 export function fetchGrabMenuApi(tabIndex, windowIndex) {
   const raw = chromeJsOnTab(
