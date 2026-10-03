@@ -55,32 +55,31 @@ type SearchableOwnerRow = {
   amountOut: number;
   type?: string;
   note?: string;
+  hasVat?: boolean;
+  vatInput?: number;
+  vatBase?: number;
+  vatInvoiceNo?: string;
+  createdBy?: string;
 };
 
-/** Smart filter: all tokens must match somewhere across row fields. */
+/**
+ * ค้นทุกช่องของบช.เจ้าของ — วันที่ (/10/ · 5/10 · /69) · รายการ · ยอด (1,250 = 1250) ·
+ * VAT · ฐาน VAT · เลขใบกำกับ · ประเภท · note · ผู้บันทึก
+ */
 export function filterOwnerBookRows<T extends SearchableOwnerRow>(
   rows: T[],
   query: string,
 ): T[] {
-  const tokens = searchTokens(query);
-  if (!tokens.length) return rows;
-
-  return rows.filter((row) => {
-    const typeLabel = row.type ? labelLedgerType(row.type) : "";
-    const blob = [
-      row.description || "",
-      row.type || "",
-      typeLabel,
-      row.note || "",
-      // Match both พ.ศ. UI labels and ค.ศ. typed searches.
-      formatDateShortBe(row.date),
-      formatDateShortCe(row.date),
-      formatPlainNumber(row.amountOut || 0),
-      String(row.amountOut || ""),
-      String(row.amountOut || "").replace(/,/g, ""),
-    ].join(" ");
-    return haystackMatch(blob, tokens);
-  });
+  if (!ledgerSearchTokens(query).length) return rows;
+  const wrapped = rows.map((src) => ({ ...src, amountIn: 0, src }));
+  return filterLedgerRowsMulti(wrapped, [query], ({ src: r }) =>
+    [
+      r.note || "",
+      r.vatInvoiceNo || "",
+      r.createdBy || "",
+      r.hasVat && Number(r.vatBase) > 0 ? formatPlainNumber(Number(r.vatBase)) : "",
+    ].join(" "),
+  ).map((w) => w.src);
 }
 
 type SearchableLedgerRow = {
@@ -97,7 +96,11 @@ type SearchableLedgerRow = {
 export function ledgerSearchTokens(query: string): string[] {
   const q = normalizeText(query);
   if (!q) return [];
-  return q.split(/[\s;|]+/).filter(Boolean);
+  // "*" = wildcard (ค้นแบบมีคำนี้อยู่แล้ว) — "*ft" / "ft*" = "ft"
+  return q
+    .split(/[\s;|]+/)
+    .map((t) => t.replace(/^\*+|\*+$/g, ""))
+    .filter(Boolean);
 }
 
 const DATE_TOKEN = /^\/?\d{1,4}(\/\d{0,4}){0,2}\/?$/;

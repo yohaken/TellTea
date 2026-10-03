@@ -9831,6 +9831,18 @@ body.has-staff-task-nudge .module-page {
   color: #1b4332;
 }
 
+.bulk-status-sum {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #1b4332;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.bulk-status-sum .muted {
+  font-weight: 600;
+}
+
 .bulk-status-btn {
   font-size: 0.72rem;
   padding: 0.22rem 0.5rem;
@@ -37883,4 +37895,264 @@ a.ghost-btn {
   width: 0.95rem;
   height: 0.95rem;
   accent-color: #2f7d4a;
+}
+
+/* /pnl/ super-mini: same small type scale as the VAT month page (td 0.64 · th 0.58 · heads 0.72) */
+.pnl-mini {
+  text-align: left;
+}
+
+.pnl-mini .muted {
+  max-width: none;
+  justify-self: stretch;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.pnl-mini .pnl-mini-title {
+  margin: 0.15rem 0 0.05rem;
+  font-size: 1.02rem;
+}
+
+.pnl-mini .pnl-mini-intro,
+.pnl-mini .pnl-mini-hint {
+  margin: 0 0 0.25rem;
+  font-size: 0.6rem;
+  line-height: 1.3;
+  color: rgba(28, 42, 31, 0.5);
+  text-align: left;
+}
+
+.pnl-mini .pnl-mini-intro {
+  margin-bottom: 0.45rem;
+}
+
+.pnl-mini .pnl-vat-apply {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0 0 0.45rem;
+  padding: 0.35rem 0.5rem 0.4rem;
+  border: 1px solid rgba(28, 42, 31, 0.1);
+  border-radius: 0.55rem;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.pnl-mini .pnl-vat-apply-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.pnl-mini .pnl-vat-apply-head h2 {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.pnl-mini .pnl-vat-apply-head .ghost-btn {
+  min-height: 1.3rem;
+  padding: 0.05rem 0.45rem;
+  font-size: 0.62rem;
+}
+
+.pnl-mini .pnl-vat-apply-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.3rem 0.45rem;
+}
+
+.pnl-mini .pnl-vat-apply .vat-sales-field {
+  margin: 0;
+  min-width: 0;
+  gap: 0.08rem;
+  font-size: 0.6rem;
+  color: rgba(28, 42, 31, 0.6);
+}
+
+.pnl-mini .pnl-vat-apply .vat-sales-field input {
+  width: 8.5rem;
+  min-height: 0;
+  height: 1.5rem;
+  padding: 0.05rem 0.35rem;
+  font-size: 0.7rem;
+}
+
+.pnl-mini .pnl-vat-apply .primary-btn {
+  width: auto;
+  min-height: 0;
+  height: 1.5rem;
+  padding: 0 0.6rem;
+  font-size: 0.66rem;
+}
+
+.pnl-mini .pnl-vat-apply-note {
+  margin: 0;
+  font-size: 0.6rem;
+  line-height: 1.3;
+  text-align: left;
+}
+
+.pnl-mini .pnl-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.2rem 0.55rem;
+  margin: 0 0 0.45rem;
+}
+
+.pnl-mini .pnl-toolbar .npos-slim-text-btn {
+  font-size: 0.68rem;
+}
+
+.pnl-mini .pnl-summary-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0 auto 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pnl-mini .pnl-summary-toggle input {
+  width: 0.85rem;
+  height: 0.85rem;
+  margin: 0;
+}
+
+.pnl-mini .pnl-summary-toggle .muted {
+  font-size: 0.6rem;
+  font-weight: 400;
+}
+
+.pnl-mini .pnl-summary-empty-hint {
+  margin: -0.25rem 0 0.4rem;
+}
+
+.pnl-mini .pnl-section {
+  margin-bottom: 0.7rem;
+}
+
+.pnl-mini .pnl-section-title {
+  margin: 0 0 0.2rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.pnl-mini .pnl-split {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.45rem;
+}
+
+@media (min-width: 720px) {
+  .pnl-mini .pnl-split {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.pnl-mini .pnl-block {
+  min-width: 0;
+}
+
+.pnl-mini .pnl-block-title {
+  margin: 0 0 0.05rem;
+  font-size: 0.68rem;
+}
+
+.pnl-mini .sheet-table--dense th {
+  padding: 0.12rem 0.25rem;
+  font-size: 0.58rem;
+}
+
+.pnl-mini .sheet-table--dense td {
+  height: 1.12rem;
+  padding: 0.06rem 0.25rem;
+  font-size: 0.64rem;
+  line-height: 1.12;
+}
+
+.pnl-mini .sheet-table--dense .col-date {
+  font-size: 0.6rem;
+}
+
+.pnl-mini .pnl-wide {
+  min-width: 54rem;
+}
+
+.pnl-mini .pnl-cat-vat-table {
+  min-width: 27rem;
+}
+
+.pnl-mini .pnl-income-cell {
+  min-width: 4.8rem;
+}
+
+.pnl-mini .pnl-income-input {
+  min-height: 0;
+  height: 1.12rem;
+  padding: 0 0.2rem;
+  border-radius: 0.25rem;
+  font-size: 0.64rem;
+}
+
+.pnl-mini .sheet-edit {
+  padding: 0 0.15rem;
+  font-size: 0.6rem;
+}
+
+.pnl-mini .pnl-income-input.is-src-vat {
+  border-color: rgba(64, 91, 74, 0.35);
+  background: rgba(64, 91, 74, 0.06);
+}
+
+.pnl-mini .pnl-income-input.is-src-manual {
+  border-color: rgba(214, 120, 40, 0.75);
+  background: rgba(214, 120, 40, 0.08);
+  color: #9a4f12;
+}
+
+.pnl-mini .pnl-income-actions {
+  white-space: nowrap;
+}
+
+.pnl-mini .pnl-trend-card {
+  padding: 0.4rem 0.5rem 0.3rem;
+  gap: 0.3rem;
+  border-radius: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.pnl-mini .pnl-trend-card .pos-ops-corr-legend {
+  font-size: 0.62rem;
+  gap: 0.2rem 0.3rem;
+}
+
+.pnl-mini .pnl-trend-card .pos-ops-legend-btn {
+  padding: 0.08rem 0.3rem;
+}
+
+.pnl-trend-card .pos-ops-corr-axis-x,
+.pnl-trend-card .pos-ops-corr-axis-y {
+  font-size: 14px;
+}
+
+.pnl-trend-card .pos-ops-corr-value-label {
+  font-size: 13px;
+}
+
+.pnl-trend-zero {
+  stroke: rgba(28, 42, 31, 0.45);
+  stroke-width: 1;
+}
+
+.pnl-mini .pnl-vat-apply-income {
+  margin: 0;
+  font-size: 0.7rem;
+  align-self: end;
+  line-height: 1.5rem;
 }

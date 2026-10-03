@@ -66,7 +66,10 @@ assert.match(ledger, /listLedgerEntriesSince\(daysAgoMs\(180\)\)/);
 assert.doesNotMatch(ledger, /void listLedgerEntries\(\)/);
 
 const owner = read("src/app/owner-books/page.tsx");
-assert.match(owner, /listOwnerBookEntriesSince\(daysAgoMs\(180\)\)/);
+// บช.เจ้าของหลักร้อยแถว — ค้นทั้งประวัติแบบ live ต่อรอบค้น (ไม่ผูกทุกตัวอักษร)
+assert.match(owner, /subscribeOwnerBooksAll\(/);
+assert.match(owner, /\}, \[searching\]\);/);
+assert.doesNotMatch(owner, /\}, \[deferredQuery\]\);/);
 assert.match(owner, /listRecentOwnerBookEntries\(200\)/);
 
 const dock = read("src/components/StaffUtilityDock.tsx");

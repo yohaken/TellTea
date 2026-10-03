@@ -77,6 +77,7 @@ import {
   OWNER_BOOKS_LIVE_MAX,
   OWNER_BOOKS_PAGE_SIZE,
   OWNER_BOOKS_RECEIPT_MAX,
+  subscribeOwnerBooksAll,
   subscribeOwnerBooksPage,
   subscribeOwnerBooksTotalOut,
   updateOwnerBookEntry,
@@ -93,7 +94,6 @@ import {
   parseDateInput,
   todayInputValue,
 } from "@/lib/utils";
-import { daysAgoMs } from "@/lib/query-window";
 import { filterOwnerBookRows, sortByDateNewestFirst } from "@/lib/smart-search";
 import { exportOwnerBooksXlsx } from "@/lib/xlsx-export";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
@@ -185,34 +185,35 @@ function OwnerBooksView() {
     return unsub;
   }, [staff, liveLimit]);
 
+  const searching = Boolean(deferredQuery);
   useEffect(() => {
-    if (!deferredQuery) {
+    if (!searching) {
       setSearchPool(null);
       setSearchLoading(false);
       return;
     }
-    let cancelled = false;
     setSearchLoading(true);
-    void listOwnerBookEntriesSince(daysAgoMs(180))
-      .then((rows) => {
-        if (!cancelled) setSearchPool(rows);
-      })
-      .catch((err) => {
-        if (!cancelled) setError((err as Error).message || "ค้นหาไม่สำเร็จ");
-      })
-      .finally(() => {
-        if (!cancelled) setSearchLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [deferredQuery]);
+    // ค้นทั้งประวัติแบบ live (บช.เจ้าของมีหลักร้อยแถว) — ย้ายประเภท/แก้แถวเก่านอกหน้า live แล้วเห็นทันที
+    const unsub = subscribeOwnerBooksAll(
+      (rows) => {
+        setSearchPool(rows);
+        setSearchLoading(false);
+      },
+      (err) => {
+        setError(err.message || "ค้นหาไม่สำเร็จ");
+        setSearchLoading(false);
+      },
+    );
+    return () => unsub();
+  }, [searching]);
+
+  /** ยังโหลดทั้งบัญชีไม่เสร็จ = ว่าง ไม่โชว์ผลครึ่งๆ จากหน้า live */
+  const searchSource = useMemo(() => searchPool ?? [], [searchPool]);
 
   const filteredEntries = useMemo(() => {
-    const source = deferredQuery ? searchPool ?? entries : entries;
-    // Live list is already date desc; search pool is asc — always show newest→oldest.
+    const source = deferredQuery ? searchSource : entries;
     return sortByDateNewestFirst(filterOwnerBookRows(source, deferredQuery));
-  }, [entries, searchPool, deferredQuery]);
+  }, [entries, searchSource, deferredQuery]);
 
   useEffect(() => {
     setExcludedIds(new Set());
@@ -223,6 +224,19 @@ function OwnerBooksView() {
   const allVisibleSelected =
     visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
   const someVisibleSelected = visibleIds.some((id) => selectedIds.has(id));
+
+  const selectedSummary = useMemo(() => {
+    let count = 0;
+    let sum = 0;
+    let vat = 0;
+    for (const row of filteredEntries) {
+      if (!selectedIds.has(row.id)) continue;
+      count += 1;
+      sum += Number(row.amountOut) || 0;
+      if (row.hasVat) vat += Number(row.vatInput) || 0;
+    }
+    return { count, sum, vat };
+  }, [filteredEntries, selectedIds]);
 
   const calcSummary = useMemo(() => {
     let includedCount = 0;
@@ -306,7 +320,10 @@ function OwnerBooksView() {
     try {
       let rows: OwnerBookEntry[];
       if (deferredQuery) {
-        rows = filterOwnerBookRows(searchPool ?? entries, deferredQuery);
+        rows = filterOwnerBookRows(
+          searchPool ? searchSource : await listOwnerBookEntriesSince(0),
+          deferredQuery,
+        );
       } else {
         rows = await listOwnerBookEntries();
       }
@@ -437,6 +454,12 @@ function OwnerBooksView() {
           {selectedIds.size > 0 ? (
             <div className="bulk-status-actions" role="group" aria-label="ตั้งประเภทกลุ่ม">
               <span className="bulk-status-count">เลือก {selectedIds.size} รายการ</span>
+              <strong className="bulk-status-sum" aria-live="polite">
+                รวม {formatBaht(selectedSummary.sum)}
+                {selectedSummary.vat > 0 ? (
+                  <span className="muted"> · VAT {formatBaht(selectedSummary.vat)}</span>
+                ) : null}
+              </strong>
               {BULK_TYPE_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}

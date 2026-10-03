@@ -184,6 +184,18 @@ export function subscribeOwnerBooksPage(
   );
 }
 
+/** ทั้งบัญชีแบบ live — ใช้ตอนค้น (หลักร้อยแถว) ให้แก้/ย้ายประเภทแล้วผลค้นอัปเดตทันที */
+export function subscribeOwnerBooksAll(
+  onRows: (rows: OwnerBookEntry[]) => void,
+  onError?: (err: Error) => void,
+): Unsubscribe {
+  return onSnapshot(
+    query(ownerBooksCol(), orderBy("date", "desc"), orderBy("createdAt", "desc")),
+    (snap) => onRows(snap.docs.map(mapEntry)),
+    (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
+  );
+}
+
 export function subscribeOwnerBooksTotalOut(
   onTotal: (totalOut: number) => void,
   onError?: (err: Error) => void,

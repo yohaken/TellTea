@@ -79,11 +79,25 @@ function pctCell(n: number | null) {
   return Number((n * 100).toFixed(2));
 }
 
-function pnlSheetRows(rows: PnlMonthRow[], includeTotals: boolean) {
+function pnlSheetRows(
+  rows: PnlMonthRow[],
+  includeTotals: boolean,
+  includeVat = false,
+) {
   const colCogs = categoryLabel("cogs");
   const colSga = categoryLabel("sga");
   const colAsset = categoryLabel("asset");
   const mapRow = (r: PnlMonthRow) => ({
+    ...pnlBaseRow(r),
+    ...(includeVat
+      ? {
+          ภาษีขาย: r.outputVat,
+          "VAT สุทธิ": r.netVat,
+          "สุทธิหลัง VAT": r.profitAfterVat,
+        }
+      : {}),
+  });
+  const pnlBaseRow = (r: PnlMonthRow) => ({
     เดือน: r.month,
     รายได้: r.income,
     "รายได้/วัน": Number(r.incomePerDay.toFixed(2)),
@@ -147,6 +161,8 @@ export function exportOwnerBooksXlsx(entries: OwnerBookEntry[]) {
 export type ExportPnlOptions = {
   summaryMode?: boolean;
   includeTotals?: boolean;
+  /** คอลัมน์ภาษีขาย / VAT สุทธิ — เจ้าของ */
+  includeVat?: boolean;
 };
 
 /** ไฟล์เดียว · แยกแผ่นงานตามตาราง PNL ทั้งหมด */
@@ -157,7 +173,11 @@ export function exportPnlXlsx(report: PnlReportData, options: ExportPnlOptions =
   appendSheet(wb, "1-บช.พนักงาน", categorySheetRows(report.staff, includeTotals));
   appendSheet(wb, "1-บช.เจ้าของ", categorySheetRows(report.owner, includeTotals));
   appendSheet(wb, "2-รวม", categorySheetRows(report.combined, includeTotals));
-  appendSheet(wb, "3-กำไรขาดทุน", pnlSheetRows(report.pnl, includeTotals));
+  appendSheet(
+    wb,
+    "3-กำไรขาดทุน",
+    pnlSheetRows(report.pnl, includeTotals, options.includeVat === true),
+  );
 
   const modeTag = options.summaryMode ? "summary" : "all";
   downloadWorkbook(wb, `telltea-pnl-${modeTag}-${stamp()}.xlsx`);

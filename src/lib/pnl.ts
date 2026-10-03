@@ -17,9 +17,13 @@ import {
 } from "./categories";
 import { businessCostOut } from "./entry-vat";
 import { normalizeMoney } from "./vat-sales";
+import type { PnlVatMonth } from "./pnl-vat-source";
 
 /** P&L บนเว็บโหลดแค่ช่วงนี้ — ไม่สแกนบัญชีทั้งประวัติ */
 export const PNL_LOOKBACK_MONTHS = 18;
+
+/** เดือนแรกที่ข้อมูลครบ — ก่อนหน้านี้ (2025-04/05) บันทึกไม่ครบ ไม่โชว์ใน P&L */
+export const PNL_FIRST_MONTH = "2025-06";
 
 export type MonthCategoryRow = {
   month: string;
@@ -63,6 +67,12 @@ export type PnlMonthRow = {
   vatCogs: number;
   vatSga: number;
   vatAsset: number;
+  /** ภาษีขาย / VAT สุทธิ จากหน้า VAT รายเดือน */
+  outputVat: number;
+  netVat: number;
+  /** สุทธิ − VAT สุทธิ */
+  profitAfterVat: number;
+  incomeSource: PnlIncomeSource;
 };
 
 type MonthAcc = {
@@ -212,13 +222,32 @@ export function combineMonthBreakdowns(
   return mapToRows(map);
 }
 
-/** Manual monthly income — doc id = YYYY-MM */
-export async function listMonthlyIncome(): Promise<Record<string, number>> {
+export type StoredMonthlyIncome = {
+  income: number;
+  /** พิมพ์ทับเองในตาราง P&L — ชนะยอดจากหน้า VAT */
+  manual: boolean;
+};
+
+/** Monthly income — doc id = YYYY-MM */
+export async function listMonthlyIncomeDocs(): Promise<
+  Record<string, StoredMonthlyIncome>
+> {
   const snap = await getDocs(collection(getDb(), "monthlyIncome"));
-  const out: Record<string, number> = {};
+  const out: Record<string, StoredMonthlyIncome> = {};
   for (const d of snap.docs) {
-    out[d.id] = Number(d.data().income) || 0;
+    const data = d.data();
+    out[d.id] = {
+      income: Number(data.income) || 0,
+      manual: data.manual === true,
+    };
   }
+  return out;
+}
+
+export async function listMonthlyIncome(): Promise<Record<string, number>> {
+  const docs = await listMonthlyIncomeDocs();
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(docs)) out[k] = v.income;
   return out;
 }
 
@@ -226,6 +255,7 @@ export async function saveMonthlyIncome(
   month: string,
   income: number,
   updatedBy: string,
+  opts?: { manual?: boolean },
 ): Promise<void> {
   if (!/^\d{4}-\d{2}$/.test(month)) {
     throw new Error("เดือนไม่ถูกต้อง");
@@ -234,9 +264,28 @@ export async function saveMonthlyIncome(
   if (value < 0) throw new Error("รายได้ต้องไม่ติดลบ");
   await setDoc(
     doc(getDb(), "monthlyIncome", month),
-    { month, income: value, updatedAt: Date.now(), updatedBy },
+    {
+      month,
+      income: value,
+      manual: opts?.manual === true,
+      updatedAt: Date.now(),
+      updatedBy,
+    },
     { merge: true },
   );
+}
+
+export type PnlIncomeSource = "manual" | "vat" | "stored" | "none";
+
+/** ลำดับ: พิมพ์ทับเอง → หน้า VAT → ค่าเก่าที่เคยบันทึก */
+export function resolvePnlIncome(
+  stored: StoredMonthlyIncome | undefined,
+  vat: PnlVatMonth | undefined,
+): { income: number; source: PnlIncomeSource } {
+  if (stored?.manual) return { income: stored.income, source: "manual" };
+  if (vat && vat.income > 0) return { income: vat.income, source: "vat" };
+  if (stored && stored.income > 0) return { income: stored.income, source: "stored" };
+  return { income: 0, source: "none" };
 }
 
 function pct(part: number, whole: number): number | null {
@@ -343,6 +392,8 @@ export function summarizePnlRows(rows: PnlMonthRow[]): PnlMonthRow | null {
   let vatCogs = 0;
   let vatSga = 0;
   let vatAsset = 0;
+  let outputVat = 0;
+  let netVat = 0;
   let days = 0;
   for (const r of rows) {
     income += r.income;
@@ -353,6 +404,8 @@ export function summarizePnlRows(rows: PnlMonthRow[]): PnlMonthRow | null {
     vatCogs += r.vatCogs;
     vatSga += r.vatSga;
     vatAsset += r.vatAsset;
+    outputVat += r.outputVat;
+    netVat += r.netVat;
     days += daysInMonthKey(r.month) || 0;
   }
   days = days || 1;
@@ -384,6 +437,10 @@ export function summarizePnlRows(rows: PnlMonthRow[]): PnlMonthRow | null {
     vatCogs,
     vatSga,
     vatAsset,
+    outputVat,
+    netVat,
+    profitAfterVat: net - netVat,
+    incomeSource: "none",
   };
 }
 
@@ -408,6 +465,8 @@ export function averagePnlRows(rows: PnlMonthRow[]): PnlMonthRow | null {
   const vatCogs = rows.reduce((s, r) => s + r.vatCogs, 0) / n;
   const vatSga = rows.reduce((s, r) => s + r.vatSga, 0) / n;
   const vatAsset = rows.reduce((s, r) => s + r.vatAsset, 0) / n;
+  const outputVat = rows.reduce((s, r) => s + r.outputVat, 0) / n;
+  const netVat = rows.reduce((s, r) => s + r.netVat, 0) / n;
   return {
     month: "เฉลี่ย",
     income,
@@ -450,15 +509,27 @@ export function averagePnlRows(rows: PnlMonthRow[]): PnlMonthRow | null {
     vatCogs,
     vatSga,
     vatAsset,
+    outputVat,
+    netVat,
+    profitAfterVat: net - netVat,
+    incomeSource: "none",
   };
 }
 
 export function buildPnlRows(
   combined: CombinedMonthRow[],
   incomeByMonth: Record<string, number>,
+  opts?: {
+    vatByMonth?: Record<string, PnlVatMonth>;
+    incomeSourceByMonth?: Record<string, PnlIncomeSource>;
+  },
 ): PnlMonthRow[] {
+  const vatByMonth = opts?.vatByMonth || {};
   return combined.map((row) => {
     const income = Number(incomeByMonth[row.month]) || 0;
+    const vat = vatByMonth[row.month];
+    const outputVat = vat?.outputVat || 0;
+    const netVat = vat?.netVat || 0;
     const days = daysInMonthKey(row.month) || 1;
     const { cogs, sga, asset, vatCogs, vatSga, vatAsset } = row;
     const purchaseVat = purchaseVatTotal(row);
@@ -490,6 +561,10 @@ export function buildPnlRows(
       vatCogs,
       vatSga,
       vatAsset,
+      outputVat,
+      netVat,
+      profitAfterVat: net - netVat,
+      incomeSource: opts?.incomeSourceByMonth?.[row.month] || "none",
     };
   });
 }
@@ -498,22 +573,73 @@ export type PnlReportData = {
   staff: MonthCategoryRow[];
   owner: MonthCategoryRow[];
   combined: CombinedMonthRow[];
+  /** รายได้ที่ใช้คำนวณจริง (หลังเลือกแหล่ง) */
   incomeByMonth: Record<string, number>;
+  incomeSourceByMonth: Record<string, PnlIncomeSource>;
+  storedIncome: Record<string, StoredMonthlyIncome>;
+  vatByMonth: Record<string, PnlVatMonth>;
   pnl: PnlMonthRow[];
 };
+
+async function loadVatMonthsSafe(): Promise<Record<string, PnlVatMonth>> {
+  try {
+    // dynamic import: vat-monthly → pnl อยู่แล้ว กันวงกลม
+    const { loadVatMonthsForPnl } = await import("./pnl-vat-source");
+    return await loadVatMonthsForPnl();
+  } catch {
+    return {};
+  }
+}
 
 export async function loadPnlReport(
   lookbackMonths: number = PNL_LOOKBACK_MONTHS,
 ): Promise<PnlReportData> {
   const sinceMs = monthsAgoStartMs(lookbackMonths);
-  const [staff, owner, incomeByMonth] = await Promise.all([
+  const [staffAll, ownerAll, storedIncome, vatByMonth] = await Promise.all([
     loadStaffMonthBreakdown(sinceMs),
     loadOwnerMonthBreakdown(sinceMs),
-    listMonthlyIncome(),
+    listMonthlyIncomeDocs(),
+    loadVatMonthsSafe(),
   ]);
-  const combined = combineMonthBreakdowns(staff, owner);
-  const pnl = buildPnlRows(combined, incomeByMonth);
-  return { staff, owner, combined, incomeByMonth, pnl };
+  const lookbackMonth = monthKeyFromMs(sinceMs);
+  const sinceMonth =
+    lookbackMonth > PNL_FIRST_MONTH ? lookbackMonth : PNL_FIRST_MONTH;
+  const staff = staffAll.filter((r) => r.month >= sinceMonth);
+  const owner = ownerAll.filter((r) => r.month >= sinceMonth);
+  const combinedRaw = combineMonthBreakdowns(staff, owner);
+  const known = new Set(combinedRaw.map((r) => r.month));
+  const vatOnly = Object.keys(vatByMonth)
+    .filter((m) => m >= sinceMonth && !known.has(m))
+    .map((m) => emptyMonthCategoryRow(m));
+  const combined = [...combinedRaw, ...vatOnly].sort((a, b) =>
+    a.month.localeCompare(b.month),
+  );
+  const incomeByMonth: Record<string, number> = {};
+  const incomeSourceByMonth: Record<string, PnlIncomeSource> = {};
+  const months = new Set([
+    ...Object.keys(storedIncome),
+    ...Object.keys(vatByMonth),
+    ...combined.map((r) => r.month),
+  ]);
+  for (const m of months) {
+    const r = resolvePnlIncome(storedIncome[m], vatByMonth[m]);
+    incomeByMonth[m] = r.income;
+    incomeSourceByMonth[m] = r.source;
+  }
+  const pnl = buildPnlRows(combined, incomeByMonth, {
+    vatByMonth,
+    incomeSourceByMonth,
+  });
+  return {
+    staff,
+    owner,
+    combined,
+    incomeByMonth,
+    incomeSourceByMonth,
+    storedIncome,
+    vatByMonth,
+    pnl,
+  };
 }
 
 export type { PnlCategory };
