@@ -65,27 +65,11 @@ public final class OptionPickerLogic {
     return "";
   }
 
+  /** Back-office order (sortOrder, applied in {@link MenuModels#fromJson}) — no re-sort here. */
   public static List<MenuModels.Option> sortForDisplay(MenuModels.OptionGroup group) {
     List<MenuModels.Option> out = new ArrayList<>();
     if (group == null || group.options == null) return out;
     out.addAll(group.options);
-    if (isSweetnessGroup(group)) {
-      out.sort(
-          (a, b) -> {
-            Integer pa = parseSweetnessPercent(a.name);
-            Integer pb = parseSweetnessPercent(b.name);
-            int va = pa == null ? 999 : pa;
-            int vb = pb == null ? 999 : pb;
-            return Integer.compare(va, vb);
-          });
-    } else {
-      out.sort(
-          (a, b) -> {
-            int c = Double.compare(a.priceDelta, b.priceDelta);
-            if (c != 0) return c;
-            return a.name.compareTo(b.name);
-          });
-    }
     return out;
   }
 }

@@ -409,8 +409,11 @@ public final class MenuModels {
         List<Option> opts = new ArrayList<>();
         JSONArray oa = o.optJSONArray("options");
         if (oa != null) {
-          for (int j = 0; j < oa.length(); j++) {
-            JSONObject op = oa.getJSONObject(j);
+          List<JSONObject> ordered = new ArrayList<>();
+          for (int j = 0; j < oa.length(); j++) ordered.add(oa.getJSONObject(j));
+          ordered.sort(
+              (a, b) -> Double.compare(a.optDouble("sortOrder", 0), b.optDouble("sortOrder", 0)));
+          for (JSONObject op : ordered) {
             opts.add(
                 new Option(
                     op.optString("id"),

@@ -16,6 +16,14 @@ public final class WhatsNewCatalog {
   private WhatsNewCatalog() {}
 
   public static List<WhatsNewSlide> slidesFor(int versionCode) {
+    if (versionCode == 153) {
+      List<WhatsNewSlide> slides = new ArrayList<>();
+      slides.add(
+          new WhatsNewSlide(
+              "ลำดับตัวเลือกตามหลังร้าน",
+              "ท็อปปิ้ง/ช็อต ราคาสูงขึ้นก่อน · ไม่เพิ่ม อยู่ท้าย · ความหวาน 0% ขึ้นก่อน"));
+      return slides;
+    }
     if (versionCode == 152) {
       List<WhatsNewSlide> slides = new ArrayList<>();
       slides.add(

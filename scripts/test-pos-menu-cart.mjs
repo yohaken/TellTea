@@ -121,20 +121,20 @@ function isSweetnessGroup(group) {
   return withPct.length >= Math.ceil(active.length * 0.6);
 }
 
-function sortChoicesForDisplay(group) {
-  const active = group.options.filter((o) => o.active);
-  if (isSweetnessGroup(group)) {
-    return [...active].sort((a, b) => {
-      const pa = parseSweetnessPercent(a.name) ?? a.sortOrder;
-      const pb = parseSweetnessPercent(b.name) ?? b.sortOrder;
+function sortChoicesByPolicy(group) {
+  return [...group.options].sort((a, b) => {
+    if (isSweetnessGroup(group)) {
+      const pa = parseSweetnessPercent(a.name) ?? Number.MAX_SAFE_INTEGER;
+      const pb = parseSweetnessPercent(b.name) ?? Number.MAX_SAFE_INTEGER;
       return pa - pb || a.sortOrder - b.sortOrder;
-    });
-  }
-  return [...active].sort((a, b) => {
-    const priceDiff = (a.priceDelta ?? 0) - (b.priceDelta ?? 0);
-    if (priceDiff !== 0) return priceDiff;
-    return a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "th");
+    }
+    const noAdd = (o) => Number(/^(ไม่เพิ่ม|ไม่รับ)/.test(o.name));
+    return (b.priceDelta ?? 0) - (a.priceDelta ?? 0) || noAdd(a) - noAdd(b) || a.sortOrder - b.sortOrder;
   });
+}
+
+function sortChoicesForDisplay(group) {
+  return group.options.filter((o) => o.active).sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
 const sweetGroup = {
@@ -147,7 +147,7 @@ const sweetGroup = {
   ],
 };
 assert.deepEqual(
-  sortChoicesForDisplay(sweetGroup).map((o) => o.name),
+  sortChoicesByPolicy(sweetGroup).map((o) => o.name),
   ["0%", "50%", "100%"],
 );
 
@@ -161,9 +161,14 @@ const toppingGroup = {
   ],
 };
 assert.deepEqual(
-  sortChoicesForDisplay(toppingGroup).map((o) => o.name),
-  ["ไม่รับ", "บุกบราวน์", "ไข่มุก"],
+  sortChoicesByPolicy(toppingGroup).map((o) => o.name),
+  ["ไข่มุก", "บุกบราวน์", "ไม่รับ"],
 );
+assert.deepEqual(
+  sortChoicesForDisplay(toppingGroup).map((o) => o.name),
+  ["ไม่รับ", "ไข่มุก", "บุกบราวน์"],
+);
+assert.match(readFileSync(join(root, "src/components/PosOptionGroupEditor.tsx"), "utf8"), /sortChoicesByPolicy/);
 
 const cartSrc = readFileSync(join(root, "src/lib/pos-menu-cart.ts"), "utf8");
 assert.match(cartSrc, /sortChoicesForDisplay/);

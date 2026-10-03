@@ -32,7 +32,6 @@ export type PosCartLine = {
 export function optionGroupsForItem(
   item: MenuItem,
   allGroups: MenuOptionGroup[],
-  channel: MenuPriceChannel = "store",
 ): MenuOptionGroup[] {
   const ids = item.optionGroupIds || [];
   const byId = new Map(allGroups.filter((g) => g.active).map((g) => [g.id, g]));
@@ -50,11 +49,10 @@ export function optionGroupsForItem(
 
   return ordered.map((group) => ({
     ...group,
-    options: sortChoicesForDisplay(group, channel),
+    options: sortChoicesForDisplay(group),
   }));
 }
 
-/** ความหวาน — เรียง 0% → มากสุด; กลุ่มอื่น — เรียงราคาต่ำ → สูง */
 export function parseSweetnessPercent(name: string): number | null {
   const trimmed = name.trim();
   const match = trimmed.match(/(\d+)\s*%/);
@@ -75,23 +73,31 @@ function choiceDisplayPrice(choice: MenuOptionChoice, channel: MenuPriceChannel 
   return resolveOptionPriceDelta(choice, channel);
 }
 
-export function sortChoicesForDisplay(
-  group: MenuOptionGroup,
-  channel: MenuPriceChannel = "store",
-): MenuOptionChoice[] {
-  const active = group.options.filter((o) => o.active);
-  if (isSweetnessGroup(group)) {
-    return [...active].sort((a, b) => {
-      const pa = parseSweetnessPercent(a.name) ?? a.sortOrder;
-      const pb = parseSweetnessPercent(b.name) ?? b.sortOrder;
+/** หน้าขายแสดงตามลำดับที่หลังร้านจัด (↑↓ / ปุ่มเรียงตามนโยบาย) */
+export function sortChoicesForDisplay(group: MenuOptionGroup): MenuOptionChoice[] {
+  return group.options
+    .filter((o) => o.active)
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "th"));
+}
+
+const NO_ADD_CHOICE = /^(ไม่เพิ่ม|ไม่รับ)/;
+
+/** นโยบายร้าน: ความหวาน 0% → มากสุด · กลุ่มอื่น ราคาหน้าร้านสูง → ต่ำ แล้วราคาเดลิเวอรี่ · «ไม่เพิ่ม» ท้ายสุด */
+export function sortChoicesByPolicy(group: MenuOptionGroup): MenuOptionChoice[] {
+  const sorted = [...group.options].sort((a, b) => {
+    if (isSweetnessGroup(group)) {
+      const pa = parseSweetnessPercent(a.name) ?? Number.MAX_SAFE_INTEGER;
+      const pb = parseSweetnessPercent(b.name) ?? Number.MAX_SAFE_INTEGER;
       return pa - pb || a.sortOrder - b.sortOrder;
-    });
-  }
-  return [...active].sort((a, b) => {
-    const priceDiff = choiceDisplayPrice(a, channel) - choiceDisplayPrice(b, channel);
-    if (priceDiff !== 0) return priceDiff;
-    return a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "th");
+    }
+    return (
+      choiceDisplayPrice(b, "store") - choiceDisplayPrice(a, "store") ||
+      choiceDisplayPrice(b, "delivery") - choiceDisplayPrice(a, "delivery") ||
+      Number(NO_ADD_CHOICE.test(a.name)) - Number(NO_ADD_CHOICE.test(b.name)) ||
+      a.sortOrder - b.sortOrder
+    );
   });
+  return sorted.map((o, i) => ({ ...o, sortOrder: (i + 1) * 100 }));
 }
 
 export function itemNeedsOptions(item: MenuItem, allGroups: MenuOptionGroup[]): boolean {

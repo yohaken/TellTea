@@ -143,6 +143,7 @@ exports.nposMenuSnapshot = functions.region("asia-southeast1").https.onRequest(a
               active: true,
             }))
             .filter((o) => o.id && o.name)
+            .sort((a, b) => a.sortOrder - b.sortOrder)
         : [];
       return {
         id: d.id,

@@ -813,7 +813,7 @@ export function PosSellView({
           itemName={picker.item.name}
           imageUrl={picker.item.imageUrl}
           basePrice={resolveMenuItemPrice(picker.item, priceChannel)}
-          groups={optionGroupsForItem(picker.item, optionGroups, priceChannel)}
+          groups={optionGroupsForItem(picker.item, optionGroups)}
           channel={priceChannel}
           initialSelections={picker.initialSelections}
           initialQty={picker.initialQty}

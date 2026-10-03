@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { ArrowLeft, Plus, Trash2, X } from "lucide-react";
+import { ArrowDownWideNarrow, ArrowLeft, Plus, Trash2, X } from "lucide-react";
 import { PosSortableList } from "@/components/PosSortableList";
+import { sortChoicesByPolicy } from "@/lib/pos-menu-cart";
 import {
   createMenuOptionChoice,
   saveMenuOptionGroupFull,
@@ -152,13 +153,21 @@ export function PosOptionGroupEditor({
 
         <div className="pos-menu-options-head">
           <h2>ตัวเลือก</h2>
+          <button
+            type="button"
+            className="ghost-btn pos-menu-btn-sm"
+            onClick={() => setOptions(sortChoicesByPolicy({ ...group, name, options }))}
+            title="ความหวาน 0% → มากสุด · กลุ่มอื่น ราคาสูง → ต่ำ · ไม่เพิ่ม ท้ายสุด"
+          >
+            <ArrowDownWideNarrow size={14} aria-hidden /> เรียงตามนโยบาย
+          </button>
           <button type="button" className="ghost-btn pos-menu-btn-sm" onClick={addOption}>
             <Plus size={14} aria-hidden /> เพิ่ม
           </button>
         </div>
 
         <p className="muted pos-menu-sort-hint">
-          กด ↑↓ เลื่อนลำดับ · คอลัมน์ราคา = ราคาเพิ่มหน้าร้าน
+          หน้าขายและช่องทางแสดงตามลำดับนี้ · กด ↑↓ เลื่อนเอง หรือ «เรียงตามนโยบาย» แล้วกดบันทึก · คอลัมน์ราคา = ราคาเพิ่มหน้าร้าน
         </p>
 
         <div className="pos-menu-option-colhead" aria-hidden>
