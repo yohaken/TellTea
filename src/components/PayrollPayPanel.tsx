@@ -137,7 +137,7 @@ export function PayrollPayPanel({
     employeeId: "",
     amount: "",
     note: "",
-    skipGroup: true,
+    skipGroup: false,
   });
   const [advanceOpen, setAdvanceOpen] = useState(false);
   const [advanceDraft, setAdvanceDraft] = useState<AdvanceDraft>({
@@ -238,7 +238,7 @@ export function PayrollPayPanel({
       employeeId: activeRoster[0]?.id || "",
       amount: "",
       note: "",
-      skipGroup: true,
+      skipGroup: false,
     });
     setSpecialOpen(true);
   }
@@ -1366,6 +1366,22 @@ export function PayrollPayPanel({
                 placeholder="เช่น แปลงประจำ · จ่ายก่อนรอบ 1"
               />
             </label>
+            {specialDraft.note.includes("เบิก") ? (
+              <p className="form-hint-inline" role="alert">
+                เบิกล่วงหน้าให้ใช้ «บันทึกเบิก» — ระบบจะหักจากงวดถัดไปอัตโนมัติ · จ่ายแยกจะไม่ถูกหัก{" "}
+                <button
+                  type="button"
+                  className="ghost-btn"
+                  disabled={busy}
+                  onClick={() => {
+                    setSpecialOpen(false);
+                    openAdvanceForm(specialDraft.employeeId);
+                  }}
+                >
+                  ไปบันทึกเบิก
+                </button>
+              </p>
+            ) : null}
             <label className="payroll-special-skip">
               <input
                 type="checkbox"
@@ -1375,7 +1391,7 @@ export function PayrollPayPanel({
                 }
                 disabled={busy}
               />
-              ยังไม่รวมตอนกด «สร้างเงินเดือน» กลุ่ม (แนะนำ)
+              ยังไม่รวมตอนกด «สร้างเงินเดือน» กลุ่ม (เฉพาะพนักงานใหม่ที่ยังไม่เข้ารอบ)
             </label>
             <p className="muted form-hint-inline">
               เดือนอ้างอิง {periodMonth} · วันโอน/ลงบัญชี = วันนี้ · หักเบิกค้างถ้ามี
