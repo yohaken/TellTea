@@ -40,9 +40,14 @@ const SETTINGS_DOC = "meta/vatSalesSettings";
 const REPORTS_COL = "platformEmailReports";
 
 const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
+const GMAIL_SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send";
 const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
-/** Gmail อ่านเมล + Drive สร้าง/เขียนเฉพาะไฟล์ที่แอพสร้าง */
-const OAUTH_SCOPES = `${GMAIL_SCOPE} ${DRIVE_SCOPE}`;
+/** Gmail อ่านเมล + ส่งสรุปยอดหาเจ้าของ + Drive สร้าง/เขียนเฉพาะไฟล์ที่แอพสร้าง */
+const OAUTH_SCOPES = `${GMAIL_SCOPE} ${GMAIL_SEND_SCOPE} ${DRIVE_SCOPE}`;
+
+function scopeHasGmailSend(scope) {
+  return String(scope || "").includes("googleapis.com/auth/gmail.send");
+}
 /** ปิดงบต้นเดือนต้องย้อนหลายหน้า Gmail + คาบเกี่ยวเดือนก่อน/หลัง */
 const DEFAULT_LOOKBACK_DAYS = 120;
 const MAX_LOOKBACK_DAYS = 180;
@@ -192,6 +197,7 @@ function publicOAuthStatus(oauthData, hasConfig, driveMeta) {
     lastSyncAdded: connected ? Number(oauthData.lastSyncAdded) || 0 : 0,
     scope: connected ? asString(oauthData.scope, 400) : "",
     hasDriveScope: drive.hasDriveScope,
+    hasSendScope: connected && scopeHasGmailSend(oauthData.scope),
     drive,
   };
 }
@@ -199,7 +205,7 @@ function publicOAuthStatus(oauthData, hasConfig, driveMeta) {
 function appReturnUrl(base, query) {
   const root = asString(base, 400) || "https://telltea-bo.web.app/vat-sales/";
   const url = new URL(root.includes("?") ? root : root.endsWith("/") ? root : `${root}/`);
-  if (!url.pathname.includes("vat-sales")) {
+  if (!url.pathname.includes("vat-sales") && !url.pathname.startsWith("/settings")) {
     url.pathname = "/vat-sales/";
   }
   Object.entries(query || {}).forEach(([k, v]) => url.searchParams.set(k, String(v)));
@@ -978,3 +984,7 @@ exports.vatMailPdfUrl = functions
   });
 
 exports.DEFAULT_MAIL_RULES = DEFAULT_MAIL_RULES;
+exports.OAUTH_DOC = OAUTH_DOC;
+exports.loadOAuthConfig = loadOAuthConfig;
+exports.refreshAccessToken = refreshAccessToken;
+exports.scopeHasGmailSend = scopeHasGmailSend;

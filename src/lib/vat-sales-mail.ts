@@ -135,6 +135,7 @@ export type VatMailStatus = {
   lastSyncAdded: number;
   scope?: string;
   hasDriveScope?: boolean;
+  hasSendScope?: boolean;
   drive?: VatMailDriveStatus;
 };
 

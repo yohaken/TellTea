@@ -9,6 +9,7 @@ import { AuthGate } from "@/components/AuthGate";
 import { NavMenuOrderSetup } from "@/components/NavMenuOrderSetup";
 import { OwnerNotifySetup } from "@/components/OwnerNotifySetup";
 import { OwnerQuickDockSetup } from "@/components/OwnerQuickDockSetup";
+import { OwnerSalesEmailSetup } from "@/components/OwnerSalesEmailSetup";
 import { ProdPolicyPopupToggle } from "@/components/ProdPolicyPopupToggle";
 import { StaffNewsSetup } from "@/components/StaffNewsSetup";
 import { useAuth } from "@/lib/auth";
@@ -51,7 +52,7 @@ function SettingsView() {
         ตั้งค่าโมดูล
       </h1>
       <p className="muted" style={{ marginBottom: "1rem", textAlign: "left" }}>
-        โปรไฟล์กิจการ · แจ้งเตือน LINE · ป๊อปอัปนโยบายผลิต · แจ้งข่าวสาร/คลังโนต · เมนูหลัก · ไอคอนลอย · อัปเดตแอป — เฉพาะเจ้าของ · แตะหัวข้อเพื่อพับ/ขยาย
+        โปรไฟล์กิจการ · แจ้งเตือน LINE · ยอดขายเข้า Gmail · ป๊อปอัปนโยบายผลิต · แจ้งข่าวสาร/คลังโนต · เมนูหลัก · ไอคอนลอย · อัปเดตแอป — เฉพาะเจ้าของ · แตะหัวข้อเพื่อพับ/ขยาย
         (SmartCheck อยู่หน้าเช็ค → รายการ SOP · คลังอยู่หน้า คลัง ·
         สินค้าผลิตอยู่หน้า ผลิต · เรทโบนัสอยู่หน้า สรุปโบนัส)
       </p>
@@ -62,6 +63,7 @@ function SettingsView() {
       {!loading ? (
         <div className="owner-settings-stack">
           <OwnerNotifySetup onError={setError} />
+          <OwnerSalesEmailSetup onError={setError} />
           <ProdPolicyPopupToggle
             policy={prodPolicy}
             actorId={actorId || ""}
