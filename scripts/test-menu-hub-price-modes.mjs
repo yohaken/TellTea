@@ -120,9 +120,15 @@ assert.match(hub, /const \[colFilterStore, setColFilterStore\]/);
 assert.match(hub, /const \[colFilterNote, setColFilterNote\]/);
 assert.match(hub, /function storePriceMatches/);
 assert.match(hub, /function storePriceSuggestionMatch/);
-assert.match(hub, /โชว์ราคา unique ทั้งหมดเสมอ/);
 assert.match(hub, /data-mph-store-opt/);
-assert.match(hub, /storePriceSuggestions = uniqueStorePrices/);
+// combobox หน้าร้าน = ราคาจากแถวที่ผ่านตัวกรองอื่น (ไม่นับตัวกรองหน้าร้านเอง) — ไม่ใช่ทุกราคาในเมนู
+assert.doesNotMatch(hub, /uniqueStorePrices/);
+assert.match(hub, /const storePriceSuggestions = useMemo/);
+assert.match(hub, /itemRowMatches\(row, ""\)/);
+assert.match(hub, /optionRowMatches\(r, ""\)/);
+assert.match(hub, /unmatchedRowMatches\(e, ""\)/);
+assert.match(hub, /rows\.filter\(\(row\) => itemRowMatches\(row, storeQ\)\)/);
+assert.match(hub, /optionRowsAll\.filter\(\(r\) => optionRowMatches\(r, storeQ\)\)/);
 assert.doesNotMatch(
   hub,
   /function storePriceMatches[\s\S]{0,280}menuTextIncludes/,

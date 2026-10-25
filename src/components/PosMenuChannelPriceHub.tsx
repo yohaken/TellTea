@@ -2390,13 +2390,13 @@ export function PosMenuChannelPriceHub({
     return () => window.removeEventListener("keydown", onKey);
   }, [cellSel.size, storeOnlySel.size, targetEdit, overrideEdit, nameConfirm, clearConfirm, fillTargetConfirm, saveTargetsConfirm]);
 
-  const filtered = useMemo(() => {
-    const q = query.trim();
-    const nameQ = colFilterName.trim();
-    const catQ = colFilterCat.trim();
-    const storeQ = colFilterStore.trim();
-    const noteQ = colFilterNote.trim();
-    return rows.filter(({ item, channels, storeOnly }) => {
+  /** storeQ แยกออกมา — combobox หน้าร้านเรียกด้วย "" เพื่อโชว์ราคาจากแถวที่ผ่านตัวกรองอื่น */
+  const itemRowMatches = useCallback(
+    ({ item, channels, storeOnly }: (typeof rows)[number], storeQ: string): boolean => {
+      const q = query.trim();
+      const nameQ = colFilterName.trim();
+      const catQ = colFilterCat.trim();
+      const noteQ = colFilterNote.trim();
       if (hideStoreOnly && storeOnly) return false;
       const worst = summarizeRowChannels(channels, visibleChannels);
       if (!rowMatchesFilter(worst, channels, statusFilter, visibleChannels)) return false;
@@ -2428,8 +2428,14 @@ export function PosMenuChannelPriceHub({
       return visibleChannels.some((ch) =>
         menuTextIncludes(channels[ch].liveName || "", q),
       );
-    });
-  }, [rows, statusFilter, query, colFilterName, colFilterCat, colFilterStore, colFilterNote, draft, noteDraft, channelLive, catName, visibleChannels, hideStoreOnly]);
+    },
+    [statusFilter, query, colFilterName, colFilterCat, colFilterNote, draft, noteDraft, channelLive, catName, visibleChannels, hideStoreOnly],
+  );
+
+  const filtered = useMemo(() => {
+    const storeQ = colFilterStore.trim();
+    return rows.filter((row) => itemRowMatches(row, storeQ));
+  }, [rows, itemRowMatches, colFilterStore]);
 
   const displayed = useMemo(() => {
     const list = [...filtered];
@@ -2587,13 +2593,12 @@ export function PosMenuChannelPriceHub({
     storeOnlyGroupIds,
   ]);
 
-  const optionRows = useMemo((): OptRow[] => {
-    const q = query.trim();
-    const nameQ = colFilterName.trim();
-    const catQ = colFilterCat.trim();
-    const storeQ = colFilterStore.trim();
-    const noteQ = colFilterNote.trim();
-    const filteredOpts = optionRowsAll.filter((r) => {
+  const optionRowMatches = useCallback(
+    (r: OptRow, storeQ: string): boolean => {
+      const q = query.trim();
+      const nameQ = colFilterName.trim();
+      const catQ = colFilterCat.trim();
+      const noteQ = colFilterNote.trim();
       if (hideStoreOnlyOptions && r.storeOnly) return false;
       const worst = summarizeRowChannels(r.channels, visibleChannels);
       if (!rowMatchesFilter(worst, r.channels, statusFilter, visibleChannels)) return false;
@@ -2621,7 +2626,13 @@ export function PosMenuChannelPriceHub({
       return visibleChannels.some((ch) =>
         menuTextIncludes(r.channels[ch].liveName || "", q),
       );
-    });
+    },
+    [statusFilter, query, colFilterName, colFilterCat, colFilterNote, optDraft, noteDraft, channelLive, visibleChannels, hideStoreOnlyOptions],
+  );
+
+  const optionRows = useMemo((): OptRow[] => {
+    const storeQ = colFilterStore.trim();
+    const filteredOpts = optionRowsAll.filter((r) => optionRowMatches(r, storeQ));
     const dir = sortDir === "asc" ? 1 : -1;
     return [...filteredOpts].sort((a, b) => {
       const groupCmp =
@@ -2653,53 +2664,14 @@ export function PosMenuChannelPriceHub({
       }
       return sortKey === "cat" ? cmp : cmp * dir;
     });
-  }, [optionRowsAll, statusFilter, query, colFilterName, colFilterCat, colFilterStore, colFilterNote, optDraft, noteDraft, channelLive, sortKey, sortDir, liveSettings, visibleChannels, optGroupRank, hideStoreOnlyOptions]);
+  }, [optionRowsAll, optionRowMatches, colFilterStore, noteDraft, channelLive, sortKey, sortDir, optGroupRank]);
 
-  /** ราคาหน้าร้าน unique จากเมนู+ตัวเลือก — ใช้เป็นรายการ combobox กรองคอลัมน์หน้าร้าน */
-  const uniqueStorePrices = useMemo(() => {
-    const set = new Set<number>();
-    for (const { item } of rows) {
-      const raw =
-        draft[item.id]?.store !== undefined
-          ? Number(draft[item.id]!.store) || 0
-          : Number(item.price) || 0;
-      set.add(Math.round(Math.max(0, raw)));
-    }
-    for (const r of optionRowsAll) {
-      const key = optRowKey(r.groupId, r.choice.id);
-      const raw =
-        optDraft[key]?.store !== undefined
-          ? Number(optDraft[key]!.store) || 0
-          : Number(r.choice.priceDelta) || 0;
-      set.add(Math.round(Math.max(0, raw)));
-    }
-    return [...set].sort((a, b) => a - b);
-  }, [rows, optionRowsAll, draft, optDraft]);
-
-  /** combobox หน้าร้าน — โชว์ราคา unique ทั้งหมดเสมอ ไม่ซ่อนเมื่อมีค่าเลือกอยู่ (ไม่ต้องกด × ก่อน) */
-  const storePriceSuggestions = uniqueStorePrices;
-
-  useEffect(() => {
-    if (!storeFilterOpen || !storePriceSuggestions.length) return;
-    const q = colFilterStore.trim().replace(/,/g, "");
-    const target =
-      (q
-        ? storePriceSuggestions.find((p) => String(p) === q) ??
-          storePriceSuggestions.find((p) => storePriceSuggestionMatch(p, q))
-        : null) ?? null;
-    if (target == null) return;
-    const el = document.querySelector<HTMLElement>(`[data-mph-store-opt="${target}"]`);
-    el?.scrollIntoView({ block: "nearest" });
-  }, [storeFilterOpen, colFilterStore, storePriceSuggestions]);
-
-  const unmatchedRows = useMemo((): UnmatchedLiveEntry[] => {
-    if (statusFilter !== "extras") return [];
-    const q = query.trim();
-    const nameQ = colFilterName.trim();
-    const catQ = colFilterCat.trim();
-    const storeQ = colFilterStore.trim();
-    const noteQ = colFilterNote.trim();
-    const list = (channelLive.unmatched || []).filter((e) => {
+  const unmatchedRowMatches = useCallback(
+    (e: UnmatchedLiveEntry, storeQ: string): boolean => {
+      const q = query.trim();
+      const nameQ = colFilterName.trim();
+      const catQ = colFilterCat.trim();
+      const noteQ = colFilterNote.trim();
       if (!visibleChannels.includes(e.channel)) return false;
       const reason = unmatchedReasonLabel(e.reason);
       const action = unmatchedCleanActionLabel(e.cleanAction);
@@ -2726,7 +2698,14 @@ export function PosMenuChannelPriceHub({
         menuTextIncludes(kind, q) ||
         menuTextIncludes(channelLabel(e.channel), q)
       );
-    });
+    },
+    [query, colFilterName, colFilterCat, colFilterNote, visibleChannels],
+  );
+
+  const unmatchedRows = useMemo((): UnmatchedLiveEntry[] => {
+    if (statusFilter !== "extras") return [];
+    const storeQ = colFilterStore.trim();
+    const list = (channelLive.unmatched || []).filter((e) => unmatchedRowMatches(e, storeQ));
     return [...list].sort((a, b) => {
       const act = unmatchedCleanActionRank(a.cleanAction) - unmatchedCleanActionRank(b.cleanAction);
       if (act !== 0) return act;
@@ -2739,16 +2718,45 @@ export function PosMenuChannelPriceHub({
       if (g !== 0) return g;
       return (a.name || "").localeCompare(b.name || "", "th");
     });
-  }, [
-    channelLive.unmatched,
-    statusFilter,
-    query,
-    colFilterName,
-    colFilterCat,
-    colFilterStore,
-    colFilterNote,
-    visibleChannels,
-  ]);
+  }, [channelLive.unmatched, statusFilter, colFilterStore, unmatchedRowMatches]);
+
+  /** ราคาหน้าร้าน unique จากแถวที่ตารางแสดงอยู่ (ตัวกรองอื่นครบ ยกเว้นตัวกรองหน้าร้านเอง) — combobox กดข้ามราคาได้โดยไม่ต้องล้าง */
+  const storePriceSuggestions = useMemo(() => {
+    const set = new Set<number>();
+    const add = (raw: number) => set.add(Math.round(Math.max(0, raw)));
+    if (statusFilter === "extras") {
+      for (const e of channelLive.unmatched || []) {
+        if (unmatchedRowMatches(e, "")) add(Number(e.price) || 0);
+      }
+    } else {
+      if (!hideMenus) {
+        for (const row of rows) {
+          if (!itemRowMatches(row, "")) continue;
+          const d = draft[row.item.id]?.store;
+          add(d !== undefined ? Number(d) || 0 : Number(row.item.price) || 0);
+        }
+      }
+      for (const r of optionRowsAll) {
+        if (!optionRowMatches(r, "")) continue;
+        const d = optDraft[optRowKey(r.groupId, r.choice.id)]?.store;
+        add(d !== undefined ? Number(d) || 0 : Number(r.choice.priceDelta) || 0);
+      }
+    }
+    return [...set].sort((a, b) => a - b);
+  }, [statusFilter, channelLive.unmatched, unmatchedRowMatches, hideMenus, rows, itemRowMatches, draft, optionRowsAll, optionRowMatches, optDraft]);
+
+  useEffect(() => {
+    if (!storeFilterOpen || !storePriceSuggestions.length) return;
+    const q = colFilterStore.trim().replace(/,/g, "");
+    const target =
+      (q
+        ? storePriceSuggestions.find((p) => String(p) === q) ??
+          storePriceSuggestions.find((p) => storePriceSuggestionMatch(p, q))
+        : null) ?? null;
+    if (target == null) return;
+    const el = document.querySelector<HTMLElement>(`[data-mph-store-opt="${target}"]`);
+    el?.scrollIntoView({ block: "nearest" });
+  }, [storeFilterOpen, colFilterStore, storePriceSuggestions]);
 
   const visibleOptGroupCount = activeOptionGroups.filter(
     (g) => !hiddenOptGroups.has(g.id),
@@ -4931,8 +4939,8 @@ export function PosMenuChannelPriceHub({
                   aria-expanded={storeFilterOpen}
                   aria-controls="mph-store-price-list"
                   aria-autocomplete="list"
-                  aria-label="เลือกราคาหน้าร้านที่ไม่ซ้ำ — เปิดแล้วเห็นทุกราคา ไม่ต้องล้างก่อน"
-                  title="เปิดรายการราคา unique ทั้งหมด · กดข้ามไปราคาอื่นได้เลยโดยไม่ต้องกด × · กรองแถวตรงตัวเลขที่เลือก"
+                  aria-label="เลือกราคาหน้าร้าน — เฉพาะราคาที่มีในตารางตามตัวกรองตอนนี้ ไม่ต้องล้างก่อน"
+                  title="รายการราคาเฉพาะแถวที่ตารางแสดงตามตัวกรองอื่น · กดข้ามไปราคาอื่นได้เลยโดยไม่ต้องกด × · กรองแถวตรงตัวเลขที่เลือก"
                   onClick={(e) => {
                     e.stopPropagation();
                     setStoreFilterOpen(true);
@@ -4965,7 +4973,7 @@ export function PosMenuChannelPriceHub({
                     id="mph-store-price-list"
                     className="mph-th-filter-list"
                     role="listbox"
-                    aria-label="ราคาหน้าร้านที่ไม่ซ้ำทั้งหมด"
+                    aria-label="ราคาหน้าร้านที่มีในตาราง"
                   >
                     {storePriceSuggestions.map((p) => {
                       const selected = colFilterStore.trim() === String(p);
