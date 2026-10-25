@@ -11,6 +11,7 @@ import {
   type GpChannelKey,
 } from "./personal-income-tax";
 import {
+  VAT_FLOOR_VERSION,
   recomputeSegment,
   sumMonthlyTotals,
   type VatMonthlyReturn,
@@ -62,6 +63,8 @@ export type MonthBooksDraft = {
    * false = ช่วงจด VAT ขอคืนไม่ได้ → เตรียมจ่ายภาษีขายเต็ม
    */
   includeInputVat: boolean;
+  /** จาก doc ที่โหลด — เดือนปิดงบที่ < 2 ใช้ปัดลงสูตรเดิมให้ตรงกับที่ยื่น */
+  floorVersion?: number;
 };
 
 export type MonthBooksView = {
@@ -281,6 +284,7 @@ export function retToMonthBooksDraft(ret: VatMonthlyReturn): MonthBooksDraft {
     note: ret.note || "",
     status: ret.status,
     includeInputVat: ret.includeInputVat !== false,
+    floorVersion: ret.floorVersion,
   };
 }
 
@@ -326,6 +330,9 @@ export function draftToSegments(draft: MonthBooksDraft): {
   storefront: VatSegmentState;
 } {
   const rates = ratesFromPct(draft.outputPct);
+  const computeOpts = {
+    legacyFloor: draft.status === "filed" && (draft.floorVersion ?? 1) < VAT_FLOOR_VERSION,
+  };
   const gpMap = draftToGpByChannel(draft);
   let deliveryGpVat = 0;
   for (const k of MONTH_CHANNELS) {
@@ -352,7 +359,7 @@ export function draftToSegments(draft: MonthBooksDraft): {
     useGpEstimate: false,
     ingredientVat: 0,
     rates,
-  });
+  }, computeOpts);
   const storefront = recomputeSegment({
     kind: "storefront",
     grossManual: 0,
@@ -366,7 +373,7 @@ export function draftToSegments(draft: MonthBooksDraft): {
     useGpEstimate: false,
     ingredientVat: draft.ingredientVat,
     rates,
-  });
+  }, computeOpts);
   return { delivery, storefront };
 }
 

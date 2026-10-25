@@ -29380,6 +29380,22 @@ a.ghost-btn {
   user-select: none;
 }
 
+.vat-col-info-btn {
+  padding: 0;
+  margin: 0;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+  position: relative;
+}
+
+/* เป้าแตะใหญ่กว่าวงกลมบนมือถือ */
+.vat-col-info-btn::after {
+  content: "";
+  position: absolute;
+  inset: -0.45rem;
+}
+
 .vat-col-info:hover {
   border-color: rgba(87, 15, 15, 0.45);
   color: rgba(87, 15, 15, 0.85);
@@ -30359,6 +30375,14 @@ a.ghost-btn {
   font-size: 0.64rem;
   font-weight: 600;
   color: rgba(28, 42, 31, 0.55);
+  white-space: nowrap;
+}
+
+.vat-sf-send-split {
+  flex: 1 1 100%;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.6rem;
+  color: rgba(28, 42, 31, 0.5);
   white-space: nowrap;
 }
 
@@ -38155,4 +38179,171 @@ a.ghost-btn {
   font-size: 0.7rem;
   align-self: end;
   line-height: 1.5rem;
+}
+
+/* VAT เดือน — แตะชื่อแถวเพื่อดูที่มาของตัวเลข */
+.vat-calc-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.22rem;
+  max-width: 100%;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.vat-calc-label-text {
+  text-decoration: underline dotted rgba(28, 42, 31, 0.35);
+  text-underline-offset: 2px;
+}
+
+.vat-calc-label-i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 0.78rem;
+  height: 0.78rem;
+  border-radius: 50%;
+  border: 1px solid rgba(28, 42, 31, 0.28);
+  color: rgba(28, 42, 31, 0.55);
+  font-size: 0.5rem;
+  font-weight: 700;
+  font-style: normal;
+  line-height: 1;
+}
+
+.vat-calc-label:hover .vat-calc-label-i,
+.vat-calc-label:focus-visible .vat-calc-label-i {
+  border-color: rgba(87, 15, 15, 0.45);
+  color: rgba(87, 15, 15, 0.85);
+  background: rgba(87, 15, 15, 0.06);
+}
+
+.vat-calc-backdrop {
+  z-index: 90;
+}
+
+.vat-calc-sheet {
+  width: min(28rem, 100%);
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  gap: 0.55rem;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.vat-calc-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.vat-calc-kicker {
+  margin: 0;
+  font-size: 0.7rem;
+  color: var(--muted, #6b7280);
+}
+
+.vat-calc-title {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.vat-calc-close {
+  border: 0;
+  background: none;
+  font-size: 1.4rem;
+  line-height: 1;
+  padding: 0 0.2rem;
+  cursor: pointer;
+  color: inherit;
+}
+
+.vat-calc-result {
+  margin: 0;
+  font-size: 1.45rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.vat-calc-result.is-neg,
+.vat-calc-term-num.is-neg {
+  color: #b42318;
+}
+
+.vat-calc-formula {
+  margin: 0;
+  padding: 0.4rem 0.55rem;
+  border-radius: 0.45rem;
+  background: rgba(64, 91, 74, 0.08);
+  font-weight: 600;
+}
+
+.vat-calc-terms {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.vat-calc-terms td {
+  padding: 0.22rem 0;
+  border-bottom: 1px solid rgba(28, 42, 31, 0.08);
+  vertical-align: top;
+}
+
+.vat-calc-op {
+  width: 1.1rem;
+  color: var(--muted, #6b7280);
+  font-weight: 700;
+}
+
+.vat-calc-term-num {
+  text-align: right;
+  white-space: nowrap;
+  padding-left: 0.6rem !important;
+}
+
+.vat-calc-hint {
+  color: var(--muted, #6b7280);
+  font-size: 0.76rem;
+}
+
+.vat-calc-subtotal td {
+  font-weight: 600;
+  background: rgba(28, 42, 31, 0.035);
+}
+
+.vat-calc-total td {
+  border-bottom: 0;
+  border-top: 1.5px solid rgba(28, 42, 31, 0.3);
+  font-weight: 700;
+}
+
+.vat-calc-block h4 {
+  margin: 0.2rem 0 0.15rem;
+  font-size: 0.78rem;
+  color: var(--muted, #6b7280);
+}
+
+.vat-calc-block ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.vat-calc-block li + li {
+  margin-top: 0.15rem;
+}
+
+.vat-calc-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding-top: 0.2rem;
 }

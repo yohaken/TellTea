@@ -28,10 +28,15 @@ export const VAT_PERIOD_TZ = "Asia/Bangkok";
 /** วันเริ่มรอบในเดือน (default = วันที่ 1 เวลา 00:00) */
 export const DEFAULT_PERIOD_START_DAY = 1;
 
-/** ปัดลงเป็นสตางค์ — ใช้ฝั่งภาษีซื้อ (play-safe) */
-export function floorMoney(n: number): number {
+/**
+ * ปัดลงเป็นสตางค์ — ใช้ฝั่งภาษีซื้อ (play-safe)
+ * legacy = สูตรเดิมก่อน 2026-10-25 (ทำ 8604.80 → 8604.79) — ใช้กับเดือนที่ปิดงบแล้วเท่านั้น ให้ตรงกับที่ยื่น
+ */
+export function floorMoney(n: number, legacy = false): number {
   if (!Number.isFinite(n) || n <= 0) return 0;
-  return Math.floor(n * 100 + Number.EPSILON) / 100;
+  if (legacy) return Math.floor(n * 100 + Number.EPSILON) / 100;
+  // n*100 ของทศนิยม 2 ตำแหน่งอาจได้ xxx.9999999 — ปัดเศษ float ทิ้งก่อน floor
+  return Math.floor(Math.round(n * 100 * 1e6) / 1e6) / 100;
 }
 
 /** clamp วันเริ่มรอบ 1–28 (กันเดือนกุมภาพันธ์) */
@@ -408,11 +413,15 @@ export type VatMonthlyReturn = {
    * false = ช่วงจด VAT / ขอคืนไม่ได้ → เตรียมจ่ายภาษีขายเต็ม · default true (งบปกติ)
    */
   includeInputVat: boolean;
+  /** สูตรปัดลงภาษีซื้อตอนเซฟ · 1 = เดิม (ไม่มีฟิลด์) · 2 = แก้ float (2026-10-25) */
+  floorVersion: number;
   filedAt: number;
   filedBy: string;
   updatedAt: number;
   updatedBy: string;
 };
+
+export const VAT_FLOOR_VERSION = 2;
 
 export type VatMonthlySettings = {
   deliveryRates: VatLogicRates;
@@ -464,9 +473,14 @@ export function mapVatLogicRates(raw: unknown): VatLogicRates {
   };
 }
 
-function applyMoneyMode(n: number, floor: boolean): number {
-  return floor ? floorMoney(n) : roundMoney(n);
+function applyMoneyMode(n: number, floor: boolean, legacyFloor = false): number {
+  return floor ? floorMoney(n, legacyFloor) : roundMoney(n);
 }
+
+export type VatSegmentComputeOpts = {
+  /** เดือนปิดงบแล้ว — ใช้ปัดลงสูตรเดิมให้ตัวเลขตรงกับที่ยื่น */
+  legacyFloor?: boolean;
+};
 
 /** ภาษีขายจากยอดรวม: gross × pct/(100+pct) */
 export function computeOutputVat(
@@ -482,7 +496,11 @@ export function computeOutputVat(
   return { vatBase, outputVat };
 }
 
-export function computeVatSegment(input: VatSegmentInput): VatSegmentComputed {
+export function computeVatSegment(
+  input: VatSegmentInput,
+  opts: VatSegmentComputeOpts = {},
+): VatSegmentComputed {
+  const legacy = opts.legacyFloor === true;
   const rates = mapVatLogicRates(input.rates);
   const kind = input.kind === "storefront" ? "storefront" : "delivery";
   const channels = mapDeliveryChannels(input.channels);
@@ -500,15 +518,17 @@ export function computeVatSegment(input: VatSegmentInput): VatSegmentComputed {
   const grossSales = remitAmount;
   const { vatBase, outputVat } = computeOutputVat(grossSales, rates);
 
-  const gpEstimate = applyMoneyMode(outputVat * rates.gpOfOutput, rates.floorInput);
+  const gpEstimate = applyMoneyMode(outputVat * rates.gpOfOutput, rates.floorInput, legacy);
   const gpRaw = input.useGpEstimate ? gpEstimate : normalizeMoney(input.gpVat);
   const gpVatClaimed = applyMoneyMode(
     gpRaw * rates.inputClaimFactor,
     rates.floorInput,
+    legacy,
   );
   const ingredientVatClaimed = applyMoneyMode(
     normalizeMoney(input.ingredientVat) * rates.inputClaimFactor,
     rates.floorInput,
+    legacy,
   );
   const inputVat = roundMoney(gpVatClaimed + ingredientVatClaimed);
   const netVat = roundMoney(outputVat - inputVat);
@@ -546,7 +566,10 @@ export function emptySegment(
   return { ...input, ...computeVatSegment(input) };
 }
 
-export function recomputeSegment(seg: VatSegmentInput): VatSegmentState {
+export function recomputeSegment(
+  seg: VatSegmentInput,
+  opts: VatSegmentComputeOpts = {},
+): VatSegmentState {
   const rates = mapVatLogicRates(seg.rates);
   const kind = seg.kind === "storefront" ? "storefront" : "delivery";
   const input: VatSegmentInput = {
@@ -563,7 +586,7 @@ export function recomputeSegment(seg: VatSegmentInput): VatSegmentState {
     ingredientVat: normalizeMoney(seg.ingredientVat),
     rates,
   };
-  return { ...input, kind: input.kind, ...computeVatSegment(input) };
+  return { ...input, kind: input.kind, ...computeVatSegment(input, opts) };
 }
 
 export function sumMonthlyTotals(
@@ -679,6 +702,7 @@ export function mapVatMonthlyReturn(
     ),
     // ของเก่าไม่มีฟิลด์ = หักภาษีซื้อตามปกติ
     includeInputVat: data?.includeInputVat !== false,
+    floorVersion: Number(data?.floorVersion) || 1,
     filedAt: Number(data?.filedAt) || 0,
     filedBy: String(data?.filedBy || ""),
     updatedAt: Number(data?.updatedAt) || 0,
@@ -861,6 +885,7 @@ export async function saveVatMonthlyReturn(
     pnlDeliveryGpPct,
     pnlGpByChannel,
     includeInputVat,
+    floorVersion: VAT_FLOOR_VERSION,
     filedAt: 0,
     filedBy: "",
     updatedAt: Date.now(),

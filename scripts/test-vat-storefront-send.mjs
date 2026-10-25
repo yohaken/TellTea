@@ -52,7 +52,7 @@ assert.doesNotMatch(
 assert.match(ui, /ยอดขายโอน/);
 assert.match(ui, /vat-cost-layer/);
 assert.match(ui, /ชั้นคิดต้นทุนบช/);
-assert.match(ui, /ติ๊กหักภาษีซื้อ → ต้นทุน = บิล − VAT/);
+assert.match(ui, /ต้นทุน \(cogs\) รวม · ที่ติ๊กนับบิล − VAT/);
 assert.match(ui, /ไม่ติ๊ก → ต้นทุน = บิลรวม VAT ทั้งก้อน/);
 assert.match(ui, /โอน ← จากแถบ A/);
 

@@ -7,7 +7,8 @@ alwaysApply: false
 # หน้า VAT เดือน — โน้ตสำหรับ AI
 
 หน้า: `/vat-sales` → `src/components/vat-sales/VatMonthBooks.tsx` (เจ้าของเท่านั้น) 
-หน้านี้**ไม่โชว์คำอธิบายสูตร** (เจ้าของสั่งเอาออก 2026-10) — หลักการอยู่ในไฟล์นี้ · ถ้าต้องอธิบายบนจอ ใช้ `title=` (tooltip) ไม่ใส่ `<p>` บรรยาย
+หน้านี้**ไม่โชว์คำอธิบายสูตรแบบข้อความค้างบนจอ** (เจ้าของสั่งเอาออก 2026-10) — ห้ามใส่ `<p>` บรรยาย 
+**ที่มาของตัวเลขทุกแถว = แตะชื่อแถว → popup** (เจ้าของสั่ง 2026-10-25): `VatCalcLabel` + `VatCalcInfoSheet` (`src/components/vat-sales/VatCalcInfo.tsx`) · เนื้อหาใน `explainVatMonthRow` (`src/lib/vat-month-explain.ts`) — แถวใหม่ต้องเพิ่ม `ExplainId` + เคสใน lib + เทส `scripts/test-vat-month-explain.ts` · popup โชว์อย่างเดียว ห้ามคิดตัวเลขต่างจากตาราง
 
 ## โครงหน้า (บนลงล่าง)
 
@@ -31,6 +32,7 @@ alwaysApply: false
 6. ยอดซื้อ ภ.พ.30 = ภาษีซื้อ × 100/7 **รายใบ** (`purchaseBaseFromVat`) — ไม่ใช้ยอดบิล (บิลปนของไม่มี VAT ได้)
 7. ติ๊กหักภาษีซื้อ **ไม่เปลี่ยนภาษีขาย** · `includeInputVat=false` → ภาษีซื้อไม่หัก
 8. แถบส่งหน้าร้าน **ไม่แตะภาษีซื้อ**
+9. ปัดลงภาษีซื้อ `floorMoney` แก้เศษ float แล้ว (2026-10-25 · เดิม 8,604.80 → 8,604.79) · doc เก็บ `floorVersion` (เซฟใหม่ = 2) · เดือน **ปิดงบ** ที่ `floorVersion < 2` คิดด้วยสูตรเดิม (`legacyFloor`) ให้ตรงกับที่ยื่น — ห้ามลบ path นี้ · เทส `scripts/test-vat-floor-money.ts`
 
 ## สูตรกำไร (C)
 
@@ -70,6 +72,8 @@ alwaysApply: false
 
 ```bash
 npx tsx scripts/test-vat-pnl-statement.ts      # C งบกำไรขาดทุน + ไม่เปลี่ยน view
+npx tsx scripts/test-vat-month-explain.ts      # popup ที่มาทุกแถว · ตัวเลขประกอบรวม = ยอดในตาราง
+npx tsx scripts/test-vat-floor-money.ts        # ปัดลงภาษีซื้อไม่หาย 1 สตางค์ · เดือนปิดงบเก่าคงตัวเลขเดิม
 npx tsx scripts/test-vat-sf-month-persist.mjs  # แถบส่งหน้าร้าน (ต้องรันด้วย tsx)
 node scripts/test-vat-storefront-send.mjs
 npx tsx scripts/test-vat-month-sources.ts

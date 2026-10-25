@@ -68,6 +68,8 @@ import { updateLedgerEntry } from "@/lib/ledger";
 import { updateOwnerBookEntry } from "@/lib/owner-books";
 import { BooksVatEntryDetailModal } from "@/components/vat-sales/BooksVatEntryDetailModal";
 import { VatColHead } from "@/components/vat-sales/VatColHead";
+import { VatCalcInfoSheet, VatCalcLabel } from "@/components/vat-sales/VatCalcInfo";
+import { explainVatMonthRow, type ExplainId } from "@/lib/vat-month-explain";
 import { VatSalesSubNav } from "@/components/vat-sales/VatSalesSubNav";
 import {
   fileVatMonthlyReturn,
@@ -235,17 +237,19 @@ function PnlRow({
   title,
   line,
   total,
+  onInfo,
 }: {
   label: string;
   title: string;
   line: MonthPnlLine;
   total?: boolean;
+  onInfo: () => void;
 }) {
   const neg = (line.amount ?? 0) < 0;
   return (
     <tr className={total ? "vat-sales-totals-row" : undefined}>
       <td className="col-seg" title={title}>
-        {label}
+        <VatCalcLabel onOpen={onInfo}>{label}</VatCalcLabel>
       </td>
       <td className={`col-num${total ? " col-net" : ""}${neg ? " is-neg" : ""}`}>
         {line.amount == null ? "—" : fmt(line.amount)}
@@ -304,6 +308,7 @@ export function VatMonthBooks({ actor }: Props) {
   const [openBooksLines, setOpenBooksLines] = useState(false);
   const [booksVatBusy, setBooksVatBusy] = useState(false);
   const [detailLine, setDetailLine] = useState<BooksVatLine | null>(null);
+  const [explainId, setExplainId] = useState<ExplainId | null>(null);
   const [pp30Copied, setPp30Copied] = useState(false);
   const [monthNote, setMonthNote] = useState("");
   const [noteBusy, setNoteBusy] = useState(false);
@@ -941,6 +946,41 @@ export function VatMonthBooks({ actor }: Props) {
       }),
     [view, booksCombo?.cogs],
   );
+  const explain = useMemo(() => {
+    if (!explainId) return null;
+    return explainVatMonthRow(explainId, {
+      monthLabel: formatThaiMonthKey(month),
+      view,
+      draft,
+      staff: bookStaff,
+      owner: bookOwner,
+      periodLabel: period.labelInclusive,
+      periodStartDay,
+      sf: {
+        posConnected: sfPosConnect,
+        pct: sfSendPct,
+        posCash: sfPosTenders.cash,
+        posTransfer: sfPosTenders.transfer,
+      },
+      claimedBooksCount: booksLines.filter((l) => l.vatClaim).length,
+      claimedBooksVat: sumClaimedBooksVat(booksLines),
+      booksLineCount: booksLines.length,
+    });
+  }, [
+    explainId,
+    month,
+    view,
+    draft,
+    bookStaff,
+    bookOwner,
+    period.labelInclusive,
+    periodStartDay,
+    sfPosConnect,
+    sfSendPct,
+    sfPosTenders,
+    booksLines,
+  ]);
+  const info = (id: ExplainId) => () => setExplainId(id);
 
   function setGpField(key: MonthChannel, raw: string) {
     if (locked) return;
@@ -1189,26 +1229,31 @@ export function VatMonthBooks({ actor }: Props) {
                   label="ยอดขายแอพ"
                   role={DELIVERY_COL_ROLE.appSales}
                   info={DELIVERY_COL_INFO.appSales}
+                  onInfo={info("col.appSales")}
                 />
                 <VatColHead
                   label="ยอดโอน"
                   role={DELIVERY_COL_ROLE.transfer}
                   info={DELIVERY_COL_INFO.transfer}
+                  onInfo={info("col.transfer")}
                 />
                 <VatColHead
                   label="คชจ.GP"
                   role={DELIVERY_COL_ROLE.gpFee}
                   info={DELIVERY_COL_INFO.gpFee}
+                  onInfo={info("col.gpFee")}
                 />
                 <VatColHead
                   label="คชจ.อื่นๆ"
                   role={DELIVERY_COL_ROLE.otherFee}
                   info={DELIVERY_COL_INFO.otherFee}
+                  onInfo={info("col.otherFee")}
                 />
                 <VatColHead
                   label="VAT-ซื้อ"
                   role={DELIVERY_COL_ROLE.purchaseVat}
                   info={DELIVERY_COL_INFO.purchaseVat}
+                  onInfo={info("col.purchaseVat")}
                 />
               </tr>
             </thead>
@@ -1342,7 +1387,9 @@ export function VatMonthBooks({ actor }: Props) {
                       className="col-seg"
                       title="ผลรวมยอดโอน SF+GB+LM (ไม่ใช่ยอดขาย)"
                     >
-                      เดลิเวอรี่ (รวม)
+                      <VatCalcLabel onOpen={info("a.delivery")}>
+                        เดลิเวอรี่ (รวม)
+                      </VatCalcLabel>
                     </td>
                     <td className="col-num col-net">
                       {fmt(view.deliveryTransfer)}
@@ -1354,7 +1401,9 @@ export function VatMonthBooks({ actor }: Props) {
                         className="col-seg col-child"
                         title={`ยอดโอน ${MONTH_CHANNEL_LABEL[k]} จากสรุปเดือน`}
                       >
-                        {MONTH_CHANNEL_LABEL[k]}
+                        <VatCalcLabel onOpen={info(`a.ch.${k}`)}>
+                          {MONTH_CHANNEL_LABEL[k]}
+                        </VatCalcLabel>
                       </td>
                       <td className="col-num col-input">
                         <MoneyCell
@@ -1371,7 +1420,7 @@ export function VatMonthBooks({ actor }: Props) {
                       className="col-seg"
                       title="หน้าร้านไม่มีหัก GP — ยอดถึงร้าน = เงินรับจริง"
                     >
-                      หน้าร้าน
+                      <VatCalcLabel onOpen={info("a.storefront")}>หน้าร้าน</VatCalcLabel>
                     </td>
                     <td className="col-num col-input">
                       <MoneyCell
@@ -1388,7 +1437,7 @@ export function VatMonthBooks({ actor }: Props) {
                       className="col-seg"
                       title={`รายได้สุทธิ = ${incomeHint}`}
                     >
-                      = รายได้สุทธิ
+                      <VatCalcLabel onOpen={info("a.income")}>= รายได้สุทธิ</VatCalcLabel>
                     </td>
                     <td className="col-num col-net">
                       {fmt(view.incomeTotal)}
@@ -1425,7 +1474,9 @@ export function VatMonthBooks({ actor }: Props) {
                       className="col-seg muted"
                       title="แพลตฟอร์มหักจากยอดโอนแล้ว — โชว์อ้างอิง · ไม่หักซ้ำตอนคิดกำไร"
                     >
-                      GP แพลตฯ (อ้างอิง · ไม่หักกำไร)
+                      <VatCalcLabel onOpen={info("b.gp")}>
+                        GP แพลตฯ (อ้างอิง · ไม่หักกำไร)
+                      </VatCalcLabel>
                     </td>
                     <td className="col-num col-net muted">
                       <span className="vat-gp-cell">
@@ -1440,7 +1491,9 @@ export function VatMonthBooks({ actor }: Props) {
                   {MONTH_CHANNELS.map((k) => (
                     <tr key={k} className="vat-row-child">
                       <td className="col-seg col-child">
-                        {MONTH_CHANNEL_LABEL[k]}
+                        <VatCalcLabel onOpen={info(`b.gp.${k}`)}>
+                          {MONTH_CHANNEL_LABEL[k]}
+                        </VatCalcLabel>
                       </td>
                       <td className="col-num col-input">
                         <span className="vat-gp-cell">
@@ -1463,7 +1516,9 @@ export function VatMonthBooks({ actor }: Props) {
                       className="col-seg"
                       title="ผสานจากบช.พนักงาน + เจ้าของอัตโนมัติ"
                     >
-                      คชจ. สองบช. (หักกำไร)
+                      <VatCalcLabel onOpen={info("b.books")}>
+                        คชจ. สองบช. (หักกำไร)
+                      </VatCalcLabel>
                       {booksBusy ? (
                         <span className="muted"> …</span>
                       ) : null}
@@ -1476,7 +1531,9 @@ export function VatMonthBooks({ actor }: Props) {
                     <>
                       <tr className="vat-row-child">
                         <td className="col-seg col-child">
-                          พนง. (COGS+SGA+อื่น)
+                          <VatCalcLabel onOpen={info("b.books.staff")}>
+                            พนง. (COGS+SGA+อื่น)
+                          </VatCalcLabel>
                         </td>
                         <td className="col-num">
                           {staffOp == null ? "—" : fmt(staffOp)}
@@ -1484,7 +1541,9 @@ export function VatMonthBooks({ actor }: Props) {
                       </tr>
                       <tr className="vat-row-child">
                         <td className="col-seg col-child">
-                          เจ้าของ (COGS+SGA+อื่น)
+                          <VatCalcLabel onOpen={info("b.books.owner")}>
+                            เจ้าของ (COGS+SGA+อื่น)
+                          </VatCalcLabel>
                         </td>
                         <td className="col-num">
                           {ownerOp == null ? "—" : fmt(ownerOp)}
@@ -1495,7 +1554,9 @@ export function VatMonthBooks({ actor }: Props) {
                           className="col-seg col-child"
                           title="สินทรัพย์โชว์อย่างเดียว — ไม่หักกำไร"
                         >
-                          สินทรัพย์ (ไม่หัก)
+                          <VatCalcLabel onOpen={info("b.asset")}>
+                            สินทรัพย์ (ไม่หัก)
+                          </VatCalcLabel>
                         </td>
                         <td className="col-num">{fmt(view.booksAsset)}</td>
                       </tr>
@@ -1507,9 +1568,11 @@ export function VatMonthBooks({ actor }: Props) {
                       <tr className="vat-row-child vat-cost-layer">
                         <td
                           className="col-seg col-child"
-                          title="รายการที่ติ๊กหักภาษีซื้อ — VAT ถูกตัดออกจากต้นทุน ไปหักภาษีขายใน D"
+                          title="ต้นทุน (cogs) ทั้งหมดของสองบช. — รายการที่ติ๊กหักภาษีซื้อนับบิล − VAT (VAT ไปหักภาษีขายใน D) · ไม่ติ๊กนับบิลเต็ม"
                         >
-                          1) ติ๊กหักภาษีซื้อ → ต้นทุน = บิล − VAT
+                          <VatCalcLabel onOpen={info("b.layer.claimed")}>
+                            ต้นทุน (cogs) รวม · ที่ติ๊กนับบิล − VAT
+                          </VatCalcLabel>
                         </td>
                         <td className="col-num">
                           {fmt(booksCombo?.cogs ?? 0)}
@@ -1524,7 +1587,9 @@ export function VatMonthBooks({ actor }: Props) {
                           className="col-seg col-child"
                           title="ภาษีซื้อจากรายการที่เคลม — ไม่ปนในต้นทุน · ไปหักภาษีขายใน D"
                         >
-                          · VAT ที่ตัดออกจากต้นทุน → D
+                          <VatCalcLabel onOpen={info("b.layer.vat")}>
+                            · VAT ที่ตัดออกจากต้นทุน → D
+                          </VatCalcLabel>
                         </td>
                         <td className="col-num">
                           {fmt(booksCombo?.vatCogs ?? 0)}
@@ -1535,7 +1600,9 @@ export function VatMonthBooks({ actor }: Props) {
                           className="col-seg col-child"
                           title="รายการไม่ติ๊ก — ใช้ยอดบิลรวม VAT ทั้งก้อนเป็นต้นทุน · ไม่นับภาษีซื้อใน D"
                         >
-                          2) ไม่ติ๊ก → ต้นทุน = บิลรวม VAT ทั้งก้อน
+                          <VatCalcLabel onOpen={info("b.layer.unclaimed")}>
+                            · ไม่ติ๊ก → ต้นทุน = บิลรวม VAT ทั้งก้อน
+                          </VatCalcLabel>
                         </td>
                         <td className="col-num muted">รวมในคชจ.ด้านบน</td>
                       </tr>
@@ -1546,7 +1613,9 @@ export function VatMonthBooks({ actor }: Props) {
                       className="col-seg"
                       title="หักจากกำไรได้แค่คชจ.บช. · GP อยู่ในยอดโอนแล้ว"
                     >
-                      = คชจ. ที่หักกำไร
+                      <VatCalcLabel onOpen={info("b.costTotal")}>
+                        = คชจ. ที่หักกำไร
+                      </VatCalcLabel>
                     </td>
                     <td className="col-num col-net">
                       {view.costTotal == null ? "—" : fmt(view.costTotal)}
@@ -1578,39 +1647,46 @@ export function VatMonthBooks({ actor }: Props) {
                     label="รายได้ถึงร้าน (ยอดโอน)"
                     title="ยอดโอน SF/GB/LM + หน้าร้าน — หลังหัก GP แพลตฯ แล้ว"
                     line={pnl.income}
+                    onInfo={info("c.income")}
                   />
                   <PnlRow
                     label="− ต้นทุนขาย"
                     title="COGS สองบช. หลังตัด VAT ที่ติ๊กหักภาษีซื้อ"
                     line={pnl.cogs}
+                    onInfo={info("c.cogs")}
                   />
                   <PnlRow
                     label="= กำไรขั้นต้น"
                     title="รายได้ถึงร้าน − ต้นทุนขาย"
                     line={pnl.grossProfit}
                     total
+                    onInfo={info("c.grossProfit")}
                   />
                   <PnlRow
                     label="− คชจ.ขาย/บริหาร + อื่นๆ"
                     title="SGA + อื่นๆ สองบช. · ไม่รวม GP (หักในยอดโอนแล้ว)"
                     line={pnl.otherOpex}
+                    onInfo={info("c.otherOpex")}
                   />
                   <PnlRow
                     label="= กำไรประมาณการเดือน"
                     title="กำไรขั้นต้น − คชจ.ขาย/บริหาร + อื่นๆ = รายได้ถึงร้าน − คชจ.บช. · ยังไม่หัก VAT"
                     line={pnl.operatingProfit}
                     total
+                    onInfo={info("c.operatingProfit")}
                   />
                   <PnlRow
                     label="− VAT สุทธิ"
                     title="จากกล่อง D · ยอดบวก = ต้องนำส่ง · ติดลบ = ได้คืน"
                     line={pnl.netVat}
+                    onInfo={info("c.netVat")}
                   />
                   <PnlRow
                     label="= กำไรสุทธิ (หลังหัก VAT)"
                     title="กำไรประมาณการ − VAT สุทธิ"
                     line={pnl.netProfit}
                     total
+                    onInfo={info("c.netProfit")}
                   />
                 </tbody>
               </table>
@@ -1655,7 +1731,9 @@ export function VatMonthBooks({ actor }: Props) {
                             }
                             label="เดลิเวอรี่"
                           />
-                          <span className="vat-seg-label">เดลิเวอรี่</span>
+                          <VatCalcLabel className="vat-seg-label" onOpen={info("d.salesDelivery")}>
+                            เดลิเวอรี่
+                          </VatCalcLabel>
                         </span>
                       </td>
                       <td className="col-num col-net">
@@ -1700,7 +1778,9 @@ export function VatMonthBooks({ actor }: Props) {
                             }
                             label="หน้าร้าน"
                           />
-                          <span className="vat-seg-label">หน้าร้าน</span>
+                          <VatCalcLabel className="vat-seg-label" onOpen={info("d.salesStorefront")}>
+                            หน้าร้าน
+                          </VatCalcLabel>
                         </span>
                       </td>
                       <td className="col-num col-net">
@@ -1766,7 +1846,9 @@ export function VatMonthBooks({ actor }: Props) {
                       </>
                     ) : null}
                     <tr className="vat-sales-totals-row">
-                      <td className="col-seg">รวม</td>
+                      <td className="col-seg">
+                        <VatCalcLabel onOpen={info("d.salesTotal")}>รวม</VatCalcLabel>
+                      </td>
                       <td className="col-num">{fmt(view.salesTotal)}</td>
                       <td className="col-num col-net">{fmt(view.outputVat)}</td>
                     </tr>
@@ -1792,7 +1874,7 @@ export function VatMonthBooks({ actor }: Props) {
                         className="col-seg"
                         title="จากยอดเดลิเวอรี่คอลัมน์ VAT-ซื้อ หรือประมาณคชจ.×7/107"
                       >
-                        ภาษีซื้อ GP (รวม)
+                        <VatCalcLabel onOpen={info("d.gpVat")}>ภาษีซื้อ GP (รวม)</VatCalcLabel>
                       </td>
                       <td className="col-num col-net">
                         {fmt(pp30.shown.purchaseBaseGp)}
@@ -1802,7 +1884,9 @@ export function VatMonthBooks({ actor }: Props) {
                     {MONTH_CHANNELS.map((k) => (
                       <tr key={`gpvat-${k}`} className="vat-row-child">
                         <td className="col-seg col-child">
-                          GP≠ {MONTH_CHANNEL_LABEL[k]}
+                          <VatCalcLabel onOpen={info(`d.gpVat.${k}`)}>
+                            GP≠ {MONTH_CHANNEL_LABEL[k]}
+                          </VatCalcLabel>
                         </td>
                         <td className="col-num">
                           {fmt(
@@ -1830,13 +1914,10 @@ export function VatMonthBooks({ actor }: Props) {
                             onToggle={() => setOpenBooksLines((v) => !v)}
                             label="รายการจากสองบช"
                           />
-                          <span
-                            className="vat-seg-label"
-                            title="ยอดจากรายการที่ติ๊ก「หักภาษีซื้อ」ในสองบช. — หักจากภาษีขายในแถบสุทธิ"
-                          >
+                          <VatCalcLabel className="vat-seg-label" onOpen={info("d.booksVat")}>
                             ภาษีซื้อสองบช.
                             {booksVatBusy ? " …" : ""}
-                          </span>
+                          </VatCalcLabel>
                         </span>
                       </td>
                       <td className="col-num col-net">
@@ -1862,7 +1943,9 @@ export function VatMonthBooks({ actor }: Props) {
                         className="col-seg col-child"
                         title="ค่าหลัง claim / ปัด — คือยอดที่หักจากภาษีขายจริง"
                       >
-                        → หักจากภาษีขาย
+                        <VatCalcLabel onOpen={info("d.booksVatApplied")}>
+                          → หักจากภาษีขาย
+                        </VatCalcLabel>
                       </td>
                       <td className="col-num col-net">
                         {fmt(pp30.shown.purchaseBaseBooks)}
@@ -1959,9 +2042,11 @@ export function VatMonthBooks({ actor }: Props) {
                             : "คำนวณภาษีซื้อไว้โชว์ — ยังไม่หักจากภาษีขาย (ปิดติ๊กด้านล่าง)"
                         }
                       >
-                        {view.includeInputVat
-                          ? "รวมภาษีซื้อ (หักจากภาษีขาย)"
-                          : "รวมภาษีซื้อ (ยังไม่หัก)"}
+                        <VatCalcLabel onOpen={info("d.inputTotal")}>
+                          {view.includeInputVat
+                            ? "รวมภาษีซื้อ (หักจากภาษีขาย)"
+                            : "รวมภาษีซื้อ (ยังไม่หัก)"}
+                        </VatCalcLabel>
                       </td>
                       <td className="col-num col-net">
                         {fmt(pp30.shown.purchaseBase)}
@@ -2133,6 +2218,10 @@ export function VatMonthBooks({ actor }: Props) {
         </>
       )}
 
+      {explain ? (
+        <VatCalcInfoSheet explain={explain} onClose={() => setExplainId(null)} />
+      ) : null}
+
       {detailLine ? (
         <BooksVatEntryDetailModal
           book={detailLine.book}
@@ -2195,14 +2284,12 @@ export function VatMonthBooks({ actor }: Props) {
         <span
           className={`vat-sf-send-out${sfSendSourceNum > 0 ? " is-live" : ""}`}
           title={
-            sfPosConnect
-              ? "ยอดหลัง % → A รายได้ + D ยอดขาย (สด/โอน ตาม nPOS)"
+            sfPosConnect && sfSendTendersGross(sfPosTenders) > 0
+              ? `ยอดรวมหลัง % → A รายได้ + D ยอดขาย · สด ${fmt(sfPosScaled.cash)} · โอน ${fmt(sfPosScaled.transfer)}`
               : "ยอดที่ส่งเข้าช่องหน้าร้านในตาราง A + D"
           }
         >
-          {sfPosConnect && sfSendTendersGross(sfPosTenders) > 0
-            ? `→ สด ${fmt(sfPosScaled.cash)} · โอน ${fmt(sfPosScaled.transfer)}`
-            : `→ โอน ${fmt(sfSendPreview)}`}
+          → ส่ง {fmt(sfSendPreview)}
         </span>
         <span
           className="vat-sf-send-unsent"
@@ -2210,6 +2297,14 @@ export function VatMonthBooks({ actor }: Props) {
         >
           ค้าง {fmt(sfUnsent)}
         </span>
+        {sfPosConnect && sfSendTendersGross(sfPosTenders) > 0 ? (
+          <span
+            className="vat-sf-send-split"
+            title={`ยอดส่งแยกตาม nPOS (หลัง ${sfSendPct}%) · ต้นทาง สด ${fmt(sfPosTenders.cash)} · โอน ${fmt(sfPosTenders.transfer)}`}
+          >
+            สด {fmt(sfPosScaled.cash)} · โอน {fmt(sfPosScaled.transfer)}
+          </span>
+        ) : null}
       </div>
     </div>
   );

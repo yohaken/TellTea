@@ -35,7 +35,9 @@ assert.match(ui, /ดึงยอดหน้าร้านจาก nPOS/);
 assert.match(ui, /onSfPosConnectChange/);
 assert.match(ui, /disconnectSfPos/);
 assert.match(ui, /sfPosConnect/);
-assert.match(ui, /→ สด/);
+assert.match(ui, /→ ส่ง \{fmt\(sfSendPreview\)\}/);
+assert.match(ui, /สด \$\{fmt\(sfPosScaled\.cash\)\} · โอน/);
+assert.match(ui, /vat-sf-send-split[\s\S]*สด \{fmt\(sfPosScaled\.cash\)\} · โอน \{fmt\(sfPosScaled\.transfer\)\}/);
 
 const css = read("src/app/globals.css");
 assert.match(css, /\.vat-sf-pos-connect\s*\{/);
